@@ -1,5 +1,6 @@
-import type { LiveData } from '../../domain/entities/liveData.js'
+import type { LiveData } from '@/domain/entities/liveData.js'
 
+/** Error lanzado cuando falla el parseo de una trama hexadecimal. */
 export class ParseError extends Error {
   constructor(message: string) {
     super(message)
@@ -27,6 +28,7 @@ function hexToByte(hex: string): number {
   return byte
 }
 
+/** Convierte 4 caracteres hex (2 bytes) a RPM según SAE J1979: (A*256+B)/4. */
 export function parseRpm(hex: string): number {
   if (hex.length !== 4) {
     throw new ParseError(`RPM requires 4 hex chars, got ${hex.length}`)
@@ -40,6 +42,7 @@ export function parseRpm(hex: string): number {
   return rpm
 }
 
+/** Convierte 2 caracteres hex a temperatura de refrigerante (°C): raw - 40. */
 export function parseCoolantTemp(hex: string): number {
   if (hex.length !== 2) {
     throw new ParseError(`Coolant temperature requires 2 hex chars, got ${hex.length}`)
@@ -51,6 +54,7 @@ export function parseCoolantTemp(hex: string): number {
   return temp
 }
 
+/** Convierte 2 caracteres hex a velocidad (km/h) — mapeo directo. */
 export function parseSpeed(hex: string): number {
   if (hex.length !== 2) {
     throw new ParseError(`Speed requires 2 hex chars, got ${hex.length}`)
@@ -62,6 +66,7 @@ export function parseSpeed(hex: string): number {
   return speed
 }
 
+/** Convierte 2 caracteres hex a temperatura de admisión (°C): raw - 40. */
 export function parseIntakeTemp(hex: string): number {
   if (hex.length !== 2) {
     throw new ParseError(`Intake air temperature requires 2 hex chars, got ${hex.length}`)
@@ -73,6 +78,7 @@ export function parseIntakeTemp(hex: string): number {
   return temp
 }
 
+/** Parsea una trama completa de 10 caracteres hex (5 bytes) y devuelve LiveData. */
 export function parseAllPids(hex: string): LiveData {
   if (hex.length === 0) {
     throw new ParseError('Empty frame — no data to parse')

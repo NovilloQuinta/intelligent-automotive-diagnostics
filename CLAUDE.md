@@ -109,3 +109,10 @@ Filosofía **"Documentation As You Code"** — la documentación se escribe al m
 
 Full project documentation (vision, architecture, planning) lives in the Obsidian vault:
 - `/data/01_Proyectos/01_p_web_intelligent_auto_diagnosis/`
+
+## Reglas de sesión
+
+1. **Cargar skills** (`tdd-workflow`, `typescript-best-practices`, etc.) al inicio de cada fase
+2. **Preguntar antes de commitear/pushear** — mostrar diff, esperar OK humano
+3. **1 paso a la vez** — no mezclar varias responsabilidades en una tanda (ej. entidades + parser + tests + commit)
+4. **Leer CLAUDE.md como checklist al arrancar sesión** — antes de tocar código, repasar reglas activas
