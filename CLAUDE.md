@@ -60,21 +60,55 @@ apps/core-api/src/
 ## Tests
 
 ```bash
-pnpm test         # vitest run
-pnpm test:watch   # vitest watch
+pnpm test           # vitest run (43 tests)
+pnpm test:watch     # vitest watch
+pnpm test:coverage  # vitest run --coverage
 ```
 
-- Tests unitarios matemáticos del `hexParser` (SAE J1979)
-- Tests con mocks del `processVehicleDiagnosis`
+### Pirámide de testing
+
+| Nivel | Peso | Ejemplos en el proyecto | Meta de cobertura |
+|---|---|---|---|
+| **Unitarias** | ~70% | `hexParser.test.ts`, `obdSimulator.test.ts`, `processVehicleDiagnosis.test.ts` | ≥ 90% por módulo |
+| **Integración** | ~25% | `server.test.ts` (Express + fetch real), `diagnosisController.test.ts` | ≥ 80% |
+| **E2E** | ~5% | Flujo login → diagnóstico visual (Playwright, Fase 3) | Flujo crítico |
+
+### Umbrales de coverage (Vitest)
+
+```
+usecases/**      ≥ 90% statements
+infrastructure/** ≥ 80% statements
+domain/**         excluido (solo tipos)
+main.ts, scripts/ excluido (composition root / tooling)
+```
+
+### Mock boundaries
+
+- Mock **solo** en infraestructura: `ObdRepository`, HTTP, file system
+- **Nunca** mockear entidades de dominio ni funciones puras (parser, validators)
+- Vitest `vi.mock()` para boundaries; implementaciones reales para lógica de dominio
 
 ## Estado actual del proyecto
 
-Lo que existe ahora en `apps/core-api/`:
-- `package.json` — dependencias y scripts
-- `tsconfig.json` — compilador TS
+### Estructura implementada
 
-Pendiente por fase:
-- **Fase 1** (base técnica, hasta 10 jul): `domain/`, `obdSimulator.ts`, `hexParser.ts`, `processVehicleDiagnosis.ts`, tests unitarios
+```
+apps/core-api/src/
+├── domain/entities/             # vehicleInfo, liveData, dtcCode, diagnosisResult
+├── domain/repositories/         # obdRepository.interface
+├── usecases/diagnostics/        # processVehicleDiagnosis
+├── usecases/agents/             # (Fase 2)
+├── usecases/simulation/         # (Fase 3)
+├── infrastructure/hardware-simulator/ # obdSimulator, obdSimulatorRepository, simulationScenario
+├── infrastructure/math-parsers/      # hexParser (SAE J1979)
+├── infrastructure/http/              # server.ts, controllers/diagnosisController
+├── infrastructure/mcp/               # (Fase 2)
+└── main.ts                            # Composition root (Express :4000)
+```
+
+### Pendiente por fase
+
+- **Fase 1** (base técnica, hasta 10 jul): ✅ Completada — 43 tests, Express API, dashboard React en curso
 - **Fase 2** (capa IA, hasta 15 jul): `mcpServer.ts`, `executeCognitiveDiagnosis.ts`
 - **Fase 3** (cierre, hasta 20 jul): streaming, cambio de escenarios, README final
 

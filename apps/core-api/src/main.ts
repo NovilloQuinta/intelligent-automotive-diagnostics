@@ -1,6 +1,4 @@
-import { ObdSimulator } from '@/infrastructure/hardware-simulator/obdSimulator.js'
-import { ObdSimulatorRepository } from '@/infrastructure/hardware-simulator/obdSimulatorRepository.js'
-import { processVehicleDiagnosis } from '@/usecases/diagnostics/processVehicleDiagnosis.js'
+import { createServer } from '@/infrastructure/http/server.js'
 import type { SimulationScenario } from '@/infrastructure/hardware-simulator/simulationScenario.js'
 import type { LiveData } from '@/domain/entities/liveData.js'
 
@@ -11,23 +9,34 @@ const audiIdleData: LiveData = {
   intakeTemp: 25,
 }
 
-const defaultScenario: SimulationScenario = {
-  id: 'audi-a3-idle',
-  name: 'Audi A3 al ralentí',
-  vehicleType: 'car',
-  sensorValues: audiIdleData,
-  dtcConfig: [{ code: 'P0301', description: 'Cylinder 1 Misfire' }],
+const kawaData: LiveData = {
+  rpm: 4500,
+  coolantTemp: 105,
+  speed: 0,
+  intakeTemp: 28,
 }
 
-async function main(): Promise<void> {
-  const simulator = new ObdSimulator(defaultScenario)
-  const repository = new ObdSimulatorRepository(simulator)
-  const diagnosis = await processVehicleDiagnosis(repository)
+const scenarios: SimulationScenario[] = [
+  {
+    id: 'audi-a3-idle',
+    name: 'Audi A3 al ralentí',
+    vehicleType: 'car',
+    sensorValues: audiIdleData,
+    dtcConfig: [{ code: 'P0301', description: 'Cylinder 1 Misfire' }],
+  },
+  {
+    id: 'kawa-z900',
+    name: 'Kawasaki Z900',
+    vehicleType: 'motorcycle',
+    sensorValues: kawaData,
+    dtcConfig: [],
+  },
+]
 
-  console.log(JSON.stringify(diagnosis, null, 2))
-}
+const PORT = Number(process.env.PORT) || 4000
 
-main().catch((err) => {
-  console.error(err)
-  process.exit(1)
+const app = createServer(scenarios)
+
+app.listen(PORT, () => {
+  console.log(`API listening on http://localhost:${PORT}`)
 })

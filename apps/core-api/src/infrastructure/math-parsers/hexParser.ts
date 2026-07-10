@@ -35,7 +35,7 @@ export function parseRpm(hex: string): number {
   }
   const a = hexToByte(hex.slice(0, 2))
   const b = hexToByte(hex.slice(2, 4))
-  const rpm = ((a * 256) + b) / 4
+  const rpm = (a * 256 + b) / 4
   if (rpm < MIN_RPM || rpm > MAX_RPM) {
     throw new ParseError(`RPM ${rpm} out of range [${MIN_RPM}, ${MAX_RPM}]`)
   }
