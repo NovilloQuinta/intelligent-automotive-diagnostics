@@ -1,0 +1,8 @@
+services:
+  elm327:
+    build:
+      context: .
+      dockerfile: docker/elm327/Dockerfile
+    ports:
+      - "35000:35000"
+    restart: unless-stopped

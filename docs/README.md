@@ -10,7 +10,10 @@ docs/
 ├── adr/               # Architectural Decision Records
 │   ├── 001-arquitectura-del-sistema.md
 │   ├── 002-persistencia-de-datos.md
-│   └── 003-diagnostico-cognitivo-mcp.md
+│   ├── 003-diagnostico-cognitivo-mcp.md
+│   └── 004-elm327-emulador-docker.md
+├── infrastructure/    # Guias de infraestructura y servicios
+│   └── elm327-emulator.md
 └── db/                # Esquemas y propuestas de base de datos
     └── schema-proposal.md
 ```

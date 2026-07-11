@@ -11,6 +11,9 @@ dist/
 .env.local
 .env.*.local
 
+# Docker
+.dockerignore
+
 # IDE
 .vs/
 .idea/

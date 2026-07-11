@@ -1,0 +1,14 @@
+{
+  "name": "intelligent-automotive-diagnostics",
+  "version": "0.1.0",
+  "description": "TFM - Vehicular telemetry simulation & AI-powered diagnosis using MCP",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "obd:send": "tsx scripts/send-obd.ts",
+    "obd:scan": "tsx scripts/scan-pids.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.0"
+  }
+}

@@ -13,6 +13,27 @@
 - **Tests**: Vitest 3
 - **Package manager**: pnpm
 - **Tooling**: tsx (dev), tsc (build)
+- **Contenedores**: Docker + Docker Compose
+- **OBD Reference**: ELM327-emulator v3.0.5 (Python 3.11, sidecar de testing)
+
+## Servicios Docker
+
+| Servicio | Puerto | Descripcion |
+|---|---|---|
+| `elm327` | 35000 | ELM327-emulator con escenario Toyota Auris Hybrid |
+
+```bash
+docker compose up -d elm327    # arrancar emulador
+docker compose logs elm327      # ver actividad
+docker compose down elm327      # parar
+```
+
+## Scripts OBD (raiz)
+
+```bash
+pnpm tsx scripts/send-obd.ts "01 0C"    # enviar comando OBD al emulador
+pnpm tsx scripts/scan-pids.ts           # escanear PIDs soportados
+```
 
 ## Arquitectura (Clean Architecture + MCP)
 
@@ -46,6 +67,18 @@ apps/core-api/src/
 │       └── server.ts           # Express / Fastify
 │
 ├── main.ts                     # Composition root / DI manual
+```
+
+```
+raiz/
+├── docker/
+│   └── elm327/Dockerfile            # Contenedor ELM327-emulator (testing)
+├── docker-compose.yml               # Servicios de desarrollo
+├── scripts/
+│   ├── send-obd.ts                  # Envia comandos OBD al emulador
+│   └── scan-pids.ts                 # Escanea PIDs soportados
+├── apps/
+│   └── core-api/...
 ```
 
 ## 4 Casos de Uso Core
@@ -106,9 +139,23 @@ apps/core-api/src/
 └── main.ts                            # Composition root (Express :4000)
 ```
 
+```
+raiz/
+├── docker/elm327/Dockerfile         # ELM327-emulator container (testing)
+├── docker-compose.yml               # Servicios de desarrollo
+├── scripts/
+│   ├── send-obd.ts                  # Enviar comandos OBD al emulador
+│   └── scan-pids.ts                 # Escanear PIDs soportados
+├── docs/
+│   ├── adr/                         # 4 ADRs (incl. 004-elm327-emulador)
+│   └── infrastructure/              # Guia de infra (elm327-emulator.md)
+├── package.json                     # Scripts del monorepo (obd:send, obd:scan)
+└── .env                             # ELM327_HOST, ELM327_PORT
+```
+
 ### Pendiente por fase
 
-- **Fase 1** (base técnica, hasta 10 jul): ✅ Completada — 43 tests, Express API, dashboard React en curso
+- **Fase 1** (base tecnica, hasta 10 jul): Completada — 43 tests, Express API, ELM327-emulator en Docker
 - **Fase 2** (capa IA, hasta 15 jul): `mcpServer.ts`, `executeCognitiveDiagnosis.ts`
 - **Fase 3** (cierre, hasta 20 jul): streaming, cambio de escenarios, README final
 
