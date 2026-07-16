@@ -181,10 +181,17 @@ Filosofía **"Documentation As You Code"** — la documentación se escribe al m
 - **Docs cerca del código**: tests junto al .ts que prueban (`*.test.ts`), documentación de esquemas en `docs/db/`
 - **Documentar el "por qué"**, no el "qué" — el código ya dice lo que hace
 
-## Skills
+## Skills (incluidas en el proyecto)
 
-- `typescript-best-practices` — load when writing or reviewing TypeScript code (naming, typing, utility types, code quality)
-- `tdd-workflow` — load before writing tests or starting a Red-Green-Refactor cycle
+Las skills viven en `.opencode/skills/` (autocontenidas, no dependen de paths externos):
+
+| Skill | Path | Cuándo cargar |
+|---|---|---|
+| `typescript-best-practices` | `.opencode/skills/typescript-best-practices/` | Al escribir o revisar TypeScript |
+| `tdd-workflow` | `.opencode/skills/tdd-workflow/` | Antes de escribir tests o ciclo Red-Green-Refactor |
+| `tsdoc-jsdoc-documentation` | `.opencode/skills/tsdoc-jsdoc-documentation/` | Antes de crear o revisar TSDoc en exports públicos |
+
+Cárgalas con `skill` tool al inicio de cada fase de desarrollo.
 
 ## Additional docs
 

@@ -6,7 +6,13 @@
   "type": "module",
   "scripts": {
     "obd:send": "tsx scripts/send-obd.ts",
-    "obd:scan": "tsx scripts/scan-pids.ts"
+    "obd:scan": "tsx scripts/scan-pids.ts",
+    "build": "cd apps/core-api && pnpm build",
+    "test": "cd apps/core-api && pnpm test",
+    "test:watch": "cd apps/core-api && pnpm test:watch",
+    "test:coverage": "cd apps/core-api && pnpm test:coverage",
+    "lint": "cd apps/core-api && pnpm lint",
+    "lint:docs": "cd apps/core-api && pnpm lint:docs"
   },
   "devDependencies": {
     "tsx": "^4.19.0"

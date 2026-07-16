@@ -3,7 +3,7 @@ import { createDiagnosisController } from '@/infrastructure/http/controllers/dia
 import type { SimulationScenario } from '@/infrastructure/hardware-simulator/simulationScenario.js'
 
 /** Crea y devuelve la instancia de Express con todas las rutas montadas. */
-export function createServer(scenarios: SimulationScenario[]) {
+export function createServer(scenarios: SimulationScenario[]): express.Application {
   const app = express()
   const controller = createDiagnosisController(scenarios)
 
