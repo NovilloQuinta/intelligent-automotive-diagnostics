@@ -5,10 +5,14 @@ import type { PidDefinition, PidReading } from '@/domain/entities/pidDefinition.
 
 /** Contrato para la persistencia del catálogo auto-expansivo de vehículos, ECUs y PIDs. */
 export interface VehicleRepository {
-  /** Registra un vehículo nuevo o actualiza la fecha de último avistamiento si ya existe (por VIN). */
+  /** Registra un vehículo nuevo o actualiza la fecha de último avistamiento si ya existe (por VIN).
+   * @throws VinDecodeError si el VIN no cumple el formato ISO 3779
+   */
   upsertVehicle(profile: VehicleProfile): Promise<VehicleProfile>
 
-  /** Busca un vehículo por su VIN. */
+  /** Busca un vehículo por su VIN.
+   * @throws VinDecodeError si el VIN no cumple el formato ISO 3779
+   */
   findVehicleByVin(vin: string): Promise<VehicleProfile | null>
 
   /** Registra una ECU asociada a un vehículo. */

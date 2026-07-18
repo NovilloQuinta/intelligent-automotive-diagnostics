@@ -1,5 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import * as schema from './schema.js'
+import { validateVin } from '@/infrastructure/obd/protocol/vinDecoder.js'
 import type { DiagnosticsDb } from './db.js'
 import type { VehicleRepository } from '@/application/ports/vehicleRepository.interface.js'
 import type { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
@@ -12,7 +13,8 @@ export class SqliteVehicleRepository implements VehicleRepository {
   constructor(private readonly db: DiagnosticsDb) {}
 
   async upsertVehicle(profile: VehicleProfile): Promise<VehicleProfile> {
-    const existing = await this.findVehicleByVin(profile.vin)
+    const vin = validateVin(profile.vin)
+    const existing = await this.findVehicleByVin(vin)
 
     if (existing?.id) {
       await this.db
@@ -32,7 +34,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
     const result = await this.db
       .insert(schema.vehicles)
       .values({
-        vin: profile.vin,
+        vin,
         make: profile.make,
         model: profile.model,
         year: profile.year,
@@ -46,10 +48,11 @@ export class SqliteVehicleRepository implements VehicleRepository {
   }
 
   async findVehicleByVin(vin: string): Promise<VehicleProfile | null> {
+    const validatedVin = validateVin(vin)
     const rows = await this.db
       .select()
       .from(schema.vehicles)
-      .where(eq(schema.vehicles.vin, vin))
+      .where(eq(schema.vehicles.vin, validatedVin))
       .limit(1)
 
     if (rows.length === 0) return null

@@ -3,6 +3,7 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from '@/infrastructure/persistence/sqlite/schema.js'
 import { SqliteVehicleRepository } from '@/infrastructure/persistence/sqlite/vehicleRepository.js'
+import { VinDecodeError } from '@/infrastructure/obd/protocol/vinDecoder.js'
 import type { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
 import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { PidDefinition, PidReading } from '@/domain/entities/pidDefinition.js'
@@ -108,6 +109,14 @@ describe('SqliteVehicleRepository', () => {
       expect(second.id).toBe(first.id)
       expect(second.year).toBe(2015)
     })
+
+    it('should throw VinDecodeError when VIN has wrong length', async () => {
+      await expect(repo.upsertVehicle({ ...toyotaAuris, vin: 'SHORT' })).rejects.toThrow(VinDecodeError)
+    })
+
+    it('should throw VinDecodeError when VIN has forbidden character I', async () => {
+      await expect(repo.upsertVehicle({ ...toyotaAuris, vin: 'WAIZZZ8V5JA123456' })).rejects.toThrow(VinDecodeError)
+    })
   })
 
   describe('findVehicleByVin', () => {
@@ -122,9 +131,13 @@ describe('SqliteVehicleRepository', () => {
     })
 
     it('should return null for unknown VIN', async () => {
-      const result = await repo.findVehicleByVin('NONEXISTENT')
+      const result = await repo.findVehicleByVin('XXXXXXXXXXXX99999')
 
       expect(result).toBeNull()
+    })
+
+    it('should throw VinDecodeError when searching with invalid VIN', async () => {
+      await expect(repo.findVehicleByVin('SHORT')).rejects.toThrow(VinDecodeError)
     })
   })
 
