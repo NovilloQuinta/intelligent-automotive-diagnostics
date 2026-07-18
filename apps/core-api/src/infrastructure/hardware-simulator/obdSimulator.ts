@@ -55,7 +55,7 @@ export class ObdSimulator {
 
   /** Service 09 — Devuelve el VIN del vehículo simulado. */
   getVin(): string {
-    return this.scenario.vehicleInfo.vin ?? 'SIMULATED_VIN'
+    return this.scenario.vehicleInfo.vin
   }
 
   /** Devuelve los PIDs soportados por el escenario. */

@@ -13,7 +13,7 @@ function mockObdRepo(overrides: Partial<ObdRepository> = {}): ObdRepository {
     readDtcCodes: vi.fn().mockResolvedValue([{ code: 'P0301', description: 'Cylinder 1 Misfire' }]),
     clearDtcCodes: vi.fn().mockResolvedValue(undefined),
     readVin: vi.fn().mockResolvedValue('WAUZZZ8V5JA123456'),
-    getVehicleInfo: vi.fn().mockResolvedValue({ make: 'Audi', model: 'A3', year: 2018, engineType: '2.0 TFSI' }),
+    getVehicleInfo: vi.fn().mockResolvedValue({ make: 'Audi', model: 'A3', year: 2018, engineType: '2.0 TFSI', vin: 'WAUZZZ8V5JA123456' }),
     setPower: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   }

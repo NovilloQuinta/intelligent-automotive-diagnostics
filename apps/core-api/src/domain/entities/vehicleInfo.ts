@@ -4,5 +4,5 @@ export interface VehicleInfo {
   readonly model: string
   readonly year: number
   readonly engineType: string
-  readonly vin?: string
+  readonly vin: string
 }
