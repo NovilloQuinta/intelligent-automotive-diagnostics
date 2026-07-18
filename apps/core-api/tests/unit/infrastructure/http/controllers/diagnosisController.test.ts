@@ -34,10 +34,12 @@ const mockScenarios: SimulationScenario[] = [
   },
 ]
 
+const mockConfig = { mode: 'sync' as const, scenarios: mockScenarios }
+
 describe('diagnosisController', () => {
   describe('getScenarios', () => {
     it('should return the list of scenarios', () => {
-      const controller = createDiagnosisController(mockScenarios)
+      const controller = createDiagnosisController(mockConfig)
       const req = makeReq()
       const res = makeRes()
 
@@ -50,7 +52,7 @@ describe('diagnosisController', () => {
 
   describe('runDiagnosis', () => {
     it('should run diagnosis for a valid scenario', async () => {
-      const controller = createDiagnosisController(mockScenarios)
+      const controller = createDiagnosisController(mockConfig)
       const req = makeReq({ scenarioId: 'audi-a3-idle' })
       const res = makeRes()
 
@@ -64,7 +66,7 @@ describe('diagnosisController', () => {
     })
 
     it('should return 404 for an unknown scenario', async () => {
-      const controller = createDiagnosisController(mockScenarios)
+      const controller = createDiagnosisController(mockConfig)
       const req = makeReq({ scenarioId: 'nonexistent' })
       const res = makeRes()
 

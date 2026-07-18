@@ -2,10 +2,16 @@ import express from 'express'
 import { createDiagnosisController } from '@/infrastructure/http/controllers/diagnosisController.js'
 import type { SimulationScenario } from '@/infrastructure/hardware-simulator/simulationScenario.js'
 
+/** Configuración del servidor Express. */
+export interface ServerConfig {
+  readonly mode: string
+  readonly scenarios: SimulationScenario[]
+}
+
 /** Crea y devuelve la instancia de Express con todas las rutas montadas. */
-export function createServer(scenarios: SimulationScenario[]): express.Application {
+export function createServer(config: ServerConfig): express.Application {
   const app = express()
-  const controller = createDiagnosisController(scenarios)
+  const controller = createDiagnosisController(config)
 
   app.use(express.json())
 

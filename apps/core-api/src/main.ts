@@ -2,6 +2,8 @@ import { createServer } from '@/infrastructure/http/server.js'
 import type { SimulationScenario } from '@/infrastructure/hardware-simulator/simulationScenario.js'
 import type { LiveData } from '@/domain/entities/liveData.js'
 
+const OBD_MODE = process.env.OBD_MODE ?? 'sync'
+
 const audiIdleData: LiveData = {
   rpm: 750,
   coolantTemp: 90,
@@ -35,8 +37,8 @@ const scenarios: SimulationScenario[] = [
 
 const PORT = Number(process.env.PORT) || 4000
 
-const app = createServer(scenarios)
+const app = createServer({ mode: OBD_MODE, scenarios })
 
 app.listen(PORT, () => {
-  console.log(`API listening on http://localhost:${PORT}`)
+  console.log(`API listening on http://localhost:${PORT} (OBD_MODE=${OBD_MODE})`)
 })

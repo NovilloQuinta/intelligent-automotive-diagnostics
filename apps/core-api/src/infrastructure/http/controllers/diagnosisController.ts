@@ -1,7 +1,7 @@
 import { ObdSimulator } from '@/infrastructure/hardware-simulator/obdSimulator.js'
 import { ObdSimulatorRepository } from '@/infrastructure/hardware-simulator/obdSimulatorRepository.js'
 import { processVehicleDiagnosis } from '@/usecases/diagnostics/processVehicleDiagnosis.js'
-import type { SimulationScenario } from '@/infrastructure/hardware-simulator/simulationScenario.js'
+import type { ServerConfig } from '@/infrastructure/http/server.js'
 
 interface ExpressRequest {
   body: unknown
@@ -13,7 +13,9 @@ interface ExpressResponse {
 }
 
 /** Factory que devuelve los handlers del controlador de diagnóstico. */
-export function createDiagnosisController(scenarios: SimulationScenario[]) {
+export function createDiagnosisController(config: ServerConfig) {
+  const { scenarios } = config
+
   return {
     getScenarios(_req: ExpressRequest, res: ExpressResponse) {
       res.status(200).json({ scenarios })

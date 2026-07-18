@@ -18,7 +18,7 @@ let baseUrl: string
 let httpServer: Server
 
 beforeAll(async () => {
-  const app = createServer(mockScenarios)
+  const app = createServer({ mode: 'sync', scenarios: mockScenarios })
   await new Promise<void>((resolve) => {
     httpServer = app.listen(0, () => resolve())
   })
