@@ -1,6 +1,8 @@
 import express from 'express'
+import swaggerUi from 'swagger-ui-express'
 import { createDiagnosisController } from '@/infrastructure/http/controllers/diagnosisController.js'
 import type { SimulationScenario } from '@/infrastructure/hardware-simulator/simulationScenario.js'
+import { openApiSpec } from '@/infrastructure/http/swagger.js'
 
 /** Configuración del servidor Express. */
 export interface ServerConfig {
@@ -28,6 +30,20 @@ export function createServer(config: ServerConfig): express.Application {
 
   app.get('/api/scenarios', controller.getScenarios)
   app.post('/api/diagnosis', controller.runDiagnosis)
+
+  app.get('/', (_req, res) => {
+    res.redirect('/api-docs')
+  })
+
+  app.get('/api', (_req, res) => {
+    res.redirect('/api-docs')
+  })
+
+  app.get('/api-docs.json', (_req, res) => {
+    res.json(openApiSpec)
+  })
+
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec))
 
   return app
 }
