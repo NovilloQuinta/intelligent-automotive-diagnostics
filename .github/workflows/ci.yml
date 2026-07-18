@@ -10,6 +10,10 @@ jobs:
   lint-and-test:
     runs-on: ubuntu-latest
 
+    defaults:
+      run:
+        working-directory: apps/core-api
+
     steps:
       - uses: actions/checkout@v4
 
@@ -21,9 +25,10 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: apps/core-api/pnpm-lock.yaml
 
       - run: pnpm install
 
-      - run: pnpm --filter core-api lint
+      - run: pnpm lint
 
-      - run: pnpm --filter core-api test
+      - run: pnpm test
