@@ -1,6 +1,6 @@
 import { ObdSimulator } from '@/infrastructure/hardware-simulator/obdSimulator.js'
 import { ObdSimulatorRepository } from '@/infrastructure/hardware-simulator/obdSimulatorRepository.js'
-import { processVehicleDiagnosis } from '@/usecases/diagnostics/processVehicleDiagnosis.js'
+import { processVehicleDiagnosis } from '@/application/diagnostics/processVehicleDiagnosis.js'
 import type { ServerConfig } from '@/infrastructure/http/server.js'
 
 interface ExpressRequest {

@@ -1,4 +1,4 @@
-import type { ObdRepository } from '@/domain/repositories/obdRepository.interface.js'
+import type { ObdRepository } from '@/application/ports/obdRepository.interface.js'
 import type { DiagnosisResult, Severity } from '@/domain/entities/diagnosisResult.js'
 
 function computeSeverity(dtcCount: number): Severity {

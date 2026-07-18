@@ -1,4 +1,4 @@
-import type { ObdRepository } from '@/domain/repositories/obdRepository.interface.js'
+import type { ObdRepository } from '@/application/ports/obdRepository.interface.js'
 import type { LiveData } from '@/domain/entities/liveData.js'
 import type { DtcCode } from '@/domain/entities/dtcCode.js'
 import type { ObdSimulator } from './obdSimulator.js'

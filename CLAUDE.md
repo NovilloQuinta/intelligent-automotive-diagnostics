@@ -10,6 +10,8 @@
 - **Lenguaje**: TypeScript 5.7+ estricto
 - **Framework web**: Express 5 + Zod
 - **IA/Agentes**: MCP SDK (`@modelcontextprotocol/sdk`)
+- **Persistencia**: SQLite + Drizzle ORM (catálogo auto-expansivo de PIDs)
+- **Vectorial**: LanceDB (búsqueda semántica de PIDs, Fase 2b)
 - **Tests**: Vitest 3
 - **Package manager**: pnpm
 - **Tooling**: tsx (dev), tsc (build)
@@ -35,22 +37,44 @@ pnpm tsx scripts/send-obd.ts "01 0C"    # enviar comando OBD al emulador
 pnpm tsx scripts/scan-pids.ts           # escanear PIDs soportados
 ```
 
+## Scripts DB (apps/core-api)
+
+```bash
+pnpm drizzle-kit generate               # generar migraciones desde schema.ts
+pnpm drizzle-kit migrate                # aplicar migraciones a SQLite
+```
+
+## Base de datos (SQLite + Drizzle)
+
+```bash
+# La BD se crea automáticamente en data/diagnostics.db al iniciar la API.
+# En tests se usa :memory: (sin archivo).
+```
+
 ## Arquitectura (Clean Architecture + MCP)
 
 ```
 apps/core-api/src/
-├── domain/                     # Capa 1: Entidades e interfaces puras
-│   ├── entities/
-│   │   └── vehicle.ts          # LiveData, DTC, estados del vehículo
-│   └── repositories/
-│       └── obdRepository.interface.ts  # Contrato de adquisición de datos
+├── domain/                     # Capa 1: Entidades puras (sin dependencias externas)
+│   └── entities/
+│       ├── vehicleProfile.ts   # VehicleProfile, DiagnosisSession
+│       ├── ecuInfo.ts          # EcuInfo (descubrimiento de ECUs)
+│       ├── pidDefinition.ts    # PidDefinition, PidReading (catálogo)
+│       ├── vehicleInfo.ts      # LiveData, DTC, estados del vehículo (legacy)
+│       └── ...
 │
-├── usecases/                   # Capa 2: Lógica de aplicación / orquestación
+├── application/                # Capa 2: Puertos + Casos de uso
+│   ├── ports/
+│   │   ├── obdRepository.interface.ts    # Contrato de adquisición de datos
+│   │   └── vehicleRepository.interface.ts # CRUD catálogo auto-expansivo
 │   ├── diagnostics/
 │   │   ├── processVehicleDiagnosis.ts    # Core: lectura → conversión → diagnóstico
 │   │   └── activeTelemetryStream.ts      # Streaming reactivo de PIDs
 │   ├── agents/
 │   │   └── executeCognitiveDiagnosis.ts  # Evaluación con IA vía MCP
+│   ├── discovery/              # Descubrimiento de vehículos y PIDs (Fase 2a)
+│   │   ├── discoverVehicle.ts  # VIN + PIDs soportados → BD
+│   │   └── scanEcus.ts         # TesterPresent → descubre ECUs en el bus
 │   └── simulation/
 │       └── switchSimulationScenario.ts   # Cambio dinámico de escenarios
 │
@@ -61,10 +85,26 @@ apps/core-api/src/
 │   │   └── hexParser.ts        # Conversor SAE J1979 (HEX → magnitudes físicas)
 │   ├── mcp/
 │   │   └── mcpServer.ts        # Servidor MCP (herramientas para el LLM)
+│   ├── obd/                    # Capa de protocolo OBD-II (Fase 2)
+│   │   ├── elm327Client.ts     # Cliente TCP al emulador ELM327
+│   │   └── protocol/           # Decodificadores de protocolo
+│   │       ├── pidParser.ts    # Parser genérico de fórmulas (refactor de hexParser)
+│   │       ├── vinDecoder.ts   # Decodificador VIN (Mode 09)
+│   │       ├── pidScanner.ts   # Scanner de PIDs soportados (Mode 01)
+│   │       └── ecuScanner.ts   # Descubrimiento de ECUs (AT SH + TesterPresent)
+│   ├── persistence/            # Capa de persistencia
+│   │   ├── sqlite/
+│   │   │   ├── schema.ts       # Schema Drizzle (vehicles, ecus, pid_definitions, ...)
+│   │   │   ├── db.ts           # Init SQLite + Drizzle
+│   │   │   └── vehicleRepository.ts  # Implementación de VehicleRepository
+│   │   └── vector/             # LanceDB (Fase 2b)
+│   │       └── lancedb.ts
 │   └── http/
 │       ├── controllers/
 │       │   └── diagnosisController.ts
-│       └── server.ts           # Express / Fastify
+│       └── server.ts           # Express
+│
+└── main.ts                     # Composition root / DI manual
 │
 ├── main.ts                     # Composition root / DI manual
 ```
@@ -81,19 +121,21 @@ raiz/
 │   └── core-api/...
 ```
 
-## 4 Casos de Uso Core
+## Casos de Uso Core
 
 | Use Case | Archivo | Rol en la demo |
 |---|---|---|
-| `ProcessVehicleDiagnosis` | `usecases/diagnostics/processVehicleDiagnosis.ts` | Flujo determinista: bytes → parseo → diagnóstico |
-| `ExecuteCognitiveDiagnosis` | `usecases/agents/executeCognitiveDiagnosis.ts` | Corazón del TFM: IA agéntica vía MCP tool calling |
-| `StreamActiveTelemetry` | `usecases/telemetry/streamActiveTelemetry.ts` | Streaming reactivo de datos en vivo (RPM, temp...) |
-| `SwitchSimulationScenario` | `usecases/simulation/switchSimulationScenario.ts` | Cambio dinámico de escenario en demo en vivo |
+| `ProcessVehicleDiagnosis` | `application/diagnostics/processVehicleDiagnosis.ts` | Flujo determinista: bytes → parseo → diagnóstico |
+| `ExecuteCognitiveDiagnosis` | `application/agents/executeCognitiveDiagnosis.ts` | Corazón del TFM: IA agéntica vía MCP tool calling |
+| `DiscoverVehicle` | `application/discovery/discoverVehicle.ts` | Descubrimiento: VIN + PIDs → catálogo auto-expansivo |
+| `ScanEcus` | `application/discovery/scanEcus.ts` | Descubrimiento de ECUs en el bus |
+| `StreamActiveTelemetry` | `application/diagnostics/activeTelemetryStream.ts` | Streaming reactivo de datos en vivo (RPM, temp...) |
+| `SwitchSimulationScenario` | `application/simulation/switchSimulationScenario.ts` | Cambio dinámico de escenario en demo en vivo |
 
 ## Tests
 
 ```bash
-pnpm test           # vitest run (43 tests)
+pnpm test           # vitest run (56 tests)
 pnpm test:watch     # vitest watch
 pnpm test:coverage  # vitest run --coverage
 ```
@@ -109,7 +151,7 @@ pnpm test:coverage  # vitest run --coverage
 ### Umbrales de coverage (Vitest)
 
 ```
-usecases/**      ≥ 90% statements
+application/**      ≥ 90% statements
 infrastructure/** ≥ 80% statements
 domain/**         excluido (solo tipos)
 main.ts, scripts/ excluido (composition root / tooling)
@@ -127,15 +169,17 @@ main.ts, scripts/ excluido (composition root / tooling)
 
 ```
 apps/core-api/src/
-├── domain/entities/             # vehicleInfo, liveData, dtcCode, diagnosisResult
-├── domain/repositories/         # obdRepository.interface
-├── usecases/diagnostics/        # processVehicleDiagnosis
-├── usecases/agents/             # (Fase 2)
-├── usecases/simulation/         # (Fase 3)
+├── domain/entities/             # vehicleProfile, ecuInfo, pidDefinition, vehicleInfo, liveData, dtcCode, diagnosisResult
+├── application/ports/           # obdRepository.interface, vehicleRepository.interface
+├── application/diagnostics/     # processVehicleDiagnosis
+├── application/discovery/       # (Fase 2a)
+├── application/agents/          # (Fase 2b)
+├── application/simulation/      # (Fase 3)
 ├── infrastructure/hardware-simulator/ # obdSimulator, obdSimulatorRepository, simulationScenario
 ├── infrastructure/math-parsers/      # hexParser (SAE J1979)
 ├── infrastructure/http/              # server.ts, controllers/diagnosisController
-├── infrastructure/mcp/               # (Fase 2)
+├── infrastructure/persistence/       # sqlite/ (schema, db, vehicleRepository)
+├── infrastructure/mcp/               # (Fase 2b)
 └── main.ts                            # Composition root (Express :4000)
 ```
 
@@ -156,7 +200,8 @@ raiz/
 ### Pendiente por fase
 
 - **Fase 1** (base tecnica, hasta 10 jul): Completada — 43 tests, Express API, ELM327-emulator en Docker
-- **Fase 2** (capa IA, hasta 15 jul): `mcpServer.ts`, `executeCognitiveDiagnosis.ts`
+- **Fase 2a** (persistencia + protocolo, en curso): SQLite/Drizzle + catálogo auto-expansivo + clientes OBD
+- **Fase 2b** (capa IA, hasta 15 jul): `mcpServer.ts`, `executeCognitiveDiagnosis.ts`, LanceDB
 - **Fase 3** (cierre, hasta 20 jul): streaming, cambio de escenarios, README final
 
 ## Convenciones
@@ -174,7 +219,7 @@ raiz/
 
 Filosofía **"Documentation As You Code"** — la documentación se escribe al mismo tiempo que el código.
 
-- **TSDoc obligatorio** en toda export pública de `domain/`, `usecases/` e `infrastructure/`: parámetros, retorno, errores, propósito
+- **TSDoc obligatorio** en toda export pública de `domain/`, `application/` e `infrastructure/`: parámetros, retorno, errores, propósito
 - **ADR** en `docs/adr/` para cada decisión arquitectónica significativa (formato Michael Nygard)
 - **README.md** raíz como punto de entrada: quick start, arquitectura, testing, fases
 - **Linter de docs** disponible: `pnpm lint:docs` — verifica existencia de documentos clave y presencia de TSDoc en archivos fuente
@@ -187,6 +232,7 @@ Las skills viven en `.opencode/skills/` (autocontenidas, no dependen de paths ex
 
 | Skill | Path | Cuándo cargar |
 |---|---|---|
+| `clean-architecture` | `.opencode/skills/clean-architecture/` | Antes de crear/mover ficheros entre capas |
 | `typescript-best-practices` | `.opencode/skills/typescript-best-practices/` | Al escribir o revisar TypeScript |
 | `tdd-workflow` | `.opencode/skills/tdd-workflow/` | Antes de escribir tests o ciclo Red-Green-Refactor |
 | `tsdoc-jsdoc-documentation` | `.opencode/skills/tsdoc-jsdoc-documentation/` | Antes de crear o revisar TSDoc en exports públicos |
