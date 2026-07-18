@@ -69,6 +69,7 @@ Load this skill when writing or reviewing TypeScript code. Based on AWS prescrip
   const MAX_RPM = 8000;        // instead of magic 8000
   const COOLANT_TEMP_MAX = 120; // instead of magic 120
   ```
+- Validate all external input — never trust `req.body`, `req.query`, or `req.params` without parsing/validation
 - No superfluous comments — prefer self-documenting code with descriptive names
 - Explicit error handling — never leave empty `catch` blocks; always log or re-throw:
   ```ts
