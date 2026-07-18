@@ -135,7 +135,7 @@ raiz/
 ## Tests
 
 ```bash
-pnpm test           # vitest run (56 tests)
+pnpm test           # vitest run (90 tests)
 pnpm test:watch     # vitest watch
 pnpm test:coverage  # vitest run --coverage
 ```
@@ -177,16 +177,16 @@ main.ts, scripts/ excluido (composition root / tooling)
 
 ```
 apps/core-api/src/
-├── domain/entities/             # vehicleProfile, ecuInfo, pidDefinition, vehicleInfo, liveData, dtcCode, diagnosisResult
+├── domain/entities/             # vehicleProfile, ecuInfo, pidDefinition, vehicleInfo, liveData, dtcCode, diagnosisResult, freezeFrame
 ├── application/ports/           # obdRepository.interface, vehicleRepository.interface
 ├── application/diagnostics/     # processVehicleDiagnosis
 ├── application/discovery/       # (Fase 2a)
 ├── application/agents/          # (Fase 2b)
 ├── application/simulation/      # (Fase 3)
 ├── infrastructure/hardware-simulator/ # obdSimulator, obdSimulatorRepository, simulationScenario
-├── infrastructure/math-parsers/      # hexParser (SAE J1979)
+├── infrastructure/obd/protocol/      # pidParser (Shunting-yard, SAE J1979)
 ├── infrastructure/http/              # server.ts, controllers/diagnosisController
-├── infrastructure/persistence/       # sqlite/ (schema, db, vehicleRepository)
+├── infrastructure/persistence/       # sqlite/ (schema, db, vehicleRepository, seed-pids)
 ├── infrastructure/mcp/               # (Fase 2b)
 └── main.ts                            # Composition root (Express :4000)
 ```

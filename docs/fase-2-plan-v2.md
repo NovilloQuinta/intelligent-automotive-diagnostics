@@ -287,7 +287,26 @@ diagnosis_sessions(
 
 ## Estado
 
-- **Fase 1**: Completada — 43 tests, Express API, ELM327-emulator en Docker
-- **Fase 2a** (Paso 1-5): Base de datos + protocolo OBD
-- **Fase 2b** (Paso 6-8): MCP + LanceDB + LLM
+| Paso | Descripción | Estado | Tests |
+|---|---|---|---|
+| 1 | SQLite + Drizzle + VehicleRepository | ✅ Completado | 13 |
+| 2 | PidParser (Shunting-yard, SAE J1979) | ✅ Completado | 44 |
+| 3 | FreezeFrame + ObdRepository ampliado (5 services) | ✅ Completado | — |
+| 4 | Seed data (22 PIDs SAE J1979) | ✅ Completado | — |
+| 5 | ObdSimulator + ObdSimulatorRepository refactor | ✅ Completado | 6 |
+| 6 | processVehicleDiagnosis refactor (readPid) | ✅ Completado | 7 |
+| 7 | hexParser.ts eliminado | ✅ Completado | — |
+| API | Tests de integración HTTP | ✅ Completado | 17 |
+| 4-5* | Capa de protocolo OBD (TCP al emulador) | ⬜ Pendiente | — |
+| 5* | Use cases descubrimiento (discoverVehicle, scanEcus) | ⬜ Pendiente | — |
+| 6 | MCP Server (6 tools) | ⬜ Pendiente | — |
+| 7 | LanceDB (búsqueda vectorial) | ⬜ Pendiente | — |
+| 8 | Diagnóstico cognitivo (LLM + tool calling) | ⬜ Pendiente | — |
+| 9 | Integración final | ⬜ Pendiente | — |
+| 10 | Documentación (ADR-005, README final) | ⬜ Pendiente | — |
+
+- **Fase 1**: Completada — Express API, ELM327-emulator en Docker
+- **Fase 2a**: Completada — SQLite/Drizzle + PidParser + catálogo + API tests
+- **Fase 2b** (Paso 4-8* original): MCP + LanceDB + LLM — **siguiente**
 - **Fase 2c** (Paso 9-10): Integración + documentación
+- **Total tests**: 90
