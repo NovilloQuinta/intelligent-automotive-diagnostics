@@ -1,0 +1,139 @@
+import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
+
+/** PIDs estándar Mode 01 (SAE J1979) — globales, para cualquier vehículo. */
+export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
+  {
+    mode: '01', pidCode: '04', name: 'Calculated Engine Load', formula: 'A*100/255', unit: '%',
+    dataBytes: 1, pidType: 'formula', confidence: 1.0, source: 'manual',
+    description: 'Engine load calculated by the ECU',
+  },
+  {
+    mode: '01', pidCode: '05', name: 'Engine Coolant Temperature', formula: 'A-40', unit: '°C',
+    dataBytes: 1, pidType: 'formula', confidence: 1.0, source: 'manual',
+    minValue: -40, maxValue: 215,
+  },
+  {
+    mode: '01', pidCode: '06', name: 'Short Term Fuel Trim — Bank 1', formula: 'A*100/128-100', unit: '%',
+    dataBytes: 1, pidType: 'formula', confidence: 1.0, source: 'manual',
+    minValue: -100, maxValue: 99.2,
+  },
+  {
+    mode: '01', pidCode: '07', name: 'Long Term Fuel Trim — Bank 1', formula: 'A*100/128-100', unit: '%',
+    dataBytes: 1, pidType: 'formula', confidence: 1.0, source: 'manual',
+    minValue: -100, maxValue: 99.2,
+  },
+  {
+    mode: '01', pidCode: '0B', name: 'Intake Manifold Absolute Pressure', formula: 'A', unit: 'kPa',
+    dataBytes: 1, pidType: 'formula', confidence: 1.0, source: 'manual',
+    minValue: 0, maxValue: 255,
+  },
+  {
+    mode: '01', pidCode: '0C', name: 'Engine RPM', formula: '(A*256+B)/4', unit: 'rpm',
+    dataBytes: 2, pidType: 'formula', confidence: 1.0, source: 'manual',
+    minValue: 0, maxValue: 16383.75,
+  },
+  {
+    mode: '01', pidCode: '0D', name: 'Vehicle Speed', formula: 'A', unit: 'km/h',
+    dataBytes: 1, pidType: 'formula', confidence: 1.0, source: 'manual',
+    minValue: 0, maxValue: 255,
+  },
+  {
+    mode: '01', pidCode: '0E', name: 'Timing Advance', formula: 'A/2-64', unit: '° before TDC',
+    dataBytes: 1, pidType: 'formula', confidence: 1.0, source: 'manual',
+    minValue: -64, maxValue: 63.5,
+  },
+  {
+    mode: '01', pidCode: '0F', name: 'Intake Air Temperature', formula: 'A-40', unit: '°C',
+    dataBytes: 1, pidType: 'formula', confidence: 1.0, source: 'manual',
+    minValue: -40, maxValue: 215,
+  },
+  {
+    mode: '01', pidCode: '10', name: 'Mass Air Flow Rate', formula: '(A*256+B)/100', unit: 'g/s',
+    dataBytes: 2, pidType: 'formula', confidence: 1.0, source: 'manual',
+    minValue: 0, maxValue: 655.35,
+  },
+  {
+    mode: '01', pidCode: '11', name: 'Throttle Position', formula: 'A*100/255', unit: '%',
+    dataBytes: 1, pidType: 'formula', confidence: 1.0, source: 'manual',
+    minValue: 0, maxValue: 100,
+  },
+  {
+    mode: '01', pidCode: '2F', name: 'Fuel Tank Level Input', formula: 'A*100/255', unit: '%',
+    dataBytes: 1, pidType: 'formula', confidence: 1.0, source: 'manual',
+    minValue: 0, maxValue: 100,
+  },
+  {
+    mode: '01', pidCode: '31', name: 'Distance Traveled Since Codes Cleared', formula: 'A*256+B', unit: 'km',
+    dataBytes: 2, pidType: 'formula', confidence: 1.0, source: 'manual',
+    minValue: 0, maxValue: 65535,
+  },
+  {
+    mode: '01', pidCode: '42', name: 'Control Module Voltage', formula: '(A*256+B)/1000', unit: 'V',
+    dataBytes: 2, pidType: 'formula', confidence: 1.0, source: 'manual',
+    minValue: 0, maxValue: 65.535,
+  },
+  {
+    mode: '01', pidCode: '46', name: 'Ambient Air Temperature', formula: 'A-40', unit: '°C',
+    dataBytes: 1, pidType: 'formula', confidence: 1.0, source: 'manual',
+    minValue: -40, maxValue: 215,
+  },
+  {
+    mode: '01', pidCode: '5C', name: 'Engine Oil Temperature', formula: 'A-40', unit: '°C',
+    dataBytes: 1, pidType: 'formula', confidence: 1.0, source: 'manual',
+    minValue: -40, maxValue: 210,
+  },
+]
+
+/** Service 09 — Vehicle information PIDs. */
+export const STANDARD_MODE_09_PIDS: PidDefinition[] = [
+  {
+    mode: '09', pidCode: '02', name: 'Vehicle Identification Number (VIN)',
+    formula: '', unit: '', dataBytes: 17, pidType: 'ascii',
+    confidence: 1.0, source: 'manual',
+    description: '17-character VIN string',
+  },
+]
+
+/** PIDs propietarios Mode 22 para Toyota Auris Hybrid. */
+export const TOYOTA_AURIS_MODE_22_PIDS: PidDefinition[] = [
+  {
+    mode: '22', pidCode: '0300', name: 'TCU Odometer',
+    formula: '(A<<24|B<<16|C<<8|D)/10', unit: 'km',
+    dataBytes: 4, pidType: 'formula',
+    confidence: 0.9, source: 'manual',
+    description: 'Kilometraje almacenado en la Transmission Control Unit',
+    minValue: 0, maxValue: 999999,
+  },
+  {
+    mode: '22', pidCode: '0400', name: 'ECM Odometer',
+    formula: '(A<<24|B<<16|C<<8|D)/10', unit: 'km',
+    dataBytes: 4, pidType: 'formula',
+    confidence: 0.9, source: 'manual',
+    description: 'Kilometraje almacenado en la Engine Control Module',
+    minValue: 0, maxValue: 999999,
+  },
+  {
+    mode: '22', pidCode: '7A76', name: 'Hybrid Battery State of Charge',
+    formula: 'A*0.5', unit: '%',
+    dataBytes: 1, pidType: 'formula',
+    confidence: 0.85, source: 'manual',
+    minValue: 0, maxValue: 100,
+  },
+  {
+    mode: '22', pidCode: '7A53', name: 'Hybrid Battery Voltage',
+    formula: '(A*256+B)*0.01', unit: 'V',
+    dataBytes: 2, pidType: 'formula',
+    confidence: 0.85, source: 'manual',
+    minValue: 0, maxValue: 655.35,
+  },
+]
+
+/** Todos los PIDs de catálogo disponibles como seed data.
+ * Los PIDs globales (Mode 01 y 09) aplican a cualquier vehículo (vehicle_id = NULL).
+ * Los PIDs Mode 22 son específicos de Toyota Auris Hybrid.
+ */
+export const ALL_SEED_PIDS: PidDefinition[] = [
+  ...STANDARD_MODE_01_PIDS,
+  ...STANDARD_MODE_09_PIDS,
+  ...TOYOTA_AURIS_MODE_22_PIDS,
+]

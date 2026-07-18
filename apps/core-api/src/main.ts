@@ -25,6 +25,7 @@ const scenarios: SimulationScenario[] = [
     vehicleType: 'car',
     sensorValues: audiIdleData,
     dtcConfig: [{ code: 'P0301', description: 'Cylinder 1 Misfire' }],
+    vehicleInfo: { make: 'Audi', model: 'A3', year: 2018, engineType: '2.0 TFSI', vin: 'WAUZZZ8V5JA123456' },
   },
   {
     id: 'kawa-z900',
@@ -32,6 +33,7 @@ const scenarios: SimulationScenario[] = [
     vehicleType: 'motorcycle',
     sensorValues: kawaData,
     dtcConfig: [],
+    vehicleInfo: { make: 'Kawasaki', model: 'Z900', year: 2020, engineType: '948cc Inline-4', vin: 'JKAZR2A1XLA000111' },
   },
 ]
 

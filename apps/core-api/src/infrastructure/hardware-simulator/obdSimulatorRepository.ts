@@ -1,16 +1,23 @@
 import type { ObdRepository } from '@/application/ports/obdRepository.interface.js'
-import type { LiveData } from '@/domain/entities/liveData.js'
 import type { DtcCode } from '@/domain/entities/dtcCode.js'
+import type { FreezeFrame } from '@/domain/entities/freezeFrame.js'
+import type { VehicleInfo } from '@/domain/entities/vehicleInfo.js'
 import type { ObdSimulator } from './obdSimulator.js'
-import { parseAllPids } from '@/infrastructure/math-parsers/hexParser.js'
 
 /** Adaptador que implementa {@link ObdRepository} usando el simulador de hardware. */
 export class ObdSimulatorRepository implements ObdRepository {
   constructor(private readonly simulator: ObdSimulator) {}
 
-  async readLiveData(): Promise<LiveData> {
-    const hex = this.simulator.getRawTelemetry()
-    return parseAllPids(hex)
+  async readPid(mode: string, pid: string): Promise<number> {
+    return this.simulator.readPidValue(mode, pid)
+  }
+
+  async getSupportedPids(): Promise<string[]> {
+    return this.simulator.getSupportedPids()
+  }
+
+  async getFreezeFrame(dtc?: string): Promise<FreezeFrame | null> {
+    return this.simulator.getFreezeFrame(dtc)
   }
 
   async readDtcCodes(): Promise<DtcCode[]> {
@@ -18,6 +25,18 @@ export class ObdSimulatorRepository implements ObdRepository {
       code,
       description: '',
     }))
+  }
+
+  async clearDtcCodes(): Promise<void> {
+    // No-op en simulación: los DTCs se gestionan vía el escenario activo
+  }
+
+  async readVin(): Promise<string> {
+    return this.simulator.getVin()
+  }
+
+  async getVehicleInfo(): Promise<VehicleInfo> {
+    return this.simulator.getVehicleInfo()
   }
 
   async setPower(_on: boolean): Promise<void> {

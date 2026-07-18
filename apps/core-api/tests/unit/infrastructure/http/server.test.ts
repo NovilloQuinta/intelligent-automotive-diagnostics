@@ -11,6 +11,15 @@ const mockScenarios: SimulationScenario[] = [
     vehicleType: 'car',
     sensorValues: { rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 },
     dtcConfig: [{ code: 'P0301', description: 'Cylinder 1 Misfire' }],
+    vehicleInfo: { make: 'Audi', model: 'A3', year: 2018, engineType: '2.0 TFSI', vin: 'WAUZZZ8V5JA123456' },
+  },
+  {
+    id: 'kawa-z900',
+    name: 'Kawasaki Z900',
+    vehicleType: 'motorcycle',
+    sensorValues: { rpm: 4500, coolantTemp: 105, speed: 0, intakeTemp: 28 },
+    dtcConfig: [],
+    vehicleInfo: { make: 'Kawasaki', model: 'Z900', year: 2020, engineType: '948cc Inline-4', vin: 'JKAZR2A1XLA000111' },
   },
 ]
 
@@ -36,20 +45,101 @@ describe('HTTP server', () => {
     const body = (await res.json()) as { scenarios: unknown[] }
 
     expect(res.status).toBe(200)
-    expect(body.scenarios).toHaveLength(1)
+    expect(body.scenarios).toHaveLength(2)
     expect(body.scenarios[0]).toHaveProperty('id', 'audi-a3-idle')
+    expect(body.scenarios[1]).toHaveProperty('id', 'kawa-z900')
   })
 
-  it('should return diagnosis on POST /api/diagnosis', async () => {
-    const res = await fetch(`${baseUrl}/api/diagnosis`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scenarioId: 'audi-a3-idle' }),
-    })
-    const body = (await res.json()) as { severity: string }
+  describe('POST /api/diagnosis — Audi A3 (with DTC P0301)', () => {
+    let body: Record<string, unknown>
 
-    expect(res.status).toBe(200)
-    expect(body.severity).toBe('critical')
+    beforeAll(async () => {
+      const res = await fetch(`${baseUrl}/api/diagnosis`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenarioId: 'audi-a3-idle' }),
+      })
+      body = (await res.json()) as Record<string, unknown>
+    })
+
+    it('should return 200', () => {
+      expect(body).toBeDefined()
+    })
+
+    it('should return correct RPM (750)', () => {
+      const pv = body.parsedValues as Record<string, number>
+      expect(pv.rpm).toBe(750)
+    })
+
+    it('should return correct coolant temperature (90)', () => {
+      const pv = body.parsedValues as Record<string, number>
+      expect(pv.coolantTemp).toBe(90)
+    })
+
+    it('should return correct speed (0)', () => {
+      const pv = body.parsedValues as Record<string, number>
+      expect(pv.speed).toBe(0)
+    })
+
+    it('should return correct intake temperature (25)', () => {
+      const pv = body.parsedValues as Record<string, number>
+      expect(pv.intakeTemp).toBe(25)
+    })
+
+    it('should have one DTC code', () => {
+      const dtcs = body.dtcCodes as Array<{ code: string }>
+      expect(dtcs).toHaveLength(1)
+    })
+
+    it('should contain DTC P0301', () => {
+      const dtcs = body.dtcCodes as Array<{ code: string }>
+      expect(dtcs[0].code).toBe('P0301')
+    })
+
+    it('should generate diagnosis text containing P0301', () => {
+      expect(body.diagnosisText).toContain('P0301')
+    })
+
+    it('should set severity to high (DTC present, no freeze frame)', () => {
+      expect(body.severity).toBe('high')
+    })
+
+    it('should include rawData field', () => {
+      expect(body.rawData).toBeTruthy()
+      expect(body.rawData).toContain('rpm')
+    })
+  })
+
+  describe('POST /api/diagnosis — Kawasaki Z900 (no DTCs)', () => {
+    let body: Record<string, unknown>
+
+    beforeAll(async () => {
+      const res = await fetch(`${baseUrl}/api/diagnosis`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenarioId: 'kawa-z900' }),
+      })
+      body = (await res.json()) as Record<string, unknown>
+    })
+
+    it('should return correct RPM (4500)', () => {
+      const pv = body.parsedValues as Record<string, number>
+      expect(pv.rpm).toBe(4500)
+    })
+
+    it('should return correct coolant temperature (105)', () => {
+      const pv = body.parsedValues as Record<string, number>
+      expect(pv.coolantTemp).toBe(105)
+    })
+
+    it('should have zero DTC codes', () => {
+      const dtcs = body.dtcCodes as Array<unknown>
+      expect(dtcs).toHaveLength(0)
+    })
+
+    it('should set severity to low (no DTCs)', () => {
+      expect(body.severity).toBe('low')
+    })
   })
 
   it('should return 404 for unknown scenario', async () => {

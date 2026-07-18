@@ -233,6 +233,7 @@ Filosofía **"Documentation As You Code"** — la documentación se escribe al m
 - **Linter de docs** disponible: `pnpm lint:docs` — verifica existencia de documentos clave y presencia de TSDoc en archivos fuente
 - **Docs cerca del código**: tests junto al .ts que prueban (`*.test.ts`), documentación de esquemas en `docs/db/`
 - **Documentar el "por qué"**, no el "qué" — el código ya dice lo que hace
+- **Tras cada commit**: actualizar `CLAUDE.md` si cambia stack/arquitectura/fases/scripts; `docs/fase-2-plan-v2.md` si avanza un paso; ADR en `docs/adr/` si hay decisión arquitectónica nueva
 
 ## Skills (incluidas en el proyecto)
 
@@ -254,7 +255,12 @@ Full project documentation (vision, architecture, planning) lives in the Obsidia
 
 ## Reglas de sesión
 
-1. **Cargar skills** (`tdd-workflow`, `typescript-best-practices`, etc.) al inicio de cada fase
+1. **Cargar skills** (`tdd-workflow`, `typescript-best-practices`, `clean-architecture`, `tsdoc-jsdoc-documentation`) al inicio de cada fase
 2. **Preguntar antes de commitear/pushear** — mostrar diff, esperar OK humano
 3. **1 paso a la vez** — no mezclar varias responsabilidades en una tanda (ej. entidades + parser + tests + commit)
 4. **Leer CLAUDE.md como checklist al arrancar sesión** — antes de tocar código, repasar reglas activas
+5. **Actualizar documentación tras cada commit**:
+   - `CLAUDE.md` → si cambia stack, arquitectura, estado de fases, o scripts
+   - `docs/fase-2-plan-v2.md` → si se completa/avanza un paso del plan
+   - ADR en `docs/adr/` → si hay decisión arquitectónica nueva
+   - `README.md` → si cambia quick start o dependencias

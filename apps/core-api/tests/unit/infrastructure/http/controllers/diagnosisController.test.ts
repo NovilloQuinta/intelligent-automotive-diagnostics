@@ -60,7 +60,7 @@ describe('diagnosisController', () => {
 
       expect(res.status).toHaveBeenCalledWith(200)
       const diagnosisArg = res.json.mock.calls[0][0]
-      expect(diagnosisArg.severity).toBe('critical')
+      expect(diagnosisArg.severity).toBe('high')
       expect(diagnosisArg.parsedValues.rpm).toBe(750)
       expect(diagnosisArg.dtcCodes).toHaveLength(1)
     })

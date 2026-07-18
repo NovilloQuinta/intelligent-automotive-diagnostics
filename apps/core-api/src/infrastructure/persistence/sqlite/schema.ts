@@ -32,6 +32,8 @@ export const pidDefinitions = sqliteTable('pid_definitions', {
   description: text('description'),
   formula: text('formula').notNull(),
   unit: text('unit'),
+  dataBytes: integer('data_bytes').notNull().default(1),
+  pidType: text('pid_type').notNull().default('formula'),
   minValue: real('min_value'),
   maxValue: real('max_value'),
   confidence: real('confidence').notNull().default(1.0),
