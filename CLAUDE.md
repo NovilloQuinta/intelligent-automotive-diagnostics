@@ -17,6 +17,7 @@
 - **Tooling**: tsx (dev), tsc (build)
 - **Contenedores**: Docker + Docker Compose
 - **OBD Reference**: ELM327-emulator v3.0.5 (Python 3.11, sidecar de testing)
+- **Normativa**: SAE J1979 (services 01-04, 09), ISO 15031-5, ISO 3779 (VIN)
 
 ## Servicios Docker
 
@@ -155,7 +156,7 @@ pnpm audit        # 0 vulnerabilidades conocidas
 ## Documentacion
 
 - **TSDoc obligatorio** en toda export publica de `domain/`, `application/` e `infrastructure/`
-- **ADR** en `docs/adr/` para decisiones arquitectonicas (formato Michael Nygard)
+- **ADR** en `docs/adr/` para decisiones arquitectonicas (formato Michael Nygard) — 6 ADRs incluyendo 006-compliance-sae-j1979
 - `pnpm lint:docs` - verifica TSDoc en exports
 - **Solo documentar el "por que"**, no el "que"
 - Tras cada commit: actualizar `CLAUDE.md` si cambia stack/arquitectura/fases; `docs/fase-2-plan-v2.md` si avanza un paso
