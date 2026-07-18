@@ -169,4 +169,31 @@ describe('HTTP server', () => {
 
     expect(res.headers.get('access-control-allow-origin')).toBeNull()
   })
+
+  describe('POST /api/mcp/tools/:toolName', () => {
+    it('should call read_pid tool and return RPM value', async () => {
+      const res = await fetch(`${baseUrl}/api/mcp/tools/read_pid`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenarioId: 'audi-a3-idle', args: { mode: '01', pid: '0C' } }),
+      })
+      const body = (await res.json()) as { tool: string; result: string }
+
+      expect(res.status).toBe(200)
+      expect(body.tool).toBe('read_pid')
+      expect(body.result).toContain('750')
+    })
+
+    it('should return diagnostic data from get_dtc_codes tool', async () => {
+      const res = await fetch(`${baseUrl}/api/mcp/tools/get_dtc_codes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenarioId: 'audi-a3-idle', args: {} }),
+      })
+      const body = (await res.json()) as { tool: string; result: string }
+
+      expect(res.status).toBe(200)
+      expect(body.result).toContain('P0301')
+    })
+  })
 })

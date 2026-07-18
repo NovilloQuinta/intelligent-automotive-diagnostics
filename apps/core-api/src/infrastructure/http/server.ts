@@ -36,6 +36,7 @@ export function createServer(config: ServerConfig): express.Application {
 
   app.get('/api/scenarios', controller.getScenarios)
   app.post('/api/diagnosis', controller.runDiagnosis)
+  app.post('/api/mcp/tools/:toolName', controller.runMcpTool)
 
   app.get('/', (_req, res) => {
     res.redirect('/api-docs')
