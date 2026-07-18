@@ -136,4 +136,30 @@ describe('McpServer', () => {
       expect(result.content[0].text).toContain('No PIDs')
     })
   })
+
+  describe('Edge cases', () => {
+    it('should throw when calling unknown tool', () => {
+      const mcp = createMcpServer(mockObdRepo(), mockVehicleRepo())
+
+      expect(() => mcp.callTool('nonexistent_tool', {})).toThrow('Tool not found')
+    })
+
+    it('get_dtc_codes should return message when no DTCs present', async () => {
+      const repo = mockObdRepo({ readDtcCodes: vi.fn().mockResolvedValue([]) })
+      const mcp = createMcpServer(repo, mockVehicleRepo())
+
+      const result = await mcp.callTool('get_dtc_codes', {})
+
+      expect(result.content[0].text).toBe('No DTC codes detected.')
+    })
+
+    it('get_freeze_frame should return message for unknown DTC', async () => {
+      const repo = mockObdRepo({ getFreezeFrame: vi.fn().mockResolvedValue(null) })
+      const mcp = createMcpServer(repo, mockVehicleRepo())
+
+      const result = await mcp.callTool('get_freeze_frame', { dtc: 'INVALID' })
+
+      expect(result.content[0].text).toContain('No freeze frame')
+    })
+  })
 })
