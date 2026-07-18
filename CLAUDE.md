@@ -140,6 +140,14 @@ pnpm test:watch     # vitest watch
 pnpm test:coverage  # vitest run --coverage
 ```
 
+## CI (GitHub Actions)
+
+Push a `main` y PRs ejecutan `pnpm lint` + `pnpm test` en Node 22 + pnpm 10.
+
+```yaml
+.github/workflows/ci.yml
+```
+
 ### Pirámide de testing
 
 | Nivel | Peso | Ejemplos en el proyecto | Meta de cobertura |
