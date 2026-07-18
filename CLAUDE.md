@@ -263,6 +263,5 @@ Full project documentation (vision, architecture, planning) lives in the Obsidia
 4. **Leer CLAUDE.md como checklist al arrancar sesión** — antes de tocar código, repasar reglas activas
 5. **Actualizar documentación tras cada commit**:
    - `CLAUDE.md` → si cambia stack, arquitectura, estado de fases, o scripts
-   - `docs/fase-2-plan-v2.md` → si se completa/avanza un paso del plan
    - ADR en `docs/adr/` → si hay decisión arquitectónica nueva
    - `README.md` → si cambia quick start o dependencias
