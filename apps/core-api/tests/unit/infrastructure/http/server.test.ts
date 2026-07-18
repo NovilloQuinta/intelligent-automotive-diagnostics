@@ -154,9 +154,19 @@ describe('HTTP server', () => {
     expect(body.error).toBe('Scenario not found')
   })
 
-  it('should have CORS headers', async () => {
-    const res = await fetch(`${baseUrl}/api/scenarios`)
+  it('should return CORS header for allowed origin', async () => {
+    const res = await fetch(`${baseUrl}/api/scenarios`, {
+      headers: { Origin: 'http://localhost:3000' },
+    })
 
-    expect(res.headers.get('access-control-allow-origin')).toBe('*')
+    expect(res.headers.get('access-control-allow-origin')).toBe('http://localhost:3000')
+  })
+
+  it('should not return CORS header for disallowed origin', async () => {
+    const res = await fetch(`${baseUrl}/api/scenarios`, {
+      headers: { Origin: 'http://evil.com' },
+    })
+
+    expect(res.headers.get('access-control-allow-origin')).toBeNull()
   })
 })

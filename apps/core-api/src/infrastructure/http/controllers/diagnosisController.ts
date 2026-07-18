@@ -1,7 +1,12 @@
+import { z } from 'zod'
 import { ObdSimulator } from '@/infrastructure/hardware-simulator/obdSimulator.js'
 import { ObdSimulatorRepository } from '@/infrastructure/hardware-simulator/obdSimulatorRepository.js'
 import { processVehicleDiagnosis } from '@/application/diagnostics/processVehicleDiagnosis.js'
 import type { ServerConfig } from '@/infrastructure/http/server.js'
+
+const DiagnosisBodySchema = z.object({
+  scenarioId: z.string().min(1, 'scenarioId is required'),
+})
 
 interface ExpressRequest {
   body: unknown
@@ -22,7 +27,13 @@ export function createDiagnosisController(config: ServerConfig) {
     },
 
     async runDiagnosis(req: ExpressRequest, res: ExpressResponse) {
-      const { scenarioId } = req.body as { scenarioId?: string }
+      const parsed = DiagnosisBodySchema.safeParse(req.body)
+      if (!parsed.success) {
+        res.status(400).json({ error: 'Invalid request body', details: parsed.error.issues })
+        return
+      }
+
+      const { scenarioId } = parsed.data
       const scenario = scenarios.find((s) => s.id === scenarioId)
 
       if (!scenario) {

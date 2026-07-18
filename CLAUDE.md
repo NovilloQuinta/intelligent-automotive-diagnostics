@@ -8,7 +8,7 @@
 
 - **Runtime**: Node 20+ (ESM)
 - **Lenguaje**: TypeScript 5.7+ estricto
-- **Framework web**: Express 5 + Zod
+- **Framework web**: Express 5 + Zod + Helmet (seguridad HTTP)
 - **IA/Agentes**: MCP SDK (`@modelcontextprotocol/sdk`)
 - **Persistencia**: SQLite + Drizzle ORM (catálogo auto-expansivo de PIDs)
 - **Vectorial**: LanceDB (búsqueda semántica de PIDs, Fase 2b)
@@ -135,14 +135,14 @@ raiz/
 ## Tests
 
 ```bash
-pnpm test           # vitest run (90 tests)
+pnpm test           # vitest run (91 tests)
 pnpm test:watch     # vitest watch
 pnpm test:coverage  # vitest run --coverage
 ```
 
 ## CI (GitHub Actions)
 
-Push a `main` y PRs ejecutan `pnpm lint` + `pnpm test` en Node 22 + pnpm 10.
+Push a `main` y PRs ejecutan `pnpm install --frozen-lockfile` + `pnpm lint` + `pnpm test` + `pnpm audit` en Node 22 + pnpm 10.
 
 ```yaml
 .github/workflows/ci.yml
@@ -179,13 +179,13 @@ main.ts, scripts/ excluido (composition root / tooling)
 apps/core-api/src/
 ├── domain/entities/             # vehicleProfile, ecuInfo, pidDefinition, vehicleInfo, liveData, dtcCode, diagnosisResult, freezeFrame
 ├── application/ports/           # obdRepository.interface, vehicleRepository.interface
-├── application/diagnostics/     # processVehicleDiagnosis
+├── application/diagnostics/     # processVehicleDiagnosis (con timeout 10s)
 ├── application/discovery/       # (Fase 2a)
 ├── application/agents/          # (Fase 2b)
 ├── application/simulation/      # (Fase 3)
 ├── infrastructure/hardware-simulator/ # obdSimulator, obdSimulatorRepository, simulationScenario
 ├── infrastructure/obd/protocol/      # pidParser (Shunting-yard, SAE J1979)
-├── infrastructure/http/              # server.ts, controllers/diagnosisController
+├── infrastructure/http/              # server.ts (helmet, CORS restringido, body limit 10kb, error handler, Swagger solo dev), controllers/diagnosisController (Zod validation)
 ├── infrastructure/persistence/       # sqlite/ (schema, db, vehicleRepository, seed-pids)
 ├── infrastructure/mcp/               # (Fase 2b)
 └── main.ts                            # Composition root (Express :4000)
@@ -208,9 +208,11 @@ raiz/
 ### Pendiente por fase
 
 - **Fase 1** (base tecnica, hasta 10 jul): Completada — 43 tests, Express API, ELM327-emulator en Docker
-- **Fase 2a** (persistencia + protocolo, en curso): SQLite/Drizzle + catálogo auto-expansivo + clientes OBD
+- **Fase 2a** (persistencia + protocolo): Completada — SQLite/Drizzle + catálogo auto-expansivo + clientes OBD
+- **Hardening OWASP Top 10**: Completado — helmet, CORS restringido, body limit, error handler, Zod validation, timeout, CI frozen-lockfile + audit. 91 tests.
 - **Fase 2b** (capa IA, hasta 15 jul): `mcpServer.ts`, `executeCognitiveDiagnosis.ts`, LanceDB
 - **Fase 3** (cierre, hasta 20 jul): streaming, cambio de escenarios, README final
+- **Pendiente producción**: autenticacion (JWT + bcrypt), rate limiting, logging estructurado
 
 ## Convenciones
 

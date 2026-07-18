@@ -1,4 +1,5 @@
 import express from 'express'
+import helmet from 'helmet'
 import swaggerUi from 'swagger-ui-express'
 import { createDiagnosisController } from '@/infrastructure/http/controllers/diagnosisController.js'
 import type { SimulationScenario } from '@/infrastructure/hardware-simulator/simulationScenario.js'
@@ -15,13 +16,18 @@ export function createServer(config: ServerConfig): express.Application {
   const app = express()
   const controller = createDiagnosisController(config)
 
-  app.use(express.json())
+  app.use(helmet())
+  app.use(express.json({ limit: '10kb' }))
 
-  app.use((_req, res, next) => {
-    res.setHeader('Access-Control-Allow-Origin', '*')
+  const allowedOrigins = ['http://localhost:4000', 'http://localhost:3000', 'http://localhost:5173']
+  app.use((req, res, next) => {
+    const origin = req.headers.origin
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin)
+    }
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-    if (_req.method === 'OPTIONS') {
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    if (req.method === 'OPTIONS') {
       res.status(204).end()
       return
     }
@@ -43,7 +49,21 @@ export function createServer(config: ServerConfig): express.Application {
     res.json(openApiSpec)
   })
 
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec))
+  if (process.env.NODE_ENV !== 'production') {
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec))
+  }
+
+  app.use(
+    (
+      err: Error,
+      _req: express.Request,
+      res: express.Response,
+      _next: express.NextFunction,
+    ) => {
+      console.error(`[ERROR] ${err.message}`)
+      res.status(500).json({ error: 'Internal server error' })
+    },
+  )
 
   return app
 }

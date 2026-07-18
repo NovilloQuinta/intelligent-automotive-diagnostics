@@ -27,8 +27,10 @@ jobs:
           cache: pnpm
           cache-dependency-path: apps/core-api/pnpm-lock.yaml
 
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
 
       - run: pnpm lint
 
       - run: pnpm test
+
+      - run: pnpm audit

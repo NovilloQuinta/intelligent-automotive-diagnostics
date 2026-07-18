@@ -285,6 +285,34 @@ diagnosis_sessions(
 
 ---
 
+## Hardening de seguridad (OWASP Top 10)
+
+> Auditoria OWASP 2026-07-18. Correcciones aplicadas y pendientes documentadas.
+
+### Correcciones aplicadas
+
+| # | Acción | Archivo | OWASP |
+|---|---|---|---|
+| H1 | Instalar `helmet` (cabeceras de seguridad) | `server.ts`, `package.json` | A05 |
+| H2 | Restringir CORS a `localhost` (antes `*`) | `server.ts` | A01 |
+| H3 | Limitar body a `10kb` (`express.json({ limit })`) | `server.ts` | A04 |
+| H4 | Error handler global (sin leak de stack traces) | `server.ts` | A05 |
+| H5 | Swagger solo en `NODE_ENV !== 'production'` | `server.ts` | A05 |
+| H6 | Validar `req.body` con Zod (`safeParse`) | `diagnosisController.ts` | A03 |
+| H7 | Timeout de 10s en `Promise.all` de diagnóstico | `processVehicleDiagnosis.ts` | A04 |
+| H8 | `pnpm install --frozen-lockfile` en CI | `.github/workflows/ci.yml` | A08 |
+| H9 | `pnpm audit` en CI | `.github/workflows/ci.yml` | A06 |
+
+### Pendientes para producción
+
+| # | Acción | OWASP | Prioridad |
+|---|---|---|---|
+| AUTH | Autenticación (JWT + bcrypt sobre SQLite, tabla `users`) | A01, A07 | ALTO |
+| RATE | Rate limiting (`express-rate-limit`) en `/api/diagnosis` | A04 | ALTO |
+| LOG | Logging estructurado (tabla `audit_logs` en SQLite) | A09 | MEDIO |
+
+---
+
 ## Estado
 
 | Paso | Descripción | Estado | Tests |
@@ -297,6 +325,7 @@ diagnosis_sessions(
 | 6 | processVehicleDiagnosis refactor (readPid) | ✅ Completado | 7 |
 | 7 | hexParser.ts eliminado | ✅ Completado | — |
 | API | Tests de integración HTTP | ✅ Completado | 17 |
+| H1-H9 | Hardening OWASP Top 10 | ✅ Completado | 91 |
 | 4-5* | Capa de protocolo OBD (TCP al emulador) | ⬜ Pendiente | — |
 | 5* | Use cases descubrimiento (discoverVehicle, scanEcus) | ⬜ Pendiente | — |
 | 6 | MCP Server (6 tools) | ⬜ Pendiente | — |
@@ -304,9 +333,13 @@ diagnosis_sessions(
 | 8 | Diagnóstico cognitivo (LLM + tool calling) | ⬜ Pendiente | — |
 | 9 | Integración final | ⬜ Pendiente | — |
 | 10 | Documentación (ADR-005, README final) | ⬜ Pendiente | — |
+| AUTH | Autenticación JWT + bcrypt | ⬜ Pendiente | — |
+| RATE | Rate limiting | ⬜ Pendiente | — |
+| LOG | Logging estructurado | ⬜ Pendiente | — |
 
 - **Fase 1**: Completada — Express API, ELM327-emulator en Docker
 - **Fase 2a**: Completada — SQLite/Drizzle + PidParser + catálogo + API tests
 - **Fase 2b** (Paso 4-8* original): MCP + LanceDB + LLM — **siguiente**
 - **Fase 2c** (Paso 9-10): Integración + documentación
-- **Total tests**: 90
+- **Hardening**: Completado — OWASP A01-A08 cubiertos. Pendientes: auth, rate limiting, logging
+- **Total tests**: 91

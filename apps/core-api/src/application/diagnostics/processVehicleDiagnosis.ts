@@ -17,19 +17,30 @@ function buildDiagnosisText(description: string, severity: Severity, freezeFrame
   return base
 }
 
-/** Orquesta lectura de telemetría y devuelve un diagnóstico determinista.
+const DIAGNOSIS_TIMEOUT_MS = 10_000
+
+/**
+ * Orquesta lectura de telemetría y devuelve un diagnóstico determinista.
  * Lee RPM, coolant temp, speed, intake temp como PIDs individuales vía readPid(),
  * consulta DTCs y freeze frame, y calcula severidad.
+ * Si la lectura excede {@link DIAGNOSIS_TIMEOUT_MS}, lanza un error con timeout.
  */
 export async function processVehicleDiagnosis(repo: ObdRepository): Promise<DiagnosisResult> {
-  const [rpm, coolantTemp, speed, intakeTemp, dtcCodes, freezeFrame] = await Promise.all([
-    repo.readPid('01', '0C'),
-    repo.readPid('01', '05'),
-    repo.readPid('01', '0D'),
-    repo.readPid('01', '0F'),
-    repo.readDtcCodes(),
-    repo.getFreezeFrame(),
+  const results = await Promise.race([
+    Promise.all([
+      repo.readPid('01', '0C'),
+      repo.readPid('01', '05'),
+      repo.readPid('01', '0D'),
+      repo.readPid('01', '0F'),
+      repo.readDtcCodes(),
+      repo.getFreezeFrame(),
+    ]),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Diagnosis timed out after 10 seconds')), DIAGNOSIS_TIMEOUT_MS),
+    ),
   ])
+
+  const [rpm, coolantTemp, speed, intakeTemp, dtcCodes, freezeFrame] = results
 
   const parsedValues = { rpm, coolantTemp, speed, intakeTemp }
   const severity = computeSeverity(dtcCodes.length, freezeFrame)
