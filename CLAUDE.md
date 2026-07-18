@@ -71,7 +71,7 @@ apps/core-api/src/
 ## Tests
 
 ```bash
-pnpm test           # vitest run (99 tests)
+pnpm test           # vitest run (125 tests)
 pnpm test:watch     # vitest watch
 pnpm test:coverage  # vitest run --coverage
 ```
