@@ -1,4 +1,5 @@
-import type { VehicleProfile, DiagnosisSession } from '@/domain/entities/vehicleProfile.js'
+import type { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
+import type { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
 import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { PidDefinition, PidReading } from '@/domain/entities/pidDefinition.js'
 
