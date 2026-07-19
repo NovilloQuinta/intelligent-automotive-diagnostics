@@ -91,3 +91,15 @@ export const refreshTokens = sqliteTable('refresh_tokens', {
   createdAt: text('created_at').notNull().default("datetime('now')"),
   revokedAt: text('revoked_at'),
 })
+
+/** Registro de auditoria de peticiones HTTP para trazabilidad (OWASP A09). */
+export const auditLogs = sqliteTable('audit_logs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  method: text('method').notNull(),
+  path: text('path').notNull(),
+  statusCode: integer('status_code').notNull(),
+  ip: text('ip'),
+  userAgent: text('user_agent'),
+  durationMs: integer('duration_ms'),
+  createdAt: text('created_at').notNull().default("datetime('now')"),
+})

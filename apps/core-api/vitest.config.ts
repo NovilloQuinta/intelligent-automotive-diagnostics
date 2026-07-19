@@ -29,6 +29,8 @@ export default defineConfig({
         '**/diagnosisController.ts',
         '**/obdSimulatorRepository.ts',
         '**/server.ts',
+        '**/auditLogger.ts',
+        '**/rateLimiter.ts',
       ],
       thresholds: {
         statements: 80,

@@ -4,11 +4,17 @@ import swaggerUi from 'swagger-ui-express'
 import { createDiagnosisController } from '@/infrastructure/http/controllers/diagnosisController.js'
 import type { SimulationScenario } from '@/infrastructure/hardware-simulator/simulationScenario.js'
 import { openApiSpec } from '@/infrastructure/http/swagger.js'
+import { createRateLimiter } from '@/infrastructure/http/middleware/rateLimiter.js'
+import type { RateLimiterConfig } from '@/infrastructure/http/middleware/rateLimiter.js'
+import { createAuditLogger } from '@/infrastructure/http/middleware/auditLogger.js'
+import type { AuditLogRepository } from '@/infrastructure/http/middleware/auditLogger.js'
 
-/** Configuración del servidor Express. */
+/** Configuracion del servidor Express. */
 export interface ServerConfig {
   readonly mode: string
   readonly scenarios: SimulationScenario[]
+  readonly rateLimit?: Partial<RateLimiterConfig>
+  readonly auditRepo?: AuditLogRepository
 }
 
 /** Crea y devuelve la instancia de Express con todas las rutas montadas. */
@@ -17,6 +23,10 @@ export function createServer(config: ServerConfig): express.Application {
   const controller = createDiagnosisController(config)
 
   app.use(helmet())
+  app.use(createRateLimiter(config.rateLimit))
+  if (config.auditRepo) {
+    app.use(createAuditLogger(config.auditRepo))
+  }
   app.use(express.json({ limit: '10kb' }))
 
   const allowedOrigins = ['http://localhost:4000', 'http://localhost:3000', 'http://localhost:5173']

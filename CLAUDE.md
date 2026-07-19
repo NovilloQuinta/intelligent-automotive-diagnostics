@@ -6,15 +6,24 @@
 ## SESION ACTUAL
 
 - **Fase**: 2b — Hardening produccion (AUTH + RATE + LOG)
-- **Paso**: D4 completado con TDD → D5 — migracion lint:docs a eslint-plugin-jsdoc completada
-- **Skills cargados**: tdd-workflow, typescript-best-practices, tsdoc-jsdoc-documentation
-- **Tests**: 161 pasando
-- **Ficheros creados/modificados**:
-  - `apps/core-api/eslint.config.mjs` (jsdoc/require-jsdoc con publicOnly, 9 archivos actualizados)
-  - `apps/core-api/scripts/lint-docs.ts` (eliminado — reemplazado por eslint-plugin-jsdoc)
-  - `package.json` (lint:docs eliminado del script raiz)
-  - `.opencode/skills/{clean-architecture,coverage-strategy,tsdoc-jsdoc-documentation}/SKILL.md` (referencias actualizadas)
-  - `CLAUDE.md`, `README.md`, `docs/README.md` (referencias actualizadas)
+- **Paso**: D5 completado con OpenSpec + TDD → Pendiente: LanceDB/LLM/TCP OBD
+- **Skills cargados**: tdd-workflow, typescript-best-practices, openspec-propose, openspec-apply-change
+- **Tests**: 173 pasando (12 nuevos en D5)
+- **Ficheros creados/modificados** (D3-D5 acumulado):
+  - `apps/core-api/src/domain/entities/user.ts` (User + CreateUserInput con Omit)
+  - `apps/core-api/src/application/ports/userRepository.interface.ts` (UserRepository)
+  - `apps/core-api/src/infrastructure/persistence/sqlite/userRepository.ts` (SqliteUserRepository)
+  - `apps/core-api/src/infrastructure/persistence/sqlite/schema.ts` (+users, +refresh_tokens, +audit_logs)
+  - `apps/core-api/src/infrastructure/auth/authService.ts` (5 funciones JWT/bcrypt)
+  - `apps/core-api/src/infrastructure/http/middleware/rateLimiter.ts` (createRateLimiter)
+  - `apps/core-api/src/infrastructure/http/middleware/auditLogger.ts` (createAuditLogger)
+  - `apps/core-api/src/infrastructure/persistence/sqlite/auditLogRepository.ts` (SqliteAuditLogRepository)
+  - `apps/core-api/src/infrastructure/http/server.ts` (ServerConfig + rateLimit + auditRepo)
+  - `apps/core-api/tests/unit/infrastructure/**/*.test.ts` (41 tests nuevos en 5 archivos)
+  - `apps/core-api/package.json` (express-rate-limit, jsonwebtoken, bcrypt)
+  - `apps/core-api/vitest.config.ts` (exclusiones middleware)
+  - `openspec/changes/add-rate-limiting-and-audit-logs/` (propuesta D5)
+  - `CLAUDE.md` (actualizado D3→D4→D5)
 
 ## REGLAS DE SESION
 
@@ -114,8 +123,8 @@ apps/core-api/src/
 | Medida | OWASP | Estado |
 |---|---|---|
 | Autenticacion JWT + bcrypt (tabla `users`) | A01, A07 | Completado |
-| Rate limiting (`express-rate-limit`) | A04 | Pendiente |
-| Logging estructurado (tabla `audit_logs`) | A09 | Pendiente |
+| Rate limiting (`express-rate-limit`) | A04 | Completado |
+| Logging estructurado (tabla `audit_logs`) | A09 | Completado |
 
 ## Documentacion
 
