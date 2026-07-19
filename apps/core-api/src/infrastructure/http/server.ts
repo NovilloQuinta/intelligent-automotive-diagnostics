@@ -8,6 +8,11 @@ import { createRateLimiter } from '@/infrastructure/http/middleware/rateLimiter.
 import type { RateLimiterConfig } from '@/infrastructure/http/middleware/rateLimiter.js'
 import { createAuditLogger } from '@/infrastructure/http/middleware/auditLogger.js'
 import type { AuditLogRepository } from '@/infrastructure/http/middleware/auditLogger.js'
+import { createAuthMiddleware } from '@/infrastructure/http/middleware/authMiddleware.js'
+import { createAuthRoutes } from '@/infrastructure/http/routes/authRoutes.js'
+import type { UserRepository } from '@/application/ports/userRepository.interface.js'
+import type { AuthService } from '@/infrastructure/auth/authService.js'
+import type { RefreshTokenStore } from '@/infrastructure/auth/authService.js'
 
 /** Configuracion del servidor Express. */
 export interface ServerConfig {
@@ -15,6 +20,10 @@ export interface ServerConfig {
   readonly scenarios: SimulationScenario[]
   readonly rateLimit?: Partial<RateLimiterConfig>
   readonly auditRepo?: AuditLogRepository
+  readonly userRepo?: UserRepository
+  readonly authService?: AuthService
+  readonly tokenStore?: RefreshTokenStore
+  readonly accessTokenSecret?: string
 }
 
 /** Crea y devuelve la instancia de Express con todas las rutas montadas. */
@@ -44,9 +53,19 @@ export function createServer(config: ServerConfig): express.Application {
     next()
   })
 
-  app.get('/api/scenarios', controller.getScenarios)
-  app.post('/api/diagnosis', controller.runDiagnosis)
-  app.post('/api/mcp/tools/:toolName', controller.runMcpTool)
+  // Auth routes (public)
+  if (config.userRepo && config.authService && config.tokenStore) {
+    app.use('/api/auth', createAuthRoutes(config.userRepo, config.authService, config.tokenStore))
+  }
+
+  // Public routes (Swagger, redirects)
+  app.get('/api-docs.json', (_req, res) => {
+    res.json(openApiSpec)
+  })
+
+  if (process.env.NODE_ENV !== 'production') {
+    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec))
+  }
 
   app.get('/', (_req, res) => {
     res.redirect('/api-docs')
@@ -56,13 +75,14 @@ export function createServer(config: ServerConfig): express.Application {
     res.redirect('/api-docs')
   })
 
-  app.get('/api-docs.json', (_req, res) => {
-    res.json(openApiSpec)
-  })
-
-  if (process.env.NODE_ENV !== 'production') {
-    app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec))
+  // Auth middleware (protected routes below this point)
+  if (config.accessTokenSecret) {
+    app.use(createAuthMiddleware(config.accessTokenSecret))
   }
+
+  app.get('/api/scenarios', controller.getScenarios)
+  app.post('/api/diagnosis', controller.runDiagnosis)
+  app.post('/api/mcp/tools/:toolName', controller.runMcpTool)
 
   app.use(
     (err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

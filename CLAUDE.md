@@ -6,24 +6,32 @@
 ## SESION ACTUAL
 
 - **Fase**: 2b — Hardening produccion (AUTH + RATE + LOG)
-- **Paso**: D5 completado con OpenSpec + TDD → Pendiente: LanceDB/LLM/TCP OBD
+- **Paso**: D6 completado con OpenSpec + TDD → Pendiente: LanceDB/LLM/TCP OBD
 - **Skills cargados**: tdd-workflow, typescript-best-practices, openspec-propose, openspec-apply-change
-- **Tests**: 173 pasando (12 nuevos en D5)
-- **Ficheros creados/modificados** (D3-D5 acumulado):
+- **Tests**: 201 pasando (28 nuevos en D6: 11 controller + 5 middleware + 12 integration)
+- **Ficheros creados/modificados** (D3-D6 acumulado):
   - `apps/core-api/src/domain/entities/user.ts` (User + CreateUserInput con Omit)
   - `apps/core-api/src/application/ports/userRepository.interface.ts` (UserRepository)
+  - `apps/core-api/src/application/auth/authController.ts` (createAuthController: register, login, refresh con Zod)
   - `apps/core-api/src/infrastructure/persistence/sqlite/userRepository.ts` (SqliteUserRepository)
   - `apps/core-api/src/infrastructure/persistence/sqlite/schema.ts` (+users, +refresh_tokens, +audit_logs)
-  - `apps/core-api/src/infrastructure/auth/authService.ts` (5 funciones JWT/bcrypt)
+  - `apps/core-api/src/infrastructure/auth/authService.ts` (5 funciones JWT/bcrypt + RefreshTokenRecord exportado)
   - `apps/core-api/src/infrastructure/http/middleware/rateLimiter.ts` (createRateLimiter)
   - `apps/core-api/src/infrastructure/http/middleware/auditLogger.ts` (createAuditLogger)
+  - `apps/core-api/src/infrastructure/http/middleware/authMiddleware.ts` (createAuthMiddleware — JWT verification + Express type augmentation)
+  - `apps/core-api/src/infrastructure/http/routes/authRoutes.ts` (Express Router /api/auth/*)
   - `apps/core-api/src/infrastructure/persistence/sqlite/auditLogRepository.ts` (SqliteAuditLogRepository)
-  - `apps/core-api/src/infrastructure/http/server.ts` (ServerConfig + rateLimit + auditRepo)
-  - `apps/core-api/tests/unit/infrastructure/**/*.test.ts` (41 tests nuevos en 5 archivos)
-  - `apps/core-api/package.json` (express-rate-limit, jsonwebtoken, bcrypt)
+  - `apps/core-api/src/infrastructure/persistence/sqlite/refreshTokenStore.ts` (SqliteRefreshTokenStore)
+  - `apps/core-api/src/infrastructure/http/server.ts` (ServerConfig + auth routes + middleware)
+  - `apps/core-api/Dockerfile` (Node 20 + pnpm + multistage build)
+  - `docker-compose.yml` (servicio api + volumen SQLite)
+  - `apps/core-api/tests/unit/**/*.test.ts` (57 tests unitarios nuevos)
+  - `apps/core-api/tests/integration/auth.integration.test.ts` (12 tests supertest)
+  - `apps/core-api/package.json` (express-rate-limit, jsonwebtoken, bcrypt, supertest)
   - `apps/core-api/vitest.config.ts` (exclusiones middleware)
   - `openspec/changes/add-rate-limiting-and-audit-logs/` (propuesta D5)
-  - `CLAUDE.md` (actualizado D3→D4→D5)
+  - `openspec/changes/add-auth-endpoints-and-middleware/` (propuesta D6)
+  - `CLAUDE.md` (actualizado D3→D4→D5→D6)
 
 ## REGLAS DE SESION
 
@@ -104,7 +112,7 @@ apps/core-api/src/
 | Fase 1 — Express API + ELM327-emulator Docker | Completada |
 | Fase 2a — SQLite/Drizzle + PidParser + catalogo + API tests | Completada |
 | Hardening OWASP A01-A08 (helmet, CORS, Zod, timeout, CI) | Completado |
-| Fase 2b — Hardening produccion (AUTH + RATE + LOG) | **En curso** |
+| Fase 2b — Hardening produccion (AUTH + RATE + LOG) | **Completada** |
 | Pendiente — LanceDB + LLM + TCP OBD + docs finales | Sin empezar |
 
 ## Seguridad

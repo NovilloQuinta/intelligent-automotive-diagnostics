@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken'
 import { createHash, randomUUID } from 'node:crypto'
 
 /** Registro de refresh token devuelto por el store. */
-interface RefreshTokenRecord {
+export interface RefreshTokenRecord {
   readonly userId: number
   readonly expiresAt: string
   readonly revokedAt: string | null

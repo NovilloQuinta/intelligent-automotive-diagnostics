@@ -1,26 +1,99 @@
-/** Definición OpenAPI 3.0 para la API de diagnóstico automotriz. */
+/** Definicion OpenAPI 3.0 para la API de diagnostico automotriz con autenticacion JWT. */
 export const openApiSpec = {
   openapi: '3.0.3',
   info: {
     title: 'Intelligent Automotive Diagnostics API',
-    version: '0.2.0',
+    version: '0.3.0',
     description:
-      'API REST para diagnóstico automotriz mediante telemetría OBD-II simulada. ' +
-      'Soporta PIDs estándar SAE J1979 (Mode 01) y PIDs propietarios de fabricante (Mode 22).',
+      'API REST para diagnostico automotriz mediante telemetria OBD-II simulada. ' +
+      'Soporta PIDs estandar SAE J1979 (Mode 01) y PIDs propietarios de fabricante (Mode 22). ' +
+      'Autenticacion via JWT Bearer token.',
     contact: {
-      name: 'Jesús Novillo',
+      name: 'Jesus Novillo',
       email: 'jesus.novillo@evenia.ad',
     },
   },
   servers: [{ url: 'http://localhost:4000', description: 'Local development' }],
-  tags: [{ name: 'Diagnosis', description: 'Operaciones de diagnóstico OBD-II' }],
+  tags: [
+    { name: 'Auth', description: 'Registro, login y refresh de tokens JWT' },
+    { name: 'Diagnosis', description: 'Operaciones de diagnostico OBD-II' },
+  ],
   paths: {
+    '/api/auth/register': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Register a new user',
+        description: 'Registra un usuario particular o taller. Devuelve tokens JWT.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/RegisterRequest' } },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'User created',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/AuthResponse' } },
+            },
+          },
+          '409': { description: 'Email already registered' },
+          '400': { description: 'Validation error' },
+        },
+      },
+    },
+    '/api/auth/login': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Login',
+        description: 'Autentica con email y password. Devuelve tokens JWT.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/LoginRequest' } },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Login successful',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/TokenPair' } },
+            },
+          },
+          '401': { description: 'Invalid credentials' },
+          '400': { description: 'Validation error' },
+        },
+      },
+    },
+    '/api/auth/refresh': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Refresh access token',
+        description:
+          'Renueva el access token usando un refresh token valido. Rota el refresh token.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/RefreshRequest' } },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'New token pair',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/TokenPair' } },
+            },
+          },
+          '401': { description: 'Invalid or expired refresh token' },
+        },
+      },
+    },
     '/api/scenarios': {
       get: {
         tags: ['Diagnosis'],
         summary: 'List available simulation scenarios',
-        description:
-          'Returns all configured vehicle scenarios with their sensor values and DTC config.',
+        description: 'Returns all configured vehicle scenarios. Requires authentication.',
+        security: [{ bearerAuth: [] }],
         responses: {
           '200': {
             description: 'List of scenarios',
@@ -38,6 +111,7 @@ export const openApiSpec = {
               },
             },
           },
+          '401': { description: 'Access token required' },
         },
       },
     },
@@ -46,9 +120,8 @@ export const openApiSpec = {
         tags: ['Diagnosis'],
         summary: 'Run vehicle diagnosis',
         description:
-          'Executes a deterministic diagnosis on the selected scenario. ' +
-          'Reads RPM, coolant temp, speed, intake temp via Mode 01 PIDs, ' +
-          'checks for DTCs and freeze frame data, and returns a severity assessment.',
+          'Executes a deterministic diagnosis on the selected scenario. Requires authentication.',
+        security: [{ bearerAuth: [] }],
         requestBody: {
           required: true,
           content: {
@@ -76,36 +149,85 @@ export const openApiSpec = {
               },
             },
           },
-          '404': {
-            description: 'Scenario not found',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    error: { type: 'string', example: 'Scenario not found' },
-                  },
-                },
-              },
-            },
-          },
+          '401': { description: 'Access token required' },
+          '404': { description: 'Scenario not found' },
         },
       },
     },
   },
   components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Token JWT obtenido en /api/auth/login o /api/auth/register',
+      },
+    },
     schemas: {
+      RegisterRequest: {
+        type: 'object',
+        required: ['username', 'email', 'password', 'userType'],
+        properties: {
+          username: { type: 'string', minLength: 3, maxLength: 50, example: 'juan' },
+          email: { type: 'string', format: 'email', example: 'juan@test.com' },
+          password: { type: 'string', minLength: 8, example: 'Pass1234!' },
+          userType: { type: 'string', enum: ['individual', 'workshop'], example: 'workshop' },
+          businessName: { type: 'string', example: 'Talleres AutoFix' },
+          taxId: { type: 'string', example: 'B12345678' },
+          address: { type: 'string', example: 'Calle 123' },
+        },
+      },
+      LoginRequest: {
+        type: 'object',
+        required: ['email', 'password'],
+        properties: {
+          email: { type: 'string', format: 'email', example: 'juan@test.com' },
+          password: { type: 'string', example: 'Pass1234!' },
+        },
+      },
+      RefreshRequest: {
+        type: 'object',
+        required: ['refreshToken'],
+        properties: {
+          refreshToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIs...' },
+        },
+      },
+      TokenPair: {
+        type: 'object',
+        properties: {
+          accessToken: { type: 'string' },
+          refreshToken: { type: 'string' },
+        },
+      },
+      AuthResponse: {
+        type: 'object',
+        properties: {
+          user: {
+            type: 'object',
+            properties: {
+              id: { type: 'integer' },
+              username: { type: 'string' },
+              email: { type: 'string' },
+              userType: { type: 'string' },
+              businessName: { type: 'string', nullable: true },
+              taxId: { type: 'string', nullable: true },
+              address: { type: 'string', nullable: true },
+              createdAt: { type: 'string' },
+            },
+          },
+          accessToken: { type: 'string' },
+          refreshToken: { type: 'string' },
+        },
+      },
       Scenario: {
         type: 'object',
         properties: {
           id: { type: 'string', example: 'audi-a3-idle' },
-          name: { type: 'string', example: 'Audi A3 al ralentí' },
+          name: { type: 'string', example: 'Audi A3 al ralenti' },
           vehicleType: { type: 'string', enum: ['car', 'motorcycle'] },
           sensorValues: { $ref: '#/components/schemas/LiveData' },
-          dtcConfig: {
-            type: 'array',
-            items: { $ref: '#/components/schemas/DtcCode' },
-          },
+          dtcConfig: { type: 'array', items: { $ref: '#/components/schemas/DtcCode' } },
           vehicleInfo: { $ref: '#/components/schemas/VehicleInfo' },
         },
       },
@@ -140,10 +262,7 @@ export const openApiSpec = {
         properties: {
           rawData: { type: 'string', example: '{"rpm":750,"coolantTemp":90,...}' },
           parsedValues: { $ref: '#/components/schemas/LiveData' },
-          dtcCodes: {
-            type: 'array',
-            items: { $ref: '#/components/schemas/DtcCode' },
-          },
+          dtcCodes: { type: 'array', items: { $ref: '#/components/schemas/DtcCode' } },
           diagnosisText: { type: 'string', example: '[HIGH] P0301' },
           severity: {
             type: 'string',
