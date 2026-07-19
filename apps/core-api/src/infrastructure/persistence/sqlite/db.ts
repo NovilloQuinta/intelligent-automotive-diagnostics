@@ -24,7 +24,7 @@ export function closeDb(): void {
   if (_db) {
     const sqlite = (globalThis as unknown as Record<string, unknown>)._sqliteInstance
     if (sqlite && typeof (sqlite as { close: () => void }).close === 'function') {
-      (sqlite as { close: () => void }).close()
+      ;(sqlite as { close: () => void }).close()
     }
     _db = null
   }

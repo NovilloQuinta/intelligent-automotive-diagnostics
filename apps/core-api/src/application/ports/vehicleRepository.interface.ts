@@ -25,7 +25,11 @@ export interface VehicleRepository {
   insertPidDefinition(pid: PidDefinition): Promise<PidDefinition>
 
   /** Busca una definición de PID por modo, código y vehículo (o global si vehicleId es null). */
-  findPidDefinition(mode: string, pidCode: string, vehicleId?: number): Promise<PidDefinition | null>
+  findPidDefinition(
+    mode: string,
+    pidCode: string,
+    vehicleId?: number,
+  ): Promise<PidDefinition | null>
 
   /** Devuelve todos los PIDs conocidos para un vehículo. */
   findPidsByVehicle(vehicleId: number): Promise<PidDefinition[]>

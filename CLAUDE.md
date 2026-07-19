@@ -71,16 +71,28 @@ apps/core-api/src/
 ## Tests
 
 ```bash
-pnpm test           # vitest run (125 tests)
-pnpm test:watch     # vitest watch
-pnpm test:coverage  # vitest run --coverage
+pnpm test              # vitest run (125+ tests)
+pnpm test:watch        # vitest watch
+pnpm test:coverage     # vitest run --coverage (Features >=80% per-file)
+pnpm coverage:core     # CI script: Core 100%
 ```
+
+### Estrategia de coverage (3 tiers)
+
+Ver skill `coverage-strategy` (.opencode/skills/coverage-strategy/SKILL.md) para detalle completo.
+
+| Tier | Umbral | Configuracion |
+|---|---|---|
+| **Core** | 100% | `pnpm coverage:core` — script dedicado |
+| **Features** | >=80% per-file | `perFile: true` en vitest |
+| **Infraestructura** | 0% (excluido) | Excluido de coverage (interfaces, seed data, schema, DB, adaptadores) |
 
 ### Testing guidelines
 
 - Mock **solo** en infraestructura: `ObdRepository`, HTTP, file system
 - **Nunca** mockear entidades de dominio ni funciones puras (parser, validators)
-- Coverage: `application/** >=90%`, `infrastructure/** >=80%`, `domain/**` excluido
+- Tests en `tests/unit/` reflejan `src/` uno a uno
+- Ficheros excluidos de coverage por ser infraestructura: `*.interface.ts`, `seed-pids.ts`, `schema.ts`, `db.ts`, `swagger.ts`, `diagnosisController.ts`, `obdSimulatorRepository.ts`, `server.ts`, `simulationScenario.ts`, `src/main.ts`, `src/domain/**`
 
 ## CI (GitHub Actions)
 
@@ -171,6 +183,7 @@ Cargar con `skill` tool al inicio de cada fase de desarrollo.
 | `typescript-best-practices` | `.opencode/skills/typescript-best-practices/` | Al escribir o revisar TypeScript |
 | `tdd-workflow` | `.opencode/skills/tdd-workflow/` | Antes de escribir tests o ciclo Red-Green-Refactor |
 | `tsdoc-jsdoc-documentation` | `.opencode/skills/tsdoc-jsdoc-documentation/` | Antes de crear o revisar TSDoc en exports publicos |
+| `coverage-strategy` | `.opencode/skills/coverage-strategy/` | Al configurar thresholds, revisar coverage, o decidir que testear |
 
 ## Reglas de sesion
 
@@ -178,7 +191,7 @@ Cargar con `skill` tool al inicio de cada fase de desarrollo.
 2. **Preguntar antes de commitear/pushear** - mostrar diff, esperar OK humano
 3. **1 paso a la vez** - no mezclar varias responsabilidades en una tanda
 4. **Leer CLAUDE.md como checklist al arrancar sesion**
-5. **Checks pre-commit**: `pnpm lint`, `pnpm test`, `pnpm audit` - todo debe pasar antes de commitear
+5. **Checks pre-commit**: `pnpm lint`, `pnpm format`, `pnpm lint:docs`, `pnpm test`, `pnpm test:coverage`, `pnpm coverage:core`, `pnpm audit` - todo debe pasar antes de commitear
 6. **Actualizar documentacion tras cada commit**:
    - `CLAUDE.md` -> si cambia stack, arquitectura, estado de fases, o scripts
    - `docs/fase-2-plan-v2.md` -> si se completa/avanza un paso del plan

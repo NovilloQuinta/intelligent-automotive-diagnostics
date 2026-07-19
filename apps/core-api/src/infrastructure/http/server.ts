@@ -55,12 +55,7 @@ export function createServer(config: ServerConfig): express.Application {
   }
 
   app.use(
-    (
-      err: Error,
-      _req: express.Request,
-      res: express.Response,
-      _next: express.NextFunction,
-    ) => {
+    (err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
       console.error(`[ERROR] ${err.message}`)
       res.status(500).json({ error: 'Internal server error' })
     },

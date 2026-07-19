@@ -38,11 +38,16 @@ export class ObdSimulator {
     const sv = this.scenario.sensorValues
     if (mode === '01') {
       switch (pid.toUpperCase()) {
-        case '0C': return sv.rpm
-        case '05': return sv.coolantTemp
-        case '0D': return sv.speed
-        case '0F': return sv.intakeTemp
-        default: throw new Error(`PID ${mode} ${pid} not supported by current scenario`)
+        case '0C':
+          return sv.rpm
+        case '05':
+          return sv.coolantTemp
+        case '0D':
+          return sv.speed
+        case '0F':
+          return sv.intakeTemp
+        default:
+          throw new Error(`PID ${mode} ${pid} not supported by current scenario`)
       }
     }
     throw new Error(`PID ${mode} ${pid} not supported by current scenario`)

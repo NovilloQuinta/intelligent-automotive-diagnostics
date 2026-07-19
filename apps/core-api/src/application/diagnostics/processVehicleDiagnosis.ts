@@ -8,7 +8,11 @@ function computeSeverity(dtcCount: number, freezeFrame: FreezeFrame | null): Sev
   return 'high'
 }
 
-function buildDiagnosisText(description: string, severity: Severity, freezeFrame: FreezeFrame | null): string {
+function buildDiagnosisText(
+  description: string,
+  severity: Severity,
+  freezeFrame: FreezeFrame | null,
+): string {
   const base = `[${severity.toUpperCase()}] ${description}`
   if (freezeFrame) {
     const freezeKeys = Object.keys(freezeFrame.pidValues).join(', ')
@@ -36,7 +40,10 @@ export async function processVehicleDiagnosis(repo: ObdRepository): Promise<Diag
       repo.getFreezeFrame(),
     ]),
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('Diagnosis timed out after 10 seconds')), DIAGNOSIS_TIMEOUT_MS),
+      setTimeout(
+        () => reject(new Error('Diagnosis timed out after 10 seconds')),
+        DIAGNOSIS_TIMEOUT_MS,
+      ),
     ),
   ])
 

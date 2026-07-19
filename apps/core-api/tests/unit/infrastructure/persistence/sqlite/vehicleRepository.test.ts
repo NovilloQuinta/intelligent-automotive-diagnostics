@@ -111,11 +111,15 @@ describe('SqliteVehicleRepository', () => {
     })
 
     it('should throw VinDecodeError when VIN has wrong length', async () => {
-      await expect(repo.upsertVehicle({ ...toyotaAuris, vin: 'SHORT' })).rejects.toThrow(VinDecodeError)
+      await expect(repo.upsertVehicle({ ...toyotaAuris, vin: 'SHORT' })).rejects.toThrow(
+        VinDecodeError,
+      )
     })
 
     it('should throw VinDecodeError when VIN has forbidden character I', async () => {
-      await expect(repo.upsertVehicle({ ...toyotaAuris, vin: 'WAIZZZ8V5JA123456' })).rejects.toThrow(VinDecodeError)
+      await expect(
+        repo.upsertVehicle({ ...toyotaAuris, vin: 'WAIZZZ8V5JA123456' }),
+      ).rejects.toThrow(VinDecodeError)
     })
   })
 
@@ -241,6 +245,15 @@ describe('SqliteVehicleRepository', () => {
       const result = await repo.findPidDefinition('22', 'FFFF', vehicleId)
 
       expect(result).toBeNull()
+    })
+
+    it('should find a PID by mode and code without vehicleId filter', async () => {
+      await repo.insertPidDefinition(rpmPid())
+
+      const result = await repo.findPidDefinition('01', '0C')
+
+      expect(result).not.toBeNull()
+      expect(result!.name).toBe('Engine RPM')
     })
 
     it('should find all PIDs for a vehicle', async () => {

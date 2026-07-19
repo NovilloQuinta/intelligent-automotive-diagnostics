@@ -12,18 +12,15 @@ export const openApiSpec = {
       email: 'jesus.novillo@evenia.ad',
     },
   },
-  servers: [
-    { url: 'http://localhost:4000', description: 'Local development' },
-  ],
-  tags: [
-    { name: 'Diagnosis', description: 'Operaciones de diagnóstico OBD-II' },
-  ],
+  servers: [{ url: 'http://localhost:4000', description: 'Local development' }],
+  tags: [{ name: 'Diagnosis', description: 'Operaciones de diagnóstico OBD-II' }],
   paths: {
     '/api/scenarios': {
       get: {
         tags: ['Diagnosis'],
         summary: 'List available simulation scenarios',
-        description: 'Returns all configured vehicle scenarios with their sensor values and DTC config.',
+        description:
+          'Returns all configured vehicle scenarios with their sensor values and DTC config.',
         responses: {
           '200': {
             description: 'List of scenarios',

@@ -1,5 +1,6 @@
 import { sqliteTable, integer, real, text } from 'drizzle-orm/sqlite-core'
 
+/** Tabla de vehiculos detectados por VIN (ISO 3779). */
 export const vehicles = sqliteTable('vehicles', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   vin: text('vin').notNull().unique(),
@@ -11,9 +12,12 @@ export const vehicles = sqliteTable('vehicles', {
   lastSeen: text('last_seen').notNull().default("datetime('now')"),
 })
 
+/** ECUs descubiertas en el bus CAN del vehiculo. */
 export const ecus = sqliteTable('ecus', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  vehicleId: integer('vehicle_id').notNull().references(() => vehicles.id),
+  vehicleId: integer('vehicle_id')
+    .notNull()
+    .references(() => vehicles.id),
   name: text('name').notNull(),
   requestAddr: text('request_addr').notNull(),
   responseAddr: text('response_addr').notNull(),
@@ -22,6 +26,7 @@ export const ecus = sqliteTable('ecus', {
   discoveredAt: text('discovered_at').notNull().default("datetime('now')"),
 })
 
+/** Catalogo auto-expansivo de definiciones de PID (SAE J1979 + propietarios). */
 export const pidDefinitions = sqliteTable('pid_definitions', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   vehicleId: integer('vehicle_id').references(() => vehicles.id),
@@ -41,6 +46,7 @@ export const pidDefinitions = sqliteTable('pid_definitions', {
   createdAt: text('created_at').notNull().default("datetime('now')"),
 })
 
+/** Lecturas historicas de PIDs con valor parseado y raw hex. */
 export const pidReadings = sqliteTable('pid_readings', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   pidDefId: integer('pid_def_id').references(() => pidDefinitions.id),
@@ -50,9 +56,12 @@ export const pidReadings = sqliteTable('pid_readings', {
   timestamp: text('timestamp').notNull().default("datetime('now')"),
 })
 
+/** Sesiones de diagnostico vinculadas a un vehiculo y escenario. */
 export const diagnosisSessions = sqliteTable('diagnosis_sessions', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  vehicleId: integer('vehicle_id').notNull().references(() => vehicles.id),
+  vehicleId: integer('vehicle_id')
+    .notNull()
+    .references(() => vehicles.id),
   scenarioId: text('scenario_id'),
   startedAt: text('started_at').notNull().default("datetime('now')"),
   endedAt: text('ended_at'),

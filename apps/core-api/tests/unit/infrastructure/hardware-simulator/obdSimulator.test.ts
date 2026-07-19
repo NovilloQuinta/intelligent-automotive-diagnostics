@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { ObdSimulator } from '@/infrastructure/hardware-simulator/obdSimulator.js'
 import type { SimulationScenario } from '@/infrastructure/hardware-simulator/simulationScenario.js'
 import type { LiveData } from '@/domain/entities/liveData.js'
+import type { FreezeFrame } from '@/domain/entities/freezeFrame.js'
 
 const audiIdleData: LiveData = {
   rpm: 750,
@@ -16,6 +17,13 @@ const audiIdleScenario: SimulationScenario = {
   vehicleType: 'car',
   sensorValues: audiIdleData,
   dtcConfig: [{ code: 'P0301', description: 'Cylinder 1 Misfire' }],
+  vehicleInfo: {
+    vin: 'WUAZZZ8V0KA123456',
+    make: 'Audi',
+    model: 'A3',
+    year: 2019,
+    engineType: '2.0 TFSI',
+  },
 }
 
 describe('ObdSimulator', () => {
@@ -77,6 +85,13 @@ describe('ObdSimulator', () => {
       vehicleType: 'motorcycle',
       sensorValues: kawaData,
       dtcConfig: [],
+      vehicleInfo: {
+        vin: 'JKAKZ900H8A123456',
+        make: 'Kawasaki',
+        model: 'Z900',
+        year: 2020,
+        engineType: '948cc Inline-4',
+      },
     }
 
     simulator.setScenario(kawaScenario)
@@ -85,5 +100,44 @@ describe('ObdSimulator', () => {
 
     expect(rpmHex).toBe('4650')
     expect(simulator.getRawDtcs()).toHaveLength(0)
+  })
+
+  it('should return VIN from scenario vehicleInfo', () => {
+    const simulator = new ObdSimulator(audiIdleScenario)
+    expect(simulator.getVin()).toBe('WUAZZZ8V0KA123456')
+  })
+
+  it('should return vehicle info from scenario', () => {
+    const simulator = new ObdSimulator(audiIdleScenario)
+    const info = simulator.getVehicleInfo()
+    expect(info.make).toBe('Audi')
+    expect(info.model).toBe('A3')
+    expect(info.year).toBe(2019)
+  })
+
+  it('should return supported PIDs including standard and scenario-specific', () => {
+    const simulator = new ObdSimulator(audiIdleScenario)
+    const pids = simulator.getSupportedPids()
+    expect(pids).toContain('01 0C')
+    expect(pids).toContain('09 02')
+    expect(pids).toContain('03')
+  })
+
+  it('should return null freeze frame when scenario has none', () => {
+    const simulator = new ObdSimulator(audiIdleScenario)
+    expect(simulator.getFreezeFrame()).toBeNull()
+  })
+
+  it('should return freeze frame from scenario when present', () => {
+    const freeze: FreezeFrame = {
+      dtcCode: 'P0301',
+      pidValues: { rpm: 750, speed: 0 },
+    }
+    const scenarioWithFreeze: SimulationScenario = {
+      ...audiIdleScenario,
+      freezeFrame: freeze,
+    }
+    const simulator = new ObdSimulator(scenarioWithFreeze)
+    expect(simulator.getFreezeFrame()).toEqual(freeze)
   })
 })

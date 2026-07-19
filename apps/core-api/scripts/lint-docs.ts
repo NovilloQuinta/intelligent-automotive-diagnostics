@@ -65,16 +65,20 @@ function hasTsdocBeforeLine(content: string, lineNumber: number): boolean {
   const lines = content.split('\n')
   let j = lineNumber - 2
 
-  while (j >= 0) {
-    const trimmed = lines[j].trim()
-    if (trimmed === '') {
-      j--
-      continue
+  if (j < 0) return false
+
+  const trimmed = lines[j].trim()
+  if (trimmed === '' || /^\*/.test(trimmed)) {
+    for (let k = j; k >= 0; k--) {
+      const t = lines[k].trim()
+      if (/^\/\*\*/.test(t)) return true
+      if (t === '' || /^\*/.test(t)) continue
+      return false
     }
-    return /\/\*\*/.test(trimmed)
+    return false
   }
 
-  return false
+  return /^\/\*\*/.test(trimmed)
 }
 
 async function checkTsdocInSourceFiles(): Promise<void> {

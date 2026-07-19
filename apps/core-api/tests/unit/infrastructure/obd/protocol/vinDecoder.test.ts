@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { decodeVin, validateVin, isValidCheckDigit, decodeWmi, VinDecodeError } from '@/infrastructure/obd/protocol/vinDecoder.js'
+import {
+  decodeVin,
+  validateVin,
+  isValidCheckDigit,
+  decodeWmi,
+  VinDecodeError,
+} from '@/infrastructure/obd/protocol/vinDecoder.js'
 
 describe('vinDecoder', () => {
   describe('decodeVin', () => {
@@ -49,6 +55,10 @@ describe('vinDecoder', () => {
 
     it('should accept lowercase and convert to uppercase', () => {
       expect(validateVin('wauzzz8v5ja123456')).toBe('WAUZZZ8V5JA123456')
+    })
+
+    it('should throw on invalid character (underscore)', () => {
+      expect(() => validateVin('WAU_ZZ8V5JA123456')).toThrow(VinDecodeError)
     })
   })
 

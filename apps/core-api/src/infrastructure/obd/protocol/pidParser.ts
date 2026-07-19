@@ -16,7 +16,7 @@ const PRECEDENCE: Record<string, number> = {
   '-': 4,
   '*': 5,
   '/': 5,
-  'u': 6, // unary minus (right-associative en la práctica)
+  u: 6, // unary minus (right-associative en la práctica)
 }
 
 const BINARY_OPS = new Set(Object.keys(PRECEDENCE))
@@ -33,21 +33,49 @@ function tokenize(formula: string): string[] {
 
   while (i < formula.length) {
     const ch = formula[i]
-    if (/\s/.test(ch)) { i++; continue }
-    if (ch === '(' || ch === ')') { tokens.push(ch); i++; continue }
-    if (ch === '+' || ch === '-' || ch === '*' || ch === '/' || ch === '|' || ch === '&') {
-      tokens.push(ch); i++; continue
+    if (/\s/.test(ch)) {
+      i++
+      continue
     }
-    if (ch === '<' && formula[i + 1] === '<') { tokens.push('<<'); i += 2; continue }
-    if (ch === '>' && formula[i + 1] === '>') { tokens.push('>>'); i += 2; continue }
-    if (/[A-Ha-h]/.test(ch)) { tokens.push(ch.toUpperCase()); i++; continue }
+    if (ch === '(' || ch === ')') {
+      tokens.push(ch)
+      i++
+      continue
+    }
+    if (ch === '+' || ch === '-' || ch === '*' || ch === '/' || ch === '|' || ch === '&') {
+      tokens.push(ch)
+      i++
+      continue
+    }
+    if (ch === '<' && formula[i + 1] === '<') {
+      tokens.push('<<')
+      i += 2
+      continue
+    }
+    if (ch === '>' && formula[i + 1] === '>') {
+      tokens.push('>>')
+      i += 2
+      continue
+    }
+    if (/[A-Ha-h]/.test(ch)) {
+      tokens.push(ch.toUpperCase())
+      i++
+      continue
+    }
     if (ch === 'r' || ch === 'R') {
-      if (formula.slice(i, i + 3).toLowerCase() === 'raw') { tokens.push('raw'); i += 3; continue }
+      if (formula.slice(i, i + 3).toLowerCase() === 'raw') {
+        tokens.push('raw')
+        i += 3
+        continue
+      }
       throw new PidParseError(`Unknown token starting with 'r' at position ${i}`)
     }
     if (/[0-9.]/.test(ch)) {
       let num = ''
-      while (i < formula.length && /[0-9.]/.test(formula[i])) { num += formula[i]; i++ }
+      while (i < formula.length && /[0-9.]/.test(formula[i])) {
+        num += formula[i]
+        i++
+      }
       const val = Number.parseFloat(num)
       if (Number.isNaN(val)) throw new PidParseError(`Invalid number: ${num}`)
       tokens.push(num)
@@ -128,7 +156,9 @@ function evaluatePostfix(postfix: string[], bytes: number[]): number {
     } else if (/^[A-H]$/.test(token)) {
       const idx = token.charCodeAt(0) - 'A'.charCodeAt(0)
       if (idx >= bytes.length) {
-        throw new PidParseError(`Variable ${token} requires byte index ${idx} but only ${bytes.length} bytes provided`)
+        throw new PidParseError(
+          `Variable ${token} requires byte index ${idx} but only ${bytes.length} bytes provided`,
+        )
       }
       stack.push(bytes[idx])
     } else if (token === 'u') {
@@ -139,24 +169,39 @@ function evaluatePostfix(postfix: string[], bytes: number[]): number {
       const b = stack.pop()!
       const a = stack.pop()!
       switch (token) {
-        case '+': stack.push(a + b); break
-        case '-': stack.push(a - b); break
-        case '*': stack.push(a * b); break
+        case '+':
+          stack.push(a + b)
+          break
+        case '-':
+          stack.push(a - b)
+          break
+        case '*':
+          stack.push(a * b)
+          break
         case '/':
           if (b === 0) throw new PidParseError('Division by zero')
           stack.push(a / b)
           break
-        case '|': stack.push((a | b) >>> 0); break
-        case '&': stack.push(a & b); break
-        case '<<': stack.push(a << b); break
-        case '>>': stack.push(a >> b); break
+        case '|':
+          stack.push((a | b) >>> 0)
+          break
+        case '&':
+          stack.push(a & b)
+          break
+        case '<<':
+          stack.push(a << b)
+          break
+        case '>>':
+          stack.push(a >> b)
+          break
       }
     } else {
       throw new PidParseError(`Unknown token in postfix: ${token}`)
     }
   }
 
-  if (stack.length !== 1) throw new PidParseError(`Invalid expression: stack has ${stack.length} values`)
+  if (stack.length !== 1)
+    throw new PidParseError(`Invalid expression: stack has ${stack.length} values`)
   return stack[0]
 }
 

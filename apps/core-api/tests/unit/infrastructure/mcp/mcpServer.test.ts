@@ -13,7 +13,13 @@ function mockObdRepo(overrides: Partial<ObdRepository> = {}): ObdRepository {
     readDtcCodes: vi.fn().mockResolvedValue([{ code: 'P0301', description: 'Cylinder 1 Misfire' }]),
     clearDtcCodes: vi.fn().mockResolvedValue(undefined),
     readVin: vi.fn().mockResolvedValue('WAUZZZ8V5JA123456'),
-    getVehicleInfo: vi.fn().mockResolvedValue({ make: 'Audi', model: 'A3', year: 2018, engineType: '2.0 TFSI', vin: 'WAUZZZ8V5JA123456' }),
+    getVehicleInfo: vi.fn().mockResolvedValue({
+      make: 'Audi',
+      model: 'A3',
+      year: 2018,
+      engineType: '2.0 TFSI',
+      vin: 'WAUZZZ8V5JA123456',
+    }),
     setPower: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   }
@@ -42,14 +48,32 @@ const sampleFreezeFrame: FreezeFrame = {
 
 const samplePids: PidDefinition[] = [
   {
-    id: 1, vehicleId: 1, ecuId: 1, mode: '01', pidCode: '0C',
-    name: 'Engine RPM', formula: '(A*256+B)/4', unit: 'rpm',
-    dataBytes: 2, pidType: 'formula', confidence: 1.0, source: 'manual',
+    id: 1,
+    vehicleId: 1,
+    ecuId: 1,
+    mode: '01',
+    pidCode: '0C',
+    name: 'Engine RPM',
+    formula: '(A*256+B)/4',
+    unit: 'rpm',
+    dataBytes: 2,
+    pidType: 'formula',
+    confidence: 1.0,
+    source: 'manual',
   },
   {
-    id: 2, vehicleId: 1, ecuId: 2, mode: '22', pidCode: '0300',
-    name: 'TCU Odometer', formula: '(A<<24|B<<16|C<<8|D)/10', unit: 'km',
-    dataBytes: 4, pidType: 'formula', confidence: 0.9, source: 'manual',
+    id: 2,
+    vehicleId: 1,
+    ecuId: 2,
+    mode: '22',
+    pidCode: '0300',
+    name: 'TCU Odometer',
+    formula: '(A<<24|B<<16|C<<8|D)/10',
+    unit: 'km',
+    dataBytes: 4,
+    pidType: 'formula',
+    confidence: 0.9,
+    source: 'manual',
   },
 ]
 

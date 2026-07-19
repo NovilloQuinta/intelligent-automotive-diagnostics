@@ -23,7 +23,10 @@ export interface DiagnosticsMcpServer {
  * Capa 1: tools sobre {@link ObdRepository} (hardware).
  * Capa 2: tools sobre {@link VehicleRepository} (catálogo).
  */
-export function createMcpServer(repo: ObdRepository, vehicleRepo: VehicleRepository): DiagnosticsMcpServer {
+export function createMcpServer(
+  repo: ObdRepository,
+  vehicleRepo: VehicleRepository,
+): DiagnosticsMcpServer {
   const server = new McpServer({
     name: 'obd-diagnostics',
     version: '0.2.0',
@@ -48,7 +51,8 @@ export function createMcpServer(repo: ObdRepository, vehicleRepo: VehicleReposit
     {},
     (handlers['get_dtc_codes'] = async () => {
       const dtcs = await repo.readDtcCodes()
-      if (dtcs.length === 0) return { content: [{ type: 'text' as const, text: 'No DTC codes detected.' }] }
+      if (dtcs.length === 0)
+        return { content: [{ type: 'text' as const, text: 'No DTC codes detected.' }] }
       const text = dtcs.map((d) => `${d.code}: ${d.description || 'no description'}`).join('\n')
       return { content: [{ type: 'text' as const, text }] }
     }),
@@ -60,21 +64,43 @@ export function createMcpServer(repo: ObdRepository, vehicleRepo: VehicleReposit
     { dtc: z.string().optional() },
     (handlers['get_freeze_frame'] = async ({ dtc }) => {
       const frame = await repo.getFreezeFrame(dtc as string | undefined)
-      if (!frame) return { content: [{ type: 'text' as const, text: 'No freeze frame data available.' }] }
-      const values = Object.entries(frame.pidValues).map(([k, v]) => `${k}: ${v}`).join(', ')
-      return { content: [{ type: 'text' as const, text: `DTC ${frame.dtcCode} freeze frame: ${values}` }] }
+      if (!frame)
+        return { content: [{ type: 'text' as const, text: 'No freeze frame data available.' }] }
+      const values = Object.entries(frame.pidValues)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(', ')
+      return {
+        content: [{ type: 'text' as const, text: `DTC ${frame.dtcCode} freeze frame: ${values}` }],
+      }
     }),
   )
 
-  server.tool('read_vin', 'Read VIN (Service 09 PID 02).', {}, (handlers['read_vin'] = async () => {
-    const vin = await repo.readVin()
-    return { content: [{ type: 'text' as const, text: vin }] }
-  }))
+  server.tool(
+    'read_vin',
+    'Read VIN (Service 09 PID 02).',
+    {},
+    (handlers['read_vin'] = async () => {
+      const vin = await repo.readVin()
+      return { content: [{ type: 'text' as const, text: vin }] }
+    }),
+  )
 
-  server.tool('get_vehicle_info', 'Get vehicle make, model, year, engine.', {}, (handlers['get_vehicle_info'] = async () => {
-    const info = await repo.getVehicleInfo()
-    return { content: [{ type: 'text' as const, text: `${info.make} ${info.model} (${info.year}) — ${info.engineType}` }] }
-  }))
+  server.tool(
+    'get_vehicle_info',
+    'Get vehicle make, model, year, engine.',
+    {},
+    (handlers['get_vehicle_info'] = async () => {
+      const info = await repo.getVehicleInfo()
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: `${info.make} ${info.model} (${info.year}) — ${info.engineType}`,
+          },
+        ],
+      }
+    }),
+  )
 
   server.tool(
     'get_available_pids',
@@ -82,7 +108,8 @@ export function createMcpServer(repo: ObdRepository, vehicleRepo: VehicleReposit
     { vehicleId: z.number().optional() },
     (handlers['get_available_pids'] = async ({ vehicleId }) => {
       const pids = vehicleId != null ? await vehicleRepo.findPidsByVehicle(vehicleId as number) : []
-      if (pids.length === 0) return { content: [{ type: 'text' as const, text: 'No PIDs available for this vehicle.' }] }
+      if (pids.length === 0)
+        return { content: [{ type: 'text' as const, text: 'No PIDs available for this vehicle.' }] }
       const text = pids
         .map((p) => `${p.mode} ${p.pidCode}: ${p.name} (${p.formula}) [${p.unit ?? ''}]`)
         .join('\n')

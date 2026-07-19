@@ -35,9 +35,25 @@ export function createDiagnosisController(config: ServerConfig) {
   const emptyVehicleRepo: VehicleRepository = {
     upsertVehicle: async () => ({ vin: '', make: '', model: '', year: 0, engineType: '' }),
     findVehicleByVin: async () => null,
-    insertEcu: async () => ({ vehicleId: 0, name: '', requestAddr: '', responseAddr: '', type: 'OTHER', protocol: '' }),
+    insertEcu: async () => ({
+      vehicleId: 0,
+      name: '',
+      requestAddr: '',
+      responseAddr: '',
+      type: 'OTHER',
+      protocol: '',
+    }),
     findEcusByVehicle: async () => [],
-    insertPidDefinition: async () => ({ mode: '', pidCode: '', name: '', formula: '', dataBytes: 1, pidType: 'formula', confidence: 0, source: 'manual' }),
+    insertPidDefinition: async () => ({
+      mode: '',
+      pidCode: '',
+      name: '',
+      formula: '',
+      dataBytes: 1,
+      pidType: 'formula',
+      confidence: 0,
+      source: 'manual',
+    }),
     findPidDefinition: async () => null,
     findPidsByVehicle: async () => [],
     insertPidReading: async () => ({ sessionId: '', rawHex: '' }),
@@ -72,7 +88,10 @@ export function createDiagnosisController(config: ServerConfig) {
       res.status(200).json(result)
     },
 
-    async runMcpTool(req: ExpressRequest & { params?: Record<string, string> }, res: ExpressResponse) {
+    async runMcpTool(
+      req: ExpressRequest & { params?: Record<string, string> },
+      res: ExpressResponse,
+    ) {
       const paramsParsed = McpToolParamsSchema.safeParse(req.params ?? {})
       if (!paramsParsed.success) {
         res.status(400).json({ error: 'Invalid tool name', details: paramsParsed.error.issues })
