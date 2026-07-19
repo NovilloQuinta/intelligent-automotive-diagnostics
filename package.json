@@ -5,13 +5,16 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "cd apps/core-api && pnpm dev",
     "obd:send": "tsx scripts/send-obd.ts",
     "obd:scan": "tsx scripts/scan-pids.ts",
     "build": "cd apps/core-api && pnpm build",
     "test": "cd apps/core-api && pnpm test",
     "test:watch": "cd apps/core-api && pnpm test:watch",
     "test:coverage": "cd apps/core-api && pnpm test:coverage",
-    "lint": "cd apps/core-api && pnpm lint"
+    "lint": "cd apps/core-api && pnpm lint",
+    "format": "cd apps/core-api && pnpm format",
+    "format:fix": "cd apps/core-api && pnpm format:fix"
   },
   "devDependencies": {
     "tsx": "^4.19.0"

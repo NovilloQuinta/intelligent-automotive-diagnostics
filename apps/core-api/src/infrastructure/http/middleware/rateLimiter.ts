@@ -1,4 +1,4 @@
-import { rateLimit, type Options as RateLimitOptions } from 'express-rate-limit'
+import { rateLimit } from 'express-rate-limit'
 
 /** Configuracion del rate limiter. */
 export interface RateLimiterConfig {
@@ -20,5 +20,5 @@ export function createRateLimiter(config?: Partial<RateLimiterConfig>) {
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many requests, please try again later.' },
-  } satisfies RateLimitOptions)
+  })
 }

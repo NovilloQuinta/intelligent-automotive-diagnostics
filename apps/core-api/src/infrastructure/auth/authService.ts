@@ -73,23 +73,23 @@ export function createAuthService(config: AuthServiceConfig): AuthService {
     refreshToken: string
   } {
     const accessToken = jwt.sign({ sub: userId, jti: randomUUID() }, accessTokenSecret, {
-      expiresIn: accessTokenExpiresIn,
+      expiresIn: accessTokenExpiresIn as jwt.SignOptions['expiresIn'],
     })
     const refreshToken = jwt.sign({ sub: userId, jti: randomUUID() }, refreshTokenSecret, {
-      expiresIn: refreshTokenExpiresIn,
+      expiresIn: refreshTokenExpiresIn as jwt.SignOptions['expiresIn'],
     })
     return { accessToken, refreshToken }
   }
 
   function verifyAccessToken(token: string): number {
-    const decoded = jwt.verify(token, accessTokenSecret) as { sub: number }
+    const decoded = jwt.verify(token, accessTokenSecret) as unknown as { sub: number }
     return decoded.sub
   }
 
   async function refreshAccessToken(
     refreshTokenStr: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
-    const decoded = jwt.verify(refreshTokenStr, refreshTokenSecret) as {
+    const decoded = jwt.verify(refreshTokenStr, refreshTokenSecret) as unknown as {
       sub: number
     }
     const tokenHash = hashToken(refreshTokenStr)

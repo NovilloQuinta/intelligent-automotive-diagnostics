@@ -19,7 +19,7 @@ export function createAuthMiddleware(accessTokenSecret: string) {
     const token = authHeader.slice(7)
 
     try {
-      const decoded = jwt.verify(token, accessTokenSecret) as { sub: number }
+      const decoded = jwt.verify(token, accessTokenSecret) as unknown as { sub: number }
       req.userId = decoded.sub
       next()
     } catch (err: unknown) {

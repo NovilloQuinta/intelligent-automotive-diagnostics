@@ -75,6 +75,10 @@ export function createServer(config: ServerConfig): express.Application {
     res.redirect('/api-docs')
   })
 
+  app.get('/health', (_req, res) => {
+    res.json({ status: 'ok', uptime: process.uptime() })
+  })
+
   // Auth middleware (protected routes below this point)
   if (config.accessTokenSecret) {
     app.use(createAuthMiddleware(config.accessTokenSecret))
