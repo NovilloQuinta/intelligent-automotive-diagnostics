@@ -6,19 +6,15 @@
 ## SESION ACTUAL
 
 - **Fase**: 2b — Hardening produccion (AUTH + RATE + LOG)
-- **Paso**: D4 completado con TDD → D5 pendiente (definir siguiente paso)
-- **Skills cargados**: tdd-workflow, typescript-best-practices
-- **Tests**: 161 pasando (20 nuevos en authService.test.ts)
+- **Paso**: D4 completado con TDD → D5 — migracion lint:docs a eslint-plugin-jsdoc completada
+- **Skills cargados**: tdd-workflow, typescript-best-practices, tsdoc-jsdoc-documentation
+- **Tests**: 161 pasando
 - **Ficheros creados/modificados**:
-  - `apps/core-api/src/domain/entities/user.ts` (User + CreateUserInput)
-  - `apps/core-api/src/application/ports/userRepository.interface.ts` (UserRepository)
-  - `apps/core-api/src/infrastructure/persistence/sqlite/userRepository.ts` (SqliteUserRepository — TSDoc corregido en REFACTOR)
-  - `apps/core-api/src/infrastructure/persistence/sqlite/schema.ts` (tablas users + refresh_tokens)
-  - `apps/core-api/src/infrastructure/auth/authService.ts` (createAuthService — 5 funciones: hashPassword, comparePassword, generateTokens, verifyAccessToken, refreshAccessToken)
-  - `apps/core-api/tests/unit/infrastructure/persistence/sqlite/userRepository.test.ts` (9 tests)
-  - `apps/core-api/tests/unit/infrastructure/auth/authService.test.ts` (20 tests — TDD: RED→GREEN→REFACTOR)
-  - `apps/core-api/package.json` (jsonwebtoken, bcrypt + @types)
-  - `CLAUDE.md` (reestructurado: checklist al principio, 199→119 lineas)
+  - `apps/core-api/eslint.config.mjs` (jsdoc/require-jsdoc con publicOnly, 9 archivos actualizados)
+  - `apps/core-api/scripts/lint-docs.ts` (eliminado — reemplazado por eslint-plugin-jsdoc)
+  - `package.json` (lint:docs eliminado del script raiz)
+  - `.opencode/skills/{clean-architecture,coverage-strategy,tsdoc-jsdoc-documentation}/SKILL.md` (referencias actualizadas)
+  - `CLAUDE.md`, `README.md`, `docs/README.md` (referencias actualizadas)
 
 ## REGLAS DE SESION
 
