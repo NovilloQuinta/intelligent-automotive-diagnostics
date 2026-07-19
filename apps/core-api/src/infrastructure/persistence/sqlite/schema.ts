@@ -66,3 +66,28 @@ export const diagnosisSessions = sqliteTable('diagnosis_sessions', {
   startedAt: text('started_at').notNull().default("datetime('now')"),
   endedAt: text('ended_at'),
 })
+
+/** Usuarios de la aplicacion (particulares y talleres). */
+export const users = sqliteTable('users', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  username: text('username').notNull().unique(),
+  email: text('email').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  userType: text('user_type').notNull(), // 'individual' | 'workshop'
+  businessName: text('business_name'),
+  taxId: text('tax_id'),
+  address: text('address'),
+  createdAt: text('created_at').notNull().default("datetime('now')"),
+})
+
+/** Refresh tokens para renovar access tokens sin reautenticacion. */
+export const refreshTokens = sqliteTable('refresh_tokens', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: text('expires_at').notNull(),
+  createdAt: text('created_at').notNull().default("datetime('now')"),
+  revokedAt: text('revoked_at'),
+})

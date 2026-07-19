@@ -1,181 +1,35 @@
 # Intelligent Automotive Diagnostics - TFM
 
-> Vehicular telemetry simulation & AI-powered diagnosis using Model Context Protocol (MCP).
-> Master IA - Jesus Novillo
-> Entrega: 20 julio 2026
+> Vehicular telemetry simulation & AI-powered diagnosis using MCP.
+> Master IA - Jesus Novillo | Entrega: 20 julio 2026
 
-## Stack
+## SESION ACTUAL
 
-- **Runtime**: Node 20+ (ESM)
-- **Lenguaje**: TypeScript 5.7+ estricto
-- **Framework web**: Express 5 + Zod + Helmet (seguridad HTTP)
-- **IA/Agentes**: MCP SDK (`@modelcontextprotocol/sdk`)
-- **Persistencia**: SQLite + Drizzle ORM (catalogo auto-expansivo de PIDs)
-- **Vectorial**: LanceDB (busqueda semantica de PIDs, Fase 2b)
-- **Tests**: Vitest 3
-- **Package manager**: pnpm
-- **Tooling**: tsx (dev), tsc (build)
-- **Contenedores**: Docker + Docker Compose
-- **OBD Reference**: ELM327-emulator v3.0.5 (Python 3.11, sidecar de testing)
-- **Normativa**: SAE J1979 (services 01-04, 09), ISO 15031-5, ISO 3779 (VIN)
+- **Fase**: 2b — Hardening produccion (AUTH + RATE + LOG)
+- **Paso**: D4 completado con TDD → D5 pendiente (definir siguiente paso)
+- **Skills cargados**: tdd-workflow, typescript-best-practices
+- **Tests**: 161 pasando (20 nuevos en authService.test.ts)
+- **Ficheros creados/modificados**:
+  - `apps/core-api/src/domain/entities/user.ts` (User + CreateUserInput)
+  - `apps/core-api/src/application/ports/userRepository.interface.ts` (UserRepository)
+  - `apps/core-api/src/infrastructure/persistence/sqlite/userRepository.ts` (SqliteUserRepository — TSDoc corregido en REFACTOR)
+  - `apps/core-api/src/infrastructure/persistence/sqlite/schema.ts` (tablas users + refresh_tokens)
+  - `apps/core-api/src/infrastructure/auth/authService.ts` (createAuthService — 5 funciones: hashPassword, comparePassword, generateTokens, verifyAccessToken, refreshAccessToken)
+  - `apps/core-api/tests/unit/infrastructure/persistence/sqlite/userRepository.test.ts` (9 tests)
+  - `apps/core-api/tests/unit/infrastructure/auth/authService.test.ts` (20 tests — TDD: RED→GREEN→REFACTOR)
+  - `apps/core-api/package.json` (jsonwebtoken, bcrypt + @types)
+  - `CLAUDE.md` (reestructurado: checklist al principio, 199→119 lineas)
 
-## Servicios Docker
+## REGLAS DE SESION
 
-| Servicio | Puerto | Descripcion |
-|---|---|---|
-| `elm327` | 35000 | ELM327-emulator con escenario Toyota Auris Hybrid |
+1. **Cargar skills necesarios** antes de empezar (ver tabla abajo)
+2. **1 paso a la vez** — no mezclar responsabilidades, no adelantar trabajo
+3. **TDD estricto**: RED (test que falla) → GREEN (codigo minimo) → REFACTOR
+4. **Preguntar antes de commitear/pushear** — mostrar diff, esperar OK humano
+5. **Checks pre-commit**: `pnpm lint && pnpm format && pnpm lint:docs && pnpm test && pnpm test:coverage && pnpm coverage:core && pnpm audit`
+6. **Tras cada paso**: actualizar `SESION ACTUAL` en este mismo fichero
 
-```bash
-docker compose up -d elm327    # arrancar emulador
-docker compose logs elm327      # ver actividad
-docker compose down elm327      # parar
-```
-
-## Scripts OBD (raiz)
-
-```bash
-pnpm tsx scripts/send-obd.ts "01 0C"    # enviar comando OBD al emulador
-pnpm tsx scripts/scan-pids.ts           # escanear PIDs soportados
-```
-
-## Scripts DB (apps/core-api)
-
-```bash
-pnpm drizzle-kit generate               # generar migraciones desde schema.ts
-pnpm drizzle-kit migrate                # aplicar migraciones a SQLite
-```
-
-## Base de datos (SQLite + Drizzle)
-
-La BD se crea automaticamente en `data/diagnostics.db` al iniciar la API.
-En tests se usa `:memory:` (sin archivo).
-
-## Arquitectura (Clean Architecture + MCP)
-
-```
-apps/core-api/src/
-├── domain/entities/             # Capa 1: Entidades puras
-├── application/                 # Capa 2: Puertos + Casos de uso
-│   ├── ports/                   # obdRepository, vehicleRepository
-│   └── diagnostics/             # processVehicleDiagnosis (core del sistema)
-├── infrastructure/              # Capa 3: Adaptadores tecnicos
-│   ├── hardware-simulator/      # obdSimulator, simulationScenario
-│   ├── obd/protocol/            # pidParser (Shunting-yard, SAE J1979)
-│   ├── http/                    # server.ts (Express), controllers/
-│   ├── persistence/sqlite/      # schema, db, vehicleRepository
-│   ├── persistence/vector/      # LanceDB (Fase 2b)
-│   └── mcp/                     # mcpServer.ts (Fase 2b)
-└── main.ts                      # Composition root (Express :4000)
-```
-
-## Tests
-
-```bash
-pnpm test              # vitest run (125+ tests)
-pnpm test:watch        # vitest watch
-pnpm test:coverage     # vitest run --coverage (Features >=80% per-file)
-pnpm coverage:core     # CI script: Core 100%
-```
-
-### Estrategia de coverage (3 tiers)
-
-Ver skill `coverage-strategy` (.opencode/skills/coverage-strategy/SKILL.md) para detalle completo.
-
-| Tier | Umbral | Configuracion |
-|---|---|---|
-| **Core** | 100% | `pnpm coverage:core` — script dedicado |
-| **Features** | >=80% per-file | `perFile: true` en vitest |
-| **Infraestructura** | 0% (excluido) | Excluido de coverage (interfaces, seed data, schema, DB, adaptadores) |
-
-### Testing guidelines
-
-- Mock **solo** en infraestructura: `ObdRepository`, HTTP, file system
-- **Nunca** mockear entidades de dominio ni funciones puras (parser, validators)
-- Tests en `tests/unit/` reflejan `src/` uno a uno
-- Ficheros excluidos de coverage por ser infraestructura: `*.interface.ts`, `seed-pids.ts`, `schema.ts`, `db.ts`, `swagger.ts`, `diagnosisController.ts`, `obdSimulatorRepository.ts`, `server.ts`, `simulationScenario.ts`, `src/main.ts`, `src/domain/**`
-
-## CI (GitHub Actions)
-
-Push a `main` y PRs ejecutan `pnpm install --frozen-lockfile` + `pnpm lint` + `pnpm test` + `pnpm audit` en Node 22 + pnpm 10.
-
-```yaml
-.github/workflows/ci.yml
-```
-
-## Estado del proyecto
-
-- **Fase 1**: Completada - Express API, ELM327-emulator en Docker
-- **Fase 2a**: Completada - SQLite/Drizzle + PidParser + catalogo + API tests
-- **Hardening OWASP Top 10**: Completado - helmet, CORS, body limit, error handler, Zod, timeout, CI (91 tests)
-- **Fase 2b** (siguiente): MCP Server + LanceDB + diagnostico cognitivo (LLM)
-- **Fase 3**: streaming, cambio de escenarios, README final
-- **Pendiente produccion**: autenticacion JWT + bcrypt, rate limiting, logging estructurado
-
-> Detalle completo en `docs/fase-2-plan-v2.md`
-
-## Convenciones
-
-- **Commits**: imperativo, espanol, <72 chars, prefijos `feat:` / `fix:` / `test:` / `docs:`
-- **Imports**: ES modules (`import/export`), named exports siempre
-- **Tipado**: estricto, evitar `any`
-- **Comentarios**: solo el "porque" no obvio
-- **Estructura**: 1 fichero = 1 responsabilidad
-- **KISS**: solve the problem at hand, don't abstract for hypothetical futures
-- **DRY**: extract duplication into shared constants/utilities, but avoid premature abstraction
-- **YAGNI**: don't write code you don't need yet - no generic interfaces "just in case"
-
-## Seguridad (OWASP Top 10)
-
-### Hardening aplicado
-
-| Medida | Archivo | OWASP |
-|---|---|---|
-| `helmet()` - cabeceras de seguridad HTTP | `server.ts` | A05 |
-| CORS restringido a `localhost` (nunca `*`) | `server.ts` | A01 |
-| Body limit `10kb` (`express.json({ limit })`) | `server.ts` | A04 |
-| Error handler global (sin leak de stack traces) | `server.ts` | A05 |
-| Swagger solo en `NODE_ENV !== 'production'` | `server.ts` | A05 |
-| Validacion de `req.body` con Zod (`safeParse`) | `diagnosisController.ts` | A03 |
-| Timeout de 10s en diagnostico (`Promise.race`) | `processVehicleDiagnosis.ts` | A04 |
-| `esbuild >=0.25.0` (pnpm overrides) | `package.json` | A06 |
-| `pnpm install --frozen-lockfile` en CI | `.github/workflows/ci.yml` | A08 |
-| `pnpm audit` en CI | `.github/workflows/ci.yml` | A06 |
-
-### Checks de seguridad
-
-```bash
-pnpm lint         # eslint + typescript-eslint
-pnpm test         # vitest (91 tests, todos deben pasar)
-pnpm audit        # 0 vulnerabilidades conocidas
-```
-
-### No regresiones
-
-- **Nunca** cambiar CORS de vuelta a `*`
-- **Nunca** quitar `helmet()` del pipeline
-- **Nunca** desactivar el error handler global o exponer stack traces
-- **Nunca** usar `req.body` sin validar con Zod en nuevos endpoints
-- **Siempre** timeout en operaciones asincronas de larga duracion
-
-### Pendientes produccion
-
-| Medida | OWASP |
-|---|---|
-| Autenticacion JWT + bcrypt | A01, A07 |
-| Rate limiting (`express-rate-limit`) | A04 |
-| Logging estructurado (tabla `audit_logs`) | A09 |
-
-## Documentacion
-
-- **TSDoc obligatorio** en toda export publica de `domain/`, `application/` e `infrastructure/`
-- **ADR** en `docs/adr/` para decisiones arquitectonicas (formato Michael Nygard) — 6 ADRs incluyendo 006-compliance-sae-j1979
-- `pnpm lint:docs` - verifica TSDoc en exports
-- **Solo documentar el "por que"**, no el "que"
-- Tras cada commit: actualizar `CLAUDE.md` si cambia stack/arquitectura/fases; `docs/fase-2-plan-v2.md` si avanza un paso
-
-## Skills (incluidas en el proyecto)
-
-Cargar con `skill` tool al inicio de cada fase de desarrollo.
+## SKILLS
 
 | Skill | Path | Cuando cargar |
 |---|---|---|
@@ -185,15 +39,91 @@ Cargar con `skill` tool al inicio de cada fase de desarrollo.
 | `tsdoc-jsdoc-documentation` | `.opencode/skills/tsdoc-jsdoc-documentation/` | Antes de crear o revisar TSDoc en exports publicos |
 | `coverage-strategy` | `.opencode/skills/coverage-strategy/` | Al configurar thresholds, revisar coverage, o decidir que testear |
 
-## Reglas de sesion
+## PATRONES DE CODIGO
 
-1. **Cargar skills** al inicio de cada fase
-2. **Preguntar antes de commitear/pushear** - mostrar diff, esperar OK humano
-3. **1 paso a la vez** - no mezclar varias responsabilidades en una tanda
-4. **Leer CLAUDE.md como checklist al arrancar sesion**
-5. **Checks pre-commit**: `pnpm lint`, `pnpm format`, `pnpm lint:docs`, `pnpm test`, `pnpm test:coverage`, `pnpm coverage:core`, `pnpm audit` - todo debe pasar antes de commitear
-6. **Actualizar documentacion tras cada commit**:
-   - `CLAUDE.md` -> si cambia stack, arquitectura, estado de fases, o scripts
-   - `docs/fase-2-plan-v2.md` -> si se completa/avanza un paso del plan
-   - ADR en `docs/adr/` -> si hay decision arquitectonica nueva
-   - `README.md` -> si cambia quick start o dependencias
+- **Factory functions**, no clases (ej. `createServer`, `createDiagnosisController`)
+- **Interface en `application/ports/`**, implementacion en `infrastructure/`
+- **Zod** para validar todo input externo (nunca usar `req.body` sin `safeParse`)
+- **Named exports** siempre, nunca `export default`
+- **1 fichero = 1 responsabilidad** (KISS, YAGNI, DRY con criterio)
+
+---
+
+## Stack
+
+- **Runtime**: Node 20+ (ESM) · TypeScript 5.7+ estricto
+- **Framework**: Express 5 + Zod + Helmet
+- **IA/Agentes**: `@modelcontextprotocol/sdk`
+- **Persistencia**: SQLite + Drizzle ORM · (LanceDB: pendiente Fase 2b)
+- **Tests**: Vitest 3 · **Package manager**: pnpm · **Tooling**: tsx (dev), tsc (build)
+- **Normativa**: SAE J1979, ISO 15031-5, ISO 3779 (VIN)
+
+## Scripts
+
+```bash
+# OBD (raiz)
+pnpm tsx scripts/send-obd.ts "01 0C"    # enviar comando OBD al emulador
+pnpm tsx scripts/scan-pids.ts           # escanear PIDs soportados
+
+# DB (apps/core-api)
+pnpm drizzle-kit generate               # generar migraciones desde schema.ts
+pnpm drizzle-kit migrate                # aplicar migraciones a SQLite
+
+# Tests
+pnpm test                               # vitest run
+pnpm test:coverage                      # coverage (Features >=80% per-file)
+pnpm coverage:core                      # CI script: Core 100%
+```
+
+## Arquitectura (Clean Architecture + MCP)
+
+```
+apps/core-api/src/
+├── domain/entities/             # Entidades puras (User, VehicleProfile, PidDefinition...)
+├── application/                 # Puertos + Casos de uso
+│   ├── ports/                   # obdRepository, vehicleRepository, userRepository
+│   └── diagnostics/             # processVehicleDiagnosis (core del sistema)
+├── infrastructure/              # Adaptadores tecnicos
+│   ├── hardware-simulator/      # obdSimulator, simulationScenario
+│   ├── http/                    # server.ts (Express), controllers, middleware
+│   ├── obd/protocol/            # pidParser (Shunting-yard, SAE J1979), vinDecoder
+│   ├── persistence/sqlite/      # schema, db, vehicleRepository, userRepository
+│   ├── persistence/vector/      # LanceDB (pendiente)
+│   └── mcp/                     # mcpServer.ts (6 tools)
+└── main.ts                      # Composition root (Express :4000)
+```
+
+## Estado del proyecto
+
+| Fase | Estado |
+|---|---|
+| Fase 1 — Express API + ELM327-emulator Docker | Completada |
+| Fase 2a — SQLite/Drizzle + PidParser + catalogo + API tests | Completada |
+| Hardening OWASP A01-A08 (helmet, CORS, Zod, timeout, CI) | Completado |
+| Fase 2b — Hardening produccion (AUTH + RATE + LOG) | **En curso** |
+| Pendiente — LanceDB + LLM + TCP OBD + docs finales | Sin empezar |
+
+## Seguridad
+
+### No regresiones (inviolable)
+
+- **Nunca** cambiar CORS de vuelta a `*`
+- **Nunca** quitar `helmet()` del pipeline
+- **Nunca** desactivar el error handler global o exponer stack traces
+- **Nunca** usar `req.body` sin validar con Zod en nuevos endpoints
+- **Siempre** timeout en operaciones de larga duracion
+
+### Pendientes produccion (en curso)
+
+| Medida | OWASP | Estado |
+|---|---|---|
+| Autenticacion JWT + bcrypt (tabla `users`) | A01, A07 | Completado |
+| Rate limiting (`express-rate-limit`) | A04 | Pendiente |
+| Logging estructurado (tabla `audit_logs`) | A09 | Pendiente |
+
+## Documentacion
+
+- **TSDoc obligatorio** en export publica de `domain/`, `application/`, `infrastructure/`
+- `pnpm lint:docs` — verifica TSDoc en exports
+- **Solo documentar el "por que"**, no el "que"
+- **Tras cada commit**: actualizar `CLAUDE.md` si cambia stack/arquitectura/fases
