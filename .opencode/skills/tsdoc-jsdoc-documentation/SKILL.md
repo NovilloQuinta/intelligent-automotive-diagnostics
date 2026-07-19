@@ -104,13 +104,13 @@ export async function processVehicleDiagnosis(repo: ObdRepository): Promise<Diag
 
 ### CI integration
 
-The project has a built-in linter that checks TSDoc presence:
+The project uses `eslint-plugin-jsdoc` integrated into `pnpm lint` to check TSDoc presence:
 
 ```bash
-pnpm lint:docs
+pnpm lint
 ```
 
-It scans every `.ts` file under `src/` for public exports. If a file has at least one `export function/interface/class/enum/type/const`, it must contain at least one `/** ... */` TSDoc block. Exit code is non-zero on failure.
+The `jsdoc/require-jsdoc` rule checks that every public export in `src/` (`function`, `class`, `interface`, `type`, `enum`, `const`) has a `/** ... */` TSDoc block. Exit code is non-zero on failure.
 
 **What it does NOT check** (intentionally): content quality, tag correctness, or param/return matching. This is a **presence gate**, not a semantic validator. Review accuracy during code review.
 
@@ -121,4 +121,4 @@ It scans every `.ts` file under `src/` for public exports. If a file has at leas
 | **IDE hover** | VS Code, Vim (coc.nvim), WebStorm show TSDoc on hover — params, returns, errors |
 | **Type narrowing** | Well-documented `@param` constraints help prevent misuse across boundaries |
 | **AI assistance** | Copilot/Supermaven generate TSDoc from function signatures; consistent TSDoc also helps LLMs generate correct calling code |
-| **CI gate** | `pnpm lint:docs` fails the pipeline if public APIs are undocumented — enforces discipline |
+| **CI gate** | `pnpm lint` (via eslint-plugin-jsdoc) fails the pipeline if public APIs are undocumented — enforces discipline |

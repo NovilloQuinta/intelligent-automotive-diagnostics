@@ -35,7 +35,7 @@ Beyond coverage, monitor:
 2. **Test success rate**: `vitest run` must always be 100%
 3. **Build errors**: `tsc --noEmit` must be 0
 4. **Vulnerabilities**: `pnpm audit` must return 0
-5. **TSDoc coverage**: `pnpm lint:docs` — all public exports documented
+5. **TSDoc coverage**: `pnpm lint` — all public exports documented (eslint-plugin-jsdoc)
 
 ## Vitest configuration
 
@@ -96,8 +96,7 @@ coverage: {
 ```bash
 pnpm test:coverage    # Features >=80% per-file + excludes Infra
 pnpm coverage:core    # Core = 100% (dedicated script)
-pnpm lint:docs        # TSDoc on all exports
-pnpm lint             # ESLint
+pnpm lint             # ESLint + TSDoc on all exports (eslint-plugin-jsdoc)
 pnpm format           # Prettier
 pnpm build            # tsc --noEmit
 pnpm audit            # 0 vulnerabilities

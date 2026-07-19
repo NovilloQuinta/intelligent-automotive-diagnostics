@@ -184,9 +184,8 @@ pnpm test:watch     # Modo watch TDD
 pnpm test:coverage  # Cobertura
 
 # Calidad
-pnpm lint           # ESLint
+pnpm lint           # ESLint + TSDoc (eslint-plugin-jsdoc)
 pnpm format         # Prettier check
-pnpm lint:docs      # Verificar TSDoc + ADRs
 
 # Base de datos
 pnpm db:generate    # Generar migraciones desde schema.ts
@@ -218,7 +217,7 @@ Filosofía **"Documentation As You Code"**:
 
 - **ADR** — 6 decisiones arquitectónicas en `docs/adr/`
 - **TSDoc** — Cada export público en `domain/`, `application/` e `infrastructure/`
-- **CI Docs** — Verificación en pipeline (`pnpm lint:docs`)
+- **CI Docs** — Verificación en pipeline (`pnpm lint` incluye TSDoc via eslint-plugin-jsdoc)
 - **[CLAUDE.md](CLAUDE.md)** — Reglas del proyecto, skills, convenciones
 - **[fase-2-plan-v2.md](docs/fase-2-plan-v2.md)** — Plan detallado Fase 2
 

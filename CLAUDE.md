@@ -26,7 +26,7 @@
 2. **1 paso a la vez** — no mezclar responsabilidades, no adelantar trabajo
 3. **TDD estricto**: RED (test que falla) → GREEN (codigo minimo) → REFACTOR
 4. **Preguntar antes de commitear/pushear** — mostrar diff, esperar OK humano
-5. **Checks pre-commit**: `pnpm lint && pnpm format && pnpm lint:docs && pnpm test && pnpm test:coverage && pnpm coverage:core && pnpm audit`
+5. **Checks pre-commit**: `pnpm lint && pnpm format && pnpm test && pnpm test:coverage && pnpm coverage:core && pnpm audit`
 6. **Tras cada paso**: actualizar `SESION ACTUAL` en este mismo fichero
 
 ## SKILLS
@@ -124,6 +124,6 @@ apps/core-api/src/
 ## Documentacion
 
 - **TSDoc obligatorio** en export publica de `domain/`, `application/`, `infrastructure/`
-- `pnpm lint:docs` — verifica TSDoc en exports
+- `pnpm lint` — verifica TSDoc en exports (eslint-plugin-jsdoc)
 - **Solo documentar el "por que"**, no el "que"
 - **Tras cada commit**: actualizar `CLAUDE.md` si cambia stack/arquitectura/fases

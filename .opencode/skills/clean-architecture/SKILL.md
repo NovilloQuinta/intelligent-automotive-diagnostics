@@ -141,7 +141,7 @@ Run before committing to verify layer discipline:
 2. `grep -r "from '@/application" src/domain/` — must return **zero** matches
 3. No `instanceof` checks in `application/` — use interfaces, not concrete classes
 4. No `new Database()`, `new ObdSimulator()`, or framework instantiation in `application/`
-5. Run `pnpm lint:docs` — public exports in all 3 layers must have TSDoc
+5. Run `pnpm lint` — public exports in all 3 layers must have TSDoc (eslint-plugin-jsdoc)
 6. Run `pnpm test` — all tests must pass
 
 ### Fixing violations

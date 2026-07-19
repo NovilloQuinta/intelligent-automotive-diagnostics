@@ -97,7 +97,7 @@ describe('hexParser', () => {
 
 ## Verificación en CI
 
-El proyecto incluye un script `lint:docs` que verifica que los archivos TSDoc esenciales existen y cumplen el formato. Se ejecuta en el pipeline antes de `build`.
+El proyecto usa `eslint-plugin-jsdoc` integrado en `pnpm lint` para verificar que los exports publicos tengan TSDoc. Se ejecuta en el pipeline antes de `build`.
 
 ## Cómo añadir documentación
 
