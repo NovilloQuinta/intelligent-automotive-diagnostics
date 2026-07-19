@@ -10,7 +10,7 @@ Coverage strategy for TypeScript that prioritizes business logic and avoids "cov
 
 | Tier | Threshold | What's included | Validation |
 |---|---|---|---|
-| **Core** | 100% | Critical business logic: algorithms, financial operations, critical path | Dedicated CI script (`pnpm coverage:core`) |
+| **Core** | 100% | Critical business logic: algorithms, financial operations, critical path | Native vitest per-file thresholds (100% S/B/F/L) |
 | **Features** | >=80% (per-file) | Visible functionality: parsers, services, repositories, MCP tools | `perFile: true` in vitest (80% stmts/lines, 90% funcs, 60% branches) |
 | **Infrastructure** | 0% (excluded) | Interfaces, constants, seed data, DB schema, config, delegation adapters | Excluded from coverage |
 
@@ -40,7 +40,7 @@ Beyond coverage, monitor:
 ## Vitest configuration
 
 ```ts
-// vitest.config.ts — thresholds for Features (Core validated separately)
+// vitest.config.ts — thresholds for Features + Core 100%
 coverage: {
   provider: 'v8',
   include: ['src/**/*.ts'],
@@ -57,6 +57,8 @@ coverage: {
     '**/diagnosisController.ts',
     '**/obdSimulatorRepository.ts',
     '**/server.ts',
+    '**/auditLogger.ts',
+    '**/rateLimiter.ts',
   ],
   thresholds: {
     statements: 80,
@@ -64,13 +66,33 @@ coverage: {
     functions: 90,
     lines: 80,
     perFile: true,  // Each individual file must meet these thresholds
+    'src/application/diagnostics/processVehicleDiagnosis.ts': {
+      statements: 100,
+      branches: 100,
+      functions: 100,
+      lines: 100,
+    },
   },
 },
 ```
 
-## CI script for Core 100%
+## Core 100% — Native vitest thresholds
 
-`scripts/check-core-coverage.ts`: parses the coverage JSON and verifies that `src/application/diagnostics/processVehicleDiagnosis.ts` has 100% in statements, branches, functions, and lines.
+Core files use per-file threshold overrides in `vitest.config.ts`:
+
+```ts
+thresholds: {
+  // ... global thresholds ...
+  'src/application/diagnostics/processVehicleDiagnosis.ts': {
+    statements: 100,
+    branches: 100,
+    functions: 100,
+    lines: 100,
+  },
+},
+```
+
+Vitest itself fails (exit code 1) if any Core file drops below 100%. No separate CI script needed.
 
 ## Project mapping
 
@@ -94,8 +116,7 @@ coverage: {
 ## CI checks
 
 ```bash
-pnpm test:coverage    # Features >=80% per-file + excludes Infra
-pnpm coverage:core    # Core = 100% (dedicated script)
+pnpm test:coverage    # Features >=80% per-file + Core 100% (native vitest thresholds)
 pnpm lint             # ESLint + TSDoc on all exports (eslint-plugin-jsdoc)
 pnpm format           # Prettier
 pnpm build            # tsc --noEmit

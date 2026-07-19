@@ -38,6 +38,12 @@ export default defineConfig({
         functions: 90,
         lines: 80,
         perFile: true,
+        'src/application/diagnostics/processVehicleDiagnosis.ts': {
+          statements: 100,
+          branches: 100,
+          functions: 100,
+          lines: 100,
+        },
       },
     },
   },

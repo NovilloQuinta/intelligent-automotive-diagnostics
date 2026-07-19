@@ -11,8 +11,7 @@
     "test": "cd apps/core-api && pnpm test",
     "test:watch": "cd apps/core-api && pnpm test:watch",
     "test:coverage": "cd apps/core-api && pnpm test:coverage",
-    "lint": "cd apps/core-api && pnpm lint",
-    "coverage:core": "cd apps/core-api && pnpm coverage:core"
+    "lint": "cd apps/core-api && pnpm lint"
   },
   "devDependencies": {
     "tsx": "^4.19.0"

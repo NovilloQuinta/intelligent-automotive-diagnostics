@@ -31,7 +31,7 @@
 2. **1 paso a la vez** — no mezclar responsabilidades, no adelantar trabajo
 3. **TDD estricto**: RED (test que falla) → GREEN (codigo minimo) → REFACTOR
 4. **Preguntar antes de commitear/pushear** — mostrar diff, esperar OK humano
-5. **Checks pre-commit**: `pnpm lint && pnpm format && pnpm test && pnpm test:coverage && pnpm coverage:core && pnpm audit`
+5. **Checks pre-commit**: `pnpm lint && pnpm format && pnpm test && pnpm test:coverage && pnpm audit`
 6. **Tras cada paso**: actualizar `SESION ACTUAL` en este mismo fichero
 
 ## SKILLS
@@ -76,8 +76,7 @@ pnpm drizzle-kit migrate                # aplicar migraciones a SQLite
 
 # Tests
 pnpm test                               # vitest run
-pnpm test:coverage                      # coverage (Features >=80% per-file)
-pnpm coverage:core                      # CI script: Core 100%
+pnpm test:coverage                      # coverage (Features >=80% + Core 100%, via vitest thresholds)
 ```
 
 ## Arquitectura (Clean Architecture + MCP)
