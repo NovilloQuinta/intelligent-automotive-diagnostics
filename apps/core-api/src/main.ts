@@ -76,7 +76,6 @@ const scenarios: SimulationScenario[] = [
 const PORT = Number(process.env.PORT) || 4000
 
 const app = createServer({
-  mode: OBD_MODE,
   scenarios,
   userRepo,
   authService,

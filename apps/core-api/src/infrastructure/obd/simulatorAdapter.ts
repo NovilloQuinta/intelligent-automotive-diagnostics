@@ -2,7 +2,7 @@ import type { ObdRepository } from '@/application/ports/obdRepository.interface.
 import type { DtcCode } from '@/domain/dtcCode.js'
 import type { FreezeFrame } from '@/domain/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/vehicleProfile.js'
-import type { ObdSimulator } from './obdSimulator.js'
+import type { ObdSimulator } from './simulator.js'
 
 /** Adaptador que implementa {@link ObdRepository} usando el simulador de hardware. */
 export class ObdSimulatorRepository implements ObdRepository {
@@ -21,7 +21,7 @@ export class ObdSimulatorRepository implements ObdRepository {
   }
 
   async readDtcCodes(): Promise<DtcCode[]> {
-    return this.simulator.getRawDtcs().map((code) => ({
+    return this.simulator.getRawDtcs().map((code: string) => ({
       code,
       description: '',
     }))
