@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import type { AddressInfo } from 'node:net'
 import type { Server } from 'node:http'
 import { createServer } from '@/infrastructure/http/server.js'
-import type { SimulationScenario } from '@/infrastructure/hardware-simulator/simulationScenario.js'
+import type { SimulationScenario } from '@/domain/simulationScenario.js'
 
 const mockScenarios: SimulationScenario[] = [
   {

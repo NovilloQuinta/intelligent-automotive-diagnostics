@@ -1,7 +1,7 @@
-import type { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
-import type { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
-import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import type { PidDefinition, PidReading } from '@/domain/entities/pidDefinition.js'
+import type { VehicleProfile } from '@/domain/vehicleProfile.js'
+import type { DiagnosisSession } from '@/domain/diagnosisSession.js'
+import type { EcuInfo } from '@/domain/ecuInfo.js'
+import type { PidDefinition, PidReading } from '@/domain/pidDefinition.js'
 
 /** Contrato para la persistencia del catálogo auto-expansivo de vehículos, ECUs y PIDs. */
 export interface VehicleRepository {

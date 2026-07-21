@@ -1,4 +1,4 @@
-import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
+import type { PidDefinition } from '@/domain/pidDefinition.js'
 
 /** PIDs estándar Mode 01 (SAE J1979) — globales, para cualquier vehículo. */
 export const STANDARD_MODE_01_PIDS: PidDefinition[] = [

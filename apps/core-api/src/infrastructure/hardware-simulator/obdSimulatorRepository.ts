@@ -1,7 +1,7 @@
 import type { ObdRepository } from '@/application/ports/obdRepository.interface.js'
-import type { DtcCode } from '@/domain/entities/dtcCode.js'
-import type { FreezeFrame } from '@/domain/entities/freezeFrame.js'
-import type { VehicleInfo } from '@/domain/entities/vehicleInfo.js'
+import type { DtcCode } from '@/domain/dtcCode.js'
+import type { FreezeFrame } from '@/domain/freezeFrame.js'
+import type { VehicleInfo } from '@/domain/vehicleProfile.js'
 import type { ObdSimulator } from './obdSimulator.js'
 
 /** Adaptador que implementa {@link ObdRepository} usando el simulador de hardware. */

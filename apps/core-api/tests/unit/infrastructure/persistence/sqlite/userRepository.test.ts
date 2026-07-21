@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
-import type { CreateUserInput } from '@/domain/entities/user.js'
+import type { CreateUserInput } from '@/domain/user.js'
 
 const mockUser: CreateUserInput = {
   username: 'testuser',

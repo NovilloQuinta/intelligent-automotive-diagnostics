@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createDiagnosisController } from '@/infrastructure/http/controllers/diagnosisController.js'
-import type { SimulationScenario } from '@/infrastructure/hardware-simulator/simulationScenario.js'
+import type { SimulationScenario } from '@/domain/simulationScenario.js'
 
 function makeReq(body?: unknown) {
   return { body: body ?? {} } as ReturnType<typeof vi.fn> & { body: unknown }

@@ -1,5 +1,5 @@
-import type { LiveData } from '@/domain/entities/liveData.js'
-import type { DtcCode } from '@/domain/entities/dtcCode.js'
+import type { LiveData } from './liveData.js'
+import type { DtcCode } from './dtcCode.js'
 
 /** Nivel de criticidad de un diagnóstico. */
 export type Severity = 'low' | 'medium' | 'high' | 'critical'

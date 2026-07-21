@@ -3,10 +3,10 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from '@/infrastructure/persistence/sqlite/schema.js'
 import { SqliteVehicleRepository } from '@/infrastructure/persistence/sqlite/vehicleRepository.js'
-import { VinDecodeError } from '@/infrastructure/obd/protocol/vinDecoder.js'
-import type { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
-import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import type { PidDefinition, PidReading } from '@/domain/entities/pidDefinition.js'
+import { VinDecodeError } from '@/domain/vin.js'
+import type { VehicleProfile } from '@/domain/vehicleProfile.js'
+import type { EcuInfo } from '@/domain/ecuInfo.js'
+import type { PidDefinition, PidReading } from '@/domain/pidDefinition.js'
 
 describe('SqliteVehicleRepository', () => {
   let db: ReturnType<typeof drizzle>

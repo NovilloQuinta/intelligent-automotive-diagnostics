@@ -1,6 +1,6 @@
-import type { SimulationScenario } from './simulationScenario.js'
-import type { FreezeFrame } from '@/domain/entities/freezeFrame.js'
-import type { VehicleInfo } from '@/domain/entities/vehicleInfo.js'
+import type { SimulationScenario } from '@/domain/simulationScenario.js'
+import type { FreezeFrame } from '@/domain/freezeFrame.js'
+import type { VehicleInfo } from '@/domain/vehicleProfile.js'
 
 /** Simulador de tramas OBD-II que convierte escenarios a bytes hexadecimales. */
 export class ObdSimulator {

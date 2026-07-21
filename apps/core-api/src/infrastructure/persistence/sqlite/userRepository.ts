@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import * as schema from './schema.js'
 import type { DiagnosticsDb } from './db.js'
 import type { UserRepository } from '@/application/ports/userRepository.interface.js'
-import type { User, CreateUserInput } from '@/domain/entities/user.js'
+import type { User, CreateUserInput } from '@/domain/user.js'
 
 type UserRow = typeof schema.users.$inferSelect
 

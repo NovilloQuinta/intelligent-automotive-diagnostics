@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { processVehicleDiagnosis } from '@/application/diagnostics/processVehicleDiagnosis.js'
 import type { ObdRepository } from '@/application/ports/obdRepository.interface.js'
-import type { FreezeFrame } from '@/domain/entities/freezeFrame.js'
+import type { FreezeFrame } from '@/domain/freezeFrame.js'
 
 const sensorValues = { rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 }
 const dtcCodes = [{ code: 'P0301', description: 'Cylinder 1 Misfire' }]

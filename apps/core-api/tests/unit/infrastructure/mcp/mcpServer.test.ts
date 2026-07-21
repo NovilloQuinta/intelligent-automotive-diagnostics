@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { ObdRepository } from '@/application/ports/obdRepository.interface.js'
 import type { VehicleRepository } from '@/application/ports/vehicleRepository.interface.js'
-import type { FreezeFrame } from '@/domain/entities/freezeFrame.js'
-import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
+import type { FreezeFrame } from '@/domain/freezeFrame.js'
+import type { PidDefinition } from '@/domain/pidDefinition.js'
 import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
 
 function mockObdRepo(overrides: Partial<ObdRepository> = {}): ObdRepository {

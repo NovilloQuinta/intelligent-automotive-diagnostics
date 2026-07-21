@@ -1,6 +1,6 @@
 import type { ObdRepository } from '@/application/ports/obdRepository.interface.js'
-import type { DiagnosisResult, Severity } from '@/domain/entities/diagnosisResult.js'
-import type { FreezeFrame } from '@/domain/entities/freezeFrame.js'
+import type { DiagnosisResult, Severity } from '@/domain/diagnosisResult.js'
+import type { FreezeFrame } from '@/domain/freezeFrame.js'
 
 function computeSeverity(dtcCount: number, freezeFrame: FreezeFrame | null): Severity {
   if (dtcCount === 0) return 'low'

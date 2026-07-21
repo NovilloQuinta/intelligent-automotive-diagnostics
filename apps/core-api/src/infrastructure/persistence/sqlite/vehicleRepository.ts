@@ -1,12 +1,12 @@
 import { eq, sql } from 'drizzle-orm'
 import * as schema from './schema.js'
-import { validateVin } from '@/infrastructure/obd/protocol/vinDecoder.js'
+import { validateVin } from '@/domain/vin.js'
 import type { DiagnosticsDb } from './db.js'
 import type { VehicleRepository } from '@/application/ports/vehicleRepository.interface.js'
-import type { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
-import type { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
-import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import type { PidDefinition, PidReading } from '@/domain/entities/pidDefinition.js'
+import type { VehicleProfile } from '@/domain/vehicleProfile.js'
+import type { DiagnosisSession } from '@/domain/diagnosisSession.js'
+import type { EcuInfo } from '@/domain/ecuInfo.js'
+import type { PidDefinition, PidReading } from '@/domain/pidDefinition.js'
 
 /** Implementación de {@link VehicleRepository} con SQLite via Drizzle ORM. */
 export class SqliteVehicleRepository implements VehicleRepository {

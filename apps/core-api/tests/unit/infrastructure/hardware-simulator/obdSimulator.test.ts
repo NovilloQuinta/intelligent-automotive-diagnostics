@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { ObdSimulator } from '@/infrastructure/hardware-simulator/obdSimulator.js'
-import type { SimulationScenario } from '@/infrastructure/hardware-simulator/simulationScenario.js'
-import type { LiveData } from '@/domain/entities/liveData.js'
-import type { FreezeFrame } from '@/domain/entities/freezeFrame.js'
+import type { SimulationScenario } from '@/domain/simulationScenario.js'
+import type { LiveData } from '@/domain/liveData.js'
+import type { FreezeFrame } from '@/domain/freezeFrame.js'
 
 const audiIdleData: LiveData = {
   rpm: 750,
