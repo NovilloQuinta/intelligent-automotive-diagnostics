@@ -1,19 +1,8 @@
 import type { Request, Response, NextFunction } from 'express'
-
-/** Contrato minimo que necesita el audit logger para persistir registros. */
-export interface AuditLogRepository {
-  create(input: {
-    method: string
-    path: string
-    statusCode: number
-    ip?: string | null
-    userAgent?: string | null
-    durationMs?: number | null
-  }): Promise<unknown>
-}
+import type { AuditLogRepositoryPort } from '@/application/ports/auditLogRepository.interface.js'
 
 /** Crea un middleware Express que registra cada request en el repositorio de auditoria. */
-export function createAuditLogger(repo: AuditLogRepository) {
+export function createAuditLogger(repo: AuditLogRepositoryPort) {
   return function auditLoggerMiddleware(req: Request, res: Response, next: NextFunction): void {
     const start = Date.now()
 

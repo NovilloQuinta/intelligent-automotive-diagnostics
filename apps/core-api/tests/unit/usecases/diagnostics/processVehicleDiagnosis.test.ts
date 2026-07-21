@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { processVehicleDiagnosis } from '@/application/diagnostics/processVehicleDiagnosis.js'
+import { processVehicleDiagnosis } from '@/application/use-cases/processVehicleDiagnosis.js'
 import type { ObdRepository } from '@/application/ports/obdRepository.interface.js'
 import type { FreezeFrame } from '@/domain/freezeFrame.js'
 

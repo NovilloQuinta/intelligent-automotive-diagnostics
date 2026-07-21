@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { ObdSimulator } from '@/infrastructure/hardware-simulator/obdSimulator.js'
 import { ObdSimulatorRepository } from '@/infrastructure/hardware-simulator/obdSimulatorRepository.js'
-import { processVehicleDiagnosis } from '@/application/diagnostics/processVehicleDiagnosis.js'
+import { processVehicleDiagnosis } from '@/application/use-cases/processVehicleDiagnosis.js'
 import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
 import type { VehicleRepository } from '@/application/ports/vehicleRepository.interface.js'
 import type { ServerConfig } from '@/infrastructure/http/server.js'

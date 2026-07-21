@@ -7,22 +7,22 @@ import { openApiSpec } from '@/infrastructure/http/swagger.js'
 import { createRateLimiter } from '@/infrastructure/http/middleware/rateLimiter.js'
 import type { RateLimiterConfig } from '@/infrastructure/http/middleware/rateLimiter.js'
 import { createAuditLogger } from '@/infrastructure/http/middleware/auditLogger.js'
-import type { AuditLogRepository } from '@/infrastructure/http/middleware/auditLogger.js'
+import type { AuditLogRepositoryPort } from '@/application/ports/auditLogRepository.interface.js'
 import { createAuthMiddleware } from '@/infrastructure/http/middleware/authMiddleware.js'
 import { createAuthRoutes } from '@/infrastructure/http/routes/authRoutes.js'
 import type { UserRepository } from '@/application/ports/userRepository.interface.js'
-import type { AuthService } from '@/infrastructure/auth/authService.js'
-import type { RefreshTokenStore } from '@/infrastructure/auth/authService.js'
+import type { AuthServicePort } from '@/application/ports/authService.interface.js'
+import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.interface.js'
 
 /** Configuracion del servidor Express. */
 export interface ServerConfig {
   readonly mode: string
   readonly scenarios: SimulationScenario[]
   readonly rateLimit?: Partial<RateLimiterConfig>
-  readonly auditRepo?: AuditLogRepository
+  readonly auditRepo?: AuditLogRepositoryPort
   readonly userRepo?: UserRepository
-  readonly authService?: AuthService
-  readonly tokenStore?: RefreshTokenStore
+  readonly authService?: AuthServicePort
+  readonly tokenStore?: RefreshTokenStorePort
   readonly accessTokenSecret?: string
 }
 

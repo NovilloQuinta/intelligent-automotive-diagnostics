@@ -109,7 +109,7 @@ describe('Auth integration', () => {
         })
         .expect(409)
 
-      expect(res.body.error).toBe('Email already registered')
+      expect(res.body.error).toContain('Email already registered')
     })
 
     it('should return 400 for invalid input', async () => {

@@ -1,20 +1,8 @@
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { createHash, randomUUID } from 'node:crypto'
-
-/** Registro de refresh token devuelto por el store. */
-export interface RefreshTokenRecord {
-  readonly userId: number
-  readonly expiresAt: string
-  readonly revokedAt: string | null
-}
-
-/** Contrato para persistir y consultar refresh tokens. */
-export interface RefreshTokenStore {
-  saveRefreshToken(userId: number, tokenHash: string, expiresAt: string): Promise<void>
-  findRefreshToken(tokenHash: string): Promise<RefreshTokenRecord | null>
-  revokeRefreshToken(tokenHash: string): Promise<void>
-}
+import type { AuthServicePort } from '@/application/ports/authService.interface.js'
+import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.interface.js'
 
 /** Configuracion del servicio de autenticacion. */
 interface AuthServiceConfig {
@@ -22,19 +10,7 @@ interface AuthServiceConfig {
   readonly refreshTokenSecret: string
   readonly accessTokenExpiresIn: string
   readonly refreshTokenExpiresIn: string
-  readonly tokenStore: RefreshTokenStore
-}
-
-/** Servicio de autenticacion devuelto por {@link createAuthService}. */
-export interface AuthService {
-  hashPassword(password: string): Promise<string>
-  comparePassword(password: string, hash: string): Promise<boolean>
-  generateTokens(userId: number): {
-    accessToken: string
-    refreshToken: string
-  }
-  verifyAccessToken(token: string): number
-  refreshAccessToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }>
+  readonly tokenStore: RefreshTokenStorePort
 }
 
 const BCRYPT_ROUNDS = 12
@@ -51,7 +27,7 @@ function calculateExpiryDate(): string {
 }
 
 /** Crea una instancia del servicio de autenticacion con la configuracion dada. */
-export function createAuthService(config: AuthServiceConfig): AuthService {
+export function createAuthService(config: AuthServiceConfig): AuthServicePort {
   const {
     accessTokenSecret,
     refreshTokenSecret,
