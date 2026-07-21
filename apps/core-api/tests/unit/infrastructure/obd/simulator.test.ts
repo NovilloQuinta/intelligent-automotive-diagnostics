@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ObdSimulator } from '@/infrastructure/hardware-simulator/obdSimulator.js'
+import { ObdSimulator } from '@/infrastructure/obd/simulator.js'
 import type { SimulationScenario } from '@/domain/simulationScenario.js'
 import type { LiveData } from '@/domain/liveData.js'
 import type { FreezeFrame } from '@/domain/freezeFrame.js'

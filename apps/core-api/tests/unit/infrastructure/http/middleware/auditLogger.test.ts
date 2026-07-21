@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { EventEmitter } from 'node:events'
-import { createAuditLogger } from '@/infrastructure/http/middleware/auditLogger.js'
+import { createAuditLogger } from '@/infrastructure/http/middleware/audit-logger.middleware.js'
 import type { AuditLogRepositoryPort } from '@/application/ports/auditLogRepository.interface.js'
 
 function createMockRes() {

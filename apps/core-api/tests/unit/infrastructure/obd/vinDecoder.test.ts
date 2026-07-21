@@ -5,7 +5,7 @@ import {
   isValidCheckDigit,
   decodeWmi,
   VinDecodeError,
-} from '@/infrastructure/obd/protocol/vinDecoder.js'
+} from '@/infrastructure/obd/vinDecoder.js'
 
 describe('vinDecoder', () => {
   describe('decodeVin', () => {

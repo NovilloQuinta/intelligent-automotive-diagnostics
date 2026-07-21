@@ -4,7 +4,7 @@ import * as schema from '@/infrastructure/persistence/sqlite/schema.js'
 import { createServer } from '@/infrastructure/http/server.js'
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
 import { SqliteRefreshTokenStore } from '@/infrastructure/persistence/sqlite/refreshTokenStore.js'
-import { createAuthService } from '@/infrastructure/auth/authService.js'
+import { createAuthService } from '@/infrastructure/services/authService.js'
 import type { SimulationScenario } from '@/domain/simulationScenario.js'
 import type { LiveData } from '@/domain/liveData.js'
 

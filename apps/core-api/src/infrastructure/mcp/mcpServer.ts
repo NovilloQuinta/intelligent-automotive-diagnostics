@@ -25,7 +25,7 @@ export interface DiagnosticsMcpServer {
  */
 export function createMcpServer(
   repo: ObdRepository,
-  vehicleRepo: VehicleRepository,
+  vehicleRepo?: VehicleRepository,
 ): DiagnosticsMcpServer {
   const server = new McpServer({
     name: 'obd-diagnostics',
@@ -107,6 +107,9 @@ export function createMcpServer(
     'List known PIDs for a vehicle.',
     { vehicleId: z.number().optional() },
     (handlers['get_available_pids'] = async ({ vehicleId }) => {
+      if (!vehicleRepo) {
+        return { content: [{ type: 'text' as const, text: 'No PIDs available for this vehicle.' }] }
+      }
       const pids = vehicleId != null ? await vehicleRepo.findPidsByVehicle(vehicleId as number) : []
       if (pids.length === 0)
         return { content: [{ type: 'text' as const, text: 'No PIDs available for this vehicle.' }] }

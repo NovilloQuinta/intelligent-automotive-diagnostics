@@ -5,7 +5,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { createServer } from '@/infrastructure/http/server.js'
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
 import { SqliteRefreshTokenStore } from '@/infrastructure/persistence/sqlite/refreshTokenStore.js'
-import { createAuthService } from '@/infrastructure/auth/authService.js'
+import { createAuthService } from '@/infrastructure/services/authService.js'
 
 const ACCESS_SECRET = 'integration-access-secret'
 const REFRESH_SECRET = 'integration-refresh-secret'

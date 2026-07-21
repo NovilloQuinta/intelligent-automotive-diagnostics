@@ -6,7 +6,7 @@ vi.mock('express-rate-limit', () => ({
   rateLimit: vi.fn().mockImplementation(() => mockRateLimitHandler),
 }))
 
-import { createRateLimiter } from '@/infrastructure/http/middleware/rateLimiter.js'
+import { createRateLimiter } from '@/infrastructure/http/middleware/rate-limiter.middleware.js'
 import { rateLimit } from 'express-rate-limit'
 
 describe('createRateLimiter', () => {

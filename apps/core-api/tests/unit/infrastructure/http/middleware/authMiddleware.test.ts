@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import jwt from 'jsonwebtoken'
-import { createAuthMiddleware } from '@/infrastructure/http/middleware/authMiddleware.js'
+import { createAuthMiddleware } from '@/infrastructure/http/middleware/auth.middleware.js'
 
 const SECRET = 'test-secret'
 

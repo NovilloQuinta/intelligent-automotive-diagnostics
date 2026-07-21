@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import jwt from 'jsonwebtoken'
-import { createAuthService } from '@/infrastructure/auth/authService.js'
+import { createAuthService } from '@/infrastructure/services/authService.js'
 import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.interface.js'
 
 describe('authService', () => {

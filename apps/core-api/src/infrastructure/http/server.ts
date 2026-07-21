@@ -1,22 +1,21 @@
 import express from 'express'
 import helmet from 'helmet'
 import swaggerUi from 'swagger-ui-express'
-import { createDiagnosisController } from '@/infrastructure/http/controllers/diagnosisController.js'
 import type { SimulationScenario } from '@/domain/simulationScenario.js'
 import { openApiSpec } from '@/infrastructure/http/swagger.js'
-import { createRateLimiter } from '@/infrastructure/http/middleware/rateLimiter.js'
-import type { RateLimiterConfig } from '@/infrastructure/http/middleware/rateLimiter.js'
-import { createAuditLogger } from '@/infrastructure/http/middleware/auditLogger.js'
+import { createRateLimiter } from '@/infrastructure/http/middleware/rate-limiter.middleware.js'
+import type { RateLimiterConfig } from '@/infrastructure/http/middleware/rate-limiter.middleware.js'
+import { createAuditLogger } from '@/infrastructure/http/middleware/audit-logger.middleware.js'
 import type { AuditLogRepositoryPort } from '@/application/ports/auditLogRepository.interface.js'
-import { createAuthMiddleware } from '@/infrastructure/http/middleware/authMiddleware.js'
-import { createAuthRoutes } from '@/infrastructure/http/routes/authRoutes.js'
+import { createAuthMiddleware } from '@/infrastructure/http/middleware/auth.middleware.js'
+import { createAuthRoutes } from '@/infrastructure/http/routes/auth.routes.js'
+import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
 import type { UserRepository } from '@/application/ports/userRepository.interface.js'
 import type { AuthServicePort } from '@/application/ports/authService.interface.js'
 import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.interface.js'
 
-/** Configuracion del servidor Express. */
-export interface ServerConfig {
-  readonly mode: string
+/** Dependencias del servidor Express. */
+export interface ServerDependencies {
   readonly scenarios: SimulationScenario[]
   readonly rateLimit?: Partial<RateLimiterConfig>
   readonly auditRepo?: AuditLogRepositoryPort
@@ -27,14 +26,13 @@ export interface ServerConfig {
 }
 
 /** Crea y devuelve la instancia de Express con todas las rutas montadas. */
-export function createServer(config: ServerConfig): express.Application {
+export function createServer(deps: ServerDependencies): express.Application {
   const app = express()
-  const controller = createDiagnosisController(config)
 
   app.use(helmet())
-  app.use(createRateLimiter(config.rateLimit))
-  if (config.auditRepo) {
-    app.use(createAuditLogger(config.auditRepo))
+  app.use(createRateLimiter(deps.rateLimit))
+  if (deps.auditRepo) {
+    app.use(createAuditLogger(deps.auditRepo))
   }
   app.use(express.json({ limit: '10kb' }))
 
@@ -53,12 +51,10 @@ export function createServer(config: ServerConfig): express.Application {
     next()
   })
 
-  // Auth routes (public)
-  if (config.userRepo && config.authService && config.tokenStore) {
-    app.use('/api/auth', createAuthRoutes(config.userRepo, config.authService, config.tokenStore))
+  if (deps.userRepo && deps.authService && deps.tokenStore) {
+    app.use('/api/auth', createAuthRoutes(deps.userRepo, deps.authService, deps.tokenStore))
   }
 
-  // Public routes (Swagger, redirects)
   app.get('/api-docs.json', (_req, res) => {
     res.json(openApiSpec)
   })
@@ -79,14 +75,12 @@ export function createServer(config: ServerConfig): express.Application {
     res.json({ status: 'ok', uptime: process.uptime() })
   })
 
-  // Auth middleware (protected routes below this point)
-  if (config.accessTokenSecret) {
-    app.use(createAuthMiddleware(config.accessTokenSecret))
+  if (deps.accessTokenSecret) {
+    app.use(createAuthMiddleware(deps.accessTokenSecret))
   }
 
-  app.get('/api/scenarios', controller.getScenarios)
-  app.post('/api/diagnosis', controller.runDiagnosis)
-  app.post('/api/mcp/tools/:toolName', controller.runMcpTool)
+  const diagnosisRouter = createDiagnosisRoutes({ scenarios: deps.scenarios })
+  app.use('/api', diagnosisRouter)
 
   app.use(
     (err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
