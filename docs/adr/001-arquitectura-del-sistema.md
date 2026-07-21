@@ -1,8 +1,8 @@
 # ADR 001: Arquitectura del Sistema
 
-**Estado:** Aprobado
-**Fecha:** 2026-07-06
-**Contexto:** Inicio del proyecto TFM
+**Estado:** Aprobado (revisado Fase 3)
+**Fecha:** 2026-07-06 | **Revisado:** 2026-07-21
+**Contexto:** Inicio del proyecto TFM + Refactorizacion Clean Architecture + Hexagonal
 
 ---
 
@@ -10,60 +10,82 @@
 
 El proyecto requiere un backend capaz de:
 
-- Simular telemetría OBD-II de vehículos (Audi A3, Kawasaki Ninja)
-- Parsear tramas binarias a magnitudes físicas (SAE J1979)
-- Ejecutar diagnósticos deterministas sobre los datos parseados
-- Exponer herramientas a un LLM vía protocolo MCP para diagnóstico cognitivo
+- Simular telemetria OBD-II de vehiculos (Audi A3, Kawasaki Z900)
+- Parsear tramas binarias a magnitudes fisicas (SAE J1979)
+- Ejecutar diagnosticos deterministas sobre los datos parseados
+- Exponer herramientas a un LLM via protocolo MCP para diagnostico cognitivo
 - Ser demostrable en vivo ante un tribunal el 20 de julio de 2026
 
-Se necesita una arquitectura que maximice la testabilidad, permita cambiar de proveedor de IA sin modificar la lógica core, y sea fácil de explicar en la defensa.
+Se necesita una arquitectura que maximice la testabilidad, permita cambiar de proveedor de IA sin modificar la logica core, y sea facil de explicar en la defensa.
 
-## Decisión
+## Decision
 
-Se adopta **Clean Architecture en 3 capas** con **MCP como adaptador de IA**:
+Se adopta **Clean Architecture + Hexagonal (Ports & Adapters)** con **MCP como adaptador de IA**:
 
 ```
 src/
-├── domain/           # Capa 1: Entidades e interfaces puras (sin dependencias externas)
-├── usecases/         # Capa 2: Lógica de aplicación / orquestación
-└── infrastructure/   # Capa 3: Adaptadores técnicos (simulador, parsers, MCP, HTTP)
-    └── db/           #   └── Persistencia (añadida en ADR 002)
+├── main.ts              # Composition root + entry point
+│
+├── domain/              # Capa interna: Value Objects + Entidades
+│   ├── vin.ts           #   Vin value object (ISO 3779)
+│   ├── pidCode.ts       #   PidCode value object
+│   └── ...              #   Entidades puras (sin deps externas)
+│
+├── application/         # Capa intermedia: Puertos + Casos de uso
+│   ├── ports/           #   Contratos (interfaces puras)
+│   └── use-cases/       #   Orquestacion de negocio
+│
+└── infrastructure/      # Capa externa: Adaptadores concretos
+    ├── http/            #   Express (routes + middleware)
+    ├── services/        #   Servicios transversales
+    ├── obd/             #   Hardware OBD-II (simulador + parsers)
+    ├── mcp/             #   MCP tools
+    └── persistence/     #   SQLite + futuro LanceDB
 ```
 
 ### Reglas clave
 
-1. **domain/** no importa nada de `infrastructure/` ni `usecases/`
-2. **usecases/** depende solo de interfaces definidas en `domain/`
-3. **infrastructure/** implementa las interfaces de `domain/` y se inyecta desde `main.ts` (composition root)
-4. **MCP Server** es un adaptador más en infraestructura — expone herramientas al LLM pero no contiene lógica de negocio
-5. Las decisiones de IA (qué modelo, cómo se llama) se aíslan en `usecases/agents/`
+1. **domain/** no importa nada de `application/` ni `infrastructure/`
+2. **application/** depende solo de `domain/` — NUNCA importa `infrastructure/`
+3. **infrastructure/** implementa los puertos de `application/ports/` y se inyecta desde `main.ts` (composition root)
+4. **MCP Server** es un adaptador de infraestructura — expone tools al LLM pero no contiene logica de negocio
+5. **Value Objects** encapsulan validacion en `domain/` (Vin ISO 3779, PidCode hex)
+6. **Convencion de naming**: `resource.type.ts` en infraestructura (`auth.routes.ts`, `auth.middleware.ts`)
+
+### Dependencias entre capas (inviolables)
+
+```
+domain ← application ← infrastructure
+   ↑          ↑             ↑
+   └── imports flow this way ──┘
+```
 
 ## Consecuencias
 
 **Positivas:**
 
-- Testabilidad absoluta: domain y usecases se prueban con mocks sin levantar servidores
-- Independencia del framework: Express o Fastify se cambian desde un solo punto
+- Testabilidad: domain y application se prueban con mocks sin levantar servidores
+- Independencia del framework: Express se cambia desde un solo punto
 - Independencia del proveedor de IA: el LLM solo ve las tools del MCP Server
-- Claridad en la defensa del TFM: las 3 capas se explican en 1 minuto
+- Value Objects garantizan datos validos en toda la app
+- Claridad en la defensa: 3 capas + composition root, patron hexagonal
 
 **Negativas:**
 
-- Mayor número de ficheros que un enfoque monolítico
-- La inyección manual en `main.ts` crece con cada nuevo adaptador
-- Curva de aprendizaje inicial para alguien no familiarizado con Clean Architecture
+- Mayor numero de ficheros que un enfoque monolitico
+- La inyeccion manual en `main.ts` crece con cada nuevo adaptador
+- Curva de aprendizaje inicial para Clean Architecture + Hexagonal
 
-## Alternativas consideradas
+## Historial de revisiones
 
-| Alternativa | Razón para descartar |
+| Fecha | Cambio |
 |---|---|
-| **Monolito sin capas** | Dificulta testear la lógica de negocio sin el simulador; mala separación de concerns |
-| **Microservicios** | Over-engineering para un TFM; complejidad de red innecesaria |
-| **Arquitectura Hexagonal** | Válida, pero Clean Architecture es más conocida en el ámbito académico y más fácil de defender |
-| **MVC clásico (Modelo-Vista-Controlador)** | El LLM no es una "vista"; MCP encaja mejor como adaptador en infraestructura |
+| 2026-07-06 | ADR inicial: Clean Architecture 3 capas |
+| 2026-07-21 | Fase 3: Refactorizacion a Clean + Hexagonal. Value Objects (Vin, PidCode), puertos con sufijo Port, naming `resource.type.ts`, `application/ports/` + `application/use-cases/` |
 
 ## Referencias
 
 - Clean Architecture (Robert C. Martin, 2017)
+- Hexagonal Architecture (Alistair Cockburn, 2005)
 - Model Context Protocol Specification (Anthropic, 2024)
-- SAE J1979 — estándar de diagnóstico OBD-II
+- SAE J1979 — estandar de diagnostico OBD-II

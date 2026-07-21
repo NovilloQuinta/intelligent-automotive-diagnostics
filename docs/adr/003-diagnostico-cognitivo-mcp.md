@@ -48,7 +48,7 @@ El MCP Server expone **tools** que el LLM puede invocar:
 
 ### Aislamiento del proveedor de IA
 
-La lógica de llamada al LLM se concentra en `usecases/agents/executeCognitiveDiagnosis.ts`. Si en el futuro se quiere cambiar de Claude a GPT-4 o a un modelo local, solo hay que cambiar ese archivo — el MCP Server y el resto del sistema no se modifican.
+La logica de llamada al LLM se concentra en `application/use-cases/executeCognitiveDiagnosis.ts`. Si en el futuro se quiere cambiar de Claude a GPT-4 o a un modelo local, solo hay que cambiar ese archivo — el MCP Server y el resto del sistema no se modifican.
 
 ## Consecuencias
 
@@ -79,5 +79,5 @@ La lógica de llamada al LLM se concentra en `usecases/agents/executeCognitiveDi
 
 - [Model Context Protocol Specification](https://spec.modelcontextprotocol.io) (Anthropic, 2024)
 - ADR 001: `001-arquitectura-del-sistema.md` (Clean Architecture base)
-- `usecases/agents/executeCognitiveDiagnosis.ts` — implementación de referencia
+- `application/use-cases/executeCognitiveDiagnosis.ts` — implementacion de referencia
 - `infrastructure/mcp/mcpServer.ts` — servidor MCP con herramientas

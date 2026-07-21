@@ -20,7 +20,7 @@ El proyecto inicial contemplaba solo un flujo en memoria (simulador → parseo �
 
 ## Decisión
 
-Se incorpora una capa de persistencia en `src/infrastructure/db/` con las siguientes elecciones técnicas:
+Se incorpora una capa de persistencia en `src/infrastructure/persistence/sqlite/` con las siguientes elecciones tecnicas:
 
 ### ORM: Drizzle ORM
 
@@ -60,7 +60,7 @@ workspaces ──┬── users
 ### Impacto en Clean Architecture
 
 - Se añaden **interfaces de repositorio** en `domain/repositories/` (ej. `IWorkspaceRepository`, `IVehicleRepository`, `IDiagnosticSessionRepository`, `IActivityLogRepository`)
-- Las **implementaciones concretas** (Drizzle + SQL/PostgreSQL) viven en `infrastructure/db/repositories/`
+- Las **implementaciones concretas** (Drizzle + SQLite/PostgreSQL) viven en `infrastructure/persistence/sqlite/`
 - Los **casos de uso** existentes (`processVehicleDiagnosis`, `executeCognitiveDiagnosis`) reciben estos repositorios por inyección para guardar resultados
 
 ## Consecuencias

@@ -1,29 +1,29 @@
 # Intelligent Automotive Diagnostics
 
-> **TFM — Máster IA** · Jesús Novillo · Julio 2026
+> **TFM — Master IA** · Jesus Novillo · Julio 2026
 >
-> Simulación de telemetría vehicular y diagnóstico con IA mediante el protocolo MCP (Model Context Protocol).
-> Catálogo de PIDs auto-expansivo asistido por LLM. Cumplimiento SAE J1979 / ISO 15031 / ISO 3779.
+> Simulacion de telemetria vehicular y diagnostico con IA mediante el protocolo MCP (Model Context Protocol).
+> Catalogo de PIDs auto-expansivo asistido por LLM. Cumplimiento SAE J1979 / ISO 15031 / ISO 3779.
 
 ## Stack
 
-| Capa | Tecnología |
+| Capa | Tecnologia |
 |---|---|
-| Runtime | Node 22+ (ESM) |
+| Runtime | Node 20+ (ESM) |
 | Lenguaje | TypeScript 5.7+ estricto |
 | Framework web | Express 5 + Zod + Helmet |
-| IA / Agentes | MCP SDK (`@modelcontextprotocol/sdk` v1.29) |
+| IA / Agentes | MCP SDK (`@modelcontextprotocol/sdk`) |
 | Persistencia | SQLite + Drizzle ORM |
-| Vectorial | LanceDB (Fase 2b) |
-| Tests | Vitest 3 |
+| Vectorial | LanceDB (pendiente) |
+| Tests | Vitest 3 + supertest |
 | Package manager | pnpm 10 |
 | Dev tooling | tsx (dev), tsc (build) |
-| Documentación API | Swagger UI + OpenAPI 3.0 |
+| Documentacion API | Swagger UI + OpenAPI 3.0 |
 | CI | GitHub Actions |
 | Normativa | SAE J1979, ISO 15031-5, ISO 3779 (VIN) |
 | OBD Reference | ELM327-emulator v3.0.5 (Python, sidecar Docker) |
 
-## Inicio rápido
+## Inicio rapido
 
 ```bash
 # 1. Instalar dependencias
@@ -39,89 +39,103 @@ open http://localhost:4000/api-docs
 
 **Disponible en `http://localhost:4000`:**
 
-| Endpoint | Método | Descripción |
-|---|---|---|
-| `/api-docs` | GET | Swagger UI interactivo (Try it out) |
-| `/api/scenarios` | GET | Lista de escenarios de simulación |
-| `/api/diagnosis` | POST | Diagnóstico determinista `{ scenarioId }` |
-| `/api/mcp/tools/:toolName` | POST | Invocar tool MCP `{ scenarioId, args }` |
+| Endpoint | Metodo | Auth | Descripcion |
+|---|---|---|---|
+| `/api-docs` | GET | No | Swagger UI interactivo |
+| `/health` | GET | No | Health check |
+| `/api/auth/register` | POST | No | Registro de usuario |
+| `/api/auth/login` | POST | No | Inicio de sesion (JWT) |
+| `/api/auth/refresh` | POST | No | Rotacion de refresh token |
+| `/api/scenarios` | GET | JWT | Lista de escenarios de simulacion |
+| `/api/diagnosis` | POST | JWT | Diagnostico determinista |
+| `/api/mcp/tools/:toolName` | POST | JWT | Invocar tool MCP |
 
 ### Prerrequisitos
 
-- **Node.js** 22+ (LTS)
+- **Node.js** 20+ (LTS)
 - **pnpm** 10+
 - **Docker Desktop** (opcional, solo para el emulador ELM327)
 
 ### Variables de entorno (`.env`)
 
 ```env
-OBD_MODE=sync              # sync = simulador interno | elm327 = emulador real
-ELM327_HOST=localhost      # Host del emulador ELM327
-ELM327_PORT=35000          # Puerto del emulador
-ANTHROPIC_API_KEY=         # API key de Anthropic (solo para diagnóstico cognitivo)
+OBD_MODE=sync                  # sync = simulador interno | elm327 = emulador real
+ELM327_HOST=localhost          # Host del emulador ELM327
+ELM327_PORT=35000              # Puerto del emulador
+DB_PATH=data/diagnostics.db    # Ruta de la BD SQLite
+ACCESS_TOKEN_SECRET=           # Secreto para firmar JWT access tokens
+REFRESH_TOKEN_SECRET=          # Secreto para firmar JWT refresh tokens
 ```
 
 ## Arquitectura
 
-Clean Architecture estricta con 3 capas y dependencia unidireccional:
+**Clean Architecture + Hexagonal (Ports & Adapters)** con dependencia unidireccional:
 
 ```
-domain/ ← application/ ← infrastructure/
+domain ← application ← infrastructure
+   ↑          ↑             ↑
+   └── imports flow this way ──┘
 ```
 
-[ADR 001](docs/adr/001-arquitectura-del-sistema.md) — justificación completa.
+[ADR 001](docs/adr/001-arquitectura-del-sistema.md) — justificacion completa.
 
 ```
 apps/core-api/src/
-├── domain/entities/              # 11 entidades puras (sin dependencias)
-│   ├── vehicleProfile.ts         # Perfil completo (VIN, ECUs, PIDs)
-│   ├── ecuInfo.ts                # Unidad de control electrónica
-│   ├── pidDefinition.ts          # PID OBD-II (modo, fórmula, tipo)
-│   ├── diagnosisSession.ts       # Sesión de diagnóstico
-│   ├── diagnosisResult.ts        # Resultado determinista
-│   ├── cognitiveDiagnosisResult.ts # Resultado cognitivo (LLM)
-│   ├── toolCallTrace.ts          # Traza de tools MCP invocadas
-│   ├── freezeFrame.ts            # Snapshot Service 02
-│   ├── liveData.ts               # Datos en vivo (legacy)
-│   ├── dtcCode.ts                # Código de fallo
-│   └── vehicleInfo.ts            # Info estática (VIN requerido)
+├── main.ts                          # Composition root + entry point
 │
-├── application/                  # Puertos + Casos de uso
-│   ├── ports/
-│   │   ├── obdRepository.interface.ts    # 8 métodos (5 services SAE J1979)
-│   │   └── vehicleRepository.interface.ts # CRUD catálogo auto-expansivo
-│   └── diagnostics/
-│       └── processVehicleDiagnosis.ts    # Core determinista
+├── domain/                          # Capa interna: value objects + entidades
+│   ├── vin.ts                       #   Vin value object (ISO 3779)
+│   ├── pidCode.ts                   #   PidCode value object
+│   ├── simulationScenario.ts        #   SimulationScenario + VehicleType
+│   ├── vehicleProfile.ts            #   VehicleInfo + VehicleProfile
+│   ├── liveData.ts, dtcCode.ts, freezeFrame.ts
+│   ├── diagnosisResult.ts, diagnosisSession.ts
+│   ├── ecuInfo.ts, pidDefinition.ts, user.ts
 │
-├── infrastructure/
-│   ├── hardware-simulator/        # ObdSimulator + repositorio + escenarios
-│   ├── obd/protocol/
-│   │   ├── pidParser.ts           # Shunting-yard (SAE J1979 formulas)
-│   │   └── vinDecoder.ts          # ISO 3779 validator + check digit + WMI
-│   ├── persistence/sqlite/        # Drizzle ORM + 5 tablas + seed data
-│   ├── mcp/
-│   │   └── mcpServer.ts           # 6 tools MCP (ObdRepository + VehicleRepository)
-│   └── http/
-│       ├── server.ts              # Express + CORS + helmet + Swagger
-│       ├── swagger.ts             # OpenAPI 3.0 spec
-│       └── controllers/
-│           └── diagnosisController.ts
+├── application/                     # Capa intermedia: puertos + casos de uso
+│   ├── ports/                       #   Contratos (6 interfaces)
+│   │   ├── obdRepository.interface.ts
+│   │   ├── userRepository.interface.ts
+│   │   ├── vehicleRepository.interface.ts
+│   │   ├── authService.interface.ts
+│   │   ├── refreshTokenStore.interface.ts
+│   │   └── auditLogRepository.interface.ts
+│   └── use-cases/                   #   Orquestacion de negocio
+│       ├── processVehicleDiagnosis.ts
+│       ├── registerUser.ts
+│       ├── loginUser.ts
+│       └── refreshToken.ts
 │
-└── main.ts                        # Composition root
+└── infrastructure/                  # Capa externa: adaptadores concretos
+    ├── http/                        #   Express (primary adapters)
+    │   ├── routes/                  #     auth.routes.ts, diagnosis.routes.ts
+    │   ├── middleware/              #     auth.middleware.ts, rate-limiter.middleware.ts...
+    │   ├── server.ts, swagger.ts
+    ├── services/                    #   Servicios transversales
+    │   └── authService.ts           #     JWT + bcrypt + refresh token rotation
+    ├── obd/                         #   Hardware OBD-II (simulador + parsers)
+    │   ├── simulator.ts, simulatorAdapter.ts
+    │   ├── pidParser.ts, vinDecoder.ts
+    ├── mcp/                         #   MCP tools para agentes IA
+    │   └── mcpServer.ts, toolCallTrace.ts, cognitiveDiagnosisResult.ts
+    └── persistence/                 #   Base de datos (secondary adapters)
+        └── sqlite/
+            ├── schema.ts, db.ts, seed-pids.ts
+            └── ...repositories (4)
 ```
 
 ## Casos de uso
 
-| Caso de uso | Ruta | Estado |
+| Caso de uso | Ubicacion | Estado |
 |---|---|---|
-| **ProcessVehicleDiagnosis** | `application/diagnostics/processVehicleDiagnosis.ts` | ✅ Implementado (7 tests) |
-| **ExecuteCognitiveDiagnosis** | `application/agents/executeCognitiveDiagnosis.ts` | 🔜 Fase 2b |
-| **DiscoverVehicle** | `application/discovery/discoverVehicle.ts` | 🔜 Fase 2b |
-| **ScanEcus** | `application/discovery/scanEcus.ts` | 🔜 Fase 2b |
-| **StreamActiveTelemetry** | `application/diagnostics/activeTelemetryStream.ts` | ⏳ Fase 3 |
-| **SwitchSimulationScenario** | `application/simulation/switchSimulationScenario.ts` | ⏳ Fase 3 |
+| **ProcessVehicleDiagnosis** | `application/use-cases/processVehicleDiagnosis.ts` | Implementado |
+| **RegisterUser** | `application/use-cases/registerUser.ts` | Implementado |
+| **LoginUser** | `application/use-cases/loginUser.ts` | Implementado |
+| **RefreshToken** | `application/use-cases/refreshToken.ts` | Implementado |
+| **ExecuteCognitiveDiagnosis** | `application/use-cases/` | Pendiente |
+| **DiscoverVehicle** | `application/use-cases/` | Pendiente |
 
-## MCP Server — 6 tools disponibles
+## MCP Server — 6 tools
 
 | Tool | Fuente | Ejemplo |
 |---|---|---|
@@ -130,97 +144,66 @@ apps/core-api/src/
 | `get_freeze_frame(dtc?)` | ObdRepository (Service 02) | `get_freeze_frame("P0301")` → valores congelados |
 | `read_vin()` | ObdRepository (Service 09) | `read_vin()` → `"WAUZZZ8V5JA123456"` |
 | `get_vehicle_info()` | ObdRepository | `get_vehicle_info()` → `"Audi A3 (2018) — 2.0 TFSI"` |
-| `get_available_pids(vehicleId?)` | VehicleRepository (catálogo) | Lista de PIDs conocidos |
-
-**Probar sin API key:**
+| `get_available_pids(vehicleId?)` | VehicleRepository | Lista de PIDs conocidos |
 
 ```bash
 curl -X POST http://localhost:4000/api/mcp/tools/read_pid \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
   -d '{"scenarioId":"audi-a3-idle","args":{"mode":"01","pid":"0C"}}'
-
-# → {"tool":"read_pid","result":"750"}
 ```
 
-## Normativa
+## Seguridad
 
-Cumplimiento documentado en [ADR 006](docs/adr/006-compliance-sae-j1979.md):
-
-| Estándar | Cobertura |
-|---|---|
-| **SAE J1979** | Services 01, 02, 03, 04, 09 implementados. 16 fórmulas Mode 01 verificadas |
-| **ISO 15031-5** | Equivalente internacional de SAE J1979 |
-| **ISO 3779** | VIN: 17 chars, sin I/O/Q, check digit, WMI lookup |
+| Medida | OWASP | Estado |
+|---|---|---|
+| Autenticacion JWT + bcrypt | A01, A07 | Completado |
+| Rate limiting (express-rate-limit) | A04 | Completado |
+| Logging estructurado (audit_logs) | A09 | Completado |
+| Helmet + CORS restrictivo | A05, A06 | Completado |
+| Zod validation en todos los endpoints | A03 | Completado |
 
 ## Testing
 
 ```bash
-pnpm test            # 125 tests en 8 suites
+pnpm test            # 201 tests en 16 suites
 pnpm test:watch      # Modo watch TDD
 pnpm test:coverage   # Cobertura
 ```
 
 | Suite | Tests | Capa |
 |---|---|---|
-| `pidParser.test.ts` | 44 | Parser Shunting-yard (22 fórmulas + operadores + edges) |
-| `server.test.ts` | 20 | Integración HTTP real + MCP endpoint |
-| `vinDecoder.test.ts` | 18 | VIN: decode, validate, check digit, WMI |
-| `vehicleRepository.test.ts` | 16 | CRUD + validación VIN ISO 3779 |
-| `mcpServer.test.ts` | 11 | 6 tools + 3 edge cases |
+| `pidParser.test.ts` | 44 | Parser Shunting-yard |
+| `server.test.ts` | 20 | Integracion HTTP + MCP |
+| `vinDecoder.test.ts` | 19 | VIN: decode, validate, check digit, WMI |
+| `vehicleRepository.test.ts` | 17 | CRUD + validacion VIN |
+| `auth.routes.test.ts` | 10 | Auth endpoints |
+| `authService.test.ts` | 20 | JWT + bcrypt |
+| `auth.integration.test.ts` | 12 | Auth end-to-end |
+| `mcpServer.test.ts` | 11 | 6 tools + edge cases |
+| `simulator.test.ts` | 11 | Codificacion/decodificacion |
+| `userRepository.test.ts` | 9 | CRUD usuarios |
 | `processVehicleDiagnosis.test.ts` | 7 | readPid + freeze frame + severidad |
-| `obdSimulator.test.ts` | 6 | Codificación/decodificación |
-| `diagnosisController.test.ts` | 3 | Scenarios + diagnosis + 404 |
-
-## Scripts
-
-```bash
-# API
-pnpm dev            # Arrancar servidor (hot-reload)
-pnpm build          # Compilar TypeScript
-
-# Tests
-pnpm test           # Ejecutar suite completa (125 tests)
-pnpm test:watch     # Modo watch TDD
-pnpm test:coverage  # Cobertura
-
-# Calidad
-pnpm lint           # ESLint + TSDoc (eslint-plugin-jsdoc)
-pnpm format         # Prettier check
-
-# Base de datos
-pnpm db:generate    # Generar migraciones desde schema.ts
-pnpm db:migrate     # Aplicar migraciones a SQLite
-
-# OBD (requiere Docker: docker compose up -d elm327)
-pnpm tsx scripts/send-obd.ts "01 0C"
-pnpm tsx scripts/scan-pids.ts
-```
-
-## CI
-
-GitHub Actions en cada push/PR a `main`: `pnpm install` + `pnpm lint` + `pnpm test` (Node 22, pnpm 10).
-
-[workflow](.github/workflows/ci.yml)
+| `authMiddleware.test.ts` | 5 | JWT verification |
+| `auditLogRepository.test.ts` | 5 | Auditoria |
+| `rateLimiter.test.ts` | 4 | Rate limiting |
+| `diagnosis.routes.test.ts` | 4 | Diagnosis endpoints |
+| `auditLogger.test.ts` | 3 | HTTP logging |
 
 ## Fases del proyecto
 
-| Fase | Estado | Tests | Entregables |
-|---|---|---|---|
-| **Fase 1** (1-10 jul) | ✅ Completada | 43 | Express API, simulador OBD, parser hex, tests |
-| **Fase 2a** (12-18 jul) | ✅ Completada | 125 | SQLite/Drizzle, PidParser, MCP Server, VIN decoder, Swagger, CI |
-| **Fase 2b** (18-19 jul) | 🔜 En curso | — | Diagnóstico cognitivo LLM, LanceDB, protocolo OBD TCP |
-| **Fase 3** (19-20 jul) | ⏳ Pendiente | — | Streaming, cambio escenarios, defensa |
+| Fase | Estado | Tests |
+|---|---|---|
+| Fase 1 — Express API + ELM327 Docker | Completada | — |
+| Fase 2a — SQLite/Drizzle + PidParser + catalogo | Completada | — |
+| Hardening OWASP A01-A08 | Completado | — |
+| Fase 2b — Hardening produccion (AUTH + RATE + LOG) | Completada | — |
+| **Fase 3 — Refactorizacion Clean Architecture + Hexagonal** | **Completada** | **201** |
+| Pendiente — LanceDB + LLM + TCP OBD | Sin empezar | — |
 
-## Documentación
+## Documentacion
 
-Filosofía **"Documentation As You Code"**:
-
-- **ADR** — 6 decisiones arquitectónicas en `docs/adr/`
-- **TSDoc** — Cada export público en `domain/`, `application/` e `infrastructure/`
-- **CI Docs** — Verificación en pipeline (`pnpm lint` incluye TSDoc via eslint-plugin-jsdoc)
+- **ADR** — 6 decisiones arquitectonicas en `docs/adr/`
+- **TSDoc** — export publico en `domain/`, `application/`, `infrastructure/`
+- **CI Docs** — verificacion en pipeline (`pnpm lint` incluye TSDoc)
 - **[CLAUDE.md](CLAUDE.md)** — Reglas del proyecto, skills, convenciones
-- **[fase-2-plan-v2.md](docs/fase-2-plan-v2.md)** — Plan detallado Fase 2
-
-## Licencia
-
-Proyecto académico — Máster IA.
