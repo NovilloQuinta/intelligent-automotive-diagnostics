@@ -1,4 +1,4 @@
-# ADR 006: Cumplimiento normativo SAE J1979 / ISO 15031 / ISO 3779
+# ADR 005: Cumplimiento normativo SAE J1979 / ISO 15031 / ISO 3779
 
 **Estado:** Aprobado
 **Fecha:** 2026-07-18

@@ -203,7 +203,7 @@ pnpm test:coverage   # Cobertura
 
 ## Documentacion
 
-- **ADR** — 6 decisiones arquitectonicas en `docs/adr/`
+- **ADR** — 5 decisiones arquitectonicas en `docs/adr/`
 - **TSDoc** — export publico en `domain/`, `application/`, `infrastructure/`
 - **CI Docs** — verificacion en pipeline (`pnpm lint` incluye TSDoc)
 - **[CLAUDE.md](CLAUDE.md)** — Reglas del proyecto, skills, convenciones
