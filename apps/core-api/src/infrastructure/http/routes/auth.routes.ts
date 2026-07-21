@@ -8,7 +8,10 @@ import {
   EmailAlreadyRegisteredError,
   createRegisterUserUseCase,
 } from '@/application/use-cases/registerUser.js'
-import { InvalidCredentialsError, createLoginUserUseCase } from '@/application/use-cases/loginUser.js'
+import {
+  InvalidCredentialsError,
+  createLoginUserUseCase,
+} from '@/application/use-cases/loginUser.js'
 import { createRefreshTokenUseCase } from '@/application/use-cases/refreshToken.js'
 
 /** Crea un Express Router con las rutas de autenticacion. */

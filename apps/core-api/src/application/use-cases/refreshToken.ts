@@ -18,9 +18,7 @@ export interface RefreshResult {
 /** Caso de uso: rotacion de refresh token.
  * Valida el token, lo revoca y emite un nuevo par.
  */
-export function createRefreshTokenUseCase(deps: {
-  readonly authService: AuthServicePort
-}) {
+export function createRefreshTokenUseCase(deps: { readonly authService: AuthServicePort }) {
   const { authService } = deps
 
   return async function refreshToken(input: RefreshInput): Promise<RefreshResult> {

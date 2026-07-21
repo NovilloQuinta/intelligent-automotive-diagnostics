@@ -1,7 +1,10 @@
 import { eq } from 'drizzle-orm'
 import * as schema from './schema.js'
 import type { DiagnosticsDb } from './db.js'
-import type { RefreshTokenStorePort, RefreshTokenRecord } from '@/application/ports/refreshTokenStore.interface.js'
+import type {
+  RefreshTokenStorePort,
+  RefreshTokenRecord,
+} from '@/application/ports/refreshTokenStore.interface.js'
 
 type RefreshTokenRow = typeof schema.refreshTokens.$inferSelect
 

@@ -55,47 +55,44 @@ export function createDiagnosisRoutes(deps: DiagnosisRoutesDeps): Router {
     res.status(200).json(result)
   })
 
-  router.post(
-    '/mcp/tools/:toolName',
-    async (req: Request<{ toolName: string }>, res: Response) => {
-      const paramsParsed = McpToolParamsSchema.safeParse(req.params)
-      if (!paramsParsed.success) {
-        res.status(400).json({ error: 'Invalid tool name', details: paramsParsed.error.issues })
-        return
+  router.post('/mcp/tools/:toolName', async (req: Request<{ toolName: string }>, res: Response) => {
+    const paramsParsed = McpToolParamsSchema.safeParse(req.params)
+    if (!paramsParsed.success) {
+      res.status(400).json({ error: 'Invalid tool name', details: paramsParsed.error.issues })
+      return
+    }
+
+    const bodyParsed = McpToolBodySchema.safeParse(req.body)
+    if (!bodyParsed.success) {
+      res.status(400).json({ error: 'Invalid request body', details: bodyParsed.error.issues })
+      return
+    }
+
+    const { toolName } = paramsParsed.data
+    const { scenarioId, args } = bodyParsed.data
+
+    const scenario = scenarios.find((s) => s.id === scenarioId)
+    if (!scenario) {
+      res.status(404).json({ error: 'Scenario not found' })
+      return
+    }
+
+    const simulator = new ObdSimulator(scenario)
+    const repository = new ObdSimulatorRepository(simulator)
+    const mcp = createMcpServer(repository)
+
+    try {
+      const result = await mcp.callTool(toolName, args)
+      res.status(200).json({ tool: toolName, result: result.content[0].text })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      if (message.includes('Tool not found')) {
+        res.status(404).json({ error: `Tool not found: ${toolName}` })
+      } else {
+        res.status(500).json({ error: message })
       }
-
-      const bodyParsed = McpToolBodySchema.safeParse(req.body)
-      if (!bodyParsed.success) {
-        res.status(400).json({ error: 'Invalid request body', details: bodyParsed.error.issues })
-        return
-      }
-
-      const { toolName } = paramsParsed.data
-      const { scenarioId, args } = bodyParsed.data
-
-      const scenario = scenarios.find((s) => s.id === scenarioId)
-      if (!scenario) {
-        res.status(404).json({ error: 'Scenario not found' })
-        return
-      }
-
-      const simulator = new ObdSimulator(scenario)
-      const repository = new ObdSimulatorRepository(simulator)
-      const mcp = createMcpServer(repository)
-
-      try {
-        const result = await mcp.callTool(toolName, args)
-        res.status(200).json({ tool: toolName, result: result.content[0].text })
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Unknown error'
-        if (message.includes('Tool not found')) {
-          res.status(404).json({ error: `Tool not found: ${toolName}` })
-        } else {
-          res.status(500).json({ error: message })
-        }
-      }
-    },
-  )
+    }
+  })
 
   return router
 }

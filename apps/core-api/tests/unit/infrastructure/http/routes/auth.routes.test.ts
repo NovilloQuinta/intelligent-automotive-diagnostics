@@ -63,14 +63,12 @@ describe('authRoutes', () => {
     it('should register an individual user and return tokens', async () => {
       const { app, userRepo, authService, tokenStore } = createTestApp()
 
-      const res = await request(app)
-        .post('/api/auth/register')
-        .send({
-          username: 'juan',
-          email: 'juan@mail.com',
-          password: 'Pass1234!',
-          userType: 'individual',
-        })
+      const res = await request(app).post('/api/auth/register').send({
+        username: 'juan',
+        email: 'juan@mail.com',
+        password: 'Pass1234!',
+        userType: 'individual',
+      })
 
       expect(res.status).toBe(201)
       expect(res.body.accessToken).toBe('access-token-xyz')
@@ -94,14 +92,12 @@ describe('authRoutes', () => {
         },
       })
 
-      const res = await request(app)
-        .post('/api/auth/register')
-        .send({
-          username: 'juan',
-          email: 'juan@mail.com',
-          password: 'Pass1234!',
-          userType: 'individual',
-        })
+      const res = await request(app).post('/api/auth/register').send({
+        username: 'juan',
+        email: 'juan@mail.com',
+        password: 'Pass1234!',
+        userType: 'individual',
+      })
 
       expect(res.status).toBe(409)
     })
@@ -109,9 +105,7 @@ describe('authRoutes', () => {
     it('should return 400 when validation fails', async () => {
       const { app } = createTestApp()
 
-      const res = await request(app)
-        .post('/api/auth/register')
-        .send({ username: 'x' })
+      const res = await request(app).post('/api/auth/register').send({ username: 'x' })
 
       expect(res.status).toBe(400)
     })
@@ -176,9 +170,7 @@ describe('authRoutes', () => {
     it('should return 400 when validation fails', async () => {
       const { app } = createTestApp()
 
-      const res = await request(app)
-        .post('/api/auth/login')
-        .send({})
+      const res = await request(app).post('/api/auth/login').send({})
 
       expect(res.status).toBe(400)
     })
@@ -204,9 +196,7 @@ describe('authRoutes', () => {
         },
       })
 
-      const res = await request(app)
-        .post('/api/auth/refresh')
-        .send({ refreshToken: 'bad-token' })
+      const res = await request(app).post('/api/auth/refresh').send({ refreshToken: 'bad-token' })
 
       expect(res.status).toBe(401)
     })
@@ -214,9 +204,7 @@ describe('authRoutes', () => {
     it('should return 400 when validation fails', async () => {
       const { app } = createTestApp()
 
-      const res = await request(app)
-        .post('/api/auth/refresh')
-        .send({})
+      const res = await request(app).post('/api/auth/refresh').send({})
 
       expect(res.status).toBe(400)
     })
