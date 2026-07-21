@@ -114,7 +114,7 @@ export function createMcpServer(
       if (pids.length === 0)
         return { content: [{ type: 'text' as const, text: 'No PIDs available for this vehicle.' }] }
       const text = pids
-        .map((p) => `${p.mode} ${p.pidCode}: ${p.name} (${p.formula}) [${p.unit ?? ''}]`)
+        .map((p) => `${p.pidCode.mode} ${p.pidCode.pid}: ${p.name} (${p.formula}) [${p.unit ?? ''}]`)
         .join('\n')
       return { content: [{ type: 'text' as const, text }] }
     }),

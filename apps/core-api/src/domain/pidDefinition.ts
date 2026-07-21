@@ -1,13 +1,14 @@
-/** Tipo de PID OBD-II. Determina cómo se interpreta la respuesta. */
+import type { PidCode } from './pidCode.js'
+
+/** Tipo de PID OBD-II. Determina como se interpreta la respuesta. */
 export type PidType = 'formula' | 'bitmask' | 'enum' | 'ascii'
 
-/** Definición de un PID OBD-II (Mode 01, Mode 22, UDS, etc.) con su fórmula de conversión. */
+/** Definicion de un PID OBD-II (Mode 01, Mode 22, UDS, etc.) con su formula de conversion. */
 export interface PidDefinition {
   readonly id?: number
   readonly vehicleId?: number
   readonly ecuId?: number
-  readonly mode: string
-  readonly pidCode: string
+  readonly pidCode: PidCode
   readonly name: string
   readonly description?: string
   readonly formula: string

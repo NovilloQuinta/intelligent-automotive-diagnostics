@@ -1,6 +1,7 @@
 import { eq, sql } from 'drizzle-orm'
 import * as schema from './schema.js'
 import { validateVin, Vin } from '@/domain/vin.js'
+import { PidCode } from '@/domain/pidCode.js'
 import type { DiagnosticsDb } from './db.js'
 import type { VehicleRepository } from '@/application/ports/vehicleRepository.interface.js'
 import type { VehicleProfile } from '@/domain/vehicleProfile.js'
@@ -111,8 +112,8 @@ export class SqliteVehicleRepository implements VehicleRepository {
       .values({
         vehicleId: pid.vehicleId ?? null,
         ecuId: pid.ecuId ?? null,
-        mode: pid.mode,
-        pidCode: pid.pidCode,
+        mode: pid.pidCode.mode,
+        pidCode: pid.pidCode.pid,
         name: pid.name,
         description: pid.description ?? null,
         formula: pid.formula,
@@ -154,8 +155,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
       id: r.id,
       vehicleId: r.vehicleId ?? undefined,
       ecuId: r.ecuId ?? undefined,
-      mode: r.mode,
-      pidCode: r.pidCode,
+      pidCode: PidCode.fromTrusted(r.mode, r.pidCode),
       name: r.name,
       description: r.description ?? undefined,
       formula: r.formula,
@@ -180,8 +180,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
       id: r.id,
       vehicleId: r.vehicleId ?? undefined,
       ecuId: r.ecuId ?? undefined,
-      mode: r.mode,
-      pidCode: r.pidCode,
+      pidCode: PidCode.fromTrusted(r.mode, r.pidCode),
       name: r.name,
       description: r.description ?? undefined,
       formula: r.formula,

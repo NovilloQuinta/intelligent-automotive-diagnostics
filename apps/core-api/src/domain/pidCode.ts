@@ -16,6 +16,11 @@ export class PidCode {
     return new PidCode(mode.toUpperCase(), pid.toUpperCase())
   }
 
+  /** Crea un PidCode sin validar (para fuentes confiables como BD interna). */
+  static fromTrusted(mode: string, pid: string): PidCode {
+    return new PidCode(mode.toUpperCase(), pid.toUpperCase())
+  }
+
   /** Clave compuesta para busquedas (ej. "01 0C"). */
   get key(): string {
     return `${this.mode} ${this.pid}`

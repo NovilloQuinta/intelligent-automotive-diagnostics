@@ -7,6 +7,7 @@ import { VinDecodeError, Vin } from '@/domain/vin.js'
 import type { VehicleProfile } from '@/domain/vehicleProfile.js'
 import type { EcuInfo } from '@/domain/ecuInfo.js'
 import type { PidDefinition, PidReading } from '@/domain/pidDefinition.js'
+import { PidCode } from '@/domain/pidCode.js'
 
 describe('SqliteVehicleRepository', () => {
   let db: ReturnType<typeof drizzle>
@@ -204,8 +205,7 @@ describe('SqliteVehicleRepository', () => {
       return {
         vehicleId,
         ecuId,
-        mode: '01',
-        pidCode: '0C',
+        pidCode: PidCode.fromTrusted('01', '0C'),
         name: 'Engine RPM',
         description: 'Revolutions per minute',
         formula: '(A*256+B)/4',
@@ -256,8 +256,7 @@ describe('SqliteVehicleRepository', () => {
       await repo.insertPidDefinition({
         vehicleId,
         ecuId,
-        mode: '01',
-        pidCode: '05',
+        pidCode: PidCode.fromTrusted('01', '05'),
         name: 'Coolant Temperature',
         formula: 'A-40',
         unit: '°C',
@@ -278,8 +277,7 @@ describe('SqliteVehicleRepository', () => {
       const llmPid: PidDefinition = {
         vehicleId,
         ecuId,
-        mode: '22',
-        pidCode: '0300',
+        pidCode: PidCode.fromTrusted('22', '0300'),
         name: 'TCU Odometer',
         formula: '(A<<24|B<<16|C<<8|D)/10',
         unit: 'km',
@@ -312,8 +310,7 @@ describe('SqliteVehicleRepository', () => {
       const pid = await repo.insertPidDefinition({
         vehicleId: vehicle.id!,
         ecuId: ecu.id!,
-        mode: '01',
-        pidCode: '0C',
+        pidCode: PidCode.fromTrusted('01', '0C'),
         name: 'Engine RPM',
         formula: '(A*256+B)/4',
         unit: 'rpm',
