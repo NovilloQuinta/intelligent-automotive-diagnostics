@@ -1,5 +1,6 @@
 import type { EcuInfo } from './ecuInfo.js'
 import type { PidDefinition } from './pidDefinition.js'
+import type { Vin } from './vin.js'
 
 /** Datos de identificacion estatica del vehiculo bajo diagnostico. */
 export interface VehicleInfo {
@@ -7,7 +8,7 @@ export interface VehicleInfo {
   readonly model: string
   readonly year: number
   readonly engineType: string
-  readonly vin: string
+  readonly vin: Vin
 }
 
 /** Perfil completo de un vehiculo: identificacion + ECUs + PIDs conocidos. */

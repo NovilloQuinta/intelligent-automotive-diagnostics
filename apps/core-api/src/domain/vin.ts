@@ -50,6 +50,11 @@ export class Vin {
     return new Vin(cleaned)
   }
 
+  /** Crea un Vin sin validar (para fuentes confiables como BD interna). */
+  static fromTrusted(raw: string): Vin {
+    return new Vin(raw.toUpperCase())
+  }
+
   toString(): string {
     return this.value
   }

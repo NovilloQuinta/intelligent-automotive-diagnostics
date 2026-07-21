@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { processVehicleDiagnosis } from '@/application/use-cases/processVehicleDiagnosis.js'
 import type { ObdRepository } from '@/application/ports/obdRepository.interface.js'
 import type { FreezeFrame } from '@/domain/freezeFrame.js'
+import { Vin } from '@/domain/vin.js'
 
 const sensorValues = { rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 }
 const dtcCodes = [{ code: 'P0301', description: 'Cylinder 1 Misfire' }]
@@ -27,7 +28,7 @@ function mockRepo(overrides: Partial<ObdRepository> = {}): ObdRepository {
       model: 'A3',
       year: 2018,
       engineType: '2.0 TFSI',
-      vin: 'WAUZZZ8V5JA123456',
+      vin: Vin.create('WAUZZZ8V5JA123456'),
     }),
     setPower: vi.fn().mockResolvedValue(undefined),
     ...overrides,

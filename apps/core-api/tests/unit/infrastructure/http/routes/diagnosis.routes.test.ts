@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import request from 'supertest'
 import express from 'express'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
+import { Vin } from '@/domain/vin.js'
 import type { SimulationScenario } from '@/domain/simulationScenario.js'
 
 const mockScenarios: SimulationScenario[] = [
@@ -16,7 +17,7 @@ const mockScenarios: SimulationScenario[] = [
       model: 'A3',
       year: 2018,
       engineType: '2.0 TFSI',
-      vin: 'WAUZZZ8V5JA123456',
+      vin: Vin.create('WAUZZZ8V5JA123456'),
     },
   },
   {
@@ -30,7 +31,7 @@ const mockScenarios: SimulationScenario[] = [
       model: 'Z900',
       year: 2020,
       engineType: '948cc Inline-4',
-      vin: 'JKAZR2A1XLA000111',
+      vin: Vin.create('JKAZR2A1XLA000111'),
     },
   },
 ]

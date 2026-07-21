@@ -5,6 +5,7 @@ import { createServer } from '@/infrastructure/http/server.js'
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
 import { SqliteRefreshTokenStore } from '@/infrastructure/persistence/sqlite/refreshTokenStore.js'
 import { createAuthService } from '@/infrastructure/services/authService.js'
+import { Vin } from '@/domain/vin.js'
 import type { SimulationScenario } from '@/domain/simulationScenario.js'
 import type { LiveData } from '@/domain/liveData.js'
 
@@ -54,7 +55,7 @@ const scenarios: SimulationScenario[] = [
       model: 'A3',
       year: 2018,
       engineType: '2.0 TFSI',
-      vin: 'WAUZZZ8V5JA123456',
+      vin: Vin.create('WAUZZZ8V5JA123456'),
     },
   },
   {
@@ -68,7 +69,7 @@ const scenarios: SimulationScenario[] = [
       model: 'Z900',
       year: 2020,
       engineType: '948cc Inline-4',
-      vin: 'JKAZR2A1XLA000111',
+      vin: Vin.create('JKAZR2A1XLA000111'),
     },
   },
 ]

@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { ObdSimulator } from '@/infrastructure/obd/simulator.js'
+import { Vin } from '@/domain/vin.js'
 import type { SimulationScenario } from '@/domain/simulationScenario.js'
 import type { LiveData } from '@/domain/liveData.js'
 import type { FreezeFrame } from '@/domain/freezeFrame.js'
 
-const audiIdleData: LiveData = {
+const audiIdleSensorValues: LiveData = {
   rpm: 750,
   coolantTemp: 90,
   speed: 0,
@@ -13,16 +14,16 @@ const audiIdleData: LiveData = {
 
 const audiIdleScenario: SimulationScenario = {
   id: 'audi-a3-idle',
-  name: 'Audi A3 al ralentí',
+  name: 'Audi A3 al ralenti',
   vehicleType: 'car',
-  sensorValues: audiIdleData,
+  sensorValues: audiIdleSensorValues,
   dtcConfig: [{ code: 'P0301', description: 'Cylinder 1 Misfire' }],
   vehicleInfo: {
-    vin: 'WUAZZZ8V0KA123456',
     make: 'Audi',
     model: 'A3',
-    year: 2019,
+    year: 2018,
     engineType: '2.0 TFSI',
+    vin: Vin.create('WUAZZZ8V0KA123456'),
   },
 }
 
@@ -58,7 +59,7 @@ describe('ObdSimulator', () => {
   it('should encode speed directly as hex byte', () => {
     const simulator = new ObdSimulator({
       ...audiIdleScenario,
-      sensorValues: { ...audiIdleData, speed: 120 },
+      sensorValues: { ...audiIdleSensorValues, speed: 120 },
     })
 
     const frame = simulator.getRawTelemetry()
@@ -86,7 +87,7 @@ describe('ObdSimulator', () => {
       sensorValues: kawaData,
       dtcConfig: [],
       vehicleInfo: {
-        vin: 'JKAKZ900H8A123456',
+        vin: Vin.create('JKAKZ900H8A123456'),
         make: 'Kawasaki',
         model: 'Z900',
         year: 2020,
@@ -112,7 +113,7 @@ describe('ObdSimulator', () => {
     const info = simulator.getVehicleInfo()
     expect(info.make).toBe('Audi')
     expect(info.model).toBe('A3')
-    expect(info.year).toBe(2019)
+    expect(info.year).toBe(2018)
   })
 
   it('should return supported PIDs including standard and scenario-specific', () => {

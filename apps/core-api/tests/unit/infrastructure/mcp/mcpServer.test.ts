@@ -3,6 +3,7 @@ import type { ObdRepository } from '@/application/ports/obdRepository.interface.
 import type { VehicleRepository } from '@/application/ports/vehicleRepository.interface.js'
 import type { FreezeFrame } from '@/domain/freezeFrame.js'
 import type { PidDefinition } from '@/domain/pidDefinition.js'
+import { Vin } from '@/domain/vin.js'
 import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
 
 function mockObdRepo(overrides: Partial<ObdRepository> = {}): ObdRepository {
@@ -18,7 +19,7 @@ function mockObdRepo(overrides: Partial<ObdRepository> = {}): ObdRepository {
       model: 'A3',
       year: 2018,
       engineType: '2.0 TFSI',
-      vin: 'WAUZZZ8V5JA123456',
+      vin: Vin.create('WAUZZZ8V5JA123456'),
     }),
     setPower: vi.fn().mockResolvedValue(undefined),
     ...overrides,

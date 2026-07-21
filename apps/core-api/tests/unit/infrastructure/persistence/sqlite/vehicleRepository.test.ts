@@ -3,7 +3,7 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from '@/infrastructure/persistence/sqlite/schema.js'
 import { SqliteVehicleRepository } from '@/infrastructure/persistence/sqlite/vehicleRepository.js'
-import { VinDecodeError } from '@/domain/vin.js'
+import { VinDecodeError, Vin } from '@/domain/vin.js'
 import type { VehicleProfile } from '@/domain/vehicleProfile.js'
 import type { EcuInfo } from '@/domain/ecuInfo.js'
 import type { PidDefinition, PidReading } from '@/domain/pidDefinition.js'
@@ -82,7 +82,7 @@ describe('SqliteVehicleRepository', () => {
   })
 
   const toyotaAuris: VehicleProfile = {
-    vin: 'SB1KE76L40E001234',
+    vin: Vin.create('SB1KE76L40E001234'),
     make: 'Toyota',
     model: 'Auris Hybrid',
     year: 2014,
@@ -94,7 +94,7 @@ describe('SqliteVehicleRepository', () => {
       const result = await repo.upsertVehicle(toyotaAuris)
 
       expect(result.id).toBeGreaterThan(0)
-      expect(result.vin).toBe(toyotaAuris.vin)
+      expect(result?.vin?.value).toBe(toyotaAuris.vin.value)
       expect(result.make).toBe('Toyota')
     })
 
@@ -110,16 +110,12 @@ describe('SqliteVehicleRepository', () => {
       expect(second.year).toBe(2015)
     })
 
-    it('should throw VinDecodeError when VIN has wrong length', async () => {
-      await expect(repo.upsertVehicle({ ...toyotaAuris, vin: 'SHORT' })).rejects.toThrow(
-        VinDecodeError,
-      )
+    it('should throw VinDecodeError when VIN has wrong length', () => {
+      expect(() => Vin.create('SHORT')).toThrow(VinDecodeError)
     })
 
-    it('should throw VinDecodeError when VIN has forbidden character I', async () => {
-      await expect(
-        repo.upsertVehicle({ ...toyotaAuris, vin: 'WAIZZZ8V5JA123456' }),
-      ).rejects.toThrow(VinDecodeError)
+    it('should throw VinDecodeError when VIN has forbidden character I', () => {
+      expect(() => Vin.create('WAIZZZ8V5JA123456')).toThrow(VinDecodeError)
     })
   })
 
@@ -127,7 +123,7 @@ describe('SqliteVehicleRepository', () => {
     it('should find a vehicle by VIN', async () => {
       await repo.upsertVehicle(toyotaAuris)
 
-      const result = await repo.findVehicleByVin(toyotaAuris.vin)
+      const result = await repo.findVehicleByVin(toyotaAuris.vin.value)
 
       expect(result).not.toBeNull()
       expect(result!.make).toBe('Toyota')

@@ -1,6 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import * as schema from './schema.js'
-import { validateVin } from '@/domain/vin.js'
+import { validateVin, Vin } from '@/domain/vin.js'
 import type { DiagnosticsDb } from './db.js'
 import type { VehicleRepository } from '@/application/ports/vehicleRepository.interface.js'
 import type { VehicleProfile } from '@/domain/vehicleProfile.js'
@@ -13,7 +13,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
   constructor(private readonly db: DiagnosticsDb) {}
 
   async upsertVehicle(profile: VehicleProfile): Promise<VehicleProfile> {
-    const vin = validateVin(profile.vin)
+    const vin = profile.vin.value
     const existing = await this.findVehicleByVin(vin)
 
     if (existing?.id) {
@@ -60,7 +60,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
     const row = rows[0]
     return {
       id: row.id,
-      vin: row.vin,
+      vin: Vin.fromTrusted(row.vin),
       make: row.make,
       model: row.model,
       year: row.year,
