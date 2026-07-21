@@ -26,11 +26,7 @@ export default defineConfig({
         '**/db.ts',
         '**/schema.ts',
         '**/swagger.ts',
-        '**/diagnosisController.ts',
-        '**/obdSimulatorRepository.ts',
         '**/server.ts',
-        '**/auditLogger.ts',
-        '**/rateLimiter.ts',
       ],
       thresholds: {
         statements: 80,
