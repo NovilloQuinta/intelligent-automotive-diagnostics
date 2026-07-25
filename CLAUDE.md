@@ -6,17 +6,19 @@
 ## SESION ACTUAL
 
 - **Fase**: 3 — Refactorizacion Clean Architecture + Hexagonal (completada)
-- **Ultimo paso**: Agente @architect (OpenSpec workflow) — 5 agentes total: architect, writer, reviewer, quality, security
-- **Tests**: 231 pasando (18 test files)
+- **Ultimo paso**: Hardening seguridad + refactor Port suffix + string enums + *.interface.ts → *.port.ts
+- **Tests**: 224 pasando (18 test files)
+- **CI**: verde — lint, format, test, build, audit
 
 ## REGLAS DE SESION
 
 1. **Cargar skills necesarios** antes de empezar (ver tabla abajo)
 2. **1 paso a la vez** — no mezclar responsabilidades, no adelantar trabajo
 3. **TDD estricto**: RED (test que falla) → GREEN (codigo minimo) → REFACTOR
-4. **Preguntar antes de commitear/pushear** — mostrar diff, esperar OK humano
-5. **Checks pre-commit**: `pnpm lint && pnpm format && pnpm test && pnpm test:coverage && pnpm audit`
-6. **Tras cada paso**: actualizar `SESION ACTUAL` en este mismo fichero
+4. **Trabajar en ramas, NO en main** — cada cambio en su rama (`git checkout -b feat/xxx` o `fix/xxx`). Solo merge a main cuando CI pase verde.
+5. **Checks pre-push**: `pnpm lint && pnpm format && pnpm test && pnpm build`
+6. **Preguntar antes de commitear/pushear** — mostrar resumen de cambios, esperar OK humano
+7. **Tras cada paso**: actualizar `SESION ACTUAL` en este mismo fichero
 
 ## AGENTES DISPONIBLES
 
