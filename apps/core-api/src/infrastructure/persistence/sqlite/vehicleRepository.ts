@@ -1,6 +1,6 @@
 import { eq, sql } from 'drizzle-orm'
 import * as schema from './schema.js'
-import { validateVin, Vin } from '@/domain/vin.js'
+import { Vin } from '@/domain/vin.js'
 import { PidCode } from '@/domain/pidCode.js'
 import type { DiagnosticsDb } from './db.js'
 import type { VehicleRepository } from '@/application/ports/vehicleRepository.interface.js'
@@ -49,7 +49,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
   }
 
   async findVehicleByVin(vin: string): Promise<VehicleProfile | null> {
-    const validatedVin = validateVin(vin)
+    const validatedVin = Vin.create(vin).value
     const rows = await this.db
       .select()
       .from(schema.vehicles)
@@ -61,7 +61,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
     const row = rows[0]
     return {
       id: row.id,
-      vin: Vin.fromTrusted(row.vin),
+      vin: Vin.create(row.vin),
       make: row.make,
       model: row.model,
       year: row.year,
@@ -155,7 +155,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
       id: r.id,
       vehicleId: r.vehicleId ?? undefined,
       ecuId: r.ecuId ?? undefined,
-      pidCode: PidCode.fromTrusted(r.mode, r.pidCode),
+      pidCode: PidCode.create(r.mode, r.pidCode),
       name: r.name,
       description: r.description ?? undefined,
       formula: r.formula,
@@ -180,7 +180,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
       id: r.id,
       vehicleId: r.vehicleId ?? undefined,
       ecuId: r.ecuId ?? undefined,
-      pidCode: PidCode.fromTrusted(r.mode, r.pidCode),
+      pidCode: PidCode.create(r.mode, r.pidCode),
       name: r.name,
       description: r.description ?? undefined,
       formula: r.formula,

@@ -35,9 +35,27 @@ const TRANSLITERATION: Record<string, number> = {
 
 const WEIGHTS = [8, 7, 6, 5, 4, 3, 2, 10, 0, 9, 8, 7, 6, 5, 4, 3, 2]
 
+const VIN_REGEX = /^[A-HJ-NPR-Z0-9]{17}$/
+
 const FORBIDDEN_CHARS = new Set(['I', 'O', 'Q'])
 
-const VIN_REGEX = /^[A-HJ-NPR-Z0-9]{17}$/
+/** Registro WMI. Primera coincidencia gana (ordenado por especificidad). */
+const WMI_REGISTRY: Array<[RegExp, { country: string; region: string }]> = [
+  [/^S[A-Z]/, { country: 'United Kingdom', region: 'Europe' }],
+  [/^W/, { country: 'Germany', region: 'Europe' }],
+  [/^V[F-V]/, { country: 'France', region: 'Europe' }],
+  [/^Z[A-Z]/, { country: 'Italy', region: 'Europe' }],
+  [/^Y[A-Z]/, { country: 'Sweden/Belgium/Finland', region: 'Europe' }],
+  [/^U[A-Z]/, { country: 'Spain', region: 'Europe' }],
+  [/^T[A-Z]/, { country: 'Switzerland/Czech Republic/Hungary', region: 'Europe' }],
+  [/^VA/, { country: 'Austria', region: 'Europe' }],
+  [/^J/, { country: 'Japan', region: 'Asia' }],
+  [/^K[A-Z]/, { country: 'South Korea', region: 'Asia' }],
+  [/^L/, { country: 'China', region: 'Asia' }],
+  [/^[1-5]/, { country: 'United States', region: 'North America' }],
+  [/^[2]/, { country: 'Canada', region: 'North America' }],
+  [/^3[A-X]/, { country: 'Mexico', region: 'North America' }],
+]
 
 /** Value Object que representa un VIN valido segun ISO 3779. */
 export class Vin {
@@ -46,13 +64,31 @@ export class Vin {
   /** Crea un Vin validado. Lanza VinDecodeError si el formato es invalido. */
   static create(raw: string): Vin {
     const cleaned = raw.toUpperCase().replace(/\s/g, '')
-    validateFormat(cleaned)
+    assertValidFormat(cleaned)
     return new Vin(cleaned)
   }
 
-  /** Crea un Vin sin validar (para fuentes confiables como BD interna). */
-  static fromTrusted(raw: string): Vin {
-    return new Vin(raw.toUpperCase())
+  /** Comprueba el check digit del VIN (posicion 9, 0-indexed: 8). */
+  isCheckDigitValid(): boolean {
+    let sum = 0
+    for (let i = 0; i < 17; i++) {
+      const ch = this.value[i]
+      const num = ch >= '0' && ch <= '9' ? Number.parseInt(ch) : TRANSLITERATION[ch]!
+      sum += num * WEIGHTS[i]
+    }
+
+    const remainder = sum % 11
+    const expected = remainder === 10 ? 'X' : String(remainder)
+    return this.value[8] === expected
+  }
+
+  /** Identifica pais y region a partir del WMI (primeros 2 caracteres del VIN). */
+  get wmiRegion(): { country: string; region: string } | null {
+    const wmi = this.value.slice(0, 2)
+    for (const [regex, result] of WMI_REGISTRY) {
+      if (regex.test(wmi)) return result
+    }
+    return null
   }
 
   toString(): string {
@@ -60,20 +96,8 @@ export class Vin {
   }
 }
 
-/** Valida que un VIN cumpla el formato ISO 3779.
- * @returns El VIN validado en mayusculas.
- * @throws {VinDecodeError} si el formato es invalido.
- */
-export function validateVin(vin: string): string {
-  const upper = vin.toUpperCase()
-  validateFormat(upper)
-  return upper
-}
-
-/** Valida que un string cumpla el formato ISO 3779 (17 chars, sin I/O/Q, alfanumerico).
- * @throws {VinDecodeError} si el formato es invalido.
- */
-function validateFormat(vin: string): void {
+/** @throws {VinDecodeError} si el formato es invalido. */
+function assertValidFormat(vin: string): void {
   if (vin.length !== 17) {
     throw new VinDecodeError(`VIN must be exactly 17 characters, got ${vin.length}`)
   }
@@ -88,47 +112,4 @@ function validateFormat(vin: string): void {
       }
     }
   }
-}
-
-/** Comprueba el check digit del VIN (posicion 9, 0-indexed: 8). */
-export function isValidCheckDigit(vin: string): boolean {
-  if (vin.length !== 17) return false
-
-  let sum = 0
-  for (let i = 0; i < 17; i++) {
-    const ch = vin[i]
-    const num = ch >= '0' && ch <= '9' ? Number.parseInt(ch) : TRANSLITERATION[ch]
-    if (num === undefined) return false
-    sum += num * WEIGHTS[i]
-  }
-
-  const remainder = sum % 11
-  const expected = remainder === 10 ? 'X' : String(remainder)
-  return vin[8] === expected
-}
-
-/** Decodifica los primeros 3 caracteres del VIN (WMI) e identifica pais y region. */
-export function decodeWmi(vin: string): { country: string; region: string } | null {
-  if (vin.length < 3) return null
-  const wmi = vin.slice(0, 2)
-
-  if (/^[S][A-Z]/.test(wmi)) return { country: 'United Kingdom', region: 'Europe' }
-  if (/^[W]/.test(wmi)) return { country: 'Germany', region: 'Europe' }
-  if (/^[V][F-V]/.test(wmi)) return { country: 'France', region: 'Europe' }
-  if (/^[Z][A-Z]/.test(wmi)) return { country: 'Italy', region: 'Europe' }
-  if (/^[Y][A-Z]/.test(wmi)) return { country: 'Sweden/Belgium/Finland', region: 'Europe' }
-  if (/^[U][A-Z]/.test(wmi)) return { country: 'Spain', region: 'Europe' }
-  if (/^[T][A-Z]/.test(wmi))
-    return { country: 'Switzerland/Czech Republic/Hungary', region: 'Europe' }
-  if (/^[V][A]/.test(wmi)) return { country: 'Austria', region: 'Europe' }
-
-  if (/^[J]/.test(wmi)) return { country: 'Japan', region: 'Asia' }
-  if (/^[K][A-Z]/.test(wmi)) return { country: 'South Korea', region: 'Asia' }
-  if (/^[L]/.test(wmi)) return { country: 'China', region: 'Asia' }
-
-  if (/^[1-5]/.test(wmi)) return { country: 'United States', region: 'North America' }
-  if (/^[2]/.test(wmi)) return { country: 'Canada', region: 'North America' }
-  if (/^[3][A-X]/.test(wmi)) return { country: 'Mexico', region: 'North America' }
-
-  return null
 }

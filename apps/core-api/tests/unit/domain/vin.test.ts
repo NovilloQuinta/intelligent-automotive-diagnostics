@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { Vin, VinDecodeError, validateVin, isValidCheckDigit, decodeWmi } from '@/domain/vin.js'
+import { Vin, VinDecodeError } from '@/domain/vin.js'
 
 describe('Vin', () => {
   describe('Vin.create', () => {
@@ -24,6 +24,14 @@ describe('Vin', () => {
       expect(() => Vin.create('WAYTOOLONGVINSTRING')).toThrow(VinDecodeError)
     })
 
+    it('should throw VinDecodeError for empty string', () => {
+      expect(() => Vin.create('')).toThrow(VinDecodeError)
+    })
+
+    it('should throw VinDecodeError for whitespace-only string', () => {
+      expect(() => Vin.create('                 ')).toThrow(VinDecodeError)
+    })
+
     it('should throw VinDecodeError when containing forbidden character I', () => {
       expect(() => Vin.create('WAIZZZ8V5JA123456')).toThrow(VinDecodeError)
     })
@@ -39,66 +47,77 @@ describe('Vin', () => {
     it('should throw VinDecodeError when containing non-alphanumeric chars', () => {
       expect(() => Vin.create('WAU_ZZ8V5JA123456')).toThrow(VinDecodeError)
     })
-  })
 
-  describe('Vin.fromTrusted', () => {
-    it('should create a Vin without validation', () => {
-      const vin = Vin.fromTrusted('WAUZZZ8V5JA123456')
-      expect(vin.value).toBe('WAUZZZ8V5JA123456')
+    it('should throw VinDecodeError when containing special characters', () => {
+      expect(() => Vin.create('WAU#Z$8V5JA123456')).toThrow(VinDecodeError)
+      expect(() => Vin.create('WAU@ZZ8V5JA123456')).toThrow(VinDecodeError)
     })
 
-    it('should not validate input', () => {
-      const vin = Vin.fromTrusted('SHORT')
-      expect(vin.value).toBe('SHORT')
+    it('should throw VinDecodeError when 17 chars are all forbidden', () => {
+      expect(() => Vin.create('IIIIIIIIIIIIIIIII')).toThrow(VinDecodeError)
+    })
+
+    it('should throw VinDecodeError for lowercase ', () => {
+      expect(() => Vin.create('waiiiiiv5ja123456')).toThrow(VinDecodeError)
+    })
+
+    it('should create a Vin with all valid same character', () => {
+      const vin = Vin.create('AAAAAAAAAAAAAAAAA')
+      expect(vin.value).toBe('AAAAAAAAAAAAAAAAA')
+    })
+
+    it('should create a Vin with numeric characters only', () => {
+      const vin = Vin.create('11111111111111111')
+      expect(vin.value).toBe('11111111111111111')
     })
   })
-})
 
-describe('validateVin', () => {
-  it('should validate and return uppercase VIN', () => {
-    expect(validateVin('WAUZZZ8V5JA123456')).toBe('WAUZZZ8V5JA123456')
+  describe('Vin.isCheckDigitValid', () => {
+    it('should return true for correct check digit', () => {
+      const vin = Vin.create('11111111111111111')
+      expect(vin.isCheckDigitValid()).toBe(true)
+    })
+
+    it('should return true for valid VIN with correct check digit', () => {
+      const vin = Vin.create('1M8GDM9AXKP042788')
+      expect(vin.isCheckDigitValid()).toBe(true)
+    })
+
+    it('should return false for invalid check digit', () => {
+      const vin = Vin.create('WAUZZZ8V5JA123456')
+      expect(vin.isCheckDigitValid()).toBe(false)
+    })
+
+    it('should return false for VIN with mismatched check digit', () => {
+      const vin = Vin.create('1M8GDM9A5KP042788')
+      expect(vin.isCheckDigitValid()).toBe(false)
+    })
   })
 
-  it('should throw on invalid VIN', () => {
-    expect(() => validateVin('SHORT')).toThrow(VinDecodeError)
-  })
-})
+  describe('Vin.wmiRegion', () => {
+    it('should identify Spain', () => {
+      const vin = Vin.create('UXXZZZ8V5JA123456')
+      expect(vin.wmiRegion).toEqual({ country: 'Spain', region: 'Europe' })
+    })
 
-describe('isValidCheckDigit', () => {
-  it('should return true for correct check digit', () => {
-    expect(isValidCheckDigit('11111111111111111')).toBe(true)
-  })
+    it('should identify Germany', () => {
+      const vin = Vin.create('WAUZZZ8V5JA123456')
+      expect(vin.wmiRegion).toEqual({ country: 'Germany', region: 'Europe' })
+    })
 
-  it('should return false for invalid check digit', () => {
-    expect(isValidCheckDigit('WAUZZZ8V5JA123456')).toBe(false)
-  })
+    it('should identify Japan', () => {
+      const vin = Vin.create('JKAZR2A1XLA000111')
+      expect(vin.wmiRegion).toEqual({ country: 'Japan', region: 'Asia' })
+    })
 
-  it('should return false for short VIN', () => {
-    expect(isValidCheckDigit('SHORT')).toBe(false)
-  })
-})
+    it('should identify United States', () => {
+      const vin = Vin.create('1M8GDM9AXKP042788')
+      expect(vin.wmiRegion).toEqual({ country: 'United States', region: 'North America' })
+    })
 
-describe('decodeWmi', () => {
-  it('should identify Spain', () => {
-    const result = decodeWmi('UXXZZZ8V5JA123456')
-    expect(result).toEqual({ country: 'Spain', region: 'Europe' })
-  })
-
-  it('should identify Germany', () => {
-    const result = decodeWmi('WAUZZZ8V5JA123456')
-    expect(result).toEqual({ country: 'Germany', region: 'Europe' })
-  })
-
-  it('should identify Japan', () => {
-    const result = decodeWmi('JKAZR2A1XLA000111')
-    expect(result).toEqual({ country: 'Japan', region: 'Asia' })
-  })
-
-  it('should return null for unknown WMI', () => {
-    expect(decodeWmi('999')).toBeNull()
-  })
-
-  it('should return null for short VIN', () => {
-    expect(decodeWmi('AB')).toBeNull()
+    it('should return null for unknown WMI', () => {
+      const vin = Vin.create('99ZZZZ8V5JA123456')
+      expect(vin.wmiRegion).toBeNull()
+    })
   })
 })

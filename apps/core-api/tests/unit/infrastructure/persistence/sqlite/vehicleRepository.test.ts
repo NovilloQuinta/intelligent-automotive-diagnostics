@@ -205,7 +205,7 @@ describe('SqliteVehicleRepository', () => {
       return {
         vehicleId,
         ecuId,
-        pidCode: PidCode.fromTrusted('01', '0C'),
+        pidCode: PidCode.create('01', '0C'),
         name: 'Engine RPM',
         description: 'Revolutions per minute',
         formula: '(A*256+B)/4',
@@ -256,7 +256,7 @@ describe('SqliteVehicleRepository', () => {
       await repo.insertPidDefinition({
         vehicleId,
         ecuId,
-        pidCode: PidCode.fromTrusted('01', '05'),
+        pidCode: PidCode.create('01', '05'),
         name: 'Coolant Temperature',
         formula: 'A-40',
         unit: '°C',
@@ -277,7 +277,7 @@ describe('SqliteVehicleRepository', () => {
       const llmPid: PidDefinition = {
         vehicleId,
         ecuId,
-        pidCode: PidCode.fromTrusted('22', '0300'),
+        pidCode: PidCode.create('22', '0300'),
         name: 'TCU Odometer',
         formula: '(A<<24|B<<16|C<<8|D)/10',
         unit: 'km',
@@ -310,7 +310,7 @@ describe('SqliteVehicleRepository', () => {
       const pid = await repo.insertPidDefinition({
         vehicleId: vehicle.id!,
         ecuId: ecu.id!,
-        pidCode: PidCode.fromTrusted('01', '0C'),
+        pidCode: PidCode.create('01', '0C'),
         name: 'Engine RPM',
         formula: '(A*256+B)/4',
         unit: 'rpm',

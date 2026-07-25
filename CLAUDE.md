@@ -6,8 +6,8 @@
 ## SESION ACTUAL
 
 - **Fase**: 3 — Refactorizacion Clean Architecture + Hexagonal (completada)
-- **Ultimo paso**: Infraestructura reestructurada (OBD unificado, resource.type.ts, controllers fusionados en routes)
-- **Tests**: 201 pasando (16 test files)
+- **Ultimo paso**: Verificacion servidor en produccion — arranca OK, 231 tests, lint limpio
+- **Tests**: 231 pasando (18 test files)
 - **Ficheros creados/modificados** (acumulado Fases 1-3):
   - `domain/vin.ts` (Vin value object ISO 3779)
   - `domain/pidCode.ts` (PidCode value object)
