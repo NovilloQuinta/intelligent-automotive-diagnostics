@@ -15,7 +15,7 @@
 1. **Cargar skills necesarios** antes de empezar (ver tabla abajo)
 2. **1 paso a la vez** — no mezclar responsabilidades, no adelantar trabajo
 3. **TDD estricto**: RED (test que falla) → GREEN (codigo minimo) → REFACTOR
-4. **Trabajar en ramas, NO en main** — cada cambio en su rama (`git checkout -b feat/xxx` o `fix/xxx`). Solo merge a main cuando CI pase verde.
+4. **Trabajar en ramas, NO en main** — cada cambio en su rama (`git checkout -b feat/xxx` o `fix/xxx`). Solo merge a main cuando CI pase verde. Cambios menores (docs, chore, style) directo a main.
 5. **Checks pre-push**: `pnpm lint && pnpm format && pnpm test && pnpm build`
 6. **Preguntar antes de commitear/pushear** — mostrar resumen de cambios, esperar OK humano
 7. **Tras cada paso**: actualizar `SESION ACTUAL` en este mismo fichero
