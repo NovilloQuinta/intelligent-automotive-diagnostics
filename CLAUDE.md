@@ -6,7 +6,7 @@
 ## SESION ACTUAL
 
 - **Fase**: 3 — Refactorizacion Clean Architecture + Hexagonal (completada)
-- **Ultimo paso**: Configuracion multi-agente (4 subagentes: writer, reviewer, quality, security) + CLAUDE.md adelgazado + Engram poblado
+- **Ultimo paso**: Agente @architect (OpenSpec workflow) — 5 agentes total: architect, writer, reviewer, quality, security
 - **Tests**: 231 pasando (18 test files)
 
 ## REGLAS DE SESION
@@ -25,6 +25,7 @@ Invoca con `@nombre` o via Task tool. Definidos en `.opencode/agents/`.
 | Agente | Modelo | Rol |
 |---|---|---|
 | `@writer` | deepseek-v4-pro | Implementa codigo con TDD + Clean Architecture + Zod |
+| `@architect` | deepseek-v4-pro | Diseña specs OpenSpec, propone cambios, mantiene coherencia entre artifacts |
 | `@reviewer` | deepseek-v4-flash | Revisa TypeScript, TSDoc, Clean Architecture (read-only) |
 | `@quality` | deepseek-v4-flash | Ejecuta lint + test + coverage + audit y reporta |
 | `@security` | deepseek-v4-flash | Audita reglas OWASP: CORS, helmet, JWT, rate-limit, Zod (read-only) |
@@ -38,6 +39,12 @@ Invoca con `@nombre` o via Task tool. Definidos en `.opencode/agents/`.
 | `tdd-workflow` | `.opencode/skills/tdd-workflow/` | Antes de escribir tests o ciclo Red-Green-Refactor |
 | `tsdoc-jsdoc-documentation` | `.opencode/skills/tsdoc-jsdoc-documentation/` | Antes de crear o revisar TSDoc en exports publicos |
 | `coverage-strategy` | `.opencode/skills/coverage-strategy/` | Al configurar thresholds, revisar coverage, o decidir que testear |
+| `openspec-propose` | `.opencode/skills/openspec-propose/` | Al proponer un cambio nuevo (design + specs + tasks) |
+| `openspec-apply-change` | `.opencode/skills/openspec-apply-change/` | Al implementar tareas de un cambio OpenSpec |
+| `openspec-archive-change` | `.opencode/skills/openspec-archive-change/` | Al archivar un cambio completado |
+| `openspec-explore` | `.opencode/skills/openspec-explore/` | Modo exploracion — pensar sin implementar |
+| `openspec-update-change` | `.opencode/skills/openspec-update-change/` | Al actualizar artifacts de un cambio existente |
+| `openspec-sync-specs` | `.opencode/skills/openspec-sync-specs/` | Al sincronizar delta specs con main specs |
 
 ## MEMORIA PERSISTENTE (Engram)
 
