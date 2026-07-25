@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { AuthServicePort } from '@/application/ports/authService.interface.js'
+import type { AuthServicePort } from '@/application/ports/authService.port.js'
 
 /** Esquema de validacion para el input de refresco de token. */
 export const refreshInputSchema = z.object({

@@ -1,8 +1,8 @@
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { createHash, randomUUID } from 'node:crypto'
-import type { AuthServicePort } from '@/application/ports/authService.interface.js'
-import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.interface.js'
+import type { AuthServicePort } from '@/application/ports/authService.port.js'
+import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.port.js'
 
 /** Configuracion del servicio de autenticacion. */
 interface AuthServiceConfig {

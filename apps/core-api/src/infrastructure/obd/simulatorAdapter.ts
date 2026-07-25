@@ -1,11 +1,11 @@
-import type { ObdRepository } from '@/application/ports/obdRepository.interface.js'
+import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
 import type { DtcCode } from '@/domain/dtcCode.js'
 import type { FreezeFrame } from '@/domain/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/vehicleProfile.js'
 import type { ObdSimulator } from './simulator.js'
 
-/** Adaptador que implementa {@link ObdRepository} usando el simulador de hardware. */
-export class ObdSimulatorRepository implements ObdRepository {
+/** Adaptador que implementa {@link ObdRepositoryPort} usando el simulador de hardware. */
+export class ObdSimulatorRepository implements ObdRepositoryPort {
   constructor(private readonly simulator: ObdSimulator) {}
 
   async readPid(mode: string, pid: string): Promise<number> {

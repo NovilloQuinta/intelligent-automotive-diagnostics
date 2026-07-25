@@ -1,8 +1,8 @@
 import { z } from 'zod'
 import { createHash } from 'node:crypto'
-import type { UserRepository } from '@/application/ports/userRepository.interface.js'
-import type { AuthServicePort } from '@/application/ports/authService.interface.js'
-import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.interface.js'
+import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
+import type { AuthServicePort } from '@/application/ports/authService.port.js'
+import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.port.js'
 import type { User } from '@/domain/user.js'
 
 /** Esquema de validacion para el input de registro. */
@@ -36,7 +36,7 @@ function hashToken(token: string): string {
  * Valida input, comprueba duplicados, crea usuario y genera tokens.
  */
 export function createRegisterUserUseCase(deps: {
-  readonly userRepo: UserRepository
+  readonly userRepo: UserRepositoryPort
   readonly authService: AuthServicePort
   readonly tokenStore: RefreshTokenStorePort
 }) {

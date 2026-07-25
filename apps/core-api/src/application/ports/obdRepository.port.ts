@@ -3,7 +3,7 @@ import type { FreezeFrame } from '@/domain/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/vehicleProfile.js'
 
 /** Contrato para la adquisición de datos OBD-II desde el hardware. */
-export interface ObdRepository {
+export interface ObdRepositoryPort {
   /** Service 01 — Lee un PID OBD-II genérico por modo y código.
    * @param mode — Modo OBD (01, 02, 09, 22, ...)
    * @param pid — Código del PID (0C, 05, 0300, ...)

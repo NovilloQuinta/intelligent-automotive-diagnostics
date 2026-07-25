@@ -1,11 +1,10 @@
-import Database from 'better-sqlite3'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
-import * as schema from '@/infrastructure/persistence/sqlite/schema.js'
+import { getDb } from '@/infrastructure/persistence/sqlite/db.js'
 import { createServer } from '@/infrastructure/http/server.js'
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
 import { SqliteRefreshTokenStore } from '@/infrastructure/persistence/sqlite/refreshTokenStore.js'
 import { createAuthService } from '@/infrastructure/services/authService.js'
 import { Vin } from '@/domain/vin.js'
+import { VehicleType } from '@/domain/simulationScenario.js'
 import type { SimulationScenario } from '@/domain/simulationScenario.js'
 import type { LiveData } from '@/domain/liveData.js'
 
@@ -14,11 +13,16 @@ const DB_PATH = process.env.DB_PATH ?? 'data/diagnostics.db'
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET ?? 'dev-access-secret'
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET ?? 'dev-refresh-secret'
 
-const sqlite = new Database(DB_PATH)
-sqlite.pragma('journal_mode = WAL')
-sqlite.pragma('foreign_keys = ON')
+if (process.env.NODE_ENV === 'production') {
+  if (ACCESS_TOKEN_SECRET === 'dev-access-secret') {
+    throw new Error('ACCESS_TOKEN_SECRET must be set in production')
+  }
+  if (REFRESH_TOKEN_SECRET === 'dev-refresh-secret') {
+    throw new Error('REFRESH_TOKEN_SECRET must be set in production')
+  }
+}
 
-const db = drizzle(sqlite, { schema })
+const db = getDb(DB_PATH)
 const userRepo = new SqliteUserRepository(db)
 const tokenStore = new SqliteRefreshTokenStore(db)
 const authService = createAuthService({
@@ -47,7 +51,7 @@ const scenarios: SimulationScenario[] = [
   {
     id: 'audi-a3-idle',
     name: 'Audi A3 al ralentí',
-    vehicleType: 'car',
+    vehicleType: VehicleType.Car,
     sensorValues: audiIdleData,
     dtcConfig: [{ code: 'P0301', description: 'Cylinder 1 Misfire' }],
     vehicleInfo: {
@@ -61,7 +65,7 @@ const scenarios: SimulationScenario[] = [
   {
     id: 'kawa-z900',
     name: 'Kawasaki Z900',
-    vehicleType: 'motorcycle',
+    vehicleType: VehicleType.Motorcycle,
     sensorValues: kawaData,
     dtcConfig: [],
     vehicleInfo: {

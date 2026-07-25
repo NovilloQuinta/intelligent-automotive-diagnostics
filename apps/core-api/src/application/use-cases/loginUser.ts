@@ -1,8 +1,8 @@
 import { z } from 'zod'
 import { createHash } from 'node:crypto'
-import type { UserRepository } from '@/application/ports/userRepository.interface.js'
-import type { AuthServicePort } from '@/application/ports/authService.interface.js'
-import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.interface.js'
+import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
+import type { AuthServicePort } from '@/application/ports/authService.port.js'
+import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.port.js'
 
 /** Esquema de validacion para el input de inicio de sesion. */
 export const loginInputSchema = z.object({
@@ -29,7 +29,7 @@ function hashToken(token: string): string {
  * Valida input, verifica credenciales y genera tokens.
  */
 export function createLoginUserUseCase(deps: {
-  readonly userRepo: UserRepository
+  readonly userRepo: UserRepositoryPort
   readonly authService: AuthServicePort
   readonly tokenStore: RefreshTokenStorePort
 }) {

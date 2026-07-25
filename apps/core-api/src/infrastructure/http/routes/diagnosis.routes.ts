@@ -7,6 +7,8 @@ import { processVehicleDiagnosis } from '@/application/use-cases/processVehicleD
 import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
 import type { SimulationScenario } from '@/domain/simulationScenario.js'
 
+const DIAGNOSIS_TIMEOUT_MS = 10_000
+
 const DiagnosisBodySchema = z.object({
   scenarioId: z.string().min(1, 'scenarioId is required'),
 })
@@ -82,14 +84,22 @@ export function createDiagnosisRoutes(deps: DiagnosisRoutesDeps): Router {
     const mcp = createMcpServer(repository)
 
     try {
-      const result = await mcp.callTool(toolName, args)
+      const result = await Promise.race([
+        mcp.callTool(toolName, args),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Tool call timed out')), DIAGNOSIS_TIMEOUT_MS),
+        ),
+      ])
       res.status(200).json({ tool: toolName, result: result.content[0].text })
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
       if (message.includes('Tool not found')) {
         res.status(404).json({ error: `Tool not found: ${toolName}` })
+      } else if (message.includes('Timed out')) {
+        res.status(504).json({ error: 'Tool call timed out' })
       } else {
-        res.status(500).json({ error: message })
+        console.error(`[ERROR] MCP tool call failed: ${message}`)
+        res.status(500).json({ error: 'Internal server error' })
       }
     }
   })

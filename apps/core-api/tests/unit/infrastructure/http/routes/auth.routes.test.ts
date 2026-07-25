@@ -2,18 +2,18 @@ import { describe, it, expect, vi } from 'vitest'
 import request from 'supertest'
 import express from 'express'
 import { createAuthRoutes } from '@/infrastructure/http/routes/auth.routes.js'
-import type { UserRepository } from '@/application/ports/userRepository.interface.js'
-import type { AuthServicePort } from '@/application/ports/authService.interface.js'
-import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.interface.js'
+import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
+import type { AuthServicePort } from '@/application/ports/authService.port.js'
+import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.port.js'
 
 function createTestApp(
   overrides: {
-    userRepo?: Partial<UserRepository>
+    userRepo?: Partial<UserRepositoryPort>
     authService?: Partial<AuthServicePort>
     tokenStore?: Partial<RefreshTokenStorePort>
   } = {},
 ) {
-  const userRepo: UserRepository = {
+  const userRepo: UserRepositoryPort = {
     findByEmail: vi.fn().mockResolvedValue(null),
     findById: vi.fn().mockResolvedValue(null),
     create: vi.fn().mockResolvedValue({

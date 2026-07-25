@@ -6,20 +6,20 @@ import { openApiSpec } from '@/infrastructure/http/swagger.js'
 import { createRateLimiter } from '@/infrastructure/http/middleware/rate-limiter.middleware.js'
 import type { RateLimiterConfig } from '@/infrastructure/http/middleware/rate-limiter.middleware.js'
 import { createAuditLogger } from '@/infrastructure/http/middleware/audit-logger.middleware.js'
-import type { AuditLogRepositoryPort } from '@/application/ports/auditLogRepository.interface.js'
+import type { AuditLogRepositoryPort } from '@/application/ports/auditLogRepository.port.js'
 import { createAuthMiddleware } from '@/infrastructure/http/middleware/auth.middleware.js'
 import { createAuthRoutes } from '@/infrastructure/http/routes/auth.routes.js'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
-import type { UserRepository } from '@/application/ports/userRepository.interface.js'
-import type { AuthServicePort } from '@/application/ports/authService.interface.js'
-import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.interface.js'
+import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
+import type { AuthServicePort } from '@/application/ports/authService.port.js'
+import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.port.js'
 
 /** Dependencias del servidor Express. */
 export interface ServerDependencies {
   readonly scenarios: SimulationScenario[]
   readonly rateLimit?: Partial<RateLimiterConfig>
   readonly auditRepo?: AuditLogRepositoryPort
-  readonly userRepo?: UserRepository
+  readonly userRepo?: UserRepositoryPort
   readonly authService?: AuthServicePort
   readonly tokenStore?: RefreshTokenStorePort
   readonly accessTokenSecret?: string
@@ -36,9 +36,10 @@ export function createServer(deps: ServerDependencies): express.Application {
   }
   app.use(express.json({ limit: '10kb' }))
 
-  const allowedOrigins = ['http://localhost:4000', 'http://localhost:3000', 'http://localhost:5173']
+  const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? 'http://localhost:4000,http://localhost:3000,http://localhost:5173').split(',')
   app.use((req, res, next) => {
     const origin = req.headers.origin
+    res.setHeader('Vary', 'Origin')
     if (origin && allowedOrigins.includes(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin)
     }
@@ -52,6 +53,7 @@ export function createServer(deps: ServerDependencies): express.Application {
   })
 
   if (deps.userRepo && deps.authService && deps.tokenStore) {
+    app.use('/api/auth', createRateLimiter({ windowMinutes: 15, maxRequests: 20 }))
     app.use('/api/auth', createAuthRoutes(deps.userRepo, deps.authService, deps.tokenStore))
   }
 
@@ -83,8 +85,9 @@ export function createServer(deps: ServerDependencies): express.Application {
   app.use('/api', diagnosisRouter)
 
   app.use(
-    (err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-      console.error(`[ERROR] ${err.message}`)
+    (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      console.error(`[ERROR] ${message}`)
       res.status(500).json({ error: 'Internal server error' })
     },
   )

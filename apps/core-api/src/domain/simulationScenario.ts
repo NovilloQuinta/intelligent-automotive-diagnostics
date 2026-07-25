@@ -4,7 +4,10 @@ import type { VehicleInfo } from './vehicleProfile.js'
 import type { FreezeFrame } from './freezeFrame.js'
 
 /** Tipo de vehiculo soportado por la simulacion. */
-export type VehicleType = 'car' | 'motorcycle'
+export enum VehicleType {
+  Car = 'car',
+  Motorcycle = 'motorcycle',
+}
 
 /** Configuracion estatica de un escenario de simulacion de telemetria. */
 export interface SimulationScenario {

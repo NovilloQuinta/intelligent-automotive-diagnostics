@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import type { ObdRepository } from '@/application/ports/obdRepository.interface.js'
-import type { VehicleRepository } from '@/application/ports/vehicleRepository.interface.js'
+import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
+import type { VehicleRepositoryPort } from '@/application/ports/vehicleRepository.port.js'
 
 /** Resultado de invocar una tool MCP. */
 export interface ToolCallResult {
@@ -20,12 +20,12 @@ export interface DiagnosticsMcpServer {
 }
 
 /** Crea un servidor MCP con tools de diagnóstico OBD-II.
- * Capa 1: tools sobre {@link ObdRepository} (hardware).
- * Capa 2: tools sobre {@link VehicleRepository} (catálogo).
+ * Capa 1: tools sobre {@link ObdRepositoryPort} (hardware).
+ * Capa 2: tools sobre {@link VehicleRepositoryPort} (catálogo).
  */
 export function createMcpServer(
-  repo: ObdRepository,
-  vehicleRepo?: VehicleRepository,
+  repo: ObdRepositoryPort,
+  vehicleRepo?: VehicleRepositoryPort,
 ): DiagnosticsMcpServer {
   const server = new McpServer({
     name: 'obd-diagnostics',

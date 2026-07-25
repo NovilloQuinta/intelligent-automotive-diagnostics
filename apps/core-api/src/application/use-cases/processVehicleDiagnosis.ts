@@ -1,11 +1,12 @@
-import type { ObdRepository } from '@/application/ports/obdRepository.interface.js'
-import type { DiagnosisResult, Severity } from '@/domain/diagnosisResult.js'
+import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
+import { Severity } from '@/domain/diagnosisResult.js'
+import type { DiagnosisResult } from '@/domain/diagnosisResult.js'
 import type { FreezeFrame } from '@/domain/freezeFrame.js'
 
 function computeSeverity(dtcCount: number, freezeFrame: FreezeFrame | null): Severity {
-  if (dtcCount === 0) return 'low'
-  if (freezeFrame) return 'critical'
-  return 'high'
+  if (dtcCount === 0) return Severity.Low
+  if (freezeFrame) return Severity.Critical
+  return Severity.High
 }
 
 function buildDiagnosisText(
@@ -29,7 +30,7 @@ const DIAGNOSIS_TIMEOUT_MS = 10_000
  * consulta DTCs y freeze frame, y calcula severidad.
  * Si la lectura excede {@link DIAGNOSIS_TIMEOUT_MS}, lanza un error con timeout.
  */
-export async function processVehicleDiagnosis(repo: ObdRepository): Promise<DiagnosisResult> {
+export async function processVehicleDiagnosis(repo: ObdRepositoryPort): Promise<DiagnosisResult> {
   const results = await Promise.race([
     Promise.all([
       repo.readPid('01', '0C'),

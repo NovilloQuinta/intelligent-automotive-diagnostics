@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
 import { processVehicleDiagnosis } from '@/application/use-cases/processVehicleDiagnosis.js'
-import type { ObdRepository } from '@/application/ports/obdRepository.interface.js'
+import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
 import type { FreezeFrame } from '@/domain/freezeFrame.js'
 import { Vin } from '@/domain/vin.js'
 
 const sensorValues = { rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 }
 const dtcCodes = [{ code: 'P0301', description: 'Cylinder 1 Misfire' }]
 
-function mockRepo(overrides: Partial<ObdRepository> = {}): ObdRepository {
+function mockRepo(overrides: Partial<ObdRepositoryPort> = {}): ObdRepositoryPort {
   return {
     readPid: vi.fn().mockImplementation((_mode: string, pid: string) => {
       const map: Record<string, number> = {

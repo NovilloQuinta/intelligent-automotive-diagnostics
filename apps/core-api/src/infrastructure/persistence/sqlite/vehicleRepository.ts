@@ -3,14 +3,14 @@ import * as schema from './schema.js'
 import { Vin } from '@/domain/vin.js'
 import { PidCode } from '@/domain/pidCode.js'
 import type { DiagnosticsDb } from './db.js'
-import type { VehicleRepository } from '@/application/ports/vehicleRepository.interface.js'
+import type { VehicleRepositoryPort } from '@/application/ports/vehicleRepository.port.js'
 import type { VehicleProfile } from '@/domain/vehicleProfile.js'
 import type { DiagnosisSession } from '@/domain/diagnosisSession.js'
 import type { EcuInfo } from '@/domain/ecuInfo.js'
 import type { PidDefinition, PidReading } from '@/domain/pidDefinition.js'
 
-/** Implementación de {@link VehicleRepository} con SQLite via Drizzle ORM. */
-export class SqliteVehicleRepository implements VehicleRepository {
+/** Implementación de {@link VehicleRepositoryPort} con SQLite via Drizzle ORM. */
+export class SqliteVehicleRepository implements VehicleRepositoryPort {
   constructor(private readonly db: DiagnosticsDb) {}
 
   async upsertVehicle(profile: VehicleProfile): Promise<VehicleProfile> {

@@ -1,5 +1,12 @@
 /** Tipo de unidad de control electrónica. */
-export type EcuType = 'ECM' | 'TCU' | 'ABS' | 'HVAC' | 'BMS' | 'OTHER'
+export enum EcuType {
+  ECM = 'ECM',
+  TCU = 'TCU',
+  ABS = 'ABS',
+  HVAC = 'HVAC',
+  BMS = 'BMS',
+  OTHER = 'OTHER',
+}
 
 /** Información de una ECU descubierta en el bus CAN/OBD. */
 export interface EcuInfo {

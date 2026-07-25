@@ -4,7 +4,7 @@ import type { DiagnosticsDb } from './db.js'
 import type {
   RefreshTokenStorePort,
   RefreshTokenRecord,
-} from '@/application/ports/refreshTokenStore.interface.js'
+} from '@/application/ports/refreshTokenStore.port.js'
 
 type RefreshTokenRow = typeof schema.refreshTokens.$inferSelect
 

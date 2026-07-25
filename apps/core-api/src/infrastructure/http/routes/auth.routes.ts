@@ -1,9 +1,9 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { ZodError } from 'zod'
-import type { UserRepository } from '@/application/ports/userRepository.interface.js'
-import type { AuthServicePort } from '@/application/ports/authService.interface.js'
-import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.interface.js'
+import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
+import type { AuthServicePort } from '@/application/ports/authService.port.js'
+import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.port.js'
 import {
   EmailAlreadyRegisteredError,
   createRegisterUserUseCase,
@@ -16,7 +16,7 @@ import { createRefreshTokenUseCase } from '@/application/use-cases/refreshToken.
 
 /** Crea un Express Router con las rutas de autenticacion. */
 export function createAuthRoutes(
-  userRepo: UserRepository,
+  userRepo: UserRepositoryPort,
   authService: AuthServicePort,
   tokenStore: RefreshTokenStorePort,
 ): Router {
