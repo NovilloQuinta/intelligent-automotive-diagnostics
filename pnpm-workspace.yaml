@@ -1,0 +1,11 @@
+packages:
+  - 'apps/*'
+
+allowBuilds:
+  esbuild: true
+
+onlyBuiltDependencies:
+  - '@scarf/scarf'
+  - bcrypt
+  - better-sqlite3
+  - esbuild
