@@ -30,9 +30,7 @@ export class PidCode {
     }
     const upperMode = mode.toUpperCase()
     if (STANDARD_MODES.has(upperMode) && pid.length !== 2) {
-      throw new PidCodeError(
-        `Mode ${upperMode} only accepts 2-character PIDs, got "${pid}".`,
-      )
+      throw new PidCodeError(`Mode ${upperMode} only accepts 2-character PIDs, got "${pid}".`)
     }
     return new PidCode(upperMode, pid.toUpperCase())
   }

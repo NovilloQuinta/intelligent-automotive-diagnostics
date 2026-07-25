@@ -36,7 +36,10 @@ export function createServer(deps: ServerDependencies): express.Application {
   }
   app.use(express.json({ limit: '10kb' }))
 
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? 'http://localhost:4000,http://localhost:3000,http://localhost:5173').split(',')
+  const allowedOrigins = (
+    process.env.ALLOWED_ORIGINS ??
+    'http://localhost:4000,http://localhost:3000,http://localhost:5173'
+  ).split(',')
   app.use((req, res, next) => {
     const origin = req.headers.origin
     res.setHeader('Vary', 'Origin')
