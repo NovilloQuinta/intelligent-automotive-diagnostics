@@ -3,6 +3,9 @@ packages:
 
 allowBuilds:
   esbuild: true
+  onnxruntime-node: true
+  protobufjs: true
+  sharp: true
 
 onlyBuiltDependencies:
   - '@scarf/scarf'

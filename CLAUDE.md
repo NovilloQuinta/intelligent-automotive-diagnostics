@@ -6,7 +6,7 @@
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM
-- **Ultimo paso**: Añadida regla mem_save en agentes writer.md + architect.md para que persistan decisiones en Engram
+- **Ultimo paso**: Implementado change add-lancedb-infra (LanceDB + embeddings locales) — 270 tests
 - **ADR**: 007 creado (Catalogo Auto-Expansivo con LanceDB)
 - **Tests**: 257 pasando (22 test files)
 - **CI**: verde — lint, format, test, build, audit
