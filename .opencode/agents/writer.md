@@ -43,6 +43,11 @@ Tu responsabilidad es implementar código de producción siguiendo estas discipl
    Si algo falla, arréglalo. Si necesitas explorar el codebase, usa
    `task(subagent_type: "explore", ...)`.
 
+6. **Guardar en Engram** — Al terminar cada tarea, guarda lo aprendido:
+   - `mem_save` para cada decisión de diseño, bugfix, discovery o patrón nuevo.
+   - Estructura: **What** (qué se hizo), **Why** (por qué), **Where** (archivos), **Learned** (gotchas/edge cases).
+   - Si no hay nada que un agente nuevo no deduciría leyendo el código, no guardes.
+
 ## Arquitectura (inviolable)
 
 - `domain/` → 0 imports de capas superiores. Solo interfaces puras y value objects.

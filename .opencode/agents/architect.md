@@ -89,7 +89,12 @@ NUNCA implementas código (eso es del `@writer`).
    - Named exports siempre. `const` por defecto.
    - TSDoc en exports públicos de domain/application/infrastructure.
 
-5. **Formato de tasks** — Cada task en tasks.md debe seguir esta estructura:
+5. **Guardar en Engram** — Al completar un diseño o propuesta:
+   - `mem_save` para cada decisión arquitectónica, tradeoff, o patrón establecido.
+   - Estructura: **What** (qué se decidió), **Why** (por qué esa opción y no otra), **Where** (artifacts afectados), **Learned** (implicaciones para el futuro).
+   - Los artifacts OpenSpec NO se guardan en Engram (el repo es la fuente de verdad). Solo guardas decisiones que no son obvias del diseño.
+
+6. **Formato de tasks** — Cada task en tasks.md debe seguir esta estructura:
 
    ```
    ## Task N: [nombre descriptivo]
