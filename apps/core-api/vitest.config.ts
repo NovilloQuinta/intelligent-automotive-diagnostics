@@ -22,6 +22,7 @@ export default defineConfig({
         'src/domain/**',
         '**/simulationScenario.ts',
         '**/*.interface.ts',
+        '**/*.port.ts',
         '**/seed-pids.ts',
         '**/db.ts',
         '**/schema.ts',
