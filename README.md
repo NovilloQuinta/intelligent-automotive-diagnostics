@@ -49,6 +49,7 @@ open http://localhost:4000/api-docs
 | `/api/scenarios` | GET | JWT | Lista de escenarios de simulacion |
 | `/api/diagnosis` | POST | JWT | Diagnostico determinista |
 | `/api/mcp/tools/:toolName` | POST | JWT | Invocar tool MCP |
+| `/api/mcp/cognitive-diagnosis` | POST | JWT | Diagnostico cognitivo LLM via MCP |
 
 ### Prerrequisitos
 
@@ -59,12 +60,17 @@ open http://localhost:4000/api-docs
 ### Variables de entorno (`.env`)
 
 ```env
-OBD_MODE=sync                  # sync = simulador interno | elm327 = emulador real
+OBD_MODE=sync                  # sync = simulador interno | tcp = emulador real
 ELM327_HOST=localhost          # Host del emulador ELM327
 ELM327_PORT=35000              # Puerto del emulador
 DB_PATH=data/diagnostics.db    # Ruta de la BD SQLite
 ACCESS_TOKEN_SECRET=           # Secreto para firmar JWT access tokens
 REFRESH_TOKEN_SECRET=          # Secreto para firmar JWT refresh tokens
+LLM_PROVIDER=openai            # Proveedor LLM: anthropic | openai
+LLM_API_KEY=                   # API key del proveedor LLM
+LLM_BASE_URL=                  # URL base (openai-compatible)
+LLM_MODEL=                     # Modelo (por defecto gpt-4o)
+ANTHROPIC_API_KEY=             # Solo si LLM_PROVIDER=anthropic
 ```
 
 ## Arquitectura
@@ -86,6 +92,7 @@ apps/core-api/src/
 ├── domain/                          # Capa interna: value objects + entidades
 │   ├── vin.ts                       #   Vin value object (ISO 3779)
 │   ├── pidCode.ts                   #   PidCode value object
+│   ├── pids.ts                       #   Catalogo de PIDs SAE J1979
 │   ├── simulationScenario.ts        #   SimulationScenario + VehicleType
 │   ├── vehicleProfile.ts            #   VehicleInfo + VehicleProfile
 │   ├── liveData.ts, dtcCode.ts, freezeFrame.ts
@@ -93,10 +100,11 @@ apps/core-api/src/
 │   ├── ecuInfo.ts, pidDefinition.ts, user.ts
 │
 ├── application/                     # Capa intermedia: puertos + casos de uso
-│   ├── ports/                       #   Contratos (6 interfaces)
+│   ├── ports/                       #   Contratos (7 interfaces)
 │   │   ├── obdRepository.interface.ts
 │   │   ├── userRepository.interface.ts
 │   │   ├── vehicleRepository.interface.ts
+│   │   ├── llmClient.interface.ts
 │   │   ├── authService.interface.ts
 │   │   ├── refreshTokenStore.interface.ts
 │   │   └── auditLogRepository.interface.ts
@@ -113,6 +121,10 @@ apps/core-api/src/
     │   ├── server.ts, swagger.ts
     ├── services/                    #   Servicios transversales
     │   └── authService.ts           #     JWT + bcrypt + refresh token rotation
+    ├── llm/                          #   Adaptadores LLM (Anthropic + OpenAI)
+    │   ├── anthropicClient.ts, openAiClient.ts
+    │   ├── mcpToolAdapter.ts, openAiToolAdapter.ts
+    │   ├── toolDefinitionSchema.ts, sdkErrorUtils.ts
     ├── obd/                         #   Hardware OBD-II (simulador + parsers)
     │   ├── simulator.ts, simulatorAdapter.ts
     │   ├── pidParser.ts, vinDecoder.ts
@@ -166,7 +178,7 @@ curl -X POST http://localhost:4000/api/mcp/tools/read_pid \
 ## Testing
 
 ```bash
-pnpm test            # 201 tests en 16 suites
+pnpm test            # 257 tests en 22 suites
 pnpm test:watch      # Modo watch TDD
 pnpm test:coverage   # Cobertura
 ```
@@ -174,20 +186,26 @@ pnpm test:coverage   # Cobertura
 | Suite | Tests | Capa |
 |---|---|---|
 | `pidParser.test.ts` | 44 | Parser Shunting-yard |
+| `vin.test.ts` | 24 | Value object VIN (ISO 3779) |
 | `server.test.ts` | 20 | Integracion HTTP + MCP |
-| `vinDecoder.test.ts` | 19 | VIN: decode, validate, check digit, WMI |
-| `vehicleRepository.test.ts` | 17 | CRUD + validacion VIN |
-| `auth.routes.test.ts` | 10 | Auth endpoints |
 | `authService.test.ts` | 20 | JWT + bcrypt |
+| `pidCode.test.ts` | 14 | Value object PidCode |
 | `auth.integration.test.ts` | 12 | Auth end-to-end |
 | `mcpServer.test.ts` | 11 | 6 tools + edge cases |
 | `simulator.test.ts` | 11 | Codificacion/decodificacion |
+| `auth.routes.test.ts` | 10 | Auth endpoints |
+| `anthropicClient.test.ts` | 9 | Adaptador LLM Anthropic |
+| `vehicleRepository.test.ts` | 17 | CRUD + validacion VIN |
 | `userRepository.test.ts` | 9 | CRUD usuarios |
 | `processVehicleDiagnosis.test.ts` | 7 | readPid + freeze frame + severidad |
+| `openAiClient.test.ts` | 16 | Adaptador LLM OpenAI |
 | `authMiddleware.test.ts` | 5 | JWT verification |
 | `auditLogRepository.test.ts` | 5 | Auditoria |
 | `rateLimiter.test.ts` | 4 | Rate limiting |
+| `mcpToolAdapter.test.ts` | 4 | Adapter Anthropic tools → JSON Schema |
+| `openAiToolAdapter.test.ts` | 4 | Adapter OpenAI tools → JSON Schema |
 | `diagnosis.routes.test.ts` | 4 | Diagnosis endpoints |
+| `vinDecoder.test.ts` | 4 | VIN: decode, validate, check digit, WMI |
 | `auditLogger.test.ts` | 3 | HTTP logging |
 
 ## Fases del proyecto
@@ -198,12 +216,13 @@ pnpm test:coverage   # Cobertura
 | Fase 2a — SQLite/Drizzle + PidParser + catalogo | Completada | — |
 | Hardening OWASP A01-A08 | Completado | — |
 | Fase 2b — Hardening produccion (AUTH + RATE + LOG) | Completada | — |
-| **Fase 3 — Refactorizacion Clean Architecture + Hexagonal** | **Completada** | **201** |
-| Pendiente — LanceDB + LLM + TCP OBD | Sin empezar | — |
+| **Fase 3 — Refactorizacion Clean Architecture + Hexagonal** | **Completada** | **257** |
+| **Fase 4 — Diagnostico Cognitivo LLM via MCP** | **En progreso** | **257** |
+| Pendiente — LanceDB + TCP OBD | Sin empezar | — |
 
 ## Documentacion
 
-- **ADR** — 5 decisiones arquitectonicas en `docs/adr/`
+- **ADR** — 6 decisiones arquitectonicas en `docs/adr/`
 - **TSDoc** — export publico en `domain/`, `application/`, `infrastructure/`
 - **CI Docs** — verificacion en pipeline (`pnpm lint` incluye TSDoc)
 - **[CLAUDE.md](CLAUDE.md)** — Reglas del proyecto, skills, convenciones

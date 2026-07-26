@@ -7,7 +7,7 @@
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM
 - **Ultimo paso**: Propuesta add-openai-client-adapter (OpenAI-compatible generico) — Fase 4
-- **Tests**: 237 pasando (20 test files)
+- **Tests**: 257 pasando (22 test files)
 - **CI**: verde — lint, format, test, build, audit
 
 ## REGLAS DE SESION

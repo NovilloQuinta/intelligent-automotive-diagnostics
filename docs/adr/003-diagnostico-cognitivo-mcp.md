@@ -48,7 +48,7 @@ El MCP Server expone **tools** que el LLM puede invocar:
 
 ### Aislamiento del proveedor de IA
 
-La logica de llamada al LLM se concentra en `application/use-cases/executeCognitiveDiagnosis.ts`. Si en el futuro se quiere cambiar de Claude a GPT-4 o a un modelo local, solo hay que cambiar ese archivo — el MCP Server y el resto del sistema no se modifican.
+La conexion al LLM se abstrae mediante el patron Port/Adapter (`application/ports/llmClient.port.ts`). Los adaptadores concretos (`AnthropicClient`, `OpenAiClient`) implementan el puerto, permitiendo cambiar de proveedor sin tocar la logica de negocio. Vease ADR 006 para el diseno detallado del multi-proveedor.
 
 ## Consecuencias
 
@@ -79,5 +79,6 @@ La logica de llamada al LLM se concentra en `application/use-cases/executeCognit
 
 - [Model Context Protocol Specification](https://spec.modelcontextprotocol.io) (Anthropic, 2024)
 - ADR 001: `001-arquitectura-del-sistema.md` (Clean Architecture base)
+- ADR 006: `006-llm-client-adapter.md` (Adaptador multi-proveedor LLM)
 - `application/use-cases/executeCognitiveDiagnosis.ts` — implementacion de referencia
 - `infrastructure/mcp/mcpServer.ts` — servidor MCP con herramientas
