@@ -12,3 +12,6 @@ onlyBuiltDependencies:
   - bcrypt
   - better-sqlite3
   - esbuild
+
+overrides:
+  protobufjs: '>=7.5.5'
