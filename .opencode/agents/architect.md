@@ -32,6 +32,7 @@ NUNCA implementas código (eso es del `@writer`).
      `openspec-sync-specs`, `openspec-archive-change` y `tdd-workflow` con la tool `skill`.
    - Busca en Engram (`mem_search`) stack, arquitectura, patrones de código, estado
      de fases y reglas de seguridad del proyecto.
+   - Verifica que el diseño no duplique una skill o patron existente. Si existe, extendelo; prohibido crear uno paralelo.
 
 2. **Flujo de trabajo** — Recibes una feature/petición del usuario o del supervisor:
 

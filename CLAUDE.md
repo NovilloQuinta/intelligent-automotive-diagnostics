@@ -13,7 +13,7 @@
 
 ## REGLAS DE SESION
 
-1. **Cargar skills necesarios** antes de empezar (ver tabla abajo)
+1. **Descubrir antes de crear** — carga skills (`skill`), busca en Engram (`mem_search`), revisa el codebase. Prohibido reescribir lógica que ya exista. Los agentes orquestan skills; no escriben lógica monolítica.
 2. **1 paso a la vez** — no mezclar responsabilidades, no adelantar trabajo
 3. **TDD estricto**: RED (test que falla) → GREEN (codigo minimo) → REFACTOR
 4. **Trabajar en ramas, NO en main** — cada cambio en su rama (`git checkout -b feat/xxx` o `fix/xxx`). Solo merge a main cuando CI pase verde. Cambios menores (docs, chore, style) directo a main.
@@ -21,6 +21,7 @@
 6. **Preguntar antes de commitear/pushear** — mostrar resumen de cambios, esperar OK humano
 7. **Tras cada paso**: actualizar `SESION ACTUAL` en este mismo fichero
 8. **Check pre-cierre** — antes de terminar sesion, preguntarse: "¿hice algo que un agente nuevo no deduciria solo leyendo el codigo?" Si la respuesta es si → `mem_save`.
+9. **Auto-auditoria post-tarea** — al terminar una tarea no trivial: skills usadas, agentes delegados, codigo nuevo estrictamente necesario.
 
 ## AGENTES DISPONIBLES
 

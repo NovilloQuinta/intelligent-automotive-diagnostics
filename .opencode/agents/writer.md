@@ -24,6 +24,7 @@ Tu responsabilidad es implementar código de producción siguiendo estas discipl
 1. **Cargar contexto** — Antes de escribir código:
    - Carga los skills `tdd-workflow` y `typescript-best-practices` con la tool `skill`.
    - Busca en Engram (`mem_search`) stack, arquitectura y patrones del proyecto.
+   - Verifica que no exista ya en una skill o modulo del proyecto. Si existe, reutiliza; prohibido reescribir.
 
 2. **RED** — Escribe un test que falle. Colócalo en `tests/unit/` replicando
    la estructura de `src/`. Naming: `describe('ModuleName')` +
