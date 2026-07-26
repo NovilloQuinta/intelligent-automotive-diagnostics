@@ -1,5 +1,4 @@
 import { z } from 'zod'
-import { createHash } from 'node:crypto'
 import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
 import type { AuthServicePort } from '@/application/ports/authService.port.js'
 import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.port.js'
@@ -19,11 +18,9 @@ export interface LoginResult {
   readonly refreshToken: string
 }
 
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
+import { hashToken } from '@/application/use-cases/hashToken.js'
 
-function hashToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex')
-}
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
 /** Caso de uso: inicio de sesion.
  * Valida input, verifica credenciales y genera tokens.

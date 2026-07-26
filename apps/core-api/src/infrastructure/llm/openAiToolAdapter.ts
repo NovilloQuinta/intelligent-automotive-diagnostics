@@ -1,19 +1,9 @@
-import { z } from 'zod'
 import type { McpToolDefinition } from '@/application/ports/llmClient.port.js'
 import type OpenAI from 'openai'
+import { mcpToolDefinitionSchema } from '@/infrastructure/llm/toolDefinitionSchema.js'
 
 /** Schema por defecto cuando una herramienta no define schema. */
 const DEFAULT_PARAMETERS: Record<string, unknown> = { type: 'object', properties: {} }
-
-/** Schema Zod para validar una definicion de herramienta MCP. */
-const mcpToolDefinitionSchema = z.object({
-  /** Nombre de la herramienta (obligatorio, no vacio). */
-  name: z.string().min(1),
-  /** Descripcion de la herramienta (obligatorio, no vacio). */
-  description: z.string().min(1),
-  /** Schema JSON opcional para los argumentos de la herramienta. */
-  schema: z.record(z.unknown()).optional(),
-})
 
 /** Tipo de herramienta OpenAI generado por el adaptador. */
 export type OpenAiChatCompletionTool = OpenAI.Chat.Completions.ChatCompletionTool

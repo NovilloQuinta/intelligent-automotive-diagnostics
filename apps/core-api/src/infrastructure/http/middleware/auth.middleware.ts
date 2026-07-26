@@ -7,16 +7,19 @@ declare module 'express' {
   }
 }
 
+const BEARER_PREFIX = 'Bearer '
+const BEARER_PREFIX_LENGTH = BEARER_PREFIX.length
+
 /** Crea un middleware que verifica el JWT del header Authorization y extrae el userId. */
 export function createAuthMiddleware(accessTokenSecret: string) {
   return function authenticateToken(req: Request, res: Response, next: NextFunction): void {
     const authHeader = req.get('authorization')
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader || !authHeader.startsWith(BEARER_PREFIX)) {
       res.status(401).json({ error: 'Access token required' })
       return
     }
 
-    const token = authHeader.slice(7)
+    const token = authHeader.slice(BEARER_PREFIX_LENGTH)
 
     try {
       const decoded = jwt.verify(token, accessTokenSecret) as unknown as { sub: number }

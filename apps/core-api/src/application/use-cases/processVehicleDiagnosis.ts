@@ -2,6 +2,13 @@ import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.j
 import { Severity } from '@/domain/diagnosisResult.js'
 import type { DiagnosisResult } from '@/domain/diagnosisResult.js'
 import type { FreezeFrame } from '@/domain/freezeFrame.js'
+import {
+  MODE_CURRENT_DATA,
+  PID_RPM,
+  PID_COOLANT_TEMP,
+  PID_SPEED,
+  PID_INTAKE_TEMP,
+} from '@/domain/pids.js'
 
 function computeSeverity(dtcCount: number, freezeFrame: FreezeFrame | null): Severity {
   if (dtcCount === 0) return Severity.Low
@@ -33,10 +40,10 @@ const DIAGNOSIS_TIMEOUT_MS = 10_000
 export async function processVehicleDiagnosis(repo: ObdRepositoryPort): Promise<DiagnosisResult> {
   const results = await Promise.race([
     Promise.all([
-      repo.readPid('01', '0C'),
-      repo.readPid('01', '05'),
-      repo.readPid('01', '0D'),
-      repo.readPid('01', '0F'),
+      repo.readPid(MODE_CURRENT_DATA, PID_RPM),
+      repo.readPid(MODE_CURRENT_DATA, PID_COOLANT_TEMP),
+      repo.readPid(MODE_CURRENT_DATA, PID_SPEED),
+      repo.readPid(MODE_CURRENT_DATA, PID_INTAKE_TEMP),
       repo.readDtcCodes(),
       repo.getFreezeFrame(),
     ]),

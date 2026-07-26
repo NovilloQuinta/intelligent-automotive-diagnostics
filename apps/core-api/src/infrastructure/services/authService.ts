@@ -1,8 +1,9 @@
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
-import { createHash, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import type { AuthServicePort } from '@/application/ports/authService.port.js'
 import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.port.js'
+import { hashToken } from '@/application/use-cases/hashToken.js'
 
 /** Configuracion del servicio de autenticacion. */
 interface AuthServiceConfig {
@@ -14,13 +15,7 @@ interface AuthServiceConfig {
 }
 
 const BCRYPT_ROUNDS = 12
-const ALGORITHM_SHA256 = 'sha256'
-const ENCODING_HEX = 'hex'
 const REFRESH_TOKEN_DURATION_MS = 7 * 24 * 60 * 60 * 1000
-
-function hashToken(token: string): string {
-  return createHash(ALGORITHM_SHA256).update(token).digest(ENCODING_HEX)
-}
 
 function calculateExpiryDate(): string {
   return new Date(Date.now() + REFRESH_TOKEN_DURATION_MS).toISOString()

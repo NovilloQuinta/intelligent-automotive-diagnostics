@@ -54,26 +54,7 @@ export class OpenAiApiError extends Error {
 
 // ── Helpers ──
 
-/** Nombre del error de timeout del SDK de OpenAI. */
-const SDK_TIMEOUT_ERROR_NAME = 'APIConnectionTimeoutError'
-
-/**
- * Determina si un error es de tipo timeout basado en su nombre de error.
- */
-function isTimeoutError(error: unknown): error is Error {
-  return error instanceof Error && error.name === SDK_TIMEOUT_ERROR_NAME
-}
-
-/**
- * Determina si un error tiene codigo de estado HTTP (API error del SDK).
- */
-function hasStatusCode(error: unknown): error is Error & { status: number } {
-  return (
-    error instanceof Error &&
-    'status' in error &&
-    typeof (error as Record<string, unknown>).status === 'number'
-  )
-}
+import { isTimeoutError, hasStatusCode } from '@/infrastructure/llm/sdkErrorUtils.js'
 
 /**
  * Envuelve un error del SDK de OpenAI en el tipo de error correspondiente

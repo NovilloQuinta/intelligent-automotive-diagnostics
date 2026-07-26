@@ -1,6 +1,17 @@
 import type { SimulationScenario } from '@/domain/simulationScenario.js'
 import type { FreezeFrame } from '@/domain/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/vehicleProfile.js'
+import {
+  MODE_CURRENT_DATA,
+  MODE_DTC,
+  MODE_VIN,
+  PID_SUPPORTED,
+  PID_VIN,
+  PID_RPM,
+  PID_COOLANT_TEMP,
+  PID_SPEED,
+  PID_INTAKE_TEMP,
+} from '@/domain/pids.js'
 
 /** Simulador de tramas OBD-II que convierte escenarios a bytes hexadecimales. */
 export class ObdSimulator {
@@ -36,15 +47,15 @@ export class ObdSimulator {
     if (key in pidValues) return pidValues[key]
 
     const sv = this.scenario.sensorValues
-    if (mode === '01') {
+    if (mode === MODE_CURRENT_DATA) {
       switch (pid.toUpperCase()) {
-        case '0C':
+        case PID_RPM:
           return sv.rpm
-        case '05':
+        case PID_COOLANT_TEMP:
           return sv.coolantTemp
-        case '0D':
+        case PID_SPEED:
           return sv.speed
-        case '0F':
+        case PID_INTAKE_TEMP:
           return sv.intakeTemp
         default:
           throw new Error(`PID ${mode} ${pid} not supported by current scenario`)
@@ -65,7 +76,15 @@ export class ObdSimulator {
 
   /** Devuelve los PIDs soportados por el escenario. */
   getSupportedPids(): string[] {
-    const pids = ['01 00', '01 0C', '01 05', '01 0D', '01 0F', '03', '09 02']
+    const pids = [
+      `${MODE_CURRENT_DATA} ${PID_SUPPORTED}`,
+      `${MODE_CURRENT_DATA} ${PID_RPM}`,
+      `${MODE_CURRENT_DATA} ${PID_COOLANT_TEMP}`,
+      `${MODE_CURRENT_DATA} ${PID_SPEED}`,
+      `${MODE_CURRENT_DATA} ${PID_INTAKE_TEMP}`,
+      MODE_DTC,
+      `${MODE_VIN} ${PID_VIN}`,
+    ]
     const pidValues = this.scenario.pidValues ?? {}
     for (const key of Object.keys(pidValues)) {
       if (!pids.includes(key)) pids.push(key)
