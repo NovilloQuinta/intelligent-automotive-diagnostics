@@ -6,8 +6,8 @@
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM
-- **Ultimo paso**: Implementado cambio OpenSpec `add-elm327-tcp-repository` (18/18 tareas) — `Elm327TcpRepository` (adaptador TCP al emulador ELM327 :35000, Mode 01/02/03/09/22), expansion domain `Vin` (manufacturer + modelYear ISO 3779), inyeccion dual-mode `OBD_MODE=tcp` en server/routes/main, Mode 03 (P0301/P0401/P2002) + Mode 02 en escenario Python. E2E verificado con curl (RPM 800, coolant 90, DTCs reales, severidad critical con freeze frame).
-- **ADR**: 009 (Adaptador ELM327 TCP) — cambio OpenSpec `add-elm327-tcp-repository` implementado, pendiente commit + archive
+- **Ultimo paso**: Commit c31f269 (feat/elm327-tcp-repository) mergeado a main via fast-forward. El hook pre-commit gga (Gentleman Guardian Angel) detecto 3 hallazgos en el primer intento: WMI_REGISTRY con Canada/Mexico muertos tras `^[1-5]` (fix TDD con 2 tests RED), createServer y createDiagnosisRoutes >40 lineas (refactor a helpers/factories). Re-check: 382 tests, lint, format, build verdes. E2E verificado con curl (RPM 800, coolant 90, DTCs P0301/P0401/P2002, severidad critical con freeze frame).
+- **ADR**: 009 (Adaptador ELM327 TCP) — cambio OpenSpec `add-elm327-tcp-repository` implementado y commiteado (c31f269), pendiente archive
 - **Tests**: 380 pasando (28 test files)
 - **CI**: verde — lint, format, test, build, audit
 
