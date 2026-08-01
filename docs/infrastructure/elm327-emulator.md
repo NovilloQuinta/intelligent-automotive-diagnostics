@@ -1,7 +1,7 @@
 # ELM327 Emulator (Docker)
 
 > Emulador del adaptador OBD-II ELM327 con soporte multi-ECU y protocolo CAN 11-bit.
-> Escenario por defecto: Toyota Auris Hybrid (~25 PIDs SAE J1979).
+> Escenario activo: Audi A3 2.0 TDI (~25 PIDs SAE J1979 + 16 DIDs VAG Mode 22).
 > Referencia: [ELM327-emulator v3.0.5](https://github.com/Ircama/ELM327-emulator)
 
 ## Setup
@@ -42,6 +42,11 @@ $s.Close(); $c.Close()
 # Enviar un comando OBD
 pnpm tsx scripts/send-obd.ts "01 0C"
 
+# PIDs VAG Mode 22 específicos del TDI
+pnpm tsx scripts/send-obd.ts "22 115C"   # Boost pressure
+pnpm tsx scripts/send-obd.ts "22 F477"   # Fuel rail pressure
+pnpm tsx scripts/send-obd.ts "22 1410"   # DPF soot mass
+
 # Escanear todos los PIDs soportados
 pnpm tsx scripts/scan-pids.ts
 ```
@@ -72,11 +77,61 @@ Con headers (`AT H1`):
 
 | Escenario | Descripción | Comando |
 |---|---|---|
-| `car` | Toyota Auris Hybrid (~25 PIDs) | Por defecto |
+| `audi-a3-tdi` | Audi A3 2.0 TDI EA288 — ~25 PIDs SAE + 16 DIDs VAG Mode 22 | `-s audi-a3-tdi` |
+| `car` | Toyota Auris Hybrid (~25 PIDs) | `-s car` |
 | `default` | PIDs básicos OBD-II | `-s default` |
 | `mt05` | ECU Delphi MT05 (motos/ATVs) | `-s mt05` |
 
-Para cambiar el escenario, editar `CMD` en `docker/elm327/Dockerfile` y reconstruir.
+El escenario por defecto se cambia en el `CMD` de `docker/elm327/Dockerfile`.
+Actualmente arranca con `audi-a3-tdi` mediante el wrapper `run_audi.py`.
+
+Para alternar entre escenarios en caliente, conectarse al contenedor:
+```bash
+docker compose exec elm327 bash
+```
+Y desde el prompt `CMD>` del emulador, usar `scenario <nombre>`.
+
+## Arquitectura del escenario `audi-a3-tdi`
+
+Los PIDs están definidos en `docker/elm327/scenarios/audi_a3_tdi.py`.
+El fichero `docker/elm327/run_audi.py` inyecta el escenario en el diccionario
+`ObdMessage` del emulador antes de arrancar, sin modificar el paquete
+`ELM327-emulator` instalado.
+
+### Mode 01 — SAE J1979 (diesel subset)
+
+PIDs enfocados a motores diésel TDI (sin fuel trim 06/07 ni spark advance 0E,
+que son específicos de gasolina): 03 (Fuel status), 04 (Engine load),
+05 (Coolant temp), 0B (MAP/boost), 0C (RPM), 0D (Speed), 0F (Intake temp),
+10 (MAF), 11 (Throttle), 1C (OBD standard), 1F (Run time), 2C (Commanded EGR),
+2D (EGR error), 2F (Fuel level), 31 (Distance since DTC clear),
+33 (Barometric pressure), 3C (Catalyst temp), 42 (Module voltage),
+46 (Ambient temp), 49 (Accel pedal D), 4C (Throttle actuator),
+4D-4E (Time MIL/DTC), 51 (Fuel type = diesel), 5C (Oil temp), 5E (Fuel rate).
+
+### Mode 22 — VAG UDS ReadDataByIdentifier
+
+DIDs documentados por la comunidad Ross-Tech/VCDS para el motor EA288 CR,
+todos en ECU `7E0` → respuesta `7E8`:
+
+| DID | Nombre | Bytes | Ralentí (valor típico) |
+|-----|--------|-------|------------------------|
+| `1130` | Engine speed | 2 | 800 RPM |
+| `115C` | Boost pressure actual | 2 | 1020 mbar |
+| `115E` | Boost pressure specified | 2 | 1000 mbar |
+| `F430` | Coolant temperature | 1 | 90 degC |
+| `F432` | Intake air temperature | 1 | 35 degC |
+| `F477` | Fuel rail pressure actual | 2 | ~280 bar |
+| `F47D` | Fuel rail pressure specified | 2 | ~275 bar |
+| `1035` | EGR duty cycle actual | 1 | 28 % |
+| `1250` | Engine torque | 2 | 38 Nm |
+| `1132` | Injection quantity | 2 | 4.0 mg/stroke |
+| `1184` | Intake air mass | 2 | 480 mg/stroke |
+| `1410` | DPF soot mass (calculated) | 2 | 8.0 g |
+| `140E` | DPF differential pressure | 2 | 12 mbar |
+| `F449` | Accelerator pedal position | 1 | 0 % |
+| `1462` | Battery voltage | 2 | 14.1 V |
+| `F40D` | Vehicle speed | 1 | 0 km/h |
 
 ## PIDs soportados en `car`
 
