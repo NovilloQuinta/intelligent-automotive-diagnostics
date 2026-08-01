@@ -6,13 +6,14 @@
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM
-- **Ultimo paso**: Implementado change add-lancedb-infra (LanceDB + embeddings locales) — 270 tests
+- **Ultimo paso**: Refactorización de orquestación multi-agente — orchestrator.md creado, 5 agentes refactorizados con instrucciones negativas y skills como dependencias
 - **ADR**: 007 creado (Catalogo Auto-Expansivo con LanceDB)
 - **Tests**: 257 pasando (22 test files)
 - **CI**: verde — lint, format, test, build, audit
 
 ## REGLAS DE SESION
 
+0. **Orquestar antes de actuar** — ante cualquier tarea, delega en `@orchestrator`. Él emite JSON de enrutamiento (agente + skills). Si el orquestador no emite JSON estructurado, es un bug — no continúes sin enrutamiento explícito.
 1. **Descubrir antes de crear** — carga skills (`skill`), busca en Engram (`mem_search`), revisa el codebase. Prohibido reescribir lógica que ya exista. Los agentes orquestan skills; no escriben lógica monolítica.
 2. **1 paso a la vez** — no mezclar responsabilidades, no adelantar trabajo
 3. **TDD estricto**: RED (test que falla) → GREEN (codigo minimo) → REFACTOR
@@ -29,6 +30,7 @@ Invoca con `@nombre` o via Task tool. Definidos en `.opencode/agents/`.
 
 | Agente | Modelo | Rol |
 |---|---|---|
+| `@orchestrator` | deepseek-v4-pro | Enruta tareas al sub-agente y skill correctos. Salida JSON estructurada. |
 | `@writer` | deepseek-v4-pro | Implementa codigo con TDD + Clean Architecture + Zod |
 | `@architect` | deepseek-v4-pro | Diseña specs OpenSpec, propone cambios, mantiene coherencia entre artifacts |
 | `@reviewer` | deepseek-v4-flash | Revisa TypeScript, TSDoc, Clean Architecture, DRY, KISS, code smells (read-only) |
