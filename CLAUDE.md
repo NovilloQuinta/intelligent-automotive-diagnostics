@@ -19,6 +19,23 @@
 
 `@orchestrator` → `@writer` | `@architect` | `@reviewer` | `@quality` | `@security`
 
+## PUENTE .opencode/ <-> .claude/ (IMPORTANTE)
+
+La **fuente de verdad** de agentes, skills y comandos está en `.opencode/`
+(formato OpenCode). Claude Code lee `.claude/`. La estructura `.claude/` contiene
+**wrappers** que adaptan el frontmatter y referencian la fuente única:
+
+| Componente | Fuente (verdad) | Wrapper (Claude Code) |
+|---|---|---|
+| Agentes (6) | `.opencode/agents/*.md` | `.claude/agents/*.md` — copia adaptada (frontmatter `model`/`tools` distinto) |
+| Skills (11) | `.opencode/skills/<name>/SKILL.md` | `.claude/skills/<name>/SKILL.md` — wrapper fino que ordena leer la fuente |
+| Comandos (6) | `.opencode/commands/*.md` | `.claude/commands/*.md` — wrapper fino que ordena leer la fuente |
+
+**Reglas:**
+1. **Siempre lee la fuente de `.opencode/`** antes de usar un skill o comando wrapper.
+2. Nunca edites el contenido duplicado en `.claude/` sin actualizar `.opencode/`.
+3. Si agregas un skill/agente/comando nuevo en `.opencode/`, crea su wrapper en `.claude/`.
+
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM

@@ -40,3 +40,4 @@ pnpm-debug.log*
 # SQLite
 data/
 *.db
+.claude/settings.local.json
