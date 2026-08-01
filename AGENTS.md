@@ -6,8 +6,7 @@
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM
-- **Ultimo paso**: Cambio OpenSpec `add-elm327-tcp-repository` archivado (`openspec/changes/archive/2026-08-01-add-elm327-tcp-repository/`) y spec sincronizada a main specs (`openspec/specs/elm327-tcp-repository/spec.md`, 7 requirements). Todo el flujo cerrado: implementado (c31f269) → merge a main (fast-forward) → hook gga PASSED → archive + sync specs.
-- **ADR**: 009 (Adaptador ELM327 TCP) — cambio OpenSpec `add-elm327-tcp-repository` implementado, mergeado y archivado
+- **Ultimo paso**: Cambio OpenSpec `add-elm327-tcp-repository` archivado (`openspec/changes/archive/2026-08-01-add-elm327-tcp-repository/`) y spec sincronizada a main specs (`openspec/specs/elm327-tcp-repository/spec.md`, 7 requirements). Todo el flujo cerrado: implementado (c31f269) → merge a main (fast-forward) → hook gga PASSED → archive + sync specs. Sin ADR propio: las decisiones del adaptador estan en el design.md del cambio archivado (el "ADR 009" referenciado en c31f269 nunca se creo — etiqueta retirada).
 - **Tests**: 380 pasando (28 test files)
 - **CI**: verde — lint, format, test, build, audit
 
