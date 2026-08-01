@@ -28,6 +28,7 @@ export default defineConfig({
         '**/schema.ts',
         '**/swagger.ts',
         '**/server.ts',
+        '**/isotp/index.ts',
       ],
       thresholds: {
         statements: 80,

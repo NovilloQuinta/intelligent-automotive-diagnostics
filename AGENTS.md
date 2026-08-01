@@ -6,9 +6,9 @@
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM
-- **Ultimo paso**: Commit de herramientas complementarias (gga, gentle-agent-state, Gentleman-Skills) + AGENTS.md como fuente de verdad para el ecosistema Gentleman (commit 12508c1)
-- **ADR**: 007 (Catalogo Auto-Expansivo con LanceDB)
-- **Tests**: 257 pasando (22 test files)
+- **Ultimo paso**: Implementacion ISO-TP (ADR 008) — frameTypes, reassembler, segmenter con TDD. 27 test files, 332 tests pasando.
+- **ADR**: 008 (Capa de Transporte ISO-TP)
+- **Tests**: 332 pasando (27 test files)
 - **CI**: verde — lint, format, test, build, audit
 
 ## REGLAS DE SESION
