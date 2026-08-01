@@ -6,8 +6,8 @@
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM
-- **Ultimo paso**: Commit c31f269 (feat/elm327-tcp-repository) mergeado a main via fast-forward. El hook pre-commit gga (Gentleman Guardian Angel) detecto 3 hallazgos en el primer intento: WMI_REGISTRY con Canada/Mexico muertos tras `^[1-5]` (fix TDD con 2 tests RED), createServer y createDiagnosisRoutes >40 lineas (refactor a helpers/factories). Re-check: 382 tests, lint, format, build verdes. E2E verificado con curl (RPM 800, coolant 90, DTCs P0301/P0401/P2002, severidad critical con freeze frame).
-- **ADR**: 009 (Adaptador ELM327 TCP) — cambio OpenSpec `add-elm327-tcp-repository` implementado y commiteado (c31f269), pendiente archive
+- **Ultimo paso**: Cambio OpenSpec `add-elm327-tcp-repository` archivado (`openspec/changes/archive/2026-08-01-add-elm327-tcp-repository/`) y spec sincronizada a main specs (`openspec/specs/elm327-tcp-repository/spec.md`, 7 requirements). Todo el flujo cerrado: implementado (c31f269) → merge a main (fast-forward) → hook gga PASSED → archive + sync specs.
+- **ADR**: 009 (Adaptador ELM327 TCP) — cambio OpenSpec `add-elm327-tcp-repository` implementado, mergeado y archivado
 - **Tests**: 380 pasando (28 test files)
 - **CI**: verde — lint, format, test, build, audit
 
