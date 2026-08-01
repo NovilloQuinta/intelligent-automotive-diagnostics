@@ -60,11 +60,19 @@ Implement tasks from an OpenSpec change.
    - Remaining tasks overview
    - Dynamic instruction from CLI
 
-6. **Implement tasks (loop until done or blocked)**
+6. **Orchestrate before implementing (MANDATORY — session rule 1)**
+
+   The OpenSpec CLI plans the WHAT; the HOW is decided by the agent system. BEFORE touching code:
+   - Invoke the `@orchestrator` agent with the change context (schema, tasks, contextFiles)
+   - It MUST emit structured routing JSON (agent + skills)
+   - If it does not emit structured JSON, treat it as a bug — STOP and report; do not proceed without explicit routing
+   - Implement via the routed agent (e.g. `@writer` with `tdd-workflow` skill), not directly
+
+   **Implement tasks (loop until done or blocked)**
 
    For each pending task:
    - Show which task is being worked on
-   - Make the code changes required
+   - Make the code changes required (via the routed agent)
    - Keep changes minimal and focused
    - Mark task complete in the tasks file: `- [ ]` → `- [x]`
    - Continue to next task
