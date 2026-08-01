@@ -6,8 +6,8 @@
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM
-- **Ultimo paso**: Cambio OpenSpec `add-elm327-tcp-repository` archivado (`openspec/changes/archive/2026-08-01-add-elm327-tcp-repository/`) y spec sincronizada a main specs (`openspec/specs/elm327-tcp-repository/spec.md`, 7 requirements). Todo el flujo cerrado: implementado (c31f269) → merge a main (fast-forward) → hook gga PASSED → archive + sync specs. Sin ADR propio: las decisiones del adaptador estan en el design.md del cambio archivado (el "ADR 009" referenciado en c31f269 nunca se creo — etiqueta retirada).
-- **Tests**: 380 pasando (28 test files)
+- **Ultimo paso**: Cambio OpenSpec `add-execute-cognitive-diagnosis` implementado al 100% (11/11 tareas) en rama `feat/execute-cognitive-diagnosis`, SIN commitear: use case `executeCognitiveDiagnosis` (application, con `CognitiveDiagnosisResult` movido a application y shim en `infrastructure/mcp/cognitiveDiagnosisResult.ts`), `listTools()` en MCP Server (6 tools, schema JSON desde zod shapes), endpoint `POST /api/mcp/cognitive-diagnosis` (timeout 60s inyectable via deps para tests), `llmClient?` en ServerDependencies, factories LLM en main.ts (`LLM_PROVIDER`=anthropic/openai). Bridge in-process: la ruta construye tools+handler desde el McpServer (design.md decision 2/3). Pendiente: review + commit + archive del cambio.
+- **Tests**: 402 pasando (29 test files)
 - **CI**: verde — lint, format, test, build, audit
 
 ## REGLAS DE SESION

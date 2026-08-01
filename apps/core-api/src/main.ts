@@ -9,8 +9,12 @@ import type { SimulationScenario } from '@/domain/simulationScenario.js'
 import type { LiveData } from '@/domain/liveData.js'
 import { Elm327TcpRepository } from '@/infrastructure/obd/elm327TcpRepository.js'
 import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
+import { createAnthropicClient } from '@/infrastructure/llm/anthropicClient.js'
+import { createOpenAiClient } from '@/infrastructure/llm/openAiClient.js'
+import type { LlmClientPort } from '@/application/ports/llmClient.port.js'
 
 const OBD_MODE = process.env.OBD_MODE ?? 'sync'
+const LLM_PROVIDER = process.env.LLM_PROVIDER
 const ELM327_HOST = process.env.ELM327_HOST ?? 'localhost'
 const ELM327_PORT = Number(process.env.ELM327_PORT) || 35000
 const DB_PATH = process.env.DB_PATH ?? 'data/diagnostics.db'
@@ -89,6 +93,21 @@ const PORT = Number(process.env.PORT) || 4000
 const obdRepo: ObdRepositoryPort | undefined =
   OBD_MODE === 'tcp' ? new Elm327TcpRepository({ host: ELM327_HOST, port: ELM327_PORT }) : undefined
 
+// Cliente LLM para el diagnóstico cognitivo (endpoint montado solo si se configura un proveedor).
+let llmClient: LlmClientPort | undefined
+if (LLM_PROVIDER === 'anthropic') {
+  llmClient = createAnthropicClient({
+    apiKey: process.env.ANTHROPIC_API_KEY ?? '',
+    model: process.env.LLM_MODEL,
+  })
+} else if (LLM_PROVIDER === 'openai') {
+  llmClient = createOpenAiClient({
+    apiKey: process.env.LLM_API_KEY ?? '',
+    baseURL: process.env.LLM_BASE_URL ?? '',
+    model: process.env.LLM_MODEL ?? '',
+  })
+}
+
 const app = createServer({
   scenarios: OBD_MODE === 'tcp' ? [] : scenarios,
   obdRepo,
@@ -96,6 +115,7 @@ const app = createServer({
   authService,
   tokenStore,
   accessTokenSecret: ACCESS_TOKEN_SECRET,
+  llmClient,
 })
 
 app.listen(PORT, () => {

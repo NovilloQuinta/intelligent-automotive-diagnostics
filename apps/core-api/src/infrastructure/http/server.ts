@@ -14,6 +14,7 @@ import type { UserRepositoryPort } from '@/application/ports/userRepository.port
 import type { AuthServicePort } from '@/application/ports/authService.port.js'
 import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.port.js'
 import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
+import type { LlmClientPort } from '@/application/ports/llmClient.port.js'
 
 /** Dependencias del servidor Express. */
 export interface ServerDependencies {
@@ -26,6 +27,8 @@ export interface ServerDependencies {
   readonly accessTokenSecret?: string
   /** Repositorio OBD externo (ej. Elm327TcpRepository en OBD_MODE=tcp). */
   readonly obdRepo?: ObdRepositoryPort
+  /** Cliente LLM opcional: si se inyecta, se monta el endpoint de diagnóstico cognitivo. */
+  readonly llmClient?: LlmClientPort
 }
 
 /** Middleware base: seguridad, logging y parseo JSON. */
@@ -117,6 +120,7 @@ export function createServer(deps: ServerDependencies): express.Application {
     createDiagnosisRoutes({
       scenarios: deps.scenarios,
       obdRepo: deps.obdRepo,
+      llmClient: deps.llmClient,
     }),
   )
 

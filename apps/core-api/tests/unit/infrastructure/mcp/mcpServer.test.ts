@@ -162,6 +162,60 @@ describe('McpServer', () => {
     })
   })
 
+  describe('listTools', () => {
+    it('should return 6 definitions with name, description and schema', () => {
+      const mcp = createMcpServer(mockObdRepo(), mockVehicleRepo())
+
+      const tools = mcp.listTools()
+
+      expect(tools).toHaveLength(6)
+      for (const tool of tools) {
+        expect(tool.name).toBeTruthy()
+        expect(tool.description).toBeTruthy()
+        expect(tool.schema).toEqual(expect.objectContaining({ type: 'object' }))
+      }
+    })
+
+    it('should expose exactly the registered tool names', () => {
+      const mcp = createMcpServer(mockObdRepo(), mockVehicleRepo())
+
+      const names = mcp.listTools().map((t) => t.name)
+
+      expect(names).toEqual([
+        'read_pid',
+        'get_dtc_codes',
+        'get_freeze_frame',
+        'read_vin',
+        'get_vehicle_info',
+        'get_available_pids',
+      ])
+    })
+
+    it('should describe read_pid schema with mode and pid properties', () => {
+      const mcp = createMcpServer(mockObdRepo(), mockVehicleRepo())
+
+      const readPid = mcp.listTools().find((t) => t.name === 'read_pid')
+
+      expect(readPid?.schema).toEqual({
+        type: 'object',
+        properties: { mode: { type: 'string' }, pid: { type: 'string' } },
+        required: ['mode', 'pid'],
+      })
+    })
+
+    it('should mark optional schema fields as not required', () => {
+      const mcp = createMcpServer(mockObdRepo(), mockVehicleRepo())
+
+      const freezeFrame = mcp.listTools().find((t) => t.name === 'get_freeze_frame')
+
+      expect(freezeFrame?.schema).toEqual({
+        type: 'object',
+        properties: { dtc: { type: 'string' } },
+        required: [],
+      })
+    })
+  })
+
   describe('Edge cases', () => {
     it('should throw when calling unknown tool', () => {
       const mcp = createMcpServer(mockObdRepo(), mockVehicleRepo())
