@@ -52,10 +52,77 @@ const WMI_REGISTRY: Array<[RegExp, { country: string; region: string }]> = [
   [/^J/, { country: 'Japan', region: 'Asia' }],
   [/^K[A-Z]/, { country: 'South Korea', region: 'Asia' }],
   [/^L/, { country: 'China', region: 'Asia' }],
-  [/^[1-5]/, { country: 'United States', region: 'North America' }],
   [/^[2]/, { country: 'Canada', region: 'North America' }],
   [/^3[A-X]/, { country: 'Mexico', region: 'North America' }],
+  [/^[145]/, { country: 'United States', region: 'North America' }],
 ]
+
+/** Registro WMI → fabricante. Primera coincidencia gana (3 primeros chars del VIN). */
+const WMI_MANUFACTURER_REGISTRY: Array<[RegExp, string]> = [
+  // VAG
+  [/^WAU/, 'Audi'],
+  [/^WUA/, 'Audi'],
+  [/^WVW/, 'Volkswagen'],
+  [/^WP[01]/, 'Porsche'],
+  // Alemania premium
+  [/^WBA/, 'BMW'],
+  [/^WBS/, 'BMW'],
+  [/^WDD/, 'Mercedes-Benz'],
+  [/^WDC/, 'Mercedes-Benz'],
+  // Stellantis
+  [/^W0L/, 'Opel'],
+  [/^VF3/, 'Peugeot'],
+  [/^VF7/, 'Citroën'],
+  [/^ZFA/, 'Fiat'],
+  [/^ZAR/, 'Alfa Romeo'],
+  // Japon
+  [/^JKA/, 'Kawasaki'],
+  [/^JTD/, 'Toyota'],
+  [/^JHM/, 'Honda'],
+  [/^JN1/, 'Nissan'],
+  // Corea
+  [/^KND/, 'Kia'],
+  [/^KMH/, 'Hyundai'],
+  // USA / Europa
+  [/^1F[1-2]/, 'Ford'],
+  [/^WF0/, 'Ford'],
+  [/^1G[1-4]/, 'Chevrolet'],
+  [/^LSG/, 'Chevrolet'],
+]
+
+/** Tabla ISO 3779: char posicion 10 → anio de modelo (ciclo mas reciente, 1980-2030). Excluye I/O/Q/U/Z/0. */
+const MODEL_YEAR_TABLE: Record<string, number> = {
+  A: 2010,
+  B: 2011,
+  C: 2012,
+  D: 2013,
+  E: 2014,
+  F: 2015,
+  G: 2016,
+  H: 2017,
+  J: 2018,
+  K: 2019,
+  L: 2020,
+  M: 2021,
+  N: 2022,
+  P: 2023,
+  R: 2024,
+  S: 2025,
+  T: 2026,
+  V: 2027,
+  W: 2028,
+  X: 2029,
+  Y: 2030,
+  '1': 2001,
+  '2': 2002,
+  '3': 2003,
+  '4': 2004,
+  '5': 2005,
+  '6': 2006,
+  '7': 2007,
+  '8': 2008,
+  '9': 2009,
+}
 
 /** Value Object que representa un VIN valido segun ISO 3779. */
 export class Vin {
@@ -89,6 +156,20 @@ export class Vin {
       if (regex.test(wmi)) return result
     }
     return null
+  }
+
+  /** Identifica el fabricante a partir del WMI (primeros 3 caracteres del VIN). */
+  get manufacturer(): string | null {
+    const wmi = this.value.slice(0, 3)
+    for (const [regex, name] of WMI_MANUFACTURER_REGISTRY) {
+      if (regex.test(wmi)) return name
+    }
+    return null
+  }
+
+  /** Anio de modelo a partir de la posicion 10 del VIN (ISO 3779). */
+  get modelYear(): number | null {
+    return MODEL_YEAR_TABLE[this.value[9]] ?? null
   }
 
   toString(): string {

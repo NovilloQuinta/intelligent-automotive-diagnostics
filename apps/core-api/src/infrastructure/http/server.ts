@@ -13,6 +13,7 @@ import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.ro
 import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
 import type { AuthServicePort } from '@/application/ports/authService.port.js'
 import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.port.js'
+import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
 
 /** Dependencias del servidor Express. */
 export interface ServerDependencies {
@@ -23,19 +24,22 @@ export interface ServerDependencies {
   readonly authService?: AuthServicePort
   readonly tokenStore?: RefreshTokenStorePort
   readonly accessTokenSecret?: string
+  /** Repositorio OBD externo (ej. Elm327TcpRepository en OBD_MODE=tcp). */
+  readonly obdRepo?: ObdRepositoryPort
 }
 
-/** Crea y devuelve la instancia de Express con todas las rutas montadas. */
-export function createServer(deps: ServerDependencies): express.Application {
-  const app = express()
-
+/** Middleware base: seguridad, logging y parseo JSON. */
+function applyBaseMiddleware(app: express.Application, deps: ServerDependencies): void {
   app.use(helmet())
   app.use(createRateLimiter(deps.rateLimit))
   if (deps.auditRepo) {
     app.use(createAuditLogger(deps.auditRepo))
   }
   app.use(express.json({ limit: '10kb' }))
+}
 
+/** CORS con allowlist de origins (responde `Vary: Origin` y maneja preflight). */
+function applyCors(app: express.Application): void {
   const allowedOrigins = (
     process.env.ALLOWED_ORIGINS ??
     'http://localhost:4000,http://localhost:3000,http://localhost:5173'
@@ -54,12 +58,10 @@ export function createServer(deps: ServerDependencies): express.Application {
     }
     next()
   })
+}
 
-  if (deps.userRepo && deps.authService && deps.tokenStore) {
-    app.use('/api/auth', createRateLimiter({ windowMinutes: 15, maxRequests: 20 }))
-    app.use('/api/auth', createAuthRoutes(deps.userRepo, deps.authService, deps.tokenStore))
-  }
-
+/** Rutas de información: spec OpenAPI, swagger UI y health check. */
+function mountInfoRoutes(app: express.Application): void {
   app.get('/api-docs.json', (_req, res) => {
     res.json(openApiSpec)
   })
@@ -79,14 +81,10 @@ export function createServer(deps: ServerDependencies): express.Application {
   app.get('/health', (_req, res) => {
     res.json({ status: 'ok', uptime: process.uptime() })
   })
+}
 
-  if (deps.accessTokenSecret) {
-    app.use(createAuthMiddleware(deps.accessTokenSecret))
-  }
-
-  const diagnosisRouter = createDiagnosisRoutes({ scenarios: deps.scenarios })
-  app.use('/api', diagnosisRouter)
-
+/** Error handler global: responde 500 sin filtrar detalles internos. */
+function mountErrorHandler(app: express.Application): void {
   app.use(
     (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
       const message = err instanceof Error ? err.message : 'Unknown error'
@@ -94,6 +92,35 @@ export function createServer(deps: ServerDependencies): express.Application {
       res.status(500).json({ error: 'Internal server error' })
     },
   )
+}
+
+/** Crea y devuelve la instancia de Express con todas las rutas montadas. */
+export function createServer(deps: ServerDependencies): express.Application {
+  const app = express()
+
+  applyBaseMiddleware(app, deps)
+  applyCors(app)
+
+  if (deps.userRepo && deps.authService && deps.tokenStore) {
+    app.use('/api/auth', createRateLimiter({ windowMinutes: 15, maxRequests: 20 }))
+    app.use('/api/auth', createAuthRoutes(deps.userRepo, deps.authService, deps.tokenStore))
+  }
+
+  mountInfoRoutes(app)
+
+  if (deps.accessTokenSecret) {
+    app.use(createAuthMiddleware(deps.accessTokenSecret))
+  }
+
+  app.use(
+    '/api',
+    createDiagnosisRoutes({
+      scenarios: deps.scenarios,
+      obdRepo: deps.obdRepo,
+    }),
+  )
+
+  mountErrorHandler(app)
 
   return app
 }

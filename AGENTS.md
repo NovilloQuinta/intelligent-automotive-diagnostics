@@ -6,9 +6,9 @@
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM
-- **Ultimo paso**: Implementacion ISO-TP (ADR 008) — frameTypes, reassembler, segmenter con TDD. 27 test files, 332 tests pasando.
-- **ADR**: 008 (Capa de Transporte ISO-TP)
-- **Tests**: 332 pasando (27 test files)
+- **Ultimo paso**: Implementado cambio OpenSpec `add-elm327-tcp-repository` (18/18 tareas) — `Elm327TcpRepository` (adaptador TCP al emulador ELM327 :35000, Mode 01/02/03/09/22), expansion domain `Vin` (manufacturer + modelYear ISO 3779), inyeccion dual-mode `OBD_MODE=tcp` en server/routes/main, Mode 03 (P0301/P0401/P2002) + Mode 02 en escenario Python. E2E verificado con curl (RPM 800, coolant 90, DTCs reales, severidad critical con freeze frame).
+- **ADR**: 009 (Adaptador ELM327 TCP) — cambio OpenSpec `add-elm327-tcp-repository` implementado, pendiente commit + archive
+- **Tests**: 380 pasando (28 test files)
 - **CI**: verde — lint, format, test, build, audit
 
 ## REGLAS DE SESION

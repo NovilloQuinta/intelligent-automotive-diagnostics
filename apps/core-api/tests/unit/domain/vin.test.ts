@@ -115,9 +115,138 @@ describe('Vin', () => {
       expect(vin.wmiRegion).toEqual({ country: 'United States', region: 'North America' })
     })
 
+    it('should identify Canada (WMI 2xx, no USA)', () => {
+      const vin = Vin.create('2G1FC1E31C9123456')
+      expect(vin.wmiRegion).toEqual({ country: 'Canada', region: 'North America' })
+    })
+
+    it('should identify Mexico (WMI 3xx, no USA)', () => {
+      const vin = Vin.create('3VWC57BU7KM123456')
+      expect(vin.wmiRegion).toEqual({ country: 'Mexico', region: 'North America' })
+    })
+
     it('should return null for unknown WMI', () => {
       const vin = Vin.create('99ZZZZ8V5JA123456')
       expect(vin.wmiRegion).toBeNull()
+    })
+  })
+
+  describe('Vin.manufacturer', () => {
+    it('should return "Audi" for WAU WMI', () => {
+      const vin = Vin.create('WAUZZZ8V5JA123456')
+      expect(vin.manufacturer).toBe('Audi')
+    })
+
+    it('should return "Kawasaki" for JKA WMI', () => {
+      const vin = Vin.create('JKAZR2A1XLA000111')
+      expect(vin.manufacturer).toBe('Kawasaki')
+    })
+
+    it('should return "Volkswagen" for WVW WMI', () => {
+      const vin = Vin.create('WVWZZZ1JZXW123456')
+      expect(vin.manufacturer).toBe('Volkswagen')
+    })
+
+    it('should return "BMW" for WBA WMI', () => {
+      const vin = Vin.create('WBA3B5C50J1234567')
+      expect(vin.manufacturer).toBe('BMW')
+    })
+
+    it('should return "Mercedes-Benz" for WDD WMI', () => {
+      const vin = Vin.create('WDDGF4HB3CR123456')
+      expect(vin.manufacturer).toBe('Mercedes-Benz')
+    })
+
+    it('should return "Porsche" for WP0 WMI', () => {
+      const vin = Vin.create('WP0ZZZ99ZTS390000')
+      expect(vin.manufacturer).toBe('Porsche')
+    })
+
+    it('should return "Toyota" for JTD WMI (japanese)', () => {
+      const vin = Vin.create('JTDKB20EX20012345')
+      expect(vin.manufacturer).toBe('Toyota')
+    })
+
+    it('should return "Honda" for JHM WMI (japanese)', () => {
+      const vin = Vin.create('JHMCM56557C404321')
+      expect(vin.manufacturer).toBe('Honda')
+    })
+
+    it('should return "Ford" for WF0 WMI (european)', () => {
+      const vin = Vin.create('WF0MXXGCM5X123456')
+      expect(vin.manufacturer).toBe('Ford')
+    })
+
+    it('should return "Chevrolet" for 1G1 WMI (american)', () => {
+      const vin = Vin.create('1G1BC52E5P7123456')
+      expect(vin.manufacturer).toBe('Chevrolet')
+    })
+
+    it('should return null for unknown WMI (XTA)', () => {
+      const vin = Vin.create('XTAZZZ8V5JA123456')
+      expect(vin.manufacturer).toBeNull()
+    })
+
+    it('should return null for unknown WMI (99 prefix)', () => {
+      const vin = Vin.create('99ZZZZ8V5JA123456')
+      expect(vin.manufacturer).toBeNull()
+    })
+  })
+
+  describe('Vin.modelYear', () => {
+    it('should return 2018 for position 10 "J"', () => {
+      const vin = Vin.create('WAUZZZ8V5JA123456')
+      expect(vin.modelYear).toBe(2018)
+    })
+
+    it('should return 2020 for position 10 "L"', () => {
+      const vin = Vin.create('JKAZR2A1XLA000111')
+      expect(vin.modelYear).toBe(2020)
+    })
+
+    it('should return 2010 for position 10 "A"', () => {
+      const vin = Vin.create('WAUZZZ8V5A1234567')
+      expect(vin.modelYear).toBe(2010)
+    })
+
+    it('should return 2005 for position 10 "5"', () => {
+      const vin = Vin.create('WF0MXXGCM5X123456')
+      expect(vin.modelYear).toBe(2005)
+    })
+
+    it('should return 2002 for position 10 "2"', () => {
+      const vin = Vin.create('JTDKB20EX20012345')
+      expect(vin.modelYear).toBe(2002)
+    })
+
+    it('should return 2007 for position 10 "7"', () => {
+      const vin = Vin.create('JHMCM56557C404321')
+      expect(vin.modelYear).toBe(2007)
+    })
+
+    it('should return 2023 for position 10 "P"', () => {
+      const vin = Vin.create('1G1BC52E5P7123456')
+      expect(vin.modelYear).toBe(2023)
+    })
+
+    it('should return 2026 for position 10 "T"', () => {
+      const vin = Vin.create('WP0ZZZ99ZTS390000')
+      expect(vin.modelYear).toBe(2026)
+    })
+
+    it('should return null for invalid char "U" at position 10', () => {
+      const vin = Vin.create('WAUZZZ8V5UA123456')
+      expect(vin.modelYear).toBeNull()
+    })
+
+    it('should return null for invalid char "Z" at position 10', () => {
+      const vin = Vin.create('JKAZR2A1XZA000111')
+      expect(vin.modelYear).toBeNull()
+    })
+
+    it('should return null for invalid char "0" at position 10', () => {
+      const vin = Vin.create('WP0ZZZ99Z0S390000')
+      expect(vin.modelYear).toBeNull()
     })
   })
 })

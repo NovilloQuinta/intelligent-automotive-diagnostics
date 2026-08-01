@@ -7,8 +7,12 @@ import { Vin } from '@/domain/vin.js'
 import { VehicleType } from '@/domain/simulationScenario.js'
 import type { SimulationScenario } from '@/domain/simulationScenario.js'
 import type { LiveData } from '@/domain/liveData.js'
+import { Elm327TcpRepository } from '@/infrastructure/obd/elm327TcpRepository.js'
+import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
 
 const OBD_MODE = process.env.OBD_MODE ?? 'sync'
+const ELM327_HOST = process.env.ELM327_HOST ?? 'localhost'
+const ELM327_PORT = Number(process.env.ELM327_PORT) || 35000
 const DB_PATH = process.env.DB_PATH ?? 'data/diagnostics.db'
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET ?? 'dev-access-secret'
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET ?? 'dev-refresh-secret'
@@ -80,8 +84,14 @@ const scenarios: SimulationScenario[] = [
 
 const PORT = Number(process.env.PORT) || 4000
 
+// Modo dual OBD: 'sync' usa el simulador in-process con escenarios;
+// 'tcp' inyecta el repositorio ELM327 contra el emulador Docker.
+const obdRepo: ObdRepositoryPort | undefined =
+  OBD_MODE === 'tcp' ? new Elm327TcpRepository({ host: ELM327_HOST, port: ELM327_PORT }) : undefined
+
 const app = createServer({
-  scenarios,
+  scenarios: OBD_MODE === 'tcp' ? [] : scenarios,
+  obdRepo,
   userRepo,
   authService,
   tokenStore,

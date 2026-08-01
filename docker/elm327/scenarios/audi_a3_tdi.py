@@ -228,6 +228,42 @@ ObdMessage = {
     },
 
     # ==================================================================
+    # Mode 03 — Diagnostic Trouble Codes (emission related, SAE J2012)
+    # P0301 = 03 01, P0401 = 04 01, P2002 = 20 02
+    # ==================================================================
+    "GET_DTC": {
+        "Request": "^03" + ELM_FOOTER,
+        "Descr": "DTCs: P0301 (Cylinder 1 Misfire), P0401 (EGR Insufficient Flow), P2002 (DPF Efficiency)",
+        "Header": ECU_ADDR_E,
+        "Response": HD(ECU_R_ADDR_E) + SZ("07") + DT("43 03 01 04 01 20 02"),
+    },
+
+    # ==================================================================
+    # Mode 02 — Freeze frame data (values at the moment P0301 fired)
+    # ==================================================================
+    "FF_RPM": {
+        "Request": "^020C" + ELM_FOOTER,
+        "Descr": "Freeze frame RPM (moment of P0301)",
+        "Header": ECU_ADDR_E,
+        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("42 0C 0C 80"),
+        # 800 RPM — surged from idle when misfire occurred
+    },
+    "FF_COOLANT_TEMP": {
+        "Request": "^0205" + ELM_FOOTER,
+        "Descr": "Freeze frame coolant temperature",
+        "Header": ECU_ADDR_E,
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 05 82"),
+        # 90 degC  (A-40)
+    },
+    "FF_SPEED": {
+        "Request": "^020D" + ELM_FOOTER,
+        "Descr": "Freeze frame vehicle speed",
+        "Header": ECU_ADDR_E,
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 0D 00"),
+        # 0 km/h — misfire at standstill
+    },
+
+    # ==================================================================
     # Mode 22 — VAG UDS ReadDataByIdentifier (real DIDs from Ross-Tech)
     #
     # Each entry uses PA(<hex payload>) which auto-generates the UDS

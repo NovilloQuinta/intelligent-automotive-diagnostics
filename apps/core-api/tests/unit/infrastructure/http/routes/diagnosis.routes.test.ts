@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import request from 'supertest'
 import express from 'express'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
 import { Vin } from '@/domain/vin.js'
 import type { SimulationScenario } from '@/domain/simulationScenario.js'
+import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
 
 const mockScenarios: SimulationScenario[] = [
   {
@@ -44,6 +45,32 @@ function createApp() {
   return app
 }
 
+/** Repositorio OBD mockeado: RPM 800, coolant 90, sin freeze frame, DTC P0301. */
+const mockObdRepo: ObdRepositoryPort = {
+  readPid: vi.fn(async (_mode: string, pid: string) => (pid === '0C' ? 800 : 90)),
+  getSupportedPids: vi.fn(async () => ['01 0C']),
+  getFreezeFrame: vi.fn(async () => null),
+  readDtcCodes: vi.fn(async () => [{ code: 'P0301', description: '' }]),
+  clearDtcCodes: vi.fn(async () => undefined),
+  readVin: vi.fn(async () => 'WAUZZZ8V5JA123456'),
+  getVehicleInfo: vi.fn(async () => ({
+    make: 'Audi',
+    model: 'unknown',
+    year: 2018,
+    engineType: 'unknown',
+    vin: Vin.create('WAUZZZ8V5JA123456'),
+  })),
+  setPower: vi.fn(async () => undefined),
+}
+
+function createTcpApp() {
+  const app = express()
+  app.use(express.json())
+  const router = createDiagnosisRoutes({ scenarios: mockScenarios, obdRepo: mockObdRepo })
+  app.use('/api', router)
+  return app
+}
+
 describe('diagnosisRoutes', () => {
   describe('GET /api/scenarios', () => {
     it('should return the list of scenarios', async () => {
@@ -78,6 +105,44 @@ describe('diagnosisRoutes', () => {
       const res = await request(app).post('/api/diagnosis').send({})
 
       expect(res.status).toBe(400)
+    })
+  })
+
+  describe('TCP mode (con obdRepo)', () => {
+    it('should run diagnosis via obdRepo without scenarioId', async () => {
+      const app = createTcpApp()
+      const res = await request(app).post('/api/diagnosis').send({})
+
+      expect(res.status).toBe(200)
+      expect(res.body.parsedValues.rpm).toBe(800)
+      expect(res.body.parsedValues.coolantTemp).toBe(90)
+      expect(res.body.dtcCodes).toEqual([{ code: 'P0301', description: '' }])
+      expect(res.body.severity).toBe('high')
+      expect(mockObdRepo.readPid).toHaveBeenCalledWith('01', '0C')
+    })
+
+    it('should return the synthetic tcp scenario on GET /scenarios', async () => {
+      const app = createTcpApp()
+      const res = await request(app).get('/api/scenarios')
+
+      expect(res.status).toBe(200)
+      expect(res.body.scenarios).toHaveLength(1)
+      expect(res.body.scenarios[0]).toMatchObject({
+        id: 'tcp',
+        name: 'ELM327 Direct Connection',
+        vehicleType: 'car',
+      })
+    })
+
+    it('should call MCP tools via obdRepo without scenarioId', async () => {
+      const app = createTcpApp()
+      const res = await request(app)
+        .post('/api/mcp/tools/read_pid')
+        .send({ args: { mode: '01', pid: '0C' } })
+
+      expect(res.status).toBe(200)
+      expect(res.body.result).toBe('800')
+      expect(mockObdRepo.readPid).toHaveBeenCalledWith('01', '0C')
     })
   })
 })

@@ -1,9 +1,10 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import type { AddressInfo } from 'node:net'
 import type { Server } from 'node:http'
 import { createServer } from '@/infrastructure/http/server.js'
 import type { SimulationScenario } from '@/domain/simulationScenario.js'
 import { Vin } from '@/domain/vin.js'
+import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
 
 const mockScenarios: SimulationScenario[] = [
   {
@@ -204,6 +205,75 @@ describe('HTTP server', () => {
         body: JSON.stringify({ scenarioId: 'audi-a3-idle', args: {} }),
       })
       const body = (await res.json()) as { tool: string; result: string }
+
+      expect(res.status).toBe(200)
+      expect(body.result).toContain('P0301')
+    })
+  })
+
+  describe('TCP mode (obdRepo inyectado, scenarios vacíos)', () => {
+    let tcpBaseUrl: string
+    let tcpServer: Server
+    const mockObdRepo: ObdRepositoryPort = {
+      readPid: vi.fn(async (_mode: string, pid: string) => (pid === '0C' ? 800 : 90)),
+      getSupportedPids: vi.fn(async () => ['01 0C']),
+      getFreezeFrame: vi.fn(async () => null),
+      readDtcCodes: vi.fn(async () => [{ code: 'P0301', description: '' }]),
+      clearDtcCodes: vi.fn(async () => undefined),
+      readVin: vi.fn(async () => 'WP0ZZZ99ZTS390000'),
+      getVehicleInfo: vi.fn(async () => ({
+        make: 'Porsche',
+        model: 'unknown',
+        year: 2026,
+        engineType: 'unknown',
+        vin: Vin.create('WP0ZZZ99ZTS390000'),
+      })),
+      setPower: vi.fn(async () => undefined),
+    }
+
+    beforeAll(async () => {
+      const app = createServer({ scenarios: [], obdRepo: mockObdRepo })
+      await new Promise<void>((resolve) => {
+        tcpServer = app.listen(0, () => resolve())
+      })
+      const { port } = tcpServer.address() as AddressInfo
+      tcpBaseUrl = `http://localhost:${port}`
+    })
+
+    afterAll(async () => {
+      await new Promise<void>((resolve) => tcpServer.close(() => resolve()))
+    })
+
+    it('should expose the synthetic tcp scenario on GET /api/scenarios', async () => {
+      const res = await fetch(`${tcpBaseUrl}/api/scenarios`)
+      const body = (await res.json()) as { scenarios: Array<{ id: string; name: string }> }
+
+      expect(res.status).toBe(200)
+      expect(body.scenarios).toHaveLength(1)
+      expect(body.scenarios[0].id).toBe('tcp')
+      expect(body.scenarios[0].name).toBe('ELM327 Direct Connection')
+    })
+
+    it('should run diagnosis via obdRepo without scenarioId', async () => {
+      const res = await fetch(`${tcpBaseUrl}/api/diagnosis`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      })
+      const body = (await res.json()) as { parsedValues: Record<string, number>; severity: string }
+
+      expect(res.status).toBe(200)
+      expect(body.parsedValues.rpm).toBe(800)
+      expect(body.severity).toBe('high')
+    })
+
+    it('should call MCP tools via obdRepo without scenarioId', async () => {
+      const res = await fetch(`${tcpBaseUrl}/api/mcp/tools/get_dtc_codes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ args: {} }),
+      })
+      const body = (await res.json()) as { result: string }
 
       expect(res.status).toBe(200)
       expect(body.result).toContain('P0301')

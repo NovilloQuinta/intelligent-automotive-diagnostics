@@ -1,19 +1,19 @@
 ## 1. Expandir Vin domain — manufacturer + modelYear (TDD)
 
-- [ ] 1.1 RED: Añadir tests en `tests/unit/domain/vin.test.ts`:
+- [x] 1.1 RED: Añadir tests en `tests/unit/domain/vin.test.ts`:
   - `vin.manufacturer()`: WAU → "Audi", JKA → "Kawasaki", WVW → "Volkswagen", WMI desconocido → null
   - `vin.modelYear()`: posición 10 = "J" → 2018, "L" → 2020, "A" → 2010, "5" → 2005, inválido → null
   - Varios VINs cubriendo marcas europeas, japonesas, americanas
-- [ ] 1.2 GREEN: Expandir `src/domain/vin.ts`:
+- [x] 1.2 GREEN: Expandir `src/domain/vin.ts`:
   - `WMI_MANUFACTURER_REGISTRY`: ~20 entradas (VAG, BMW, Mercedes, Stellantis, Toyota, Honda, Kawasaki, Ford, GM)
   - `Vin.manufacturer` getter
   - `MODEL_YEAR_TABLE`: mapeo char → year (ISO 3779, 1980-2030, excluye I/O/Q/U/Z/0)
   - `Vin.modelYear` getter
-- [ ] 1.3 REFACTOR: Verificar que tests existentes no rompen (24 tests de vin.test.ts)
+- [x] 1.3 REFACTOR: Verificar que tests existentes no rompen (24 tests de vin.test.ts)
 
 ## 2. RED — Tests Elm327TcpRepository con mock TCP
 
-- [ ] 2.1 Crear `tests/unit/infrastructure/obd/elm327TcpRepository.test.ts` con `vi.mock('node:net')`:
+- [x] 2.1 Crear `tests/unit/infrastructure/obd/elm327TcpRepository.test.ts` con `vi.mock('node:net')`:
   - **readPid Mode 01 RPM**: mock TCP responde `"41 0C 0C 80"` → `readPid("01","0C")` devuelve 800
   - **readPid Mode 01 Coolant**: mock responde `"41 05 82"` → `readPid("01","05")` devuelve 90
   - **readPid Mode 01 Speed**: mock responde `"41 0D 00"` → `readPid("01","0D")` devuelve 0
@@ -28,11 +28,11 @@
   - **Connection refused**: mock emite ECONNREFUSED → lanza Elm327ConnectionError
   - **Respuesta malformada**: mock responde basura → lanza Elm327ParseError
   - **PID no soportado**: mock responde `"NO DATA"` → lanza Elm327NoDataError
-- [ ] 2.2 Verificar que tests fallan en RED (mock no implementado aún)
+- [x] 2.2 Verificar que tests fallan en RED (mock no implementado aún)
 
 ## 3. GREEN — Implementar Elm327TcpRepository
 
-- [ ] 3.1 Crear `src/infrastructure/obd/elm327TcpRepository.ts`:
+- [x] 3.1 Crear `src/infrastructure/obd/elm327TcpRepository.ts`:
   - `sendCommand(cmd)`: `createConnection` → write `cmd\r\n` → collect data (3s timeout) → destroy → strip echo/prompt/empty lines
   - `parseModeResponse(raw)`: extrae bytes tras `4X YY` → `number[]`
   - `parseMode22Response(raw, didLen)`: extrae bytes tras `62 XX XX` → `number[]`
@@ -49,33 +49,33 @@
   - `getSupportedPids()`: send "01 00" → parse bitmask → string[]
   - `clearDtcCodes()`: send "04" → void (fire-and-forget)
   - `setPower(on)`: no-op
-- [ ] 3.2 Ejecutar tests unitarios → todos GREEN
+- [x] 3.2 Ejecutar tests unitarios → todos GREEN
 
 ## 4. REFACTOR — Inyección en server + routes + main
 
-- [ ] 4.1 Modificar `src/infrastructure/http/server.ts`:
+- [x] 4.1 Modificar `src/infrastructure/http/server.ts`:
   - Añadir `obdRepo?: ObdRepositoryPort` a `ServerDependencies`
   - Pasar `obdRepo` a `createDiagnosisRoutes({ scenarios, obdRepo })`
-- [ ] 4.2 Modificar `src/infrastructure/http/routes/diagnosis.routes.ts`:
+- [x] 4.2 Modificar `src/infrastructure/http/routes/diagnosis.routes.ts`:
   - Añadir `obdRepo?: ObdRepositoryPort` a `DiagnosisRoutesDeps`
   - `POST /diagnosis`: si `obdRepo` existe, usar `processVehicleDiagnosis(obdRepo)`; si no, flujo actual con escenario
   - `POST /mcp/tools/:toolName`: ídem con `createMcpServer(obdRepo)`
   - `GET /scenarios`: si `obdRepo`, devolver `[{ id: "tcp", name: "ELM327 Direct Connection", vehicleType: "car", ... }]`
-- [ ] 4.3 Modificar `src/main.ts`:
+- [x] 4.3 Modificar `src/main.ts`:
   - Importar `Elm327TcpRepository`
   - Cuando `OBD_MODE === 'tcp'`: `new Elm327TcpRepository({ host, port })` + `createServer({ obdRepo, ...auth, scenarios: [] })`
   - Cuando `OBD_MODE === 'sync'`: flujo actual sin cambios
-- [ ] 4.4 Actualizar tests existentes:
+- [x] 4.4 Actualizar tests existentes:
   - `diagnosis.routes.test.ts`: añadir test POST /diagnosis con obdRepo mockeado (sin scenario)
   - `diagnosis.routes.test.ts`: añadir test GET /scenarios en modo TCP devuelve entry TCP
   - `server.test.ts`: añadir test modo TCP inyecta repo correctamente
 
 ## 5. Añadir Mode 03 + Mode 02 al escenario Python
 
-- [ ] 5.1 Modificar `docker/elm327/scenarios/audi_a3_tdi.py`:
+- [x] 5.1 Modificar `docker/elm327/scenarios/audi_a3_tdi.py`:
   - Añadir entrada Mode 03: DTCs P0301 (Cylinder 1 Misfire), P0401 (EGR Insufficient Flow), P2002 (DPF Efficiency)
   - Añadir entrada Mode 02 (freeze frame): para P0301 con valores de sensores congelados
-- [ ] 5.2 Reconstruir y verificar:
+- [x] 5.2 Reconstruir y verificar:
   ```bash
   docker compose build elm327 && docker compose up -d elm327
   printf '03\r\n' | nc -w 2 localhost 35000
@@ -84,8 +84,8 @@
 
 ## 6. Verificación final
 
-- [ ] 6.1 `pnpm test` → todos los tests pasan
-- [ ] 6.2 `pnpm lint && pnpm format` → sin errores
-- [ ] 6.3 `pnpm build` → compila sin errores
-- [ ] 6.4 Test manual end-to-end con `curl` (login + diagnosis en modo TCP)
-- [ ] 6.5 Actualizar `AGENTS.md` con nuevo estado de sesión
+- [x] 6.1 `pnpm test` → todos los tests pasan
+- [x] 6.2 `pnpm lint && pnpm format` → sin errores
+- [x] 6.3 `pnpm build` → compila sin errores
+- [x] 6.4 Test manual end-to-end con `curl` (login + diagnosis en modo TCP)
+- [x] 6.5 Actualizar `AGENTS.md` con nuevo estado de sesión
