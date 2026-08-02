@@ -1,16 +1,10 @@
 import { desc } from 'drizzle-orm'
 import * as schema from './schema.js'
 import type { DiagnosticsDb } from './db.js'
-
-/** Datos necesarios para crear un registro de auditoria. */
-export interface CreateAuditLogInput {
-  readonly method: string
-  readonly path: string
-  readonly statusCode: number
-  readonly ip?: string | null
-  readonly userAgent?: string | null
-  readonly durationMs?: number | null
-}
+import type {
+  AuditLogRepositoryPort,
+  CreateAuditLogInput,
+} from '@/application/ports/auditLogRepository.port.js'
 
 /** Registro de auditoria devuelto por el repositorio. */
 export interface AuditLog {
@@ -27,7 +21,7 @@ export interface AuditLog {
 type AuditLogRow = typeof schema.auditLogs.$inferSelect
 
 /** Implementacion del repositorio de auditoria con SQLite via Drizzle ORM. */
-export class SqliteAuditLogRepository {
+export class SqliteAuditLogRepository implements AuditLogRepositoryPort {
   constructor(private readonly db: DiagnosticsDb) {}
 
   private toEntity(row: AuditLogRow): AuditLog {
@@ -44,20 +38,15 @@ export class SqliteAuditLogRepository {
   }
 
   /** Inserta un registro de auditoria. */
-  async create(input: CreateAuditLogInput): Promise<AuditLog> {
-    const result = await this.db
-      .insert(schema.auditLogs)
-      .values({
-        method: input.method,
-        path: input.path,
-        statusCode: input.statusCode,
-        ip: input.ip ?? null,
-        userAgent: input.userAgent ?? null,
-        durationMs: input.durationMs ?? null,
-      })
-      .returning()
-
-    return this.toEntity(result[0])
+  async create(input: CreateAuditLogInput): Promise<void> {
+    await this.db.insert(schema.auditLogs).values({
+      method: input.method,
+      path: input.path,
+      statusCode: input.statusCode,
+      ip: input.ip ?? null,
+      userAgent: input.userAgent ?? null,
+      durationMs: input.durationMs ?? null,
+    })
   }
 
   /** Devuelve los N registros mas recientes ordenados por fecha descendente. */

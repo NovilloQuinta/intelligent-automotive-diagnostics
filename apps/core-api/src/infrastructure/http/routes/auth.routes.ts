@@ -3,7 +3,7 @@ import type { Request, Response } from 'express'
 import { ZodError } from 'zod'
 import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
 import type { AuthServicePort } from '@/application/ports/authService.port.js'
-import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.port.js'
+import type { RefreshTokenRepositoryPort } from '@/application/ports/refreshTokenRepository.port.js'
 import {
   EmailAlreadyRegisteredError,
   createRegisterUserUseCase,
@@ -18,7 +18,7 @@ import { createRefreshTokenUseCase } from '@/application/use-cases/refreshToken.
 export function createAuthRoutes(
   userRepo: UserRepositoryPort,
   authService: AuthServicePort,
-  tokenStore: RefreshTokenStorePort,
+  tokenStore: RefreshTokenRepositoryPort,
 ): Router {
   const router = Router()
 

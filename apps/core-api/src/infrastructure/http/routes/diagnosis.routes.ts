@@ -145,7 +145,9 @@ function createMcpToolHandler(deps: DiagnosisRoutesDeps) {
   return async (req: Request<{ toolName: string }>, res: Response): Promise<void> => {
     const paramsParsed = McpToolParamsSchema.safeParse(req.params)
     if (!paramsParsed.success) {
-      res.status(400).json({ error: ERROR_MESSAGES.invalidToolName, details: paramsParsed.error.issues })
+      res
+        .status(400)
+        .json({ error: ERROR_MESSAGES.invalidToolName, details: paramsParsed.error.issues })
       return
     }
 

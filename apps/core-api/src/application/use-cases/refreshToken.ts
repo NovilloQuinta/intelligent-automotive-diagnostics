@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import type { AuthServicePort } from '@/application/ports/authService.port.js'
+import type { AuthServicePort, TokenPair } from '@/application/ports/authService.port.js'
 
 /** Esquema de validacion para el input de refresco de token. */
 export const refreshInputSchema = z.object({
@@ -10,10 +10,7 @@ export const refreshInputSchema = z.object({
 export type RefreshInput = z.infer<typeof refreshInputSchema>
 
 /** Resultado devuelto por el caso de uso de refresco de token. */
-export interface RefreshResult {
-  readonly accessToken: string
-  readonly refreshToken: string
-}
+export type RefreshResult = TokenPair
 
 /** Caso de uso: rotacion de refresh token.
  * Valida el token, lo revoca y emite un nuevo par.

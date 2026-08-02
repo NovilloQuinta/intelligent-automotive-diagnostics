@@ -1,7 +1,8 @@
 import { z } from 'zod'
 import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
-import type { AuthServicePort } from '@/application/ports/authService.port.js'
-import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.port.js'
+import type { AuthServicePort, TokenPair } from '@/application/ports/authService.port.js'
+import type { RefreshTokenRepositoryPort } from '@/application/ports/refreshTokenRepository.port.js'
+import { persistRefreshToken } from '@/application/use-cases/hashToken.js'
 
 /** Esquema de validacion para el input de inicio de sesion. */
 export const loginInputSchema = z.object({
@@ -13,14 +14,7 @@ export const loginInputSchema = z.object({
 export type LoginInput = z.infer<typeof loginInputSchema>
 
 /** Resultado devuelto por el caso de uso de inicio de sesion. */
-export interface LoginResult {
-  readonly accessToken: string
-  readonly refreshToken: string
-}
-
-import { hashToken } from '@/application/use-cases/hashToken.js'
-
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
+export type LoginResult = TokenPair
 
 /** Caso de uso: inicio de sesion.
  * Valida input, verifica credenciales y genera tokens.
@@ -28,7 +22,7 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 export function createLoginUserUseCase(deps: {
   readonly userRepo: UserRepositoryPort
   readonly authService: AuthServicePort
-  readonly tokenStore: RefreshTokenStorePort
+  readonly tokenStore: RefreshTokenRepositoryPort
 }) {
   const { userRepo, authService, tokenStore } = deps
 
@@ -46,9 +40,7 @@ export function createLoginUserUseCase(deps: {
     }
 
     const tokens = authService.generateTokens(user.id)
-    const expiresAt = new Date(Date.now() + SEVEN_DAYS_MS).toISOString()
-    const tokenHash = hashToken(tokens.refreshToken)
-    await tokenStore.saveRefreshToken(user.id, tokenHash, expiresAt)
+    await persistRefreshToken(tokenStore, user.id, tokens)
 
     return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken }
   }

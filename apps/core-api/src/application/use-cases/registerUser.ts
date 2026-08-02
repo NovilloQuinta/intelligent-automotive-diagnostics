@@ -1,8 +1,9 @@
 import { z } from 'zod'
 import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
-import type { AuthServicePort } from '@/application/ports/authService.port.js'
-import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.port.js'
+import type { AuthServicePort, TokenPair } from '@/application/ports/authService.port.js'
+import type { RefreshTokenRepositoryPort } from '@/application/ports/refreshTokenRepository.port.js'
 import type { User } from '@/domain/user.js'
+import { persistRefreshToken } from '@/application/use-cases/hashToken.js'
 
 /** Esquema de validacion para el input de registro. */
 export const registerInputSchema = z.object({
@@ -19,15 +20,9 @@ export const registerInputSchema = z.object({
 export type RegisterInput = z.infer<typeof registerInputSchema>
 
 /** Resultado devuelto por el caso de uso de registro. */
-export interface RegisterResult {
+export interface RegisterResult extends TokenPair {
   readonly user: Omit<User, 'passwordHash'>
-  readonly accessToken: string
-  readonly refreshToken: string
 }
-
-import { hashToken } from '@/application/use-cases/hashToken.js'
-
-const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
 /** Caso de uso: registro de usuario nuevo.
  * Valida input, comprueba duplicados, crea usuario y genera tokens.
@@ -35,7 +30,7 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 export function createRegisterUserUseCase(deps: {
   readonly userRepo: UserRepositoryPort
   readonly authService: AuthServicePort
-  readonly tokenStore: RefreshTokenStorePort
+  readonly tokenStore: RefreshTokenRepositoryPort
 }) {
   const { userRepo, authService, tokenStore } = deps
 
@@ -59,9 +54,7 @@ export function createRegisterUserUseCase(deps: {
     })
 
     const tokens = authService.generateTokens(user.id)
-    const expiresAt = new Date(Date.now() + SEVEN_DAYS_MS).toISOString()
-    const tokenHash = hashToken(tokens.refreshToken)
-    await tokenStore.saveRefreshToken(user.id, tokenHash, expiresAt)
+    await persistRefreshToken(tokenStore, user.id, tokens)
 
     const { passwordHash: _, ...safeUser } = user
     return { user: safeUser, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken }

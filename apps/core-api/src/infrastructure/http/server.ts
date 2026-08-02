@@ -12,7 +12,7 @@ import { createAuthRoutes } from '@/infrastructure/http/routes/auth.routes.js'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
 import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
 import type { AuthServicePort } from '@/application/ports/authService.port.js'
-import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.port.js'
+import type { RefreshTokenRepositoryPort } from '@/application/ports/refreshTokenRepository.port.js'
 import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
 import type { LlmClientPort } from '@/application/ports/llmClient.port.js'
 
@@ -23,7 +23,7 @@ export interface ServerDependencies {
   readonly auditRepo?: AuditLogRepositoryPort
   readonly userRepo?: UserRepositoryPort
   readonly authService?: AuthServicePort
-  readonly tokenStore?: RefreshTokenStorePort
+  readonly tokenStore?: RefreshTokenRepositoryPort
   readonly accessTokenSecret?: string
   /** Repositorio OBD externo (ej. Elm327TcpRepository en OBD_MODE=tcp). */
   readonly obdRepo?: ObdRepositoryPort

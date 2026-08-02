@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { SqliteAuditLogRepository } from '@/infrastructure/persistence/sqlite/auditLogRepository.js'
-import type { CreateAuditLogInput } from '@/infrastructure/persistence/sqlite/auditLogRepository.js'
+import type { CreateAuditLogInput } from '@/application/ports/auditLogRepository.port.js'
 
 const mockLog: CreateAuditLogInput = {
   method: 'GET',
@@ -44,9 +44,12 @@ describe('SqliteAuditLogRepository', () => {
   })
 
   describe('create', () => {
-    it('should insert an audit log entry and return it with an id', async () => {
-      const entry = await repo.create(mockLog)
+    it('should insert an audit log entry and persist it', async () => {
+      await repo.create(mockLog)
 
+      const logs = await repo.findRecent(1)
+      expect(logs).toHaveLength(1)
+      const entry = logs[0]
       expect(entry.id).toBeGreaterThan(0)
       expect(entry.method).toBe('GET')
       expect(entry.path).toBe('/api/scenarios')
@@ -58,8 +61,10 @@ describe('SqliteAuditLogRepository', () => {
     })
 
     it('should insert an audit log with minimal fields', async () => {
-      const entry = await repo.create(mockErrorLog)
+      await repo.create(mockErrorLog)
 
+      const logs = await repo.findRecent(1)
+      const entry = logs[0]
       expect(entry.statusCode).toBe(404)
       expect(entry.userAgent).toBeNull()
       expect(entry.durationMs).toBeNull()

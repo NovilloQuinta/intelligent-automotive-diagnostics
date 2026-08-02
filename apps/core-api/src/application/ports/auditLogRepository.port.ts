@@ -1,11 +1,15 @@
+/** Entrada para crear un registro de auditoria HTTP. */
+export interface CreateAuditLogInput {
+  readonly method: string
+  readonly path: string
+  readonly statusCode: number
+  readonly ip?: string | null
+  readonly userAgent?: string | null
+  readonly durationMs?: number | null
+}
+
 /** Contrato para persistir registros de auditoria HTTP. */
 export interface AuditLogRepositoryPort {
-  create(input: {
-    method: string
-    path: string
-    statusCode: number
-    ip?: string | null
-    userAgent?: string | null
-    durationMs?: number | null
-  }): Promise<unknown>
+  /** Persiste un registro de auditoria. Fire-and-forget: no devuelve dato util. */
+  create(input: CreateAuditLogInput): Promise<void>
 }

@@ -1,9 +1,9 @@
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { randomUUID } from 'node:crypto'
-import type { AuthServicePort } from '@/application/ports/authService.port.js'
-import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.port.js'
-import { hashToken } from '@/application/use-cases/hashToken.js'
+import type { AuthServicePort, TokenPair } from '@/application/ports/authService.port.js'
+import type { RefreshTokenRepositoryPort } from '@/application/ports/refreshTokenRepository.port.js'
+import { hashToken, REFRESH_TOKEN_DURATION_MS } from '@/application/use-cases/hashToken.js'
 
 /** Configuracion del servicio de autenticacion. */
 interface AuthServiceConfig {
@@ -11,11 +11,10 @@ interface AuthServiceConfig {
   readonly refreshTokenSecret: string
   readonly accessTokenExpiresIn: string
   readonly refreshTokenExpiresIn: string
-  readonly tokenStore: RefreshTokenStorePort
+  readonly tokenStore: RefreshTokenRepositoryPort
 }
 
 const BCRYPT_ROUNDS = 12
-const REFRESH_TOKEN_DURATION_MS = 7 * 24 * 60 * 60 * 1000
 
 function calculateExpiryDate(): string {
   return new Date(Date.now() + REFRESH_TOKEN_DURATION_MS).toISOString()
@@ -39,10 +38,7 @@ export function createAuthService(config: AuthServiceConfig): AuthServicePort {
     return bcrypt.compare(password, hash)
   }
 
-  function generateTokens(userId: number): {
-    accessToken: string
-    refreshToken: string
-  } {
+  function generateTokens(userId: number): TokenPair {
     const accessToken = jwt.sign({ sub: userId, jti: randomUUID() }, accessTokenSecret, {
       expiresIn: accessTokenExpiresIn as jwt.SignOptions['expiresIn'],
     })
@@ -57,9 +53,7 @@ export function createAuthService(config: AuthServiceConfig): AuthServicePort {
     return decoded.sub
   }
 
-  async function refreshAccessToken(
-    refreshTokenStr: string,
-  ): Promise<{ accessToken: string; refreshToken: string }> {
+  async function refreshAccessToken(refreshTokenStr: string): Promise<TokenPair> {
     const decoded = jwt.verify(refreshTokenStr, refreshTokenSecret) as unknown as {
       sub: number
     }

@@ -6,7 +6,7 @@ import type {
   LlmResponse,
   ToolCallTrace,
 } from '@/application/ports/llmClient.port.js'
-import { MaxToolCallIterationsError } from '@/application/ports/llmClient.port.js'
+import { MaxToolCallIterationsError } from '@/application/errors/llmErrors.js'
 import { openAiToolAdapter } from '@/infrastructure/llm/openAiToolAdapter.js'
 
 // ── Constantes ──

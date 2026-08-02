@@ -4,13 +4,13 @@ import express from 'express'
 import { createAuthRoutes } from '@/infrastructure/http/routes/auth.routes.js'
 import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
 import type { AuthServicePort } from '@/application/ports/authService.port.js'
-import type { RefreshTokenStorePort } from '@/application/ports/refreshTokenStore.port.js'
+import type { RefreshTokenRepositoryPort } from '@/application/ports/refreshTokenRepository.port.js'
 
 function createTestApp(
   overrides: {
     userRepo?: Partial<UserRepositoryPort>
     authService?: Partial<AuthServicePort>
-    tokenStore?: Partial<RefreshTokenStorePort>
+    tokenStore?: Partial<RefreshTokenRepositoryPort>
   } = {},
 ) {
   const userRepo: UserRepositoryPort = {
@@ -45,7 +45,7 @@ function createTestApp(
     ...overrides.authService,
   }
 
-  const tokenStore: RefreshTokenStorePort = {
+  const tokenStore: RefreshTokenRepositoryPort = {
     saveRefreshToken: vi.fn().mockResolvedValue(undefined),
     findRefreshToken: vi.fn().mockResolvedValue(null),
     revokeRefreshToken: vi.fn().mockResolvedValue(undefined),

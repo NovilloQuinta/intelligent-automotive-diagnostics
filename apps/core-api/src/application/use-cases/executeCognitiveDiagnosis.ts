@@ -1,7 +1,30 @@
 import { z } from 'zod'
 import { Severity } from '@/domain/diagnosisResult.js'
 import type { VehicleInfo } from '@/domain/vehicleProfile.js'
-import type { CognitiveDiagnosisResult, ExecuteCognitiveDiagnosisInput } from '@/application/ports/cognitiveDiagnosis.port.js'
+import type {
+  LlmClientPort,
+  McpToolDefinition,
+  ToolCallHandler,
+  ToolCallTrace,
+} from '@/application/ports/llmClient.port.js'
+
+/** Entrada para el caso de uso de diagnostico cognitivo. */
+export interface ExecuteCognitiveDiagnosisInput {
+  readonly llmClient: LlmClientPort
+  readonly tools: readonly McpToolDefinition[]
+  readonly handler: ToolCallHandler
+  readonly userQuery?: string
+  readonly vehicleContext?: VehicleInfo
+}
+
+/** Resultado de un diagnostico cognitivo generado por un LLM via MCP tool calling. */
+export interface CognitiveDiagnosisResult {
+  readonly diagnosis: string
+  readonly severity: Severity
+  readonly confidence: number
+  readonly recommendations: string[]
+  readonly toolCalls: readonly ToolCallTrace[]
+}
 
 const SEVERITY_LABELS: Record<Severity, string> = {
   [Severity.Low]: 'low',

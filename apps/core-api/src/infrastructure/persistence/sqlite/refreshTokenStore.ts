@@ -2,14 +2,14 @@ import { eq } from 'drizzle-orm'
 import * as schema from './schema.js'
 import type { DiagnosticsDb } from './db.js'
 import type {
-  RefreshTokenStorePort,
+  RefreshTokenRepositoryPort,
   RefreshTokenRecord,
-} from '@/application/ports/refreshTokenStore.port.js'
+} from '@/application/ports/refreshTokenRepository.port.js'
 
 type RefreshTokenRow = typeof schema.refreshTokens.$inferSelect
 
-/** Implementacion de {@link RefreshTokenStorePort} con SQLite via Drizzle ORM. */
-export class SqliteRefreshTokenStore implements RefreshTokenStorePort {
+/** Implementacion de {@link RefreshTokenRepositoryPort} con SQLite via Drizzle ORM. */
+export class SqliteRefreshTokenStore implements RefreshTokenRepositoryPort {
   constructor(private readonly db: DiagnosticsDb) {}
 
   private toRecord(row: RefreshTokenRow): RefreshTokenRecord {

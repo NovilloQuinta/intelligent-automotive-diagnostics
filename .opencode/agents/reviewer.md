@@ -54,6 +54,39 @@ Si ya los cargaste en este contexto, no los repitas.
 - ¿Puertos con sufijo `Port`?
 - ¿1 fichero = 1 responsabilidad?
 
+### Code Smell (según AGENTS.md PRINCIPIOS DE CODIGO)
+
+Estos son umbrales CONCRETOS. Reporta CADA ocurrencia con archivo:línea.
+
+- **Funciones >40 líneas** — contar líneas de código (sin imports, sin líneas vacías). Si una función supera 40 líneas, debe extraerse.
+- **Parámetros >4** — si una función/método tiene más de 4 parámetros, debe agruparse en un DTO de entrada.
+- **Anidamiento >3 niveles** — contar `if { for { if { ... }}}`. Más de 3 niveles de nesting → extraer a función separada o usar early return.
+- **Comentarios explicando QUÉ hace el código** — `// iteramos sobre los usuarios` o `// calculamos el total` cuando el código ya es auto-explicativo. Solo se permiten comentarios que explican POR QUÉ (decisión de diseño, edge case, workaround). Los comentarios `// TODO` y `// FIXME` son aceptables.
+- **Magic strings sin nombre** — cualquier string literal usado en lógica de negocio que no sea un mensaje de UI/test. Ej: `'tool_use'`, `'function'`, `'finish'`, nombres de headers, códigos de estado. Deben ser constantes con nombre.
+- **Magic numbers sin nombre** — números literales en lógica (excepto -1, 0, 1, 2 en operaciones obvias como índices). Ej: `setTimeout(fn, 30000)` → `const TIMEOUT_MS = 30_000`.
+- **Imports no usados** — `eslint` los detecta automáticamente, pero verificar a mano en el diff. Si un import quedó sin uso tras un refactor, reportarlo.
+- **Variables no usadas** — ídem. ESLint las captura con `@typescript-eslint/no-unused-vars`, pero verificar en diff.
+- ¿Patrones repetidos 3+ veces? Buscar con grep: constantes, bloques de persistencia,
+  wrappers de error, shapes de DTO. No confiar solo en el diff — mirar el código circundante.
+- Si un fix introduce un tipo NOMBRADO (ej. `TokenPair`), ¿se propagó a TODOS los
+  consumidores, o quedan interfaces con la misma forma redeclaradas?
+- ¿Los renames son COMPLETOS? Verificar fichero, clase, interfaz, variables locales
+  y parámetros — no solo el símbolo principal.
+- ¿El fix introdujo duplicación NUEVA? Comparar el shape antes/después del cambio.
+- ¿El adaptador que implementa el puerto quedó alineado tras el cambio?
+  (mismo DTO importado, misma firma de retorno, cláusula `implements` presente).
+
+### Errores y contratos
+- ¿`@throws` documentado en TODOS los métodos que lanzan, no solo en los ya documentados?
+- ¿Referencias `@throws` apuntan a tipos importados o importables, o son colgantes?
+- ¿`new Error('...')` con magic strings donde ya existen clases tipadas en `application/errors/`?
+- ¿Casts dobles (`as unknown as`) sin validación runtime? Si no se puede validar, al menos documentar por qué es seguro.
+
+### Impacto del cambio
+- ¿Los tests de los consumidores se actualizaron y cubren el cambio?
+- Volver a ejecutar el checklist COMPLETO sobre todos los ficheros tocados, no solo el diff.
+- Verificar que `pnpm lint && pnpm test` pasan sobre la rama (si tienes acceso a ejecución).
+
 ### Seguridad OWASP
 La auditoría de seguridad se delega al subagente `@security`. Este agente no evalúa reglas OWASP.
 
