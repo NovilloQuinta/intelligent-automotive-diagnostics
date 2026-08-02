@@ -124,6 +124,49 @@ describe('executeCognitiveDiagnosis', () => {
     expect(result.recommendations).toEqual([])
   })
 
+  it('should parse a ---JSON\\n block (DeepSeek real format with newline separator)', async () => {
+    // DeepSeek emite: ---JSON\n{...}\n--- en vez de ---JSON---{...}---
+    const text =
+      'El motor falla en el cilindro 1.\n---JSON\n{"severity":"high","confidence":0.78,"recommendations":["Revisar bujías","Cambiar bobina","Verificar compresión"]}\n---'
+    const llmClient = mockLlmClient({
+      sendMessage: vi.fn().mockResolvedValue(cognitiveResponse(text)),
+    })
+
+    const result = await executeCognitiveDiagnosis({
+      llmClient,
+      tools: sixTools,
+      handler: vi.fn(),
+    })
+
+    expect(result.diagnosis).toBe(text)
+    expect(result.severity).toBe(Severity.High)
+    expect(result.confidence).toBe(0.78)
+    expect(result.recommendations).toEqual([
+      'Revisar bujías',
+      'Cambiar bobina',
+      'Verificar compresión',
+    ])
+  })
+
+  it('should parse a ---JSON--- block with trailing whitespace before closing ---', async () => {
+    // Variante: ---JSON---{...}\n--- (espacio/newline antes del cierre)
+    const text =
+      'Diagnóstico.\n---JSON---{"severity":"low","confidence":0.6,"recommendations":["ok"]}\n---'
+    const llmClient = mockLlmClient({
+      sendMessage: vi.fn().mockResolvedValue(cognitiveResponse(text)),
+    })
+
+    const result = await executeCognitiveDiagnosis({
+      llmClient,
+      tools: sixTools,
+      handler: vi.fn(),
+    })
+
+    expect(result.severity).toBe(Severity.Low)
+    expect(result.confidence).toBe(0.6)
+    expect(result.recommendations).toEqual(['ok'])
+  })
+
   it('should fall back to defaults when the ---JSON--- block is malformed', async () => {
     const text = 'Narrativa. ---JSON---{"severity": }---'
     const llmClient = mockLlmClient({
