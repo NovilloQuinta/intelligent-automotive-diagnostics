@@ -39,7 +39,6 @@ La **fuente de verdad** de agentes, skills y comandos está en `.opencode/`
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM
-- **Ultimo paso**: Commit de herramientas complementarias (gga, gentle-agent-state, Gentleman-Skills) + AGENTS.md como fuente de verdad (commit 12508c1)
-- **ADR**: 007 (Catalogo Auto-Expansivo con LanceDB)
-- **Tests**: 257 pasando (22 test files)
-- **CI**: verde
+- **Ultimo paso**: Cambio `add-execute-cognitive-diagnosis` implementado y archivado en OpenSpec. Refactoring post-archivado commiteado (`50c0a5e`): tipos extraidos a `application/ports/cognitiveDiagnosis.port.ts`, shims eliminados, regex JSON mejorado (tolera `---JSON\n` de DeepSeek), schema Zod exportado como `cognitiveDiagnosisJsonSchema`. SYSTEM INSTRUCTIONS & EXECUTIVE PROTOCOL integrado en AGENTS.md, commiteado (`f257ed2`).
+- **Tests**: 404 pasando (29 test files)
+- **CI**: verde — lint, format, test, build, audit
