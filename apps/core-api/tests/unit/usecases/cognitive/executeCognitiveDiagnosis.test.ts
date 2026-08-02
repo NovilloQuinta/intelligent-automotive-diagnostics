@@ -6,7 +6,7 @@ import type {
   ToolCallHandler,
   ToolCallTrace,
 } from '@/application/ports/llmClient.port.js'
-import { MaxToolCallIterationsError } from '@/application/errors/llmErrors.js'
+import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
 import { Severity } from '@/domain/diagnosisResult.js'
 import type { VehicleInfo } from '@/domain/vehicleProfile.js'
 import { Vin } from '@/domain/vin.js'
