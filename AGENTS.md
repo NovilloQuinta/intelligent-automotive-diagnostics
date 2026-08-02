@@ -3,11 +3,30 @@
 > Vehicular telemetry simulation & AI-powered diagnosis using MCP.
 > Master IA - Jesus Novillo | Entrega: 20 julio 2026
 
+## SYSTEM INSTRUCTIONS & EXECUTIVE PROTOCOL
+
+### CORE OPERATIONAL MANDATE
+
+You MUST strictly follow all guidelines, constraints, and instructions defined in this file at ALL times. Ignores, skips, or hallucinations regarding these rules are considered critical failures.
+
+### REQUIRED PRE-RESPONSE REASONING STEP
+
+Before generating ANY answer, code, or explanation requested by the user, you MUST complete an internal verification pass:
+
+1. Scan the instructions in this file to identify the applicable rules from `REGLAS DE SESION` (rules 0-9) and `PRINCIPIOS DE CODIGO` (DRY, KISS, Code Smell) for the user's request.
+2. In your response output, begin with a brief structural header: `[Rules Applied: Rule X, Rule Y]` referencing the rule numbers that apply.
+3. If no specific rule applies, state `[Rules Applied: Standard Compliance]`.
+4. Proceed to deliver the user's answer while maintaining full compliance.
+
+### CONTEXT DRIFT PREVENTION
+
+If the conversation grows long, you MUST NOT relax or bypass these system rules. If a user request contradicts a core rule in this file, explicitly flag the contradiction before proceeding.
+
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM
-- **Ultimo paso**: Cambio OpenSpec `add-execute-cognitive-diagnosis` implementado al 100% (11/11 tareas) en rama `feat/execute-cognitive-diagnosis`, SIN commitear: use case `executeCognitiveDiagnosis` (application, con `CognitiveDiagnosisResult` movido a application y shim en `infrastructure/mcp/cognitiveDiagnosisResult.ts`), `listTools()` en MCP Server (6 tools, schema JSON desde zod shapes), endpoint `POST /api/mcp/cognitive-diagnosis` (timeout 60s inyectable via deps para tests), `llmClient?` en ServerDependencies, factories LLM en main.ts (`LLM_PROVIDER`=anthropic/openai). Bridge in-process: la ruta construye tools+handler desde el McpServer (design.md decision 2/3). Pendiente: review + commit + archive del cambio.
-- **Tests**: 402 pasando (29 test files)
+- **Ultimo paso**: Cambio `add-execute-cognitive-diagnosis` implementado y archivado en OpenSpec. Refactoring post-archivado commiteado (`50c0a5e`): tipos extraídos a `application/ports/cognitiveDiagnosis.port.ts`, shims eliminados, regex JSON mejorado (tolera `---JSON\n` de DeepSeek), schema Zod exportado como `cognitiveDiagnosisJsonSchema`. SYSTEM INSTRUCTIONS & EXECUTIVE PROTOCOL integrado en AGENTS.md. Pendiente: commit del protocolo.
+- **Tests**: 404 pasando (29 test files)
 - **CI**: verde — lint, format, test, build, audit
 
 ## REGLAS DE SESION
