@@ -25,7 +25,7 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM
-- **Ultimo paso**: Cambio `add-execute-cognitive-diagnosis` implementado y archivado en OpenSpec. Refactoring post-archivado commiteado (`50c0a5e`): tipos extraídos a `application/ports/cognitiveDiagnosis.port.ts`, shims eliminados, regex JSON mejorado (tolera `---JSON\n` de DeepSeek), schema Zod exportado como `cognitiveDiagnosisJsonSchema`. SYSTEM INSTRUCTIONS & EXECUTIVE PROTOCOL integrado en AGENTS.md. Pendiente: commit del protocolo.
+- **Ultimo paso**: Cambio `add-execute-cognitive-diagnosis` implementado y archivado en OpenSpec. Refactoring post-archivado commiteado (`50c0a5e`): tipos extraídos a `application/ports/cognitiveDiagnosis.port.ts`, shims eliminados, regex JSON mejorado (tolera `---JSON\n` de DeepSeek), schema Zod exportado como `cognitiveDiagnosisJsonSchema`. SYSTEM INSTRUCTIONS & EXECUTIVE PROTOCOL integrado en AGENTS.md, commiteado (`f257ed2`). CI: `paths-ignore` para docs-only pushes (`e5b9221`).
 - **Tests**: 404 pasando (29 test files)
 - **CI**: verde — lint, format, test, build, audit
 
