@@ -25,9 +25,9 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM
-- **Ultimo paso**: Refactoring de puertos (`6a3faad`). Corregidas 5 desviaciones del patron de puertos (cognitiveDiagnosis movido a use case, CreateAuditLogInput extraido, TokenPair propagado, MaxToolCallIterationsError a errors/, refreshTokenStore→Repository). Anadido persistRefreshToken() + REFRESH_TOKEN_DURATION_MS en hashToken.ts (eliminados 3 bloques DRY). @reviewer ampliado con Code Smell (8 metricas) + DRY/KISS + Errores + Impacto.
+- **Ultimo paso**: Corregidos frontmatters YAML de los 6 subagentes (`c42ad94`). Descripciones a 1 linea, keys de `task` quoted segun convencion docs OpenCode. Prevenido fallo de registro/invocacion de agentes por parseo YAML fragil.
 - **Tests**: 404 pasando (29 test files)
-- **CI**: verde — lint, format, test, build, audit
+- **CI**: verde — lint, format, test, build
 
 ## REGLAS DE SESION
 
