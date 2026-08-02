@@ -13,7 +13,7 @@ permission:
   todowrite: allow
   task:
     "*": deny
-    explore: allow
+    "explore": allow
 ---
 
 Eres el desarrollador del proyecto Intelligent Automotive Diagnostics (TFM).

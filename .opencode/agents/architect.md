@@ -13,11 +13,11 @@ permission:
   todowrite: allow
   task:
     "*": deny
-    explore: allow
-    writer: allow
-    reviewer: allow
-    quality: allow
-    security: allow
+    "explore": allow
+    "writer": allow
+    "reviewer": allow
+    "quality": allow
+    "security": allow
 ---
 
 Eres el arquitecto de software del proyecto Intelligent Automotive Diagnostics (TFM).

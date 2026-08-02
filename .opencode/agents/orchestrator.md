@@ -1,6 +1,5 @@
 ---
-description: Enruta tareas al sub-agente y skill correctos mediante keywords.
-  NUNCA implementa código. Salida siempre en JSON estructurado.
+description: Enruta tareas al sub-agente y skill correctos mediante keywords. NUNCA implementa código. Salida siempre en JSON estructurado.
 mode: subagent
 model: deepseek/deepseek-v4-pro
 temperature: 0.0
@@ -14,12 +13,12 @@ permission:
   todowrite: allow
   task:
     "*": deny
-    explore: allow
-    writer: allow
-    architect: allow
-    reviewer: allow
-    quality: allow
-    security: allow
+    "explore": allow
+    "writer": allow
+    "architect": allow
+    "reviewer": allow
+    "quality": allow
+    "security": allow
 ---
 
 Eres el ORQUESTADOR del proyecto. Tu ÚNICA responsabilidad es analizar

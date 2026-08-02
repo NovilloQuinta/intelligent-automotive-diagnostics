@@ -12,7 +12,7 @@ permission:
   skill: allow
   task:
     "*": deny
-    explore: allow
+    "explore": allow
 ---
 
 Eres el revisor de código del proyecto Intelligent Automotive Diagnostics (TFM).
