@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { ObdSimulator } from '@/infrastructure/obd/simulator.js'
 import { Vin } from '@/domain/vin.js'
+import { FreezeFrame } from '@/domain/freezeFrame.js'
 import type { SimulationScenario } from '@/domain/simulationScenario.js'
 import type { LiveData } from '@/domain/liveData.js'
-import type { FreezeFrame } from '@/domain/freezeFrame.js'
 
 const audiIdleSensorValues: LiveData = {
   rpm: 750,
@@ -130,10 +130,10 @@ describe('ObdSimulator', () => {
   })
 
   it('should return freeze frame from scenario when present', () => {
-    const freeze: FreezeFrame = {
+    const freeze: FreezeFrame = FreezeFrame.create({
       dtcCode: 'P0301',
       pidValues: { rpm: 750, speed: 0 },
-    }
+    })
     const scenarioWithFreeze: SimulationScenario = {
       ...audiIdleScenario,
       freezeFrame: freeze,

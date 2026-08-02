@@ -1,9 +1,9 @@
 import { createConnection } from 'node:net'
 import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
 import type { DtcCode } from '@/domain/dtcCode.js'
-import type { FreezeFrame } from '@/domain/freezeFrame.js'
+import { FreezeFrame } from '@/domain/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/vehicleProfile.js'
-import { Vin } from '@/domain/vin.js'
+import { Vin, FALLBACK_VIN } from '@/domain/vin.js'
 import { STANDARD_MODE_01_PIDS } from '@/infrastructure/persistence/sqlite/seed-pids.js'
 import { evaluatePid } from './pidParser.js'
 import { decodeVin } from './vinDecoder.js'
@@ -41,6 +41,9 @@ export interface Elm327TcpConfig {
 }
 
 const DEFAULT_TIMEOUT_MS = 3000
+
+/** Código DTC de placeholder cuando la respuesta ELM327 no identifica el DTC que disparó el freeze frame. */
+const UNKNOWN_FREEZE_FRAME_DTC = 'UNKNOWN'
 
 /** Fórmulas VAG Mode 22 (DIDs reales del escenario Audi A3 2.0 TDI, Ross-Tech). */
 const VAG_MODE_22_FORMULAS: Record<string, { formula: string; dataBytes: number }> = {
@@ -224,6 +227,7 @@ export class Elm327TcpRepository implements ObdRepositoryPort {
     return evaluatePid(entry.formula, bytes.slice(0, entry.dataBytes))
   }
 
+  /** Lee un PID OBD-II del emulador ELM327 y devuelve su valor fisico. */
   async readPid(mode: string, pid: string): Promise<number> {
     const raw = await this.sendCommand(formatCommand(mode, pid))
     const entry = this.pidFormulas.get(`${mode} ${pid.toUpperCase()}`)
@@ -234,6 +238,7 @@ export class Elm327TcpRepository implements ObdRepositoryPort {
     return this.applyPidFormula(mode, pid, bytes)
   }
 
+  /** Consulta los PIDs soportados por la ECU via comando 01 00. */
   async getSupportedPids(): Promise<string[]> {
     const raw = await this.sendCommand('01 00')
     const bytes = this.parseModeResponse(raw)
@@ -249,16 +254,18 @@ export class Elm327TcpRepository implements ObdRepositoryPort {
     return pids
   }
 
+  /** Devuelve el freeze frame del DTC indicado via comando 02 0C. */
   async getFreezeFrame(dtc?: string): Promise<FreezeFrame | null> {
     const raw = await this.sendCommand('02 0C')
     if (/NO DATA/i.test(raw)) return null
     const bytes = this.parseModeResponse(raw)
-    return {
-      dtcCode: dtc ?? '',
+    return FreezeFrame.create({
+      dtcCode: dtc ?? UNKNOWN_FREEZE_FRAME_DTC,
       pidValues: { '0C': this.applyPidFormula('01', '0C', bytes) },
-    }
+    })
   }
 
+  /** Lee los codigos DTC almacenados en la ECU via comando 03. */
   async readDtcCodes(): Promise<DtcCode[]> {
     const raw = await this.sendCommand('03')
     return this.parseDtcResponse(raw).map(([b1, b2]) => ({
@@ -267,15 +274,18 @@ export class Elm327TcpRepository implements ObdRepositoryPort {
     }))
   }
 
+  /** Limpia los codigos DTC de la ECU via comando 04. */
   async clearDtcCodes(): Promise<void> {
     await this.sendCommand('04')
   }
 
+  /** Lee el VIN del vehiculo via comando 09 02. */
   async readVin(): Promise<string> {
     const raw = await this.sendCommand('09 02')
     return decodeVin(this.parseVinResponse(raw))
   }
 
+  /** Obtiene la informacion del vehiculo conectado al emulador. */
   async getVehicleInfo(): Promise<VehicleInfo> {
     try {
       const vin = Vin.create(await this.readVin())
@@ -293,11 +303,12 @@ export class Elm327TcpRepository implements ObdRepositoryPort {
         model: 'unknown',
         year: 0,
         engineType: 'unknown',
-        vin: Vin.create('XXXXXXXXXXXXXXXXX'),
+        vin: Vin.create(FALLBACK_VIN),
       }
     }
   }
 
+  /** Controla el estado de alimentacion del emulador ELM327. */
   async setPower(_on: boolean): Promise<void> {
     // No-op: el adaptador no controla la alimentación del hardware
   }

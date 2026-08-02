@@ -25,8 +25,8 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM
-- **Ultimo paso**: Corregidos frontmatters YAML de los 6 subagentes (`c42ad94`). Descripciones a 1 linea, keys de `task` quoted segun convencion docs OpenCode. Prevenido fallo de registro/invocacion de agentes por parseo YAML fragil.
-- **Tests**: 404 pasando (29 test files)
+- **Ultimo paso**: Refactor `refactor-rich-domain-model` implementado (cambio OpenSpec `2026-08-02-refactor-rich-domain-model`, sin commitear aun): `FreezeFrame` y `DiagnosisResult` como value objects ricos (patron Vin/PidCode: private constructor + `create()` con validacion + error tipado + getters derivados, cero presentacion en dominio — eliminados `rawData`/`diagnosisText`). `processVehicleDiagnosis` devuelve entidad pura. Parser anti-corrupcion nuevo `application/llm/extractLlmDiagnosis.ts` (regex `---JSON---`, schema Zod, fallback) y `executeCognitiveDiagnosis` delega. Mapper HTTP eliminado (inline en ruta). `FreezeFrameError` en dominio; sentinel `UNKNOWN_FREEZE_FRAME_DTC` en `elm327TcpRepository` para freeze frames sin DTC conocido. Skill `clean-architecture` actualizado: permite value objects ricos con comportamiento puro.
+- **Tests**: 429 pasando (32 test files)
 - **CI**: verde — lint, format, test, build
 
 ## REGLAS DE SESION

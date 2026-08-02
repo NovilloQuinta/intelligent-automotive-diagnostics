@@ -9,8 +9,8 @@ Load this skill before creating or moving files between layers. Enforces strict 
 ### `domain/` — Entities & Business Rules (innermost layer)
 
 **Allowed contents:**
-- Pure entity interfaces with `readonly` properties (`LiveData`, `VehicleProfile`, `EcuInfo`, `PidDefinition`, `DtcCode`, `DiagnosisResult`)
-- Value objects (plain data structures, no behavior)
+- Pure entity interfaces with `readonly` properties (`LiveData`, `VehicleProfile`, `EcuInfo`, `PidDefinition`, `DtcCode`)
+- Rich value objects with pure behavior: `private constructor`, `static create()` with validation and typed errors, derived getters (pattern `Vin`, `PidCode`, `FreezeFrame`, `DiagnosisResult`)
 - Type unions, enums, constants that represent business concepts
 
 **Forbidden:**
@@ -25,6 +25,9 @@ domain/entities/liveData.ts       ← OK: pure interface
 domain/entities/pidDefinition.ts  ← OK: pure interface
 domain/entities/ecuInfo.ts        ← OK: pure interface
 domain/entities/vehicleProfile.ts ← OK: pure interface
+domain/vin.ts                     ← OK: rich value object (create + VinDecodeError + derived getters)
+domain/pidCode.ts                 ← OK: rich value object (create + PidCodeError + key getter)
+domain/diagnosisResult.ts         ← OK: rich value object (create derives severity, no presentation)
 ```
 
 ### `application/` — Ports & Use Cases (middle layer)

@@ -1,5 +1,5 @@
 import type { SimulationScenario } from '@/domain/simulationScenario.js'
-import type { FreezeFrame } from '@/domain/freezeFrame.js'
+import { FreezeFrame } from '@/domain/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/vehicleProfile.js'
 import {
   MODE_CURRENT_DATA,
@@ -64,9 +64,11 @@ export class ObdSimulator {
     throw new Error(`PID ${mode} ${pid} not supported by current scenario`)
   }
 
-  /** Service 02 — Devuelve los datos de freeze frame simulados. */
+  /** Service 02 — Devuelve los datos de freeze frame simulados como instancia de FreezeFrame. */
   getFreezeFrame(_dtc?: string): FreezeFrame | null {
-    return this.scenario.freezeFrame ?? null
+    const frame = this.scenario.freezeFrame
+    if (!frame) return null
+    return FreezeFrame.create({ dtcCode: frame.dtcCode, pidValues: { ...frame.pidValues } })
   }
 
   /** Service 09 — Devuelve el VIN del vehiculo simulado. */

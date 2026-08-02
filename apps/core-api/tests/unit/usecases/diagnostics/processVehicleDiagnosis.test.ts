@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { processVehicleDiagnosis } from '@/application/use-cases/processVehicleDiagnosis.js'
 import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
-import type { FreezeFrame } from '@/domain/freezeFrame.js'
+import { FreezeFrame } from '@/domain/freezeFrame.js'
 import { Vin } from '@/domain/vin.js'
 
 const sensorValues = { rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 }
@@ -36,7 +36,10 @@ function mockRepo(overrides: Partial<ObdRepositoryPort> = {}): ObdRepositoryPort
 }
 
 function mockFreezeFrame(): FreezeFrame {
-  return { dtcCode: 'P0301', pidValues: { rpm: 800, coolantTemp: 95, speed: 60 } }
+  return FreezeFrame.create({
+    dtcCode: 'P0301',
+    pidValues: { rpm: 800, coolantTemp: 95, speed: 60 },
+  })
 }
 
 describe('processVehicleDiagnosis', () => {
@@ -89,20 +92,15 @@ describe('processVehicleDiagnosis', () => {
     expect(result.dtcCodes).toHaveLength(0)
   })
 
-  it('should generate a human-readable diagnosis text', async () => {
+  it('should derive severity from the entity instead of accepting it', async () => {
     const repo = mockRepo()
 
     const result = await processVehicleDiagnosis(repo)
 
-    expect(result.diagnosisText).toBeTruthy()
-    expect(result.diagnosisText).toContain('P0301')
-  })
-
-  it('should include raw data representation', async () => {
-    const repo = mockRepo()
-
-    const result = await processVehicleDiagnosis(repo)
-
-    expect(result.rawData).toBeTruthy()
+    expect(result.hasFreezeFrame).toBe(false)
+    expect(result.dtcCount).toBe(dtcCodes.length)
+    expect(result.severity).toBe('high')
+    expect(result).not.toHaveProperty('diagnosisText')
+    expect(result).not.toHaveProperty('rawData')
   })
 })

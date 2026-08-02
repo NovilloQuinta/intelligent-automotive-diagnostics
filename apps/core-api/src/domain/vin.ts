@@ -124,6 +124,9 @@ const MODEL_YEAR_TABLE: Record<string, number> = {
   '9': 2009,
 }
 
+/** VIN de reserva cuando no se conoce el vehiculo (modo TCP directo, emulador sin escenario). */
+export const FALLBACK_VIN = 'XXXXXXXXXXXXXXXXX' as const
+
 /** Value Object que representa un VIN valido segun ISO 3779. */
 export class Vin {
   private constructor(readonly value: string) {}
