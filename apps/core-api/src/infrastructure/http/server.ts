@@ -20,7 +20,7 @@ import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 export interface ServerDependencies {
   readonly scenarios: SimulationScenario[]
   readonly rateLimit?: Partial<RateLimiterConfig>
-  readonly auditRepo?: AuditLogRepository
+  readonly auditRepo: AuditLogRepository
   readonly userRepo?: UserRepository
   readonly authService?: AuthServicePort
   readonly tokenStore?: RefreshTokenRepository
@@ -35,9 +35,7 @@ export interface ServerDependencies {
 function applyBaseMiddleware(app: express.Application, deps: ServerDependencies): void {
   app.use(helmet())
   app.use(createRateLimiter(deps.rateLimit))
-  if (deps.auditRepo) {
-    app.use(createAuditLogger(deps.auditRepo))
-  }
+  app.use(createAuditLogger(deps.auditRepo))
   app.use(express.json({ limit: '10kb' }))
 }
 

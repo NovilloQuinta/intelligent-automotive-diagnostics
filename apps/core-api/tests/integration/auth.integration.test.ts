@@ -3,6 +3,9 @@ import request from 'supertest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { createServer } from '@/infrastructure/http/server.js'
+import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.js'
+
+const mockAuditRepo: AuditLogRepository = { create: async () => {} }
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
 import { SqliteRefreshTokenStore } from '@/infrastructure/persistence/sqlite/refreshTokenStore.js'
 import { createAuthService } from '@/infrastructure/services/authService.js'
@@ -59,6 +62,7 @@ describe('Auth integration', () => {
       accessTokenSecret: ACCESS_SECRET,
       allowedOrigins: '*',
       nodeEnv: 'test',
+      auditRepo: mockAuditRepo,
     })
   })
 

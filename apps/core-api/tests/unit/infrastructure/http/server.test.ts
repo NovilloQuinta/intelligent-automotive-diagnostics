@@ -4,7 +4,9 @@ import type { Server } from 'node:http'
 import { createServer } from '@/infrastructure/http/server.js'
 import type { SimulationScenario } from '@/infrastructure/obd/simulationScenario.js'
 import { Vin } from '@/domain/value-objects/vin.js'
-import type { ObdRepository } from '@/application/ports/ObdRepository.js'
+import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.js'
+
+const mockAuditRepo: AuditLogRepository = { create: async () => {} }
 
 const mockScenarios: SimulationScenario[] = [
   {
@@ -41,7 +43,7 @@ let baseUrl: string
 let httpServer: Server
 
 beforeAll(async () => {
-  const app = createServer({ scenarios: mockScenarios, allowedOrigins: 'http://localhost:3000', nodeEnv: 'test' })
+  const app = createServer({ scenarios: mockScenarios, allowedOrigins: 'http://localhost:3000', nodeEnv: 'test', auditRepo: mockAuditRepo })
   await new Promise<void>((resolve) => {
     httpServer = app.listen(0, () => resolve())
   })
@@ -232,7 +234,7 @@ describe('HTTP server', () => {
     }
 
     beforeAll(async () => {
-      const app = createServer({ scenarios: [], obdRepo: mockObdRepo, allowedOrigins: 'http://localhost:3000', nodeEnv: 'test' })
+      const app = createServer({ scenarios: [], obdRepo: mockObdRepo, allowedOrigins: 'http://localhost:3000', nodeEnv: 'test', auditRepo: mockAuditRepo })
       await new Promise<void>((resolve) => {
         tcpServer = app.listen(0, () => resolve())
       })

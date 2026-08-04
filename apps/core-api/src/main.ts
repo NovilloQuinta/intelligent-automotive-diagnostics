@@ -13,11 +13,13 @@ import { createAnthropicClient } from '@/infrastructure/llm/anthropicClient.js'
 import { createOpenAiClient } from '@/infrastructure/llm/openAiClient.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import { loadConfig, assertProductionSecrets } from '@/infrastructure/configuration/index.js'
+import { SqliteAuditLogRepository } from '@/infrastructure/persistence/sqlite/auditLogRepository.js'
 
 const config = loadConfig()
 assertProductionSecrets(config)
 
 const db = getDb(config.DB_PATH)
+const auditRepo = new SqliteAuditLogRepository(db)
 const userRepo = new SqliteUserRepository(db)
 const tokenStore = new SqliteRefreshTokenStore(db)
 const authService = createAuthService({
@@ -93,6 +95,7 @@ const app = createServer({
   llmClient,
   allowedOrigins: config.ALLOWED_ORIGINS,
   nodeEnv: config.NODE_ENV,
+  auditRepo,
 })
 
 app.listen(config.PORT, () => {
