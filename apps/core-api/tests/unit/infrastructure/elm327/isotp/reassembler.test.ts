@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { reassembleFrames } from '@/infrastructure/obd/isotp/reassembler.js'
+import { reassembleFrames } from '@/infrastructure/elm327/isotp/reassembler.js'
 import {
   IsotpFrameError,
   IsotpSequenceError,
   IsotpTruncatedError,
-} from '@/infrastructure/obd/isotp/frameTypes.js'
+} from '@/infrastructure/elm327/isotp/frameTypes.js'
 
 function payloadBytes(count: number, offset = 0): number[] {
   return Array.from({ length: count }, (_, i) => (i + offset) % 256)

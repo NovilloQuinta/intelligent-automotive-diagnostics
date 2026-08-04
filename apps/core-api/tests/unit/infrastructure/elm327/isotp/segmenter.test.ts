@@ -3,9 +3,9 @@ import {
   segmentPayload,
   computeFrameCount,
   IsotpOverflowError,
-} from '@/infrastructure/obd/isotp/segmenter.js'
-import { FrameType, parsePci } from '@/infrastructure/obd/isotp/frameTypes.js'
-import { reassembleFrames } from '@/infrastructure/obd/isotp/reassembler.js'
+} from '@/infrastructure/elm327/isotp/segmenter.js'
+import { FrameType, parsePci } from '@/infrastructure/elm327/isotp/frameTypes.js'
+import { reassembleFrames } from '@/infrastructure/elm327/isotp/reassembler.js'
 
 function payloadBytes(count: number, offset = 0): number[] {
   return Array.from({ length: count }, (_, i) => (i + offset) % 256)

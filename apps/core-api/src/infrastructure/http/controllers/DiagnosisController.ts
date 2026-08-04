@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express'
 import { z } from 'zod'
-import { ObdSimulator } from '@/infrastructure/obd/simulator.js'
-import { ObdSimulatorRepository } from '@/infrastructure/obd/simulatorAdapter.js'
+import { ObdSimulator } from '@/infrastructure/simulation/simulator.js'
+import { ObdSimulatorRepository } from '@/infrastructure/simulation/simulatorAdapter.js'
 import { ProcessVehicleDiagnosisUseCase, DIAGNOSIS_TIMEOUT_MS, withTimeout } from '@/application/use-cases/ProcessVehicleDiagnosisUseCase.js'
 import { ExecuteCognitiveDiagnosisUseCase } from '@/application/use-cases/ExecuteCognitiveDiagnosisUseCase.js'
 import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
@@ -11,8 +11,8 @@ import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
 import type { DiagnosisResult } from '@/domain/value-objects/diagnosisResult.js'
 import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/ExecuteCognitiveDiagnosisOutput.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
-import { VehicleType } from '@/infrastructure/obd/simulationScenario.js'
-import type { SimulationScenario } from '@/infrastructure/obd/simulationScenario.js'
+import { VehicleType } from '@/infrastructure/simulation/scenario.js'
+import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 
 const COGNITIVE_DIAGNOSIS_TIMEOUT_MS = 60_000
 

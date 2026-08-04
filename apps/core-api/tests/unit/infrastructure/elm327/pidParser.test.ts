@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { evaluatePid, PidParseError } from '@/infrastructure/obd/pidParser.js'
+import { evaluatePid, PidParseError } from '@/infrastructure/elm327/pidParser.js'
 
 describe('evaluatePid', () => {
   // ─── 1. Un test por cada fórmula de PID del catálogo (20 tests) ───

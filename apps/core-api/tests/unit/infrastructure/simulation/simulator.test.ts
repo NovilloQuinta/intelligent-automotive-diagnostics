@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { ObdSimulator } from '@/infrastructure/obd/simulator.js'
+import { ObdSimulator } from '@/infrastructure/simulation/simulator.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
-import type { SimulationScenario } from '@/infrastructure/obd/simulationScenario.js'
+import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import type { LiveData } from '@/domain/value-objects/liveData.js'
 
 const audiIdleSensorValues: LiveData = {

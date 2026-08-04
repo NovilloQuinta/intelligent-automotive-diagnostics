@@ -3,7 +3,7 @@ import request from 'supertest'
 import express from 'express'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
 import { Vin } from '@/domain/value-objects/vin.js'
-import type { SimulationScenario } from '@/infrastructure/obd/simulationScenario.js'
+import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmClientPort, ToolCallTrace } from '@/application/ports/LlmClientPort.js'
 

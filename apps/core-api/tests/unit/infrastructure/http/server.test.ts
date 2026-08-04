@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import type { AddressInfo } from 'node:net'
 import type { Server } from 'node:http'
 import { createServer } from '@/infrastructure/http/server.js'
-import type { SimulationScenario } from '@/infrastructure/obd/simulationScenario.js'
+import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.js'
 

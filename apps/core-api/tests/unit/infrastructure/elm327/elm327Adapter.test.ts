@@ -5,7 +5,7 @@ import {
   Elm327ConnectionError,
   Elm327NoDataError,
   Elm327ParseError,
-} from '@/infrastructure/obd/elm327TcpRepository.js'
+} from '@/infrastructure/elm327/elm327Adapter.js'
 
 vi.mock('node:net', () => {
   const createConnection = vi.fn(() => {

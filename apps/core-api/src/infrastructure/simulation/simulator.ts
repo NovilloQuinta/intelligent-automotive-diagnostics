@@ -1,4 +1,4 @@
-import type { SimulationScenario } from './simulationScenario.js'
+import type { SimulationScenario } from './scenario.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import {

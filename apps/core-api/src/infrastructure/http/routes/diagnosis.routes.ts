@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import type { SimulationScenario } from '@/infrastructure/obd/simulationScenario.js'
+import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'

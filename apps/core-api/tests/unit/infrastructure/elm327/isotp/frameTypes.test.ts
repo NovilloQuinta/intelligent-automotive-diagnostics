@@ -4,7 +4,7 @@ import {
   parsePci,
   buildPci,
   IsotpFrameError,
-} from '@/infrastructure/obd/isotp/frameTypes.js'
+} from '@/infrastructure/elm327/isotp/frameTypes.js'
 
 describe('parsePci', () => {
   describe('Single Frame (PCI 0x0n)', () => {
