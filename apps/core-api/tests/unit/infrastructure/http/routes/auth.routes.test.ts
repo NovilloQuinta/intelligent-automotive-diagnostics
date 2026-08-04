@@ -2,18 +2,18 @@ import { describe, it, expect, vi } from 'vitest'
 import request from 'supertest'
 import express from 'express'
 import { createAuthRoutes } from '@/infrastructure/http/routes/auth.routes.js'
-import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
-import type { AuthServicePort } from '@/application/ports/authService.port.js'
-import type { RefreshTokenRepositoryPort } from '@/application/ports/refreshTokenRepository.port.js'
+import type { UserRepository } from '@/application/ports/UserRepository.js'
+import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
+import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
 
 function createTestApp(
   overrides: {
-    userRepo?: Partial<UserRepositoryPort>
+    userRepo?: Partial<UserRepository>
     authService?: Partial<AuthServicePort>
-    tokenStore?: Partial<RefreshTokenRepositoryPort>
+    tokenStore?: Partial<RefreshTokenRepository>
   } = {},
 ) {
-  const userRepo: UserRepositoryPort = {
+  const userRepo: UserRepository = {
     findByEmail: vi.fn().mockResolvedValue(null),
     findById: vi.fn().mockResolvedValue(null),
     create: vi.fn().mockResolvedValue({
@@ -45,7 +45,7 @@ function createTestApp(
     ...overrides.authService,
   }
 
-  const tokenStore: RefreshTokenRepositoryPort = {
+  const tokenStore: RefreshTokenRepository = {
     saveRefreshToken: vi.fn().mockResolvedValue(undefined),
     findRefreshToken: vi.fn().mockResolvedValue(null),
     revokeRefreshToken: vi.fn().mockResolvedValue(undefined),

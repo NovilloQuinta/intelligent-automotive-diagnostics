@@ -1,9 +1,10 @@
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { randomUUID } from 'node:crypto'
-import type { AuthServicePort, TokenPair } from '@/application/ports/authService.port.js'
-import type { RefreshTokenRepositoryPort } from '@/application/ports/refreshTokenRepository.port.js'
-import { hashToken, REFRESH_TOKEN_DURATION_MS } from '@/application/use-cases/hashToken.js'
+import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
+import type { TokenPair } from '@/application/dto/TokenPair.js'
+import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
+import { hashToken, REFRESH_TOKEN_DURATION_MS } from '@/application/shared/hashToken.js'
 
 /** Configuracion del servicio de autenticacion. */
 interface AuthServiceConfig {
@@ -11,7 +12,7 @@ interface AuthServiceConfig {
   readonly refreshTokenSecret: string
   readonly accessTokenExpiresIn: string
   readonly refreshTokenExpiresIn: string
-  readonly tokenStore: RefreshTokenRepositoryPort
+  readonly tokenStore: RefreshTokenRepository
 }
 
 const BCRYPT_ROUNDS = 12

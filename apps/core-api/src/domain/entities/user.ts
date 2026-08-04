@@ -49,6 +49,3 @@ export class User {
     return this.userType === 'workshop'
   }
 }
-
-/** Datos necesarios para crear un usuario (sin id ni createdAt, que asigna la DB). */
-export type CreateUserInput = Omit<User, 'id' | 'createdAt' | 'isWorkshop'>

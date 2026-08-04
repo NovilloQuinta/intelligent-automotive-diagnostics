@@ -3,13 +3,14 @@ import type { Request, Response } from 'express'
 import { z } from 'zod'
 import { ObdSimulator } from '@/infrastructure/obd/simulator.js'
 import { ObdSimulatorRepository } from '@/infrastructure/obd/simulatorAdapter.js'
-import { processVehicleDiagnosis, DIAGNOSIS_TIMEOUT_MS, withTimeout } from '@/application/use-cases/processVehicleDiagnosis.js'
-import type { CognitiveDiagnosisResult } from '@/application/use-cases/executeCognitiveDiagnosis.js'
+import { ProcessVehicleDiagnosisUseCase, DIAGNOSIS_TIMEOUT_MS, withTimeout } from '@/application/use-cases/ProcessVehicleDiagnosisUseCase.js'
+import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/ExecuteCognitiveDiagnosisOutput.js'
 import type { DiagnosisResult } from '@/domain/value-objects/diagnosisResult.js'
-import { executeCognitiveDiagnosis } from '@/application/use-cases/executeCognitiveDiagnosis.js'
+import { ExecuteCognitiveDiagnosisUseCase } from '@/application/use-cases/ExecuteCognitiveDiagnosisUseCase.js'
 import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
-import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
-import type { LlmClientPort, ToolCallHandler } from '@/application/ports/llmClient.port.js'
+import type { ObdRepository } from '@/application/ports/ObdRepository.js'
+import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
+import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import { VehicleType } from '@/infrastructure/obd/simulationScenario.js'
 import type { SimulationScenario } from '@/infrastructure/obd/simulationScenario.js'
@@ -82,7 +83,7 @@ const TCP_DIRECT_SCENARIO: SimulationScenario = {
 
 interface DiagnosisRoutesDeps {
   readonly scenarios: SimulationScenario[]
-  readonly obdRepo?: ObdRepositoryPort
+  readonly obdRepo?: ObdRepository
   /** Cliente LLM opcional: si no se inyecta, el endpoint cognitivo no se monta. */
   readonly llmClient?: LlmClientPort
   /** Timeout del diagnóstico cognitivo en ms (default: {@link COGNITIVE_DIAGNOSIS_TIMEOUT_MS}). */
@@ -95,7 +96,7 @@ function parseBodyAndResolve<T extends { scenarioId?: string }>(
   res: Response,
   body: unknown,
   schema: { safeParse: (data: unknown) => { success: true; data: T } | { success: false; error: { issues: unknown[] } } },
-): { repository: ObdRepositoryPort; data: T } | null {
+): { repository: ObdRepository; data: T } | null {
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
     res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
@@ -113,7 +114,7 @@ function parseBodyAndResolve<T extends { scenarioId?: string }>(
 function resolveRepository(
   deps: DiagnosisRoutesDeps,
   scenarioId?: string,
-): ObdRepositoryPort | null {
+): ObdRepository | null {
   if (deps.obdRepo) return deps.obdRepo
   const scenario = deps.scenarios.find((s) => s.id === scenarioId)
   return scenario ? new ObdSimulatorRepository(new ObdSimulator(scenario)) : null
@@ -134,7 +135,8 @@ function createDiagnosisHandler(deps: DiagnosisRoutesDeps) {
     const resolved = parseBodyAndResolve(deps, res, req.body, schema)
     if (!resolved) return
 
-    const result = await processVehicleDiagnosis(resolved.repository)
+    const useCase = new ProcessVehicleDiagnosisUseCase(resolved.repository)
+    const result = await useCase.execute()
     res.status(200).json({
       rawData: JSON.stringify(result.parsedValues),
       parsedValues: result.parsedValues,
@@ -238,19 +240,17 @@ function createCognitiveDiagnosisHandler(deps: DiagnosisRoutesDeps) {
 
 /** Ejecuta diagnóstico cognitivo con timeout. Extraído del handler para reducir nesting. */
 async function runCognitiveDiagnosis(params: {
-  repository: ObdRepositoryPort
+  repository: ObdRepository
   llmClient: LlmClientPort
   tools: ReturnType<ReturnType<typeof createMcpServer>['listTools']>
   handler: ToolCallHandler
   userQuery?: string
   timeoutMs: number
-}): Promise<CognitiveDiagnosisResult> {
+}): Promise<ExecuteCognitiveDiagnosisOutput> {
   const diagnosis = (async () => {
     const vehicleContext = await params.repository.getVehicleInfo()
-    return executeCognitiveDiagnosis({
-      llmClient: params.llmClient,
-      tools: params.tools,
-      handler: params.handler,
+    const useCase = new ExecuteCognitiveDiagnosisUseCase(params.llmClient, params.tools, params.handler)
+    return useCase.execute({
       userQuery: params.userQuery,
       vehicleContext,
     })

@@ -1,14 +1,15 @@
 import { eq } from 'drizzle-orm'
 import * as schema from './schema.js'
 import type { DiagnosticsDb } from './db.js'
-import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
-import { User, type CreateUserInput } from '@/domain/entities/user.js'
+import type { UserRepository } from '@/application/ports/UserRepository.js'
+import { User } from '@/domain/entities/user.js'
+import type { CreateUserInput } from '@/application/dto/CreateUserInput.js'
 import { Email } from '@/domain/value-objects/email.js'
 
 type UserRow = typeof schema.users.$inferSelect
 
-/** Implementacion de {@link UserRepositoryPort} con SQLite via Drizzle ORM. */
-export class SqliteUserRepository implements UserRepositoryPort {
+/** Implementacion de {@link UserRepository} con SQLite via Drizzle ORM. */
+export class SqliteUserRepository implements UserRepository {
   constructor(private readonly db: DiagnosticsDb) {}
 
   private toUser(row: UserRow): User {

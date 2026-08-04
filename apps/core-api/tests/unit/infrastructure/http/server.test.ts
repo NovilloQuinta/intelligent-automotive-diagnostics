@@ -4,7 +4,7 @@ import type { Server } from 'node:http'
 import { createServer } from '@/infrastructure/http/server.js'
 import type { SimulationScenario } from '@/infrastructure/obd/simulationScenario.js'
 import { Vin } from '@/domain/value-objects/vin.js'
-import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
+import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 
 const mockScenarios: SimulationScenario[] = [
   {
@@ -214,7 +214,7 @@ describe('HTTP server', () => {
   describe('TCP mode (obdRepo inyectado, scenarios vacíos)', () => {
     let tcpBaseUrl: string
     let tcpServer: Server
-    const mockObdRepo: ObdRepositoryPort = {
+    const mockObdRepo: ObdRepository = {
       readPid: vi.fn(async (_mode: string, pid: string) => (pid === '0C' ? 800 : 90)),
       getSupportedPids: vi.fn(async () => ['01 0C']),
       getFreezeFrame: vi.fn(async () => null),

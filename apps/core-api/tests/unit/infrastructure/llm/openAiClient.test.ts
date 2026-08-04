@@ -4,7 +4,8 @@ import {
   OpenAiTimeoutError,
   OpenAiApiError,
 } from '@/infrastructure/llm/openAiClient.js'
-import type { LlmClientPort, ToolCallHandler } from '@/application/ports/llmClient.port.js'
+import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
+import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
 import type OpenAI from 'openai'
 
 /** Mock de la funcion `create` del SDK openai. */

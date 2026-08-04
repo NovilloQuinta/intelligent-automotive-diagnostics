@@ -1,8 +1,8 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
-import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
-import type { VehicleRepositoryPort } from '@/application/ports/vehicleRepository.port.js'
-import type { McpToolDefinition } from '@/application/ports/llmClient.port.js'
+import type { ObdRepository } from '@/application/ports/ObdRepository.js'
+import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
+import type { McpToolDefinition } from '@/application/dto/McpToolDefinition.js'
 
 /** Resultado de invocar una tool MCP (siempre contenido de tipo texto). */
 export interface ToolCallResult {
@@ -63,8 +63,8 @@ type ToolRegistrar = (
 /** Registra las 6 tools de diagnóstico OBD-II sobre el repositorio inyectado. */
 function registerDiagnosticTools(
   register: ToolRegistrar,
-  repo: ObdRepositoryPort,
-  vehicleRepo: VehicleRepositoryPort | undefined,
+  repo: ObdRepository,
+  vehicleRepo: VehicleRepository | undefined,
 ): void {
   register(
     'read_pid',
@@ -140,12 +140,12 @@ function registerDiagnosticTools(
 }
 
 /** Crea un servidor MCP con tools de diagnóstico OBD-II.
- * Capa 1: tools sobre {@link ObdRepositoryPort} (hardware).
- * Capa 2: tools sobre {@link VehicleRepositoryPort} (catálogo).
+ * Capa 1: tools sobre {@link ObdRepository} (hardware).
+ * Capa 2: tools sobre {@link VehicleRepository} (catálogo).
  */
 export function createMcpServer(
-  repo: ObdRepositoryPort,
-  vehicleRepo?: VehicleRepositoryPort,
+  repo: ObdRepository,
+  vehicleRepo?: VehicleRepository,
 ): DiagnosticsMcpServer {
   const server = new McpServer({
     name: 'obd-diagnostics',

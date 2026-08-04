@@ -6,27 +6,27 @@ import { openApiSpec } from '@/infrastructure/http/swagger.js'
 import { createRateLimiter } from '@/infrastructure/http/middleware/rate-limiter.middleware.js'
 import type { RateLimiterConfig } from '@/infrastructure/http/middleware/rate-limiter.middleware.js'
 import { createAuditLogger } from '@/infrastructure/http/middleware/audit-logger.middleware.js'
-import type { AuditLogRepositoryPort } from '@/application/ports/auditLogRepository.port.js'
+import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.js'
 import { createAuthMiddleware } from '@/infrastructure/http/middleware/auth.middleware.js'
 import { createAuthRoutes } from '@/infrastructure/http/routes/auth.routes.js'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
-import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
-import type { AuthServicePort } from '@/application/ports/authService.port.js'
-import type { RefreshTokenRepositoryPort } from '@/application/ports/refreshTokenRepository.port.js'
-import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
-import type { LlmClientPort } from '@/application/ports/llmClient.port.js'
+import type { UserRepository } from '@/application/ports/UserRepository.js'
+import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
+import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
+import type { ObdRepository } from '@/application/ports/ObdRepository.js'
+import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 
 /** Dependencias del servidor Express. */
 export interface ServerDependencies {
   readonly scenarios: SimulationScenario[]
   readonly rateLimit?: Partial<RateLimiterConfig>
-  readonly auditRepo?: AuditLogRepositoryPort
-  readonly userRepo?: UserRepositoryPort
+  readonly auditRepo?: AuditLogRepository
+  readonly userRepo?: UserRepository
   readonly authService?: AuthServicePort
-  readonly tokenStore?: RefreshTokenRepositoryPort
+  readonly tokenStore?: RefreshTokenRepository
   readonly accessTokenSecret?: string
   /** Repositorio OBD externo (ej. Elm327TcpRepository en OBD_MODE=tcp). */
-  readonly obdRepo?: ObdRepositoryPort
+  readonly obdRepo?: ObdRepository
   /** Cliente LLM opcional: si se inyecta, se monta el endpoint de diagnóstico cognitivo. */
   readonly llmClient?: LlmClientPort
 }

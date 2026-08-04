@@ -1,34 +1,34 @@
 import { Router } from 'express'
 import type { Request, Response } from 'express'
 import { ZodError } from 'zod'
-import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
-import type { AuthServicePort } from '@/application/ports/authService.port.js'
-import type { RefreshTokenRepositoryPort } from '@/application/ports/refreshTokenRepository.port.js'
+import type { UserRepository } from '@/application/ports/UserRepository.js'
+import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
+import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
 import {
+  RegisterUserUseCase,
   EmailAlreadyRegisteredError,
-  createRegisterUserUseCase,
-} from '@/application/use-cases/registerUser.js'
+} from '@/application/use-cases/RegisterUserUseCase.js'
 import {
+  LoginUserUseCase,
   InvalidCredentialsError,
-  createLoginUserUseCase,
-} from '@/application/use-cases/loginUser.js'
-import { createRefreshTokenUseCase } from '@/application/use-cases/refreshToken.js'
+} from '@/application/use-cases/LoginUserUseCase.js'
+import { RefreshTokenUseCase } from '@/application/use-cases/RefreshTokenUseCase.js'
 
 /** Crea un Express Router con las rutas de autenticacion. */
 export function createAuthRoutes(
-  userRepo: UserRepositoryPort,
+  userRepo: UserRepository,
   authService: AuthServicePort,
-  tokenStore: RefreshTokenRepositoryPort,
+  tokenStore: RefreshTokenRepository,
 ): Router {
   const router = Router()
 
-  const registerUser = createRegisterUserUseCase({ userRepo, authService, tokenStore })
-  const loginUser = createLoginUserUseCase({ userRepo, authService, tokenStore })
-  const refreshToken = createRefreshTokenUseCase({ authService })
+  const registerUser = new RegisterUserUseCase(userRepo, authService, tokenStore)
+  const loginUser = new LoginUserUseCase(userRepo, authService, tokenStore)
+  const refreshToken = new RefreshTokenUseCase(authService)
 
   router.post('/register', async (req: Request, res: Response) => {
     try {
-      const result = await registerUser(req.body)
+      const result = await registerUser.execute(req.body)
       res.status(201).json(result)
     } catch (err) {
       if (err instanceof ZodError) {
@@ -45,7 +45,7 @@ export function createAuthRoutes(
 
   router.post('/login', async (req: Request, res: Response) => {
     try {
-      const result = await loginUser(req.body)
+      const result = await loginUser.execute(req.body)
       res.status(200).json(result)
     } catch (err) {
       if (err instanceof ZodError) {
@@ -62,7 +62,7 @@ export function createAuthRoutes(
 
   router.post('/refresh', async (req: Request, res: Response) => {
     try {
-      const result = await refreshToken(req.body)
+      const result = await refreshToken.execute(req.body)
       res.status(200).json(result)
     } catch (err) {
       if (err instanceof ZodError) {

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { EventEmitter } from 'node:events'
 import { createAuditLogger } from '@/infrastructure/http/middleware/audit-logger.middleware.js'
-import type { AuditLogRepositoryPort } from '@/application/ports/auditLogRepository.port.js'
+import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.js'
 
 function createMockRes() {
   const emitter = new EventEmitter()
@@ -24,7 +24,7 @@ function createMockReq(overrides: Record<string, unknown> = {}) {
 }
 
 describe('createAuditLogger', () => {
-  let mockRepo: AuditLogRepositoryPort
+  let mockRepo: AuditLogRepository
   let middleware: ReturnType<typeof createAuditLogger>
 
   beforeEach(() => {

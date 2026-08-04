@@ -3,15 +3,15 @@ import * as schema from './schema.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { PidCode } from '@/domain/value-objects/pidCode.js'
 import type { DiagnosticsDb } from './db.js'
-import type { VehicleRepositoryPort } from '@/application/ports/vehicleRepository.port.js'
+import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import type { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
 import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
 import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import type { PidReading } from '@/domain/entities/pidReading.js'
 
-/** Implementación de {@link VehicleRepositoryPort} con SQLite via Drizzle ORM. */
-export class SqliteVehicleRepository implements VehicleRepositoryPort {
+/** Implementación de {@link VehicleRepository} con SQLite via Drizzle ORM. */
+export class SqliteVehicleRepository implements VehicleRepository {
   constructor(private readonly db: DiagnosticsDb) {}
 
   async upsertVehicle(profile: VehicleProfile): Promise<VehicleProfile> {

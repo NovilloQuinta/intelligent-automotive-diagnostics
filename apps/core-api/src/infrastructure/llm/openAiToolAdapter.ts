@@ -1,4 +1,4 @@
-import type { McpToolDefinition } from '@/application/ports/llmClient.port.js'
+import type { McpToolDefinition } from '@/application/dto/McpToolDefinition.js'
 import type OpenAI from 'openai'
 import { mcpToolDefinitionSchema } from '@/infrastructure/llm/toolDefinitionSchema.js'
 

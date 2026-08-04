@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
-import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
-import type { VehicleRepositoryPort } from '@/application/ports/vehicleRepository.port.js'
+import type { ObdRepository } from '@/application/ports/ObdRepository.js'
+import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
 
-function mockObdRepo(overrides: Partial<ObdRepositoryPort> = {}): ObdRepositoryPort {
+function mockObdRepo(overrides: Partial<ObdRepository> = {}): ObdRepository {
   return {
     readPid: vi.fn().mockResolvedValue(750),
     getSupportedPids: vi.fn().mockResolvedValue(['01 0C']),
@@ -26,7 +26,7 @@ function mockObdRepo(overrides: Partial<ObdRepositoryPort> = {}): ObdRepositoryP
   }
 }
 
-function mockVehicleRepo(overrides: Partial<VehicleRepositoryPort> = {}): VehicleRepositoryPort {
+function mockVehicleRepo(overrides: Partial<VehicleRepository> = {}): VehicleRepository {
   return {
     upsertVehicle: vi.fn(),
     findVehicleByVin: vi.fn(),

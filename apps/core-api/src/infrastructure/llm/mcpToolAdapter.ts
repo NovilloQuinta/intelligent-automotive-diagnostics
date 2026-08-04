@@ -1,5 +1,5 @@
 import type Anthropic from '@anthropic-ai/sdk'
-import type { McpToolDefinition } from '@/application/ports/llmClient.port.js'
+import type { McpToolDefinition } from '@/application/dto/McpToolDefinition.js'
 import { mcpToolDefinitionSchema } from '@/infrastructure/llm/toolDefinitionSchema.js'
 
 /** Schema por defecto cuando una herramienta no define schema. */

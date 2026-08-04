@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
-import { executeCognitiveDiagnosis } from '@/application/use-cases/executeCognitiveDiagnosis.js'
+import { ExecuteCognitiveDiagnosisUseCase } from '@/application/use-cases/ExecuteCognitiveDiagnosisUseCase.js'
 import type {
   LlmClientPort,
   McpToolDefinition,
   ToolCallHandler,
   ToolCallTrace,
-} from '@/application/ports/llmClient.port.js'
+} from '@/application/ports/LlmClientPort.js'
 import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
 import { Severity } from '@/domain/value-objects/diagnosisResult.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
@@ -51,10 +51,7 @@ describe('executeCognitiveDiagnosis', () => {
     })
     const handler: ToolCallHandler = vi.fn(async () => 'result')
 
-    await executeCognitiveDiagnosis({
-      llmClient,
-      tools: sixTools,
-      handler,
+    await new ExecuteCognitiveDiagnosisUseCase(llmClient, sixTools, handler).execute({
       userQuery: '¿Por qué tiembla el motor al ralentí?',
       vehicleContext,
     })
@@ -79,7 +76,7 @@ describe('executeCognitiveDiagnosis', () => {
       sendMessage: vi.fn().mockResolvedValue(cognitiveResponse('ok')),
     })
 
-    await executeCognitiveDiagnosis({ llmClient, tools: sixTools, handler })
+    await new ExecuteCognitiveDiagnosisUseCase(llmClient, sixTools, handler).execute({ llmClient, tools: sixTools, handler })
 
     const input = (llmClient.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
     expect(input.handler).toBe(handler)
@@ -94,10 +91,7 @@ describe('executeCognitiveDiagnosis', () => {
       sendMessage: vi.fn().mockResolvedValue(cognitiveResponse(text)),
     })
 
-    const result = await executeCognitiveDiagnosis({
-      llmClient,
-      tools: sixTools,
-      handler: vi.fn(),
+    const result = await new ExecuteCognitiveDiagnosisUseCase(llmClient, sixTools, vi.fn()).execute({
     })
 
     expect(result.diagnosis).toBe(text)
@@ -112,10 +106,7 @@ describe('executeCognitiveDiagnosis', () => {
       sendMessage: vi.fn().mockResolvedValue(cognitiveResponse(text)),
     })
 
-    const result = await executeCognitiveDiagnosis({
-      llmClient,
-      tools: sixTools,
-      handler: vi.fn(),
+    const result = await new ExecuteCognitiveDiagnosisUseCase(llmClient, sixTools, vi.fn()).execute({
     })
 
     expect(result.diagnosis).toBe(text)
@@ -132,10 +123,7 @@ describe('executeCognitiveDiagnosis', () => {
       sendMessage: vi.fn().mockResolvedValue(cognitiveResponse(text)),
     })
 
-    const result = await executeCognitiveDiagnosis({
-      llmClient,
-      tools: sixTools,
-      handler: vi.fn(),
+    const result = await new ExecuteCognitiveDiagnosisUseCase(llmClient, sixTools, vi.fn()).execute({
     })
 
     expect(result.diagnosis).toBe(text)
@@ -156,10 +144,7 @@ describe('executeCognitiveDiagnosis', () => {
       sendMessage: vi.fn().mockResolvedValue(cognitiveResponse(text)),
     })
 
-    const result = await executeCognitiveDiagnosis({
-      llmClient,
-      tools: sixTools,
-      handler: vi.fn(),
+    const result = await new ExecuteCognitiveDiagnosisUseCase(llmClient, sixTools, vi.fn()).execute({
     })
 
     expect(result.severity).toBe(Severity.Low)
@@ -173,10 +158,7 @@ describe('executeCognitiveDiagnosis', () => {
       sendMessage: vi.fn().mockResolvedValue(cognitiveResponse(text)),
     })
 
-    const result = await executeCognitiveDiagnosis({
-      llmClient,
-      tools: sixTools,
-      handler: vi.fn(),
+    const result = await new ExecuteCognitiveDiagnosisUseCase(llmClient, sixTools, vi.fn()).execute({
     })
 
     expect(result.diagnosis).toBe(text)
@@ -191,10 +173,7 @@ describe('executeCognitiveDiagnosis', () => {
       sendMessage: vi.fn().mockResolvedValue(cognitiveResponse(text)),
     })
 
-    const result = await executeCognitiveDiagnosis({
-      llmClient,
-      tools: sixTools,
-      handler: vi.fn(),
+    const result = await new ExecuteCognitiveDiagnosisUseCase(llmClient, sixTools, vi.fn()).execute({
     })
 
     expect(result.severity).toBe(Severity.Medium)
@@ -212,7 +191,7 @@ describe('executeCognitiveDiagnosis', () => {
     })
 
     await expect(
-      executeCognitiveDiagnosis({ llmClient, tools: sixTools, handler: vi.fn() }),
+      new ExecuteCognitiveDiagnosisUseCase(llmClient, sixTools, vi.fn()).execute({}),
     ).rejects.toBeInstanceOf(MaxToolCallIterationsError)
   })
 
@@ -232,10 +211,7 @@ describe('executeCognitiveDiagnosis', () => {
         ),
     })
 
-    const result = await executeCognitiveDiagnosis({
-      llmClient,
-      tools: sixTools,
-      handler: vi.fn(),
+    const result = await new ExecuteCognitiveDiagnosisUseCase(llmClient, sixTools, vi.fn()).execute({
     })
 
     expect(result.toolCalls).toEqual(toolCalls)
@@ -246,10 +222,7 @@ describe('executeCognitiveDiagnosis', () => {
       sendMessage: vi.fn().mockResolvedValue(cognitiveResponse('ok')),
     })
 
-    const result = await executeCognitiveDiagnosis({
-      llmClient,
-      tools: sixTools,
-      handler: vi.fn(),
+    const result = await new ExecuteCognitiveDiagnosisUseCase(llmClient, sixTools, vi.fn()).execute({
     })
 
     const input = (llmClient.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]

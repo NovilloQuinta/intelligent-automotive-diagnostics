@@ -8,10 +8,10 @@ import { VehicleType } from '@/infrastructure/obd/simulationScenario.js'
 import type { SimulationScenario } from '@/infrastructure/obd/simulationScenario.js'
 import { LiveData } from '@/domain/value-objects/liveData.js'
 import { Elm327TcpRepository } from '@/infrastructure/obd/elm327TcpRepository.js'
-import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
+import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import { createAnthropicClient } from '@/infrastructure/llm/anthropicClient.js'
 import { createOpenAiClient } from '@/infrastructure/llm/openAiClient.js'
-import type { LlmClientPort } from '@/application/ports/llmClient.port.js'
+import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 
 const OBD_MODE = process.env.OBD_MODE ?? 'sync'
 const LLM_PROVIDER = process.env.LLM_PROVIDER
@@ -80,7 +80,7 @@ const PORT = Number(process.env.PORT) || 4000
 
 // Modo dual OBD: 'sync' usa el simulador in-process con escenarios;
 // 'tcp' inyecta el repositorio ELM327 contra el emulador Docker.
-const obdRepo: ObdRepositoryPort | undefined =
+const obdRepo: ObdRepository | undefined =
   OBD_MODE === 'tcp' ? new Elm327TcpRepository({ host: ELM327_HOST, port: ELM327_PORT }) : undefined
 
 // Cliente LLM para el diagnóstico cognitivo (endpoint montado solo si se configura un proveedor).

@@ -1,5 +1,5 @@
 import { createConnection } from 'node:net'
-import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
+import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import { DtcCode } from '@/domain/value-objects/dtcCode.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
@@ -91,7 +91,7 @@ function formatCommand(mode: string, pid: string): string {
  * Conexión efímera por comando, parseo ELM327 sin headers (AT H0 por defecto),
  * aplicación de fórmulas SAE J1979 + VAG Mode 22, decodificación DTC SAE J2012.
  */
-export class Elm327TcpRepository implements ObdRepositoryPort {
+export class Elm327TcpRepository implements ObdRepository {
   private readonly host: string
   private readonly port: number
   private readonly timeoutMs: number

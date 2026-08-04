@@ -1,4 +1,4 @@
-import type { ToolCallTrace } from '@/application/ports/llmClient.port.js'
+import type { ToolCallTrace } from '@/application/dto/ToolCallTrace.js'
 
 /** Error lanzado cuando el bucle de tool calling alcanza el limite maximo de iteraciones. */
 export class MaxToolCallIterationsError extends Error {

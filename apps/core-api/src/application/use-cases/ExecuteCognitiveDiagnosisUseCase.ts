@@ -1,30 +1,13 @@
 import { Severity } from '@/domain/value-objects/diagnosisResult.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import { parseCognitiveDiagnosis } from '@/application/llm/extractLlmDiagnosis.js'
+import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
+import type { McpToolDefinition } from '@/application/dto/McpToolDefinition.js'
+import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
 import type {
-  LlmClientPort,
-  McpToolDefinition,
-  ToolCallHandler,
-  ToolCallTrace,
-} from '@/application/ports/llmClient.port.js'
-
-/** Entrada para el caso de uso de diagnostico cognitivo. */
-export interface ExecuteCognitiveDiagnosisInput {
-  readonly llmClient: LlmClientPort
-  readonly tools: readonly McpToolDefinition[]
-  readonly handler: ToolCallHandler
-  readonly userQuery?: string
-  readonly vehicleContext?: VehicleInfo
-}
-
-/** Resultado de un diagnostico cognitivo generado por un LLM via MCP tool calling. */
-export interface CognitiveDiagnosisResult {
-  readonly diagnosis: string
-  readonly severity: Severity
-  readonly confidence: number
-  readonly recommendations: string[]
-  readonly toolCalls: readonly ToolCallTrace[]
-}
+  ExecuteCognitiveDiagnosisInput,
+} from '@/application/dto/ExecuteCognitiveDiagnosisInput.js'
+import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/ExecuteCognitiveDiagnosisOutput.js'
 
 /** Prompt del sistema: pide explorar tools OBD-II, razonar causa raíz y devolver bloque JSON al final. */
 const COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT = [
@@ -53,30 +36,31 @@ function buildUserMessage(
   return `${contextLine}\n${queryLine}`
 }
 
-/**
- * Orquesta diagnóstico cognitivo: tool calling LLM + parseo del bloque JSON.
- * @param input — cliente LLM, tools MCP, handler bridge y contexto opcional
- * @returns Diagnóstico narrativo con severidad, confianza, recomendaciones y traza de tools
- * @throws {MaxToolCallIterationsError} si el LLM excede el límite de iteraciones
- */
-export async function executeCognitiveDiagnosis(
-  input: ExecuteCognitiveDiagnosisInput,
-): Promise<CognitiveDiagnosisResult> {
-  const { llmClient, tools, handler, userQuery, vehicleContext } = input
+/** Caso de uso: diagnostico cognitivo via LLM + tool calling MCP. */
+export class ExecuteCognitiveDiagnosisUseCase {
+  constructor(
+    private readonly llmClient: LlmClientPort,
+    private readonly tools: readonly McpToolDefinition[],
+    private readonly handler: ToolCallHandler,
+  ) {}
 
-  const { text, toolCalls } = await llmClient.sendMessage({
-    systemPrompt: COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT,
-    userMessage: buildUserMessage(userQuery, vehicleContext),
-    tools,
-    handler,
-  })
+  async execute(input: ExecuteCognitiveDiagnosisInput): Promise<ExecuteCognitiveDiagnosisOutput> {
+    const { userQuery, vehicleContext } = input
 
-  const parsed = parseCognitiveDiagnosis(text)
-  return {
-    diagnosis: text,
-    severity: parsed.severity,
-    confidence: parsed.confidence,
-    recommendations: parsed.recommendations,
-    toolCalls,
+    const { text, toolCalls } = await this.llmClient.sendMessage({
+      systemPrompt: COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT,
+      userMessage: buildUserMessage(userQuery, vehicleContext),
+      tools: this.tools,
+      handler: this.handler,
+    })
+
+    const parsed = parseCognitiveDiagnosis(text)
+    return {
+      diagnosis: text,
+      severity: parsed.severity,
+      confidence: parsed.confidence,
+      recommendations: parsed.recommendations,
+      toolCalls,
+    }
   }
 }

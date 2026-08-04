@@ -2,10 +2,10 @@ import { z } from 'zod'
 import Anthropic from '@anthropic-ai/sdk'
 import type {
   LlmClientPort,
-  LlmMessageInput,
-  LlmResponse,
-  ToolCallTrace,
-} from '@/application/ports/llmClient.port.js'
+} from '@/application/ports/LlmClientPort.js'
+import type { LlmMessageInput } from '@/application/dto/LlmMessageInput.js'
+import type { LlmResponse } from '@/application/dto/LlmResponse.js'
+import type { ToolCallTrace } from '@/application/dto/ToolCallTrace.js'
 import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
 import { mcpToolAdapter } from '@/infrastructure/llm/mcpToolAdapter.js'
 

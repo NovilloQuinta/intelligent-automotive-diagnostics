@@ -5,7 +5,7 @@ import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import type { PidReading } from '@/domain/entities/pidReading.js'
 
 /** Contrato para la persistencia del catálogo auto-expansivo de vehículos, ECUs y PIDs. */
-export interface VehicleRepositoryPort {
+export interface VehicleRepository {
   /** Registra un vehículo nuevo o actualiza la fecha de último avistamiento si ya existe (por VIN).
    * @throws VinDecodeError si el VIN no cumple el formato ISO 3779
    */

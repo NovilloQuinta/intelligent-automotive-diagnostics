@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import jwt from 'jsonwebtoken'
 import { createAuthService } from '@/infrastructure/services/authService.js'
-import type { RefreshTokenRepositoryPort } from '@/application/ports/refreshTokenRepository.port.js'
+import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
 
 describe('authService', () => {
-  const mockStore: RefreshTokenRepositoryPort = {
+  const mockStore: RefreshTokenRepository = {
     saveRefreshToken: vi.fn().mockResolvedValue(undefined),
     findRefreshToken: vi.fn(),
     revokeRefreshToken: vi.fn().mockResolvedValue(undefined),

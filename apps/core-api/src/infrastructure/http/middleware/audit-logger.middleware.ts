@@ -1,8 +1,8 @@
 import type { Request, Response, NextFunction } from 'express'
-import type { AuditLogRepositoryPort } from '@/application/ports/auditLogRepository.port.js'
+import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.js'
 
 /** Crea un middleware Express que registra cada request en el repositorio de auditoria. */
-export function createAuditLogger(repo: AuditLogRepositoryPort) {
+export function createAuditLogger(repo: AuditLogRepository) {
   return function auditLoggerMiddleware(req: Request, res: Response, next: NextFunction): void {
     const start = Date.now()
 

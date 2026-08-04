@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { openAiToolAdapter } from '@/infrastructure/llm/openAiToolAdapter.js'
-import type { McpToolDefinition } from '@/application/ports/llmClient.port.js'
+import type { McpToolDefinition } from '@/application/ports/LlmClientPort.js'
 
 /**
  * Schema JSON basico para tests del adaptador.

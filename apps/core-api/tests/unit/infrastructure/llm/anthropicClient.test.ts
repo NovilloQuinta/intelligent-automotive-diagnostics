@@ -4,7 +4,8 @@ import {
   AnthropicTimeoutError,
   AnthropicApiError,
 } from '@/infrastructure/llm/anthropicClient.js'
-import type { LlmClientPort, ToolCallHandler } from '@/application/ports/llmClient.port.js'
+import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
+import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
 
 /** Mock de @anthropic-ai/sdk. */
 const mockCreate = vi.fn()

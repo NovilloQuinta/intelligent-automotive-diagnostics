@@ -4,8 +4,8 @@ import express from 'express'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import type { SimulationScenario } from '@/infrastructure/obd/simulationScenario.js'
-import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
-import type { LlmClientPort, ToolCallTrace } from '@/application/ports/llmClient.port.js'
+import type { ObdRepository } from '@/application/ports/ObdRepository.js'
+import type { LlmClientPort, ToolCallTrace } from '@/application/ports/LlmClientPort.js'
 
 const mockScenarios: SimulationScenario[] = [
   {
@@ -47,7 +47,7 @@ function createApp() {
 }
 
 /** Repositorio OBD mockeado: RPM 800, coolant 90, sin freeze frame, DTC P0301. */
-const mockObdRepo: ObdRepositoryPort = {
+const mockObdRepo: ObdRepository = {
   readPid: vi.fn(async (_mode: string, pid: string) => (pid === '0C' ? 800 : 90)),
   getSupportedPids: vi.fn(async () => ['01 0C']),
   getFreezeFrame: vi.fn(async () => null),

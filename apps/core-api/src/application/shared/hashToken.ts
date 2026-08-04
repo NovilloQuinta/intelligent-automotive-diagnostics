@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
-import type { RefreshTokenRepositoryPort } from '@/application/ports/refreshTokenRepository.port.js'
-import type { TokenPair } from '@/application/ports/authService.port.js'
+import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
+import type { TokenPair } from '@/application/dto/TokenPair.js'
 
 const ALGORITHM_SHA256 = 'sha256'
 const ENCODING_HEX = 'hex'
@@ -15,7 +15,7 @@ export function hashToken(token: string): string {
 
 /** Persiste el hash del refresh token en el repositorio. */
 export async function persistRefreshToken(
-  tokenStore: RefreshTokenRepositoryPort,
+  tokenStore: RefreshTokenRepository,
   userId: number,
   tokens: TokenPair,
 ): Promise<void> {

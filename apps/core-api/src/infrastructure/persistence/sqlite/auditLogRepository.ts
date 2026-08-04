@@ -2,9 +2,9 @@ import { desc } from 'drizzle-orm'
 import * as schema from './schema.js'
 import type { DiagnosticsDb } from './db.js'
 import type {
-  AuditLogRepositoryPort,
-  CreateAuditLogInput,
-} from '@/application/ports/auditLogRepository.port.js'
+  AuditLogRepository,
+} from '@/application/ports/AuditLogRepository.js'
+import type { CreateAuditLogInput } from '@/application/dto/CreateAuditLogInput.js'
 
 /** Registro de auditoria devuelto por el repositorio. */
 export interface AuditLog {
@@ -21,7 +21,7 @@ export interface AuditLog {
 type AuditLogRow = typeof schema.auditLogs.$inferSelect
 
 /** Implementacion del repositorio de auditoria con SQLite via Drizzle ORM. */
-export class SqliteAuditLogRepository implements AuditLogRepositoryPort {
+export class SqliteAuditLogRepository implements AuditLogRepository {
   constructor(private readonly db: DiagnosticsDb) {}
 
   private toEntity(row: AuditLogRow): AuditLog {

@@ -1,8 +1,4 @@
-/** Par de tokens de acceso y refresco. */
-export interface TokenPair {
-  readonly accessToken: string
-  readonly refreshToken: string
-}
+import type { TokenPair } from '@/application/dto/TokenPair.js'
 
 /** Contrato para el servicio de autenticacion (JWT + bcrypt). */
 export interface AuthServicePort {

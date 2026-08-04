@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
-import { processVehicleDiagnosis } from '@/application/use-cases/processVehicleDiagnosis.js'
-import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
+import { ProcessVehicleDiagnosisUseCase } from '@/application/use-cases/ProcessVehicleDiagnosisUseCase.js'
+import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 
 const sensorValues = { rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 }
 const dtcCodes = [{ code: 'P0301', description: 'Cylinder 1 Misfire' }]
 
-function mockRepo(overrides: Partial<ObdRepositoryPort> = {}): ObdRepositoryPort {
+function mockRepo(overrides: Partial<ObdRepository> = {}): ObdRepository {
   return {
     readPid: vi.fn().mockImplementation((_mode: string, pid: string) => {
       const map: Record<string, number> = {
@@ -46,7 +46,7 @@ describe('processVehicleDiagnosis', () => {
   it('should return parsed values from the repository', async () => {
     const repo = mockRepo()
 
-    const result = await processVehicleDiagnosis(repo)
+    const result = await new ProcessVehicleDiagnosisUseCase(repo).execute()
 
     expect(result.parsedValues).toEqual(sensorValues)
     expect(repo.readPid).toHaveBeenCalledTimes(4)
@@ -55,7 +55,7 @@ describe('processVehicleDiagnosis', () => {
   it('should include DTC codes from the repository', async () => {
     const repo = mockRepo()
 
-    const result = await processVehicleDiagnosis(repo)
+    const result = await new ProcessVehicleDiagnosisUseCase(repo).execute()
 
     expect(result.dtcCodes).toEqual(dtcCodes)
     expect(repo.readDtcCodes).toHaveBeenCalledOnce()
@@ -64,7 +64,7 @@ describe('processVehicleDiagnosis', () => {
   it('should set severity to high when DTC codes are present with no freeze frame', async () => {
     const repo = mockRepo({ getFreezeFrame: vi.fn().mockResolvedValue(null) })
 
-    const result = await processVehicleDiagnosis(repo)
+    const result = await new ProcessVehicleDiagnosisUseCase(repo).execute()
 
     expect(result.severity).toBe('high')
   })
@@ -75,7 +75,7 @@ describe('processVehicleDiagnosis', () => {
       getFreezeFrame: vi.fn().mockResolvedValue(mockFreezeFrame()),
     })
 
-    const result = await processVehicleDiagnosis(repo)
+    const result = await new ProcessVehicleDiagnosisUseCase(repo).execute()
 
     expect(result.severity).toBe('critical')
   })
@@ -86,7 +86,7 @@ describe('processVehicleDiagnosis', () => {
       getFreezeFrame: vi.fn().mockResolvedValue(null),
     })
 
-    const result = await processVehicleDiagnosis(repo)
+    const result = await new ProcessVehicleDiagnosisUseCase(repo).execute()
 
     expect(result.severity).toBe('low')
     expect(result.dtcCodes).toHaveLength(0)
@@ -95,7 +95,7 @@ describe('processVehicleDiagnosis', () => {
   it('should derive severity from the entity instead of accepting it', async () => {
     const repo = mockRepo()
 
-    const result = await processVehicleDiagnosis(repo)
+    const result = await new ProcessVehicleDiagnosisUseCase(repo).execute()
 
     expect(result.hasFreezeFrame).toBe(false)
     expect(result.dtcCount).toBe(dtcCodes.length)

@@ -1,7 +1,8 @@
-import type { User, CreateUserInput } from '@/domain/entities/user.js'
+import type { User } from '@/domain/entities/user.js'
+import type { CreateUserInput } from '@/application/dto/CreateUserInput.js'
 
 /** Contrato para la persistencia de usuarios. */
-export interface UserRepositoryPort {
+export interface UserRepository {
   /** Busca un usuario por su email. */
   findByEmail(email: string): Promise<User | null>
 
