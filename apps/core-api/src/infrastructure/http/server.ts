@@ -25,10 +25,10 @@ export interface ServerDependencies {
   readonly authService?: AuthServicePort
   readonly tokenStore?: RefreshTokenRepository
   readonly accessTokenSecret?: string
-  /** Repositorio OBD externo (ej. Elm327TcpRepository en OBD_MODE=tcp). */
   readonly obdRepo?: ObdRepository
-  /** Cliente LLM opcional: si se inyecta, se monta el endpoint de diagnóstico cognitivo. */
   readonly llmClient?: LlmClientPort
+  readonly allowedOrigins: string
+  readonly nodeEnv: string
 }
 
 /** Middleware base: seguridad, logging y parseo JSON. */
@@ -41,16 +41,13 @@ function applyBaseMiddleware(app: express.Application, deps: ServerDependencies)
   app.use(express.json({ limit: '10kb' }))
 }
 
-/** CORS con allowlist de origins (responde `Vary: Origin` y maneja preflight). */
-function applyCors(app: express.Application): void {
-  const allowedOrigins = (
-    process.env.ALLOWED_ORIGINS ??
-    'http://localhost:4000,http://localhost:3000,http://localhost:5173'
-  ).split(',')
+/** CORS con allowlist de origins. */
+function applyCors(app: express.Application, allowedOrigins: string): void {
+  const origins = allowedOrigins.split(',')
   app.use((req, res, next) => {
     const origin = req.headers.origin
     res.setHeader('Vary', 'Origin')
-    if (origin && allowedOrigins.includes(origin)) {
+    if (origin && origins.includes(origin)) {
       res.setHeader('Access-Control-Allow-Origin', origin)
     }
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
@@ -64,12 +61,12 @@ function applyCors(app: express.Application): void {
 }
 
 /** Rutas de información: spec OpenAPI, swagger UI y health check. */
-function mountInfoRoutes(app: express.Application): void {
+function mountInfoRoutes(app: express.Application, nodeEnv: string): void {
   app.get('/api-docs.json', (_req, res) => {
     res.json(openApiSpec)
   })
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (nodeEnv !== 'production') {
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec))
   }
 
@@ -102,14 +99,14 @@ export function createServer(deps: ServerDependencies): express.Application {
   const app = express()
 
   applyBaseMiddleware(app, deps)
-  applyCors(app)
+  applyCors(app, deps.allowedOrigins)
 
   if (deps.userRepo && deps.authService && deps.tokenStore) {
     app.use('/api/auth', createRateLimiter({ windowMinutes: 15, maxRequests: 20 }))
     app.use('/api/auth', createAuthRoutes(deps.userRepo, deps.authService, deps.tokenStore))
   }
 
-  mountInfoRoutes(app)
+  mountInfoRoutes(app, deps.nodeEnv)
 
   if (deps.accessTokenSecret) {
     app.use(createAuthMiddleware(deps.accessTokenSecret))

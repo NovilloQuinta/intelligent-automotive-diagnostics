@@ -41,7 +41,7 @@ let baseUrl: string
 let httpServer: Server
 
 beforeAll(async () => {
-  const app = createServer({ mode: 'sync', scenarios: mockScenarios })
+  const app = createServer({ scenarios: mockScenarios, allowedOrigins: 'http://localhost:3000', nodeEnv: 'test' })
   await new Promise<void>((resolve) => {
     httpServer = app.listen(0, () => resolve())
   })
@@ -232,7 +232,7 @@ describe('HTTP server', () => {
     }
 
     beforeAll(async () => {
-      const app = createServer({ scenarios: [], obdRepo: mockObdRepo })
+      const app = createServer({ scenarios: [], obdRepo: mockObdRepo, allowedOrigins: 'http://localhost:3000', nodeEnv: 'test' })
       await new Promise<void>((resolve) => {
         tcpServer = app.listen(0, () => resolve())
       })

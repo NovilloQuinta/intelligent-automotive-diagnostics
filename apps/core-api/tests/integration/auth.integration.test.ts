@@ -51,13 +51,14 @@ describe('Auth integration', () => {
     })
 
     app = createServer({
-      mode: 'sync',
       scenarios: [],
       rateLimit: { windowMinutes: 60, maxRequests: 1000 },
       userRepo,
       authService,
       tokenStore,
       accessTokenSecret: ACCESS_SECRET,
+      allowedOrigins: '*',
+      nodeEnv: 'test',
     })
   })
 

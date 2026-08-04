@@ -1,24 +1,13 @@
 import { eq } from 'drizzle-orm'
 import * as schema from './schema.js'
 import type { DiagnosticsDb } from './db.js'
-import type {
-  RefreshTokenRepository,
-} from '@/application/ports/RefreshTokenRepository.js'
+import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
 import type { RefreshTokenRecord } from '@/application/dto/RefreshTokenRecord.js'
-
-type RefreshTokenRow = typeof schema.refreshTokens.$inferSelect
+import { toRefreshTokenRecord } from '@/infrastructure/persistence/mappers/refreshTokenMapper.js'
 
 /** Implementacion de {@link RefreshTokenRepository} con SQLite via Drizzle ORM. */
 export class SqliteRefreshTokenStore implements RefreshTokenRepository {
   constructor(private readonly db: DiagnosticsDb) {}
-
-  private toRecord(row: RefreshTokenRow): RefreshTokenRecord {
-    return {
-      userId: row.userId,
-      expiresAt: row.expiresAt,
-      revokedAt: row.revokedAt ?? null,
-    }
-  }
 
   async saveRefreshToken(userId: number, tokenHash: string, expiresAt: string): Promise<void> {
     await this.db.insert(schema.refreshTokens).values({
@@ -35,7 +24,7 @@ export class SqliteRefreshTokenStore implements RefreshTokenRepository {
       .where(eq(schema.refreshTokens.tokenHash, tokenHash))
       .limit(1)
 
-    return rows.length === 0 ? null : this.toRecord(rows[0])
+    return rows.length === 0 ? null : toRefreshTokenRecord(rows[0])
   }
 
   async revokeRefreshToken(tokenHash: string): Promise<void> {
