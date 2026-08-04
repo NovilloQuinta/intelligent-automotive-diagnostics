@@ -24,9 +24,9 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 
 ## SESION ACTUAL
 
-- **Fase**: 4 — Diagnostico Cognitivo LLM
-- **Ultimo paso**: Refactor `refactor-rich-domain-model` implementado (cambio OpenSpec `2026-08-02-refactor-rich-domain-model`, sin commitear aun): `FreezeFrame` y `DiagnosisResult` como value objects ricos (patron Vin/PidCode: private constructor + `create()` con validacion + error tipado + getters derivados, cero presentacion en dominio — eliminados `rawData`/`diagnosisText`). `processVehicleDiagnosis` devuelve entidad pura. Parser anti-corrupcion nuevo `application/llm/extractLlmDiagnosis.ts` (regex `---JSON---`, schema Zod, fallback) y `executeCognitiveDiagnosis` delega. Mapper HTTP eliminado (inline en ruta). `FreezeFrameError` en dominio; sentinel `UNKNOWN_FREEZE_FRAME_DTC` en `elm327TcpRepository` para freeze frames sin DTC conocido. Skill `clean-architecture` actualizado: permite value objects ricos con comportamiento puro.
-- **Tests**: 429 pasando (32 test files)
+- **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
+- **Ultimo paso**: Refactor completo de las 3 capas (dominio, aplicacion, infraestructura). Dominio: `entities/` + `value-objects/`, clases con constructor publico + validacion inline, `id` obligatorio, sin `static create()`. Aplicacion: puertos PascalCase (repo sin Port, servicios con Port), DTOs en `dto/` (1 por fichero), use cases a clases con `execute()`. Infraestructura: `controllers/`, `configuration/` (Zod), `observability/` (pino), `persistence/mappers/`, `composition/composition.ts`, audit middleware wireado.
+- **Tests**: 432 pasando (33 test files)
 - **CI**: verde — lint, format, test, build
 
 ## REGLAS DE SESION
