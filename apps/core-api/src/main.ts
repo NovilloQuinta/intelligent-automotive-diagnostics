@@ -1,5 +1,5 @@
 import { loadConfig, assertProductionSecrets } from '@/infrastructure/configuration/index.js'
-import { buildApp } from '@/infrastructure/composition/composition.js'
+import { buildApp } from '@/infrastructure/composition/index.js'
 
 const config = loadConfig()
 assertProductionSecrets(config)
