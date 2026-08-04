@@ -59,31 +59,25 @@ const WMI_REGISTRY: Array<[RegExp, { country: string; region: string }]> = [
 
 /** Registro WMI → fabricante. Primera coincidencia gana (3 primeros chars del VIN). */
 const WMI_MANUFACTURER_REGISTRY: Array<[RegExp, string]> = [
-  // VAG
   [/^WAU/, 'Audi'],
   [/^WUA/, 'Audi'],
   [/^WVW/, 'Volkswagen'],
   [/^WP[01]/, 'Porsche'],
-  // Alemania premium
   [/^WBA/, 'BMW'],
   [/^WBS/, 'BMW'],
   [/^WDD/, 'Mercedes-Benz'],
   [/^WDC/, 'Mercedes-Benz'],
-  // Stellantis
   [/^W0L/, 'Opel'],
   [/^VF3/, 'Peugeot'],
   [/^VF7/, 'Citroën'],
   [/^ZFA/, 'Fiat'],
   [/^ZAR/, 'Alfa Romeo'],
-  // Japon
   [/^JKA/, 'Kawasaki'],
   [/^JTD/, 'Toyota'],
   [/^JHM/, 'Honda'],
   [/^JN1/, 'Nissan'],
-  // Corea
   [/^KND/, 'Kia'],
   [/^KMH/, 'Hyundai'],
-  // USA / Europa
   [/^1F[1-2]/, 'Ford'],
   [/^WF0/, 'Ford'],
   [/^1G[1-4]/, 'Chevrolet'],
@@ -127,15 +121,31 @@ const MODEL_YEAR_TABLE: Record<string, number> = {
 /** VIN de reserva cuando no se conoce el vehiculo (modo TCP directo, emulador sin escenario). */
 export const FALLBACK_VIN = 'XXXXXXXXXXXXXXXXX' as const
 
+function validateVin(vin: string): void {
+  if (vin.length !== 17) {
+    throw new VinDecodeError(`VIN must be exactly 17 characters, got ${vin.length}`)
+  }
+  if (!VIN_REGEX.test(vin)) {
+    for (let i = 0; i < vin.length; i++) {
+      const ch = vin[i]
+      if (FORBIDDEN_CHARS.has(ch)) {
+        throw new VinDecodeError(`VIN contains forbidden character '${ch}' at position ${i}`)
+      }
+      if (!/[A-Z0-9]/.test(ch)) {
+        throw new VinDecodeError(`VIN contains invalid character '${ch}' at position ${i}`)
+      }
+    }
+  }
+}
+
 /** Value Object que representa un VIN valido segun ISO 3779. */
 export class Vin {
-  private constructor(readonly value: string) {}
+  readonly value: string
 
-  /** Crea un Vin validado. Lanza VinDecodeError si el formato es invalido. */
-  static create(raw: string): Vin {
+  constructor(raw: string) {
     const cleaned = raw.toUpperCase().replace(/\s/g, '')
-    assertValidFormat(cleaned)
-    return new Vin(cleaned)
+    validateVin(cleaned)
+    this.value = cleaned
   }
 
   /** Comprueba el check digit del VIN (posicion 9, 0-indexed: 8). */
@@ -177,23 +187,5 @@ export class Vin {
 
   toString(): string {
     return this.value
-  }
-}
-
-/** @throws {VinDecodeError} si el formato es invalido. */
-function assertValidFormat(vin: string): void {
-  if (vin.length !== 17) {
-    throw new VinDecodeError(`VIN must be exactly 17 characters, got ${vin.length}`)
-  }
-  if (!VIN_REGEX.test(vin)) {
-    for (let i = 0; i < vin.length; i++) {
-      const ch = vin[i]
-      if (FORBIDDEN_CHARS.has(ch)) {
-        throw new VinDecodeError(`VIN contains forbidden character '${ch}' at position ${i}`)
-      }
-      if (!/[A-Z0-9]/.test(ch)) {
-        throw new VinDecodeError(`VIN contains invalid character '${ch}' at position ${i}`)
-      }
-    }
   }
 }

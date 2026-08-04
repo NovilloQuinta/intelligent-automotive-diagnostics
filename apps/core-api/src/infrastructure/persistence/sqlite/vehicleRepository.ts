@@ -1,13 +1,14 @@
 import { eq, sql } from 'drizzle-orm'
 import * as schema from './schema.js'
-import { Vin } from '@/domain/vin.js'
-import { PidCode } from '@/domain/pidCode.js'
+import { Vin } from '@/domain/value-objects/vin.js'
+import { PidCode } from '@/domain/value-objects/pidCode.js'
 import type { DiagnosticsDb } from './db.js'
 import type { VehicleRepositoryPort } from '@/application/ports/vehicleRepository.port.js'
-import type { VehicleProfile } from '@/domain/vehicleProfile.js'
-import type { DiagnosisSession } from '@/domain/diagnosisSession.js'
-import type { EcuInfo } from '@/domain/ecuInfo.js'
-import type { PidDefinition, PidReading } from '@/domain/pidDefinition.js'
+import type { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
+import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
+import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
+import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
+import type { PidReading } from '@/domain/entities/pidReading.js'
 
 /** Implementación de {@link VehicleRepositoryPort} con SQLite via Drizzle ORM. */
 export class SqliteVehicleRepository implements VehicleRepositoryPort {
@@ -49,7 +50,7 @@ export class SqliteVehicleRepository implements VehicleRepositoryPort {
   }
 
   async findVehicleByVin(vin: string): Promise<VehicleProfile | null> {
-    const validatedVin = Vin.create(vin).value
+    const validatedVin = new Vin(vin).value
     const rows = await this.db
       .select()
       .from(schema.vehicles)
@@ -61,7 +62,7 @@ export class SqliteVehicleRepository implements VehicleRepositoryPort {
     const row = rows[0]
     return {
       id: row.id,
-      vin: Vin.create(row.vin),
+      vin: new Vin(row.vin),
       make: row.make,
       model: row.model,
       year: row.year,
@@ -155,7 +156,7 @@ export class SqliteVehicleRepository implements VehicleRepositoryPort {
       id: r.id,
       vehicleId: r.vehicleId ?? undefined,
       ecuId: r.ecuId ?? undefined,
-      pidCode: PidCode.create(r.mode, r.pidCode),
+      pidCode: new PidCode(r.mode, r.pidCode),
       name: r.name,
       description: r.description ?? undefined,
       formula: r.formula,
@@ -180,7 +181,7 @@ export class SqliteVehicleRepository implements VehicleRepositoryPort {
       id: r.id,
       vehicleId: r.vehicleId ?? undefined,
       ecuId: r.ecuId ?? undefined,
-      pidCode: PidCode.create(r.mode, r.pidCode),
+      pidCode: new PidCode(r.mode, r.pidCode),
       name: r.name,
       description: r.description ?? undefined,
       formula: r.formula,
@@ -220,7 +221,12 @@ export class SqliteVehicleRepository implements VehicleRepositoryPort {
       })
       .returning()
 
-    return { ...session, id: result[0].id }
+    return new DiagnosisSession({
+      id: result[0].id,
+      vehicleId: session.vehicleId,
+      scenarioId: session.scenarioId,
+      startedAt: new Date().toISOString(),
+    })
   }
 
   async endSession(sessionId: number): Promise<void> {

@@ -2,7 +2,8 @@ import { eq } from 'drizzle-orm'
 import * as schema from './schema.js'
 import type { DiagnosticsDb } from './db.js'
 import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
-import type { User, CreateUserInput } from '@/domain/user.js'
+import { User, type CreateUserInput } from '@/domain/entities/user.js'
+import { Email } from '@/domain/value-objects/email.js'
 
 type UserRow = typeof schema.users.$inferSelect
 
@@ -11,17 +12,17 @@ export class SqliteUserRepository implements UserRepositoryPort {
   constructor(private readonly db: DiagnosticsDb) {}
 
   private toUser(row: UserRow): User {
-    return {
+    return new User({
       id: row.id,
       username: row.username,
-      email: row.email,
+      email: new Email(row.email),
       passwordHash: row.passwordHash,
       userType: row.userType as 'individual' | 'workshop',
       businessName: row.businessName,
       taxId: row.taxId,
       address: row.address,
       createdAt: row.createdAt,
-    }
+    })
   }
 
   async create(input: CreateUserInput): Promise<User> {
@@ -29,7 +30,7 @@ export class SqliteUserRepository implements UserRepositoryPort {
       .insert(schema.users)
       .values({
         username: input.username,
-        email: input.email.toLowerCase().trim(),
+        email: input.email.value,
         passwordHash: input.passwordHash,
         userType: input.userType,
         businessName: input.businessName ?? null,

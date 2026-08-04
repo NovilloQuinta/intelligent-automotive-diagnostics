@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { processVehicleDiagnosis } from '@/application/use-cases/processVehicleDiagnosis.js'
 import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
-import { FreezeFrame } from '@/domain/freezeFrame.js'
-import { Vin } from '@/domain/vin.js'
+import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
+import { Vin } from '@/domain/value-objects/vin.js'
 
 const sensorValues = { rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 }
 const dtcCodes = [{ code: 'P0301', description: 'Cylinder 1 Misfire' }]
@@ -28,7 +28,7 @@ function mockRepo(overrides: Partial<ObdRepositoryPort> = {}): ObdRepositoryPort
       model: 'A3',
       year: 2018,
       engineType: '2.0 TFSI',
-      vin: Vin.create('WAUZZZ8V5JA123456'),
+      vin: new Vin('WAUZZZ8V5JA123456'),
     }),
     setPower: vi.fn().mockResolvedValue(undefined),
     ...overrides,
@@ -36,7 +36,7 @@ function mockRepo(overrides: Partial<ObdRepositoryPort> = {}): ObdRepositoryPort
 }
 
 function mockFreezeFrame(): FreezeFrame {
-  return FreezeFrame.create({
+  return new FreezeFrame({
     dtcCode: 'P0301',
     pidValues: { rpm: 800, coolantTemp: 95, speed: 60 },
   })

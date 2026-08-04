@@ -15,13 +15,10 @@ const STANDARD_MODES = new Set(['01', '02', '05', '06', '08', '09'])
 
 /** Value Object que representa un codigo de PID OBD-II validado. */
 export class PidCode {
-  private constructor(
-    readonly mode: string,
-    readonly pid: string,
-  ) {}
+  readonly mode: string
+  readonly pid: string
 
-  /** Crea un PidCode validado. Lanza PidCodeError si mode o pid son invalidos. */
-  static create(mode: string, pid: string): PidCode {
+  constructor(mode: string, pid: string) {
     if (!MODE_REGEX.test(mode)) {
       throw new PidCodeError(`Invalid OBD mode: "${mode}". Must be 2 hex digits.`)
     }
@@ -32,7 +29,8 @@ export class PidCode {
     if (STANDARD_MODES.has(upperMode) && pid.length !== 2) {
       throw new PidCodeError(`Mode ${upperMode} only accepts 2-character PIDs, got "${pid}".`)
     }
-    return new PidCode(upperMode, pid.toUpperCase())
+    this.mode = upperMode
+    this.pid = pid.toUpperCase()
   }
 
   /** Clave compuesta para busquedas (ej. "01 0C"). */

@@ -12,11 +12,15 @@ export enum Severity {
 
 /** Resultado completo de un diagnóstico vehicular determinista (value object rico). */
 export class DiagnosisResult {
-  private constructor(
-    readonly parsedValues: LiveData,
-    readonly dtcCodes: DtcCode[],
-    readonly freezeFrame: FreezeFrame | null,
-  ) {}
+  readonly parsedValues: LiveData
+  readonly dtcCodes: DtcCode[]
+  readonly freezeFrame: FreezeFrame | null
+
+  constructor(params: { parsedValues: LiveData; dtcCodes: DtcCode[]; freezeFrame: FreezeFrame | null }) {
+    this.parsedValues = params.parsedValues
+    this.dtcCodes = [...params.dtcCodes]
+    this.freezeFrame = params.freezeFrame
+  }
 
   /**
    * Regla de negocio pura: calcula criticidad a partir del número de DTCs
@@ -26,15 +30,6 @@ export class DiagnosisResult {
     if (dtcCount === 0) return Severity.Low
     if (freezeFrame) return Severity.Critical
     return Severity.High
-  }
-
-  /** Crea un DiagnosisResult. La severidad se deriva del estado via {@link computeSeverity}. */
-  static create(params: {
-    parsedValues: LiveData
-    dtcCodes: DtcCode[]
-    freezeFrame: FreezeFrame | null
-  }): DiagnosisResult {
-    return new DiagnosisResult(params.parsedValues, [...params.dtcCodes], params.freezeFrame)
   }
 
   /** Criticidad derivada del estado (DTCs + freeze frame), nunca inyectada por el caller. */

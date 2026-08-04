@@ -1,5 +1,5 @@
-import { Severity } from '@/domain/diagnosisResult.js'
-import type { VehicleInfo } from '@/domain/vehicleProfile.js'
+import { Severity } from '@/domain/value-objects/diagnosisResult.js'
+import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import { parseCognitiveDiagnosis } from '@/application/llm/extractLlmDiagnosis.js'
 import type {
   LlmClientPort,

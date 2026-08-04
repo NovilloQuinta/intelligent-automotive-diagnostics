@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
 import type { VehicleRepositoryPort } from '@/application/ports/vehicleRepository.port.js'
-import { FreezeFrame } from '@/domain/freezeFrame.js'
-import type { PidDefinition } from '@/domain/pidDefinition.js'
-import { Vin } from '@/domain/vin.js'
+import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
+import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
+import { Vin } from '@/domain/value-objects/vin.js'
 import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
 
 function mockObdRepo(overrides: Partial<ObdRepositoryPort> = {}): ObdRepositoryPort {
@@ -19,7 +19,7 @@ function mockObdRepo(overrides: Partial<ObdRepositoryPort> = {}): ObdRepositoryP
       model: 'A3',
       year: 2018,
       engineType: '2.0 TFSI',
-      vin: Vin.create('WAUZZZ8V5JA123456'),
+      vin: new Vin('WAUZZZ8V5JA123456'),
     }),
     setPower: vi.fn().mockResolvedValue(undefined),
     ...overrides,
@@ -42,7 +42,7 @@ function mockVehicleRepo(overrides: Partial<VehicleRepositoryPort> = {}): Vehicl
   }
 }
 
-const sampleFreezeFrame: FreezeFrame = FreezeFrame.create({
+const sampleFreezeFrame: FreezeFrame = new FreezeFrame({
   dtcCode: 'P0301',
   pidValues: { rpm: 3200, coolantTemp: 88, speed: 80 },
 })

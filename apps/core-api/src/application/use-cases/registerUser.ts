@@ -2,7 +2,8 @@ import { z } from 'zod'
 import type { UserRepositoryPort } from '@/application/ports/userRepository.port.js'
 import type { AuthServicePort, TokenPair } from '@/application/ports/authService.port.js'
 import type { RefreshTokenRepositoryPort } from '@/application/ports/refreshTokenRepository.port.js'
-import type { User } from '@/domain/user.js'
+import type { User } from '@/domain/entities/user.js'
+import { Email } from '@/domain/value-objects/email.js'
 import { persistRefreshToken } from '@/application/use-cases/hashToken.js'
 
 /** Esquema de validacion para el input de registro. */
@@ -45,7 +46,7 @@ export function createRegisterUserUseCase(deps: {
     const passwordHash = await authService.hashPassword(parsed.password)
     const user = await userRepo.create({
       username: parsed.username,
-      email: parsed.email,
+      email: new Email(parsed.email),
       passwordHash,
       userType: parsed.userType,
       businessName: parsed.businessName ?? null,
@@ -56,7 +57,8 @@ export function createRegisterUserUseCase(deps: {
     const tokens = authService.generateTokens(user.id)
     await persistRefreshToken(tokenStore, user.id, tokens)
 
-    const { passwordHash: _, ...safeUser } = user
+    const { passwordHash: _, ...rest } = user
+    const safeUser = { ...rest, isWorkshop: user.isWorkshop }
     return { user: safeUser, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken }
   }
 }

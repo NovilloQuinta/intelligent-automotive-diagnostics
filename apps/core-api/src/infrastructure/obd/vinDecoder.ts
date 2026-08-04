@@ -1,4 +1,4 @@
-import { Vin, VinDecodeError } from '@/domain/vin.js'
+import { Vin, VinDecodeError } from '@/domain/value-objects/vin.js'
 
 /** Convierte bytes ASCII de un VIN (Mode 09 PID 02) a string y lo valida.
  * @param bytes — 17 bytes ASCII del VIN.
@@ -12,5 +12,5 @@ export function decodeVin(bytes: number[]): string {
 
   const vin = String.fromCharCode(...bytes)
 
-  return Vin.create(vin).value
+  return new Vin(vin).value
 }

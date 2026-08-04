@@ -3,7 +3,7 @@ import {
   cognitiveDiagnosisJsonSchema,
   parseCognitiveDiagnosis,
 } from '@/application/llm/extractLlmDiagnosis.js'
-import { Severity } from '@/domain/diagnosisResult.js'
+import { Severity } from '@/domain/value-objects/diagnosisResult.js'
 
 describe('extractLlmDiagnosis', () => {
   it('should parse a valid inline ---JSON--- block', () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { decodeVin } from '@/infrastructure/obd/vinDecoder.js'
-import { VinDecodeError } from '@/domain/vin.js'
+import { VinDecodeError } from '@/domain/value-objects/vin.js'
 
 describe('vinDecoder', () => {
   describe('decodeVin', () => {

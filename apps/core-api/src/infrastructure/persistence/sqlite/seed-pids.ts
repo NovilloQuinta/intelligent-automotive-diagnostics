@@ -1,10 +1,11 @@
-import type { PidDefinition } from '@/domain/pidDefinition.js'
-import { PidCode } from '@/domain/pidCode.js'
+import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
+import { PidCode } from '@/domain/value-objects/pidCode.js'
 
 /** PIDs estándar Mode 01 (SAE J1979) — globales, para cualquier vehículo. */
 export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
   {
-    pidCode: PidCode.create('01', '04'),
+    id: 0,
+    pidCode: new PidCode('01', '04'),
     name: 'Calculated Engine Load',
     formula: 'A*100/255',
     unit: '%',
@@ -15,7 +16,8 @@ export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
     description: 'Engine load calculated by the ECU',
   },
   {
-    pidCode: PidCode.create('01', '05'),
+    id: 0,
+    pidCode: new PidCode('01', '05'),
     name: 'Engine Coolant Temperature',
     formula: 'A-40',
     unit: '°C',
@@ -27,7 +29,8 @@ export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
     maxValue: 215,
   },
   {
-    pidCode: PidCode.create('01', '06'),
+    id: 0,
+    pidCode: new PidCode('01', '06'),
     name: 'Short Term Fuel Trim — Bank 1',
     formula: 'A*100/128-100',
     unit: '%',
@@ -39,7 +42,8 @@ export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
     maxValue: 99.2,
   },
   {
-    pidCode: PidCode.create('01', '07'),
+    id: 0,
+    pidCode: new PidCode('01', '07'),
     name: 'Long Term Fuel Trim — Bank 1',
     formula: 'A*100/128-100',
     unit: '%',
@@ -51,7 +55,8 @@ export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
     maxValue: 99.2,
   },
   {
-    pidCode: PidCode.create('01', '0B'),
+    id: 0,
+    pidCode: new PidCode('01', '0B'),
     name: 'Intake Manifold Absolute Pressure',
     formula: 'A',
     unit: 'kPa',
@@ -63,7 +68,8 @@ export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
     maxValue: 255,
   },
   {
-    pidCode: PidCode.create('01', '0C'),
+    id: 0,
+    pidCode: new PidCode('01', '0C'),
     name: 'Engine RPM',
     formula: '(A*256+B)/4',
     unit: 'rpm',
@@ -75,7 +81,8 @@ export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
     maxValue: 16383.75,
   },
   {
-    pidCode: PidCode.create('01', '0D'),
+    id: 0,
+    pidCode: new PidCode('01', '0D'),
     name: 'Vehicle Speed',
     formula: 'A',
     unit: 'km/h',
@@ -87,7 +94,8 @@ export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
     maxValue: 255,
   },
   {
-    pidCode: PidCode.create('01', '0E'),
+    id: 0,
+    pidCode: new PidCode('01', '0E'),
     name: 'Timing Advance',
     formula: 'A/2-64',
     unit: '° before TDC',
@@ -99,7 +107,8 @@ export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
     maxValue: 63.5,
   },
   {
-    pidCode: PidCode.create('01', '0F'),
+    id: 0,
+    pidCode: new PidCode('01', '0F'),
     name: 'Intake Air Temperature',
     formula: 'A-40',
     unit: '°C',
@@ -111,7 +120,8 @@ export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
     maxValue: 215,
   },
   {
-    pidCode: PidCode.create('01', '10'),
+    id: 0,
+    pidCode: new PidCode('01', '10'),
     name: 'Mass Air Flow Rate',
     formula: '(A*256+B)/100',
     unit: 'g/s',
@@ -123,7 +133,8 @@ export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
     maxValue: 655.35,
   },
   {
-    pidCode: PidCode.create('01', '11'),
+    id: 0,
+    pidCode: new PidCode('01', '11'),
     name: 'Throttle Position',
     formula: 'A*100/255',
     unit: '%',
@@ -135,7 +146,8 @@ export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
     maxValue: 100,
   },
   {
-    pidCode: PidCode.create('01', '2F'),
+    id: 0,
+    pidCode: new PidCode('01', '2F'),
     name: 'Fuel Tank Level Input',
     formula: 'A*100/255',
     unit: '%',
@@ -147,7 +159,8 @@ export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
     maxValue: 100,
   },
   {
-    pidCode: PidCode.create('01', '31'),
+    id: 0,
+    pidCode: new PidCode('01', '31'),
     name: 'Distance Traveled Since Codes Cleared',
     formula: 'A*256+B',
     unit: 'km',
@@ -159,7 +172,8 @@ export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
     maxValue: 65535,
   },
   {
-    pidCode: PidCode.create('01', '42'),
+    id: 0,
+    pidCode: new PidCode('01', '42'),
     name: 'Control Module Voltage',
     formula: '(A*256+B)/1000',
     unit: 'V',
@@ -171,7 +185,8 @@ export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
     maxValue: 65.535,
   },
   {
-    pidCode: PidCode.create('01', '46'),
+    id: 0,
+    pidCode: new PidCode('01', '46'),
     name: 'Ambient Air Temperature',
     formula: 'A-40',
     unit: '°C',
@@ -183,7 +198,8 @@ export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
     maxValue: 215,
   },
   {
-    pidCode: PidCode.create('01', '5C'),
+    id: 0,
+    pidCode: new PidCode('01', '5C'),
     name: 'Engine Oil Temperature',
     formula: 'A-40',
     unit: '°C',
@@ -199,7 +215,8 @@ export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
 /** Service 09 — Vehicle information PIDs. */
 export const STANDARD_MODE_09_PIDS: PidDefinition[] = [
   {
-    pidCode: PidCode.create('09', '02'),
+    id: 0,
+    pidCode: new PidCode('09', '02'),
     name: 'Vehicle Identification Number (VIN)',
     formula: '',
     unit: '',
@@ -214,7 +231,8 @@ export const STANDARD_MODE_09_PIDS: PidDefinition[] = [
 /** PIDs propietarios Mode 22 para Toyota Auris Hybrid. */
 export const TOYOTA_AURIS_MODE_22_PIDS: PidDefinition[] = [
   {
-    pidCode: PidCode.create('22', '0300'),
+    id: 0,
+    pidCode: new PidCode('22', '0300'),
     name: 'TCU Odometer',
     formula: '(A<<24|B<<16|C<<8|D)/10',
     unit: 'km',
@@ -227,7 +245,8 @@ export const TOYOTA_AURIS_MODE_22_PIDS: PidDefinition[] = [
     maxValue: 999999,
   },
   {
-    pidCode: PidCode.create('22', '0400'),
+    id: 0,
+    pidCode: new PidCode('22', '0400'),
     name: 'ECM Odometer',
     formula: '(A<<24|B<<16|C<<8|D)/10',
     unit: 'km',
@@ -240,7 +259,8 @@ export const TOYOTA_AURIS_MODE_22_PIDS: PidDefinition[] = [
     maxValue: 999999,
   },
   {
-    pidCode: PidCode.create('22', '7A76'),
+    id: 0,
+    pidCode: new PidCode('22', '7A76'),
     name: 'Hybrid Battery State of Charge',
     formula: 'A*0.5',
     unit: '%',
@@ -252,7 +272,8 @@ export const TOYOTA_AURIS_MODE_22_PIDS: PidDefinition[] = [
     maxValue: 100,
   },
   {
-    pidCode: PidCode.create('22', '7A53'),
+    id: 0,
+    pidCode: new PidCode('22', '7A53'),
     name: 'Hybrid Battery Voltage',
     formula: '(A*256+B)*0.01',
     unit: 'V',

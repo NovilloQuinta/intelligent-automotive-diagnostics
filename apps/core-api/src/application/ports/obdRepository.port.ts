@@ -1,6 +1,6 @@
-import type { DtcCode } from '@/domain/dtcCode.js'
-import type { FreezeFrame } from '@/domain/freezeFrame.js'
-import type { VehicleInfo } from '@/domain/vehicleProfile.js'
+import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
+import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
+import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 
 /** Contrato para la adquisición de datos OBD-II desde el hardware. */
 export interface ObdRepositoryPort {

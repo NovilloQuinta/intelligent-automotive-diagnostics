@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest'
-import { DiagnosisResult, Severity } from '@/domain/diagnosisResult.js'
-import { FreezeFrame } from '@/domain/freezeFrame.js'
-import type { LiveData } from '@/domain/liveData.js'
-import type { DtcCode } from '@/domain/dtcCode.js'
+import { DiagnosisResult, Severity } from '@/domain/value-objects/diagnosisResult.js'
+import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
+import type { LiveData } from '@/domain/value-objects/liveData.js'
+import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
 
 const sampleLiveData: LiveData = { rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 }
 const sampleDtcCodes: DtcCode[] = [{ code: 'P0301', description: 'Cylinder 1 Misfire' }]
 
 function mockFreezeFrame(): FreezeFrame {
-  return FreezeFrame.create({
+  return new FreezeFrame({
     dtcCode: 'P0301',
     pidValues: { rpm: 800, coolantTemp: 95, speed: 60 },
   })
@@ -35,7 +35,7 @@ describe('DiagnosisResult', () => {
 
   describe('create', () => {
     it('should derive High severity when DTCs are present without freeze frame', () => {
-      const result = DiagnosisResult.create({
+      const result = new DiagnosisResult({
         parsedValues: sampleLiveData,
         dtcCodes: sampleDtcCodes,
         freezeFrame: null,
@@ -46,7 +46,7 @@ describe('DiagnosisResult', () => {
     })
 
     it('should derive Critical severity when DTCs are present with freeze frame', () => {
-      const result = DiagnosisResult.create({
+      const result = new DiagnosisResult({
         parsedValues: sampleLiveData,
         dtcCodes: sampleDtcCodes,
         freezeFrame: mockFreezeFrame(),
@@ -56,7 +56,7 @@ describe('DiagnosisResult', () => {
     })
 
     it('should derive Low severity when no DTCs are present', () => {
-      const result = DiagnosisResult.create({
+      const result = new DiagnosisResult({
         parsedValues: sampleLiveData,
         dtcCodes: [],
         freezeFrame: null,
@@ -66,7 +66,7 @@ describe('DiagnosisResult', () => {
     })
 
     it('should expose parsedValues and dtcCodes as readonly state', () => {
-      const result = DiagnosisResult.create({
+      const result = new DiagnosisResult({
         parsedValues: sampleLiveData,
         dtcCodes: sampleDtcCodes,
         freezeFrame: null,
@@ -79,7 +79,7 @@ describe('DiagnosisResult', () => {
 
   describe('derived getters', () => {
     it('should return dtcCount as the number of DTC codes', () => {
-      const result = DiagnosisResult.create({
+      const result = new DiagnosisResult({
         parsedValues: sampleLiveData,
         dtcCodes: sampleDtcCodes,
         freezeFrame: null,
@@ -89,7 +89,7 @@ describe('DiagnosisResult', () => {
     })
 
     it('should report hasFreezeFrame true when a freeze frame is present', () => {
-      const result = DiagnosisResult.create({
+      const result = new DiagnosisResult({
         parsedValues: sampleLiveData,
         dtcCodes: sampleDtcCodes,
         freezeFrame: mockFreezeFrame(),
@@ -99,7 +99,7 @@ describe('DiagnosisResult', () => {
     })
 
     it('should report hasFreezeFrame false when no freeze frame is present', () => {
-      const result = DiagnosisResult.create({
+      const result = new DiagnosisResult({
         parsedValues: sampleLiveData,
         dtcCodes: [],
         freezeFrame: null,
@@ -109,7 +109,7 @@ describe('DiagnosisResult', () => {
     })
 
     it('should not expose presentation fields rawData or diagnosisText', () => {
-      const result = DiagnosisResult.create({
+      const result = new DiagnosisResult({
         parsedValues: sampleLiveData,
         dtcCodes: sampleDtcCodes,
         freezeFrame: null,

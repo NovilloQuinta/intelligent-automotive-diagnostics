@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { ObdSimulator } from '@/infrastructure/obd/simulator.js'
-import { Vin } from '@/domain/vin.js'
-import { FreezeFrame } from '@/domain/freezeFrame.js'
-import type { SimulationScenario } from '@/domain/simulationScenario.js'
-import type { LiveData } from '@/domain/liveData.js'
+import { Vin } from '@/domain/value-objects/vin.js'
+import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
+import type { SimulationScenario } from '@/infrastructure/obd/simulationScenario.js'
+import type { LiveData } from '@/domain/value-objects/liveData.js'
 
 const audiIdleSensorValues: LiveData = {
   rpm: 750,
@@ -23,7 +23,7 @@ const audiIdleScenario: SimulationScenario = {
     model: 'A3',
     year: 2018,
     engineType: '2.0 TFSI',
-    vin: Vin.create('WUAZZZ8V0KA123456'),
+    vin: new Vin('WUAZZZ8V0KA123456'),
   },
 }
 
@@ -87,7 +87,7 @@ describe('ObdSimulator', () => {
       sensorValues: kawaData,
       dtcConfig: [],
       vehicleInfo: {
-        vin: Vin.create('JKAKZ900H8A123456'),
+        vin: new Vin('JKAKZ900H8A123456'),
         make: 'Kawasaki',
         model: 'Z900',
         year: 2020,
@@ -130,7 +130,7 @@ describe('ObdSimulator', () => {
   })
 
   it('should return freeze frame from scenario when present', () => {
-    const freeze: FreezeFrame = FreezeFrame.create({
+    const freeze: FreezeFrame = new FreezeFrame({
       dtcCode: 'P0301',
       pidValues: { rpm: 750, speed: 0 },
     })

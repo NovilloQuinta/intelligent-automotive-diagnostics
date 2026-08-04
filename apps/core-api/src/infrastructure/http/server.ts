@@ -1,7 +1,7 @@
 import express from 'express'
 import helmet from 'helmet'
 import swaggerUi from 'swagger-ui-express'
-import type { SimulationScenario } from '@/domain/simulationScenario.js'
+import type { SimulationScenario } from '@/infrastructure/obd/simulationScenario.js'
 import { openApiSpec } from '@/infrastructure/http/swagger.js'
 import { createRateLimiter } from '@/infrastructure/http/middleware/rate-limiter.middleware.js'
 import type { RateLimiterConfig } from '@/infrastructure/http/middleware/rate-limiter.middleware.js'

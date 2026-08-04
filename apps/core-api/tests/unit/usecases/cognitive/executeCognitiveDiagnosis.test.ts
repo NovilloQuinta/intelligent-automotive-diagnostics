@@ -7,9 +7,9 @@ import type {
   ToolCallTrace,
 } from '@/application/ports/llmClient.port.js'
 import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
-import { Severity } from '@/domain/diagnosisResult.js'
-import type { VehicleInfo } from '@/domain/vehicleProfile.js'
-import { Vin } from '@/domain/vin.js'
+import { Severity } from '@/domain/value-objects/diagnosisResult.js'
+import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
+import { Vin } from '@/domain/value-objects/vin.js'
 
 /** Las 6 tools del MCP Server (mismas que listTools devuelve en producción). */
 const sixTools: McpToolDefinition[] = [
@@ -26,7 +26,7 @@ const vehicleContext: VehicleInfo = {
   model: 'A3',
   year: 2018,
   engineType: '2.0 TFSI',
-  vin: Vin.create('WAUZZZ8V5JA123456'),
+  vin: new Vin('WAUZZZ8V5JA123456'),
 }
 
 function mockLlmClient(overrides: Partial<LlmClientPort> = {}): LlmClientPort {

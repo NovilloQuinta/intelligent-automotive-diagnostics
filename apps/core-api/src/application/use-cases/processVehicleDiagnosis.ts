@@ -1,5 +1,6 @@
 import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
-import { DiagnosisResult } from '@/domain/diagnosisResult.js'
+import { DiagnosisResult } from '@/domain/value-objects/diagnosisResult.js'
+import { LiveData } from '@/domain/value-objects/liveData.js'
 import {
   MODE_CURRENT_DATA,
   PID_RPM,
@@ -32,7 +33,7 @@ export function withTimeout<T>(
 /**
  * Orquesta lectura de telemetría y devuelve una entidad pura de diagnóstico.
  * Lee PIDs, DTCs y freeze frame, y delega el cálculo de severidad en
- * {@link DiagnosisResult.create} (getter derivado).
+ * {@link DiagnosisResult} (getter derivado).
  * Si la lectura excede {@link DIAGNOSIS_TIMEOUT_MS}, lanza un error con timeout.
  */
 export async function processVehicleDiagnosis(repo: ObdRepositoryPort): Promise<DiagnosisResult> {
@@ -50,6 +51,6 @@ export async function processVehicleDiagnosis(repo: ObdRepositoryPort): Promise<
       `Diagnosis timed out after ${DIAGNOSIS_TIMEOUT_MS}ms`,
     )
 
-  const parsedValues = { rpm, coolantTemp, speed, intakeTemp }
-  return DiagnosisResult.create({ parsedValues, dtcCodes, freezeFrame })
+  const parsedValues = new LiveData({ rpm, coolantTemp, speed, intakeTemp })
+  return new DiagnosisResult({ parsedValues, dtcCodes, freezeFrame })
 }

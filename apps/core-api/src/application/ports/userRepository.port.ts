@@ -1,4 +1,4 @@
-import type { User, CreateUserInput } from '@/domain/user.js'
+import type { User, CreateUserInput } from '@/domain/entities/user.js'
 
 /** Contrato para la persistencia de usuarios. */
 export interface UserRepositoryPort {

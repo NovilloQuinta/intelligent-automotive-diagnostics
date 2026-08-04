@@ -2,18 +2,19 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
-import type { CreateUserInput } from '@/domain/user.js'
+import type { CreateUserInput } from '@/domain/entities/user.js'
+import { Email } from '@/domain/value-objects/email.js'
 
 const mockUser: CreateUserInput = {
   username: 'testuser',
-  email: 'test@example.com',
+  email: new Email('test@example.com'),
   passwordHash: '$2b$12$hashedpasswordvaluehere',
   userType: 'individual',
 }
 
 const mockWorkshop: CreateUserInput = {
   username: 'tallercars',
-  email: 'taller@example.com',
+  email: new Email('taller@example.com'),
   passwordHash: '$2b$12$anotherhashedvalue',
   userType: 'workshop',
   businessName: 'Talleres AutoFix',
@@ -61,7 +62,7 @@ describe('SqliteUserRepository', () => {
       expect(user.id).toBeDefined()
       expect(user.id).toBeGreaterThan(0)
       expect(user.username).toBe('testuser')
-      expect(user.email).toBe('test@example.com')
+      expect(user.email.value).toBe('test@example.com')
       expect(user.passwordHash).toBe(mockUser.passwordHash)
       expect(user.userType).toBe('individual')
       expect(user.businessName).toBeNull()
@@ -83,25 +84,25 @@ describe('SqliteUserRepository', () => {
       const user = await repo.create({
         ...mockUser,
         username: 'mixedcase',
-        email: 'MiXeD@Example.COM',
+        email: new Email('MiXeD@Example.COM'),
       })
 
-      expect(user.email).toBe('mixed@example.com')
+      expect(user.email.value).toBe('mixed@example.com')
     })
 
     it('rechaza email duplicado', async () => {
-      await repo.create({ ...mockUser, username: 'unique1', email: 'dup@example.com' })
+      await repo.create({ ...mockUser, username: 'unique1', email: new Email('dup@example.com') })
 
       await expect(
-        repo.create({ ...mockUser, username: 'unique2', email: 'dup@example.com' }),
+        repo.create({ ...mockUser, username: 'unique2', email: new Email('dup@example.com') }),
       ).rejects.toThrow()
     })
 
     it('rechaza username duplicado', async () => {
-      await repo.create({ ...mockUser, username: 'dupuser', email: 'a@example.com' })
+      await repo.create({ ...mockUser, username: 'dupuser', email: new Email('a@example.com') })
 
       await expect(
-        repo.create({ ...mockUser, username: 'dupuser', email: 'b@example.com' }),
+        repo.create({ ...mockUser, username: 'dupuser', email: new Email('b@example.com') }),
       ).rejects.toThrow()
     })
   })
@@ -114,7 +115,7 @@ describe('SqliteUserRepository', () => {
     })
 
     it('encuentra un usuario por email (case-insensitive)', async () => {
-      await repo.create({ ...mockUser, username: 'findme', email: 'FindMe@Example.COM' })
+      await repo.create({ ...mockUser, username: 'findme', email: new Email('FindMe@Example.COM') })
 
       const user = await repo.findByEmail('findme@example.com')
 
@@ -135,14 +136,14 @@ describe('SqliteUserRepository', () => {
       const created = await repo.create({
         ...mockUser,
         username: 'byid',
-        email: 'byid@example.com',
+        email: new Email('byid@example.com'),
       })
 
       const user = await repo.findById(created.id!)
 
       expect(user).not.toBeNull()
       expect(user!.username).toBe('byid')
-      expect(user!.email).toBe('byid@example.com')
+      expect(user!.email.value).toBe('byid@example.com')
     })
   })
 })

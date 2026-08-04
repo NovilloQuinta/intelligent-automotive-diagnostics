@@ -3,11 +3,11 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from '@/infrastructure/persistence/sqlite/schema.js'
 import { SqliteVehicleRepository } from '@/infrastructure/persistence/sqlite/vehicleRepository.js'
-import { VinDecodeError, Vin } from '@/domain/vin.js'
-import type { VehicleProfile } from '@/domain/vehicleProfile.js'
-import type { EcuInfo } from '@/domain/ecuInfo.js'
-import type { PidDefinition, PidReading } from '@/domain/pidDefinition.js'
-import { PidCode } from '@/domain/pidCode.js'
+import { VinDecodeError, Vin } from '@/domain/value-objects/vin.js'
+import type { VehicleProfile } from '@/domain/value-objects/vehicleInfo.js'
+import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
+import type { PidDefinition, PidReading } from '@/domain/entities/pidDefinition.js'
+import { PidCode } from '@/domain/value-objects/pidCode.js'
 
 describe('SqliteVehicleRepository', () => {
   let db: ReturnType<typeof drizzle>
@@ -83,7 +83,7 @@ describe('SqliteVehicleRepository', () => {
   })
 
   const toyotaAuris: VehicleProfile = {
-    vin: Vin.create('SB1KE76L40E001234'),
+    vin: new Vin('SB1KE76L40E001234'),
     make: 'Toyota',
     model: 'Auris Hybrid',
     year: 2014,
@@ -112,11 +112,11 @@ describe('SqliteVehicleRepository', () => {
     })
 
     it('should throw VinDecodeError when VIN has wrong length', () => {
-      expect(() => Vin.create('SHORT')).toThrow(VinDecodeError)
+      expect(() => new Vin('SHORT')).toThrow(VinDecodeError)
     })
 
     it('should throw VinDecodeError when VIN has forbidden character I', () => {
-      expect(() => Vin.create('WAIZZZ8V5JA123456')).toThrow(VinDecodeError)
+      expect(() => new Vin('WAIZZZ8V5JA123456')).toThrow(VinDecodeError)
     })
   })
 
@@ -205,7 +205,7 @@ describe('SqliteVehicleRepository', () => {
       return {
         vehicleId,
         ecuId,
-        pidCode: PidCode.create('01', '0C'),
+        pidCode: new PidCode('01', '0C'),
         name: 'Engine RPM',
         description: 'Revolutions per minute',
         formula: '(A*256+B)/4',
@@ -256,7 +256,7 @@ describe('SqliteVehicleRepository', () => {
       await repo.insertPidDefinition({
         vehicleId,
         ecuId,
-        pidCode: PidCode.create('01', '05'),
+        pidCode: new PidCode('01', '05'),
         name: 'Coolant Temperature',
         formula: 'A-40',
         unit: '°C',
@@ -277,7 +277,7 @@ describe('SqliteVehicleRepository', () => {
       const llmPid: PidDefinition = {
         vehicleId,
         ecuId,
-        pidCode: PidCode.create('22', '0300'),
+        pidCode: new PidCode('22', '0300'),
         name: 'TCU Odometer',
         formula: '(A<<24|B<<16|C<<8|D)/10',
         unit: 'km',
@@ -310,7 +310,7 @@ describe('SqliteVehicleRepository', () => {
       const pid = await repo.insertPidDefinition({
         vehicleId: vehicle.id!,
         ecuId: ecu.id!,
-        pidCode: PidCode.create('01', '0C'),
+        pidCode: new PidCode('01', '0C'),
         name: 'Engine RPM',
         formula: '(A*256+B)/4',
         unit: 'rpm',

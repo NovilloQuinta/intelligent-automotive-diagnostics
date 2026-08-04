@@ -1,9 +1,9 @@
 import { createConnection } from 'node:net'
 import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
-import type { DtcCode } from '@/domain/dtcCode.js'
-import { FreezeFrame } from '@/domain/freezeFrame.js'
-import type { VehicleInfo } from '@/domain/vehicleProfile.js'
-import { Vin, FALLBACK_VIN } from '@/domain/vin.js'
+import { DtcCode } from '@/domain/value-objects/dtcCode.js'
+import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
+import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
+import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import { STANDARD_MODE_01_PIDS } from '@/infrastructure/persistence/sqlite/seed-pids.js'
 import { evaluatePid } from './pidParser.js'
 import { decodeVin } from './vinDecoder.js'
@@ -209,17 +209,6 @@ export class Elm327TcpRepository implements ObdRepositoryPort {
     return pairs
   }
 
-  /** SAE J2012: decodifica un par de bytes a código DTC (ej. 0x0301 → "P0301"). */
-  private decodeDtc(byte1: number, byte2: number): string {
-    const categories = ['P', 'C', 'B', 'U']
-    const category = categories[(byte1 >> 6) & 0x03]
-    const digit1 = (byte1 >> 4) & 0x03
-    const digit2 = byte1 & 0x0f
-    const digit3 = byte2 >> 4
-    const digit4 = byte2 & 0x0f
-    return `${category}${digit1}${digit2}${digit3}${digit4}`
-  }
-
   /** Aplica la fórmula del PID (SAE o VAG) o fallback big-endian si es desconocida. */
   private applyPidFormula(mode: string, pid: string, bytes: number[]): number {
     const entry = this.pidFormulas.get(`${mode} ${pid.toUpperCase()}`)
@@ -259,7 +248,7 @@ export class Elm327TcpRepository implements ObdRepositoryPort {
     const raw = await this.sendCommand('02 0C')
     if (/NO DATA/i.test(raw)) return null
     const bytes = this.parseModeResponse(raw)
-    return FreezeFrame.create({
+    return new FreezeFrame({
       dtcCode: dtc ?? UNKNOWN_FREEZE_FRAME_DTC,
       pidValues: { '0C': this.applyPidFormula('01', '0C', bytes) },
     })
@@ -268,10 +257,9 @@ export class Elm327TcpRepository implements ObdRepositoryPort {
   /** Lee los codigos DTC almacenados en la ECU via comando 03. */
   async readDtcCodes(): Promise<DtcCode[]> {
     const raw = await this.sendCommand('03')
-    return this.parseDtcResponse(raw).map(([b1, b2]) => ({
-      code: this.decodeDtc(b1, b2),
-      description: '',
-    }))
+    return this.parseDtcResponse(raw).map(([b1, b2]) =>
+      new DtcCode({ code: DtcCode.decodeFromBytes(b1, b2) }),
+    )
   }
 
   /** Limpia los codigos DTC de la ECU via comando 04. */
@@ -288,7 +276,7 @@ export class Elm327TcpRepository implements ObdRepositoryPort {
   /** Obtiene la informacion del vehiculo conectado al emulador. */
   async getVehicleInfo(): Promise<VehicleInfo> {
     try {
-      const vin = Vin.create(await this.readVin())
+      const vin = new Vin(await this.readVin())
       return {
         make: vin.manufacturer ?? 'unknown',
         model: 'unknown',
@@ -303,7 +291,7 @@ export class Elm327TcpRepository implements ObdRepositoryPort {
         model: 'unknown',
         year: 0,
         engineType: 'unknown',
-        vin: Vin.create(FALLBACK_VIN),
+        vin: new Vin(FALLBACK_VIN),
       }
     }
   }

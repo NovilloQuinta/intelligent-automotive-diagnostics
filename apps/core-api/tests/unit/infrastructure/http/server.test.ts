@@ -2,8 +2,8 @@ import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest'
 import type { AddressInfo } from 'node:net'
 import type { Server } from 'node:http'
 import { createServer } from '@/infrastructure/http/server.js'
-import type { SimulationScenario } from '@/domain/simulationScenario.js'
-import { Vin } from '@/domain/vin.js'
+import type { SimulationScenario } from '@/infrastructure/obd/simulationScenario.js'
+import { Vin } from '@/domain/value-objects/vin.js'
 import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
 
 const mockScenarios: SimulationScenario[] = [
@@ -18,7 +18,7 @@ const mockScenarios: SimulationScenario[] = [
       model: 'A3',
       year: 2018,
       engineType: '2.0 TFSI',
-      vin: Vin.create('WAUZZZ8V5JA123456'),
+      vin: new Vin('WAUZZZ8V5JA123456'),
     },
   },
   {
@@ -32,7 +32,7 @@ const mockScenarios: SimulationScenario[] = [
       model: 'Z900',
       year: 2020,
       engineType: '948cc Inline-4',
-      vin: Vin.create('JKAZR2A1XLA000111'),
+      vin: new Vin('JKAZR2A1XLA000111'),
     },
   },
 ]
@@ -226,7 +226,7 @@ describe('HTTP server', () => {
         model: 'unknown',
         year: 2026,
         engineType: 'unknown',
-        vin: Vin.create('WP0ZZZ99ZTS390000'),
+        vin: new Vin('WP0ZZZ99ZTS390000'),
       })),
       setPower: vi.fn(async () => undefined),
     }

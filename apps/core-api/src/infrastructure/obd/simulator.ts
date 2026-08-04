@@ -1,6 +1,6 @@
-import type { SimulationScenario } from '@/domain/simulationScenario.js'
-import { FreezeFrame } from '@/domain/freezeFrame.js'
-import type { VehicleInfo } from '@/domain/vehicleProfile.js'
+import type { SimulationScenario } from './simulationScenario.js'
+import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
+import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import {
   MODE_CURRENT_DATA,
   MODE_DTC,
@@ -68,7 +68,7 @@ export class ObdSimulator {
   getFreezeFrame(_dtc?: string): FreezeFrame | null {
     const frame = this.scenario.freezeFrame
     if (!frame) return null
-    return FreezeFrame.create({ dtcCode: frame.dtcCode, pidValues: { ...frame.pidValues } })
+    return new FreezeFrame({ dtcCode: frame.dtcCode, pidValues: { ...frame.pidValues } })
   }
 
   /** Service 09 — Devuelve el VIN del vehiculo simulado. */

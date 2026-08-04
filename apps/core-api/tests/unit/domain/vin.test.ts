@@ -1,251 +1,251 @@
 import { describe, it, expect } from 'vitest'
-import { Vin, VinDecodeError } from '@/domain/vin.js'
+import { Vin, VinDecodeError } from '@/domain/value-objects/vin.js'
 
 describe('Vin', () => {
-  describe('Vin.create', () => {
+  describe('Vin', () => {
     it('should create a Vin from a valid 17-char string', () => {
-      const vin = Vin.create('WAUZZZ8V5JA123456')
+      const vin = new Vin('WAUZZZ8V5JA123456')
       expect(vin.value).toBe('WAUZZZ8V5JA123456')
       expect(vin.toString()).toBe('WAUZZZ8V5JA123456')
     })
 
     it('should uppercase input', () => {
-      const vin = Vin.create('wauzzz8v5ja123456')
+      const vin = new Vin('wauzzz8v5ja123456')
       expect(vin.value).toBe('WAUZZZ8V5JA123456')
     })
 
     it('should strip whitespace', () => {
-      const vin = Vin.create('  WAUZZZ8V5JA123456  ')
+      const vin = new Vin('  WAUZZZ8V5JA123456  ')
       expect(vin.value).toBe('WAUZZZ8V5JA123456')
     })
 
     it('should throw VinDecodeError when length is not 17', () => {
-      expect(() => Vin.create('SHORT')).toThrow(VinDecodeError)
-      expect(() => Vin.create('WAYTOOLONGVINSTRING')).toThrow(VinDecodeError)
+      expect(() => new Vin('SHORT')).toThrow(VinDecodeError)
+      expect(() => new Vin('WAYTOOLONGVINSTRING')).toThrow(VinDecodeError)
     })
 
     it('should throw VinDecodeError for empty string', () => {
-      expect(() => Vin.create('')).toThrow(VinDecodeError)
+      expect(() => new Vin('')).toThrow(VinDecodeError)
     })
 
     it('should throw VinDecodeError for whitespace-only string', () => {
-      expect(() => Vin.create('                 ')).toThrow(VinDecodeError)
+      expect(() => new Vin('                 ')).toThrow(VinDecodeError)
     })
 
     it('should throw VinDecodeError when containing forbidden character I', () => {
-      expect(() => Vin.create('WAIZZZ8V5JA123456')).toThrow(VinDecodeError)
+      expect(() => new Vin('WAIZZZ8V5JA123456')).toThrow(VinDecodeError)
     })
 
     it('should throw VinDecodeError when containing forbidden character O', () => {
-      expect(() => Vin.create('WAOZZZ8V5JA123456')).toThrow(VinDecodeError)
+      expect(() => new Vin('WAOZZZ8V5JA123456')).toThrow(VinDecodeError)
     })
 
     it('should throw VinDecodeError when containing forbidden character Q', () => {
-      expect(() => Vin.create('WAQZZZ8V5JA123456')).toThrow(VinDecodeError)
+      expect(() => new Vin('WAQZZZ8V5JA123456')).toThrow(VinDecodeError)
     })
 
     it('should throw VinDecodeError when containing non-alphanumeric chars', () => {
-      expect(() => Vin.create('WAU_ZZ8V5JA123456')).toThrow(VinDecodeError)
+      expect(() => new Vin('WAU_ZZ8V5JA123456')).toThrow(VinDecodeError)
     })
 
     it('should throw VinDecodeError when containing special characters', () => {
-      expect(() => Vin.create('WAU#Z$8V5JA123456')).toThrow(VinDecodeError)
-      expect(() => Vin.create('WAU@ZZ8V5JA123456')).toThrow(VinDecodeError)
+      expect(() => new Vin('WAU#Z$8V5JA123456')).toThrow(VinDecodeError)
+      expect(() => new Vin('WAU@ZZ8V5JA123456')).toThrow(VinDecodeError)
     })
 
     it('should throw VinDecodeError when 17 chars are all forbidden', () => {
-      expect(() => Vin.create('IIIIIIIIIIIIIIIII')).toThrow(VinDecodeError)
+      expect(() => new Vin('IIIIIIIIIIIIIIIII')).toThrow(VinDecodeError)
     })
 
     it('should throw VinDecodeError for lowercase ', () => {
-      expect(() => Vin.create('waiiiiiv5ja123456')).toThrow(VinDecodeError)
+      expect(() => new Vin('waiiiiiv5ja123456')).toThrow(VinDecodeError)
     })
 
     it('should create a Vin with all valid same character', () => {
-      const vin = Vin.create('AAAAAAAAAAAAAAAAA')
+      const vin = new Vin('AAAAAAAAAAAAAAAAA')
       expect(vin.value).toBe('AAAAAAAAAAAAAAAAA')
     })
 
     it('should create a Vin with numeric characters only', () => {
-      const vin = Vin.create('11111111111111111')
+      const vin = new Vin('11111111111111111')
       expect(vin.value).toBe('11111111111111111')
     })
   })
 
   describe('Vin.isCheckDigitValid', () => {
     it('should return true for correct check digit', () => {
-      const vin = Vin.create('11111111111111111')
+      const vin = new Vin('11111111111111111')
       expect(vin.isCheckDigitValid()).toBe(true)
     })
 
     it('should return true for valid VIN with correct check digit', () => {
-      const vin = Vin.create('1M8GDM9AXKP042788')
+      const vin = new Vin('1M8GDM9AXKP042788')
       expect(vin.isCheckDigitValid()).toBe(true)
     })
 
     it('should return false for invalid check digit', () => {
-      const vin = Vin.create('WAUZZZ8V5JA123456')
+      const vin = new Vin('WAUZZZ8V5JA123456')
       expect(vin.isCheckDigitValid()).toBe(false)
     })
 
     it('should return false for VIN with mismatched check digit', () => {
-      const vin = Vin.create('1M8GDM9A5KP042788')
+      const vin = new Vin('1M8GDM9A5KP042788')
       expect(vin.isCheckDigitValid()).toBe(false)
     })
   })
 
   describe('Vin.wmiRegion', () => {
     it('should identify Spain', () => {
-      const vin = Vin.create('UXXZZZ8V5JA123456')
+      const vin = new Vin('UXXZZZ8V5JA123456')
       expect(vin.wmiRegion).toEqual({ country: 'Spain', region: 'Europe' })
     })
 
     it('should identify Germany', () => {
-      const vin = Vin.create('WAUZZZ8V5JA123456')
+      const vin = new Vin('WAUZZZ8V5JA123456')
       expect(vin.wmiRegion).toEqual({ country: 'Germany', region: 'Europe' })
     })
 
     it('should identify Japan', () => {
-      const vin = Vin.create('JKAZR2A1XLA000111')
+      const vin = new Vin('JKAZR2A1XLA000111')
       expect(vin.wmiRegion).toEqual({ country: 'Japan', region: 'Asia' })
     })
 
     it('should identify United States', () => {
-      const vin = Vin.create('1M8GDM9AXKP042788')
+      const vin = new Vin('1M8GDM9AXKP042788')
       expect(vin.wmiRegion).toEqual({ country: 'United States', region: 'North America' })
     })
 
     it('should identify Canada (WMI 2xx, no USA)', () => {
-      const vin = Vin.create('2G1FC1E31C9123456')
+      const vin = new Vin('2G1FC1E31C9123456')
       expect(vin.wmiRegion).toEqual({ country: 'Canada', region: 'North America' })
     })
 
     it('should identify Mexico (WMI 3xx, no USA)', () => {
-      const vin = Vin.create('3VWC57BU7KM123456')
+      const vin = new Vin('3VWC57BU7KM123456')
       expect(vin.wmiRegion).toEqual({ country: 'Mexico', region: 'North America' })
     })
 
     it('should return null for unknown WMI', () => {
-      const vin = Vin.create('99ZZZZ8V5JA123456')
+      const vin = new Vin('99ZZZZ8V5JA123456')
       expect(vin.wmiRegion).toBeNull()
     })
   })
 
   describe('Vin.manufacturer', () => {
     it('should return "Audi" for WAU WMI', () => {
-      const vin = Vin.create('WAUZZZ8V5JA123456')
+      const vin = new Vin('WAUZZZ8V5JA123456')
       expect(vin.manufacturer).toBe('Audi')
     })
 
     it('should return "Kawasaki" for JKA WMI', () => {
-      const vin = Vin.create('JKAZR2A1XLA000111')
+      const vin = new Vin('JKAZR2A1XLA000111')
       expect(vin.manufacturer).toBe('Kawasaki')
     })
 
     it('should return "Volkswagen" for WVW WMI', () => {
-      const vin = Vin.create('WVWZZZ1JZXW123456')
+      const vin = new Vin('WVWZZZ1JZXW123456')
       expect(vin.manufacturer).toBe('Volkswagen')
     })
 
     it('should return "BMW" for WBA WMI', () => {
-      const vin = Vin.create('WBA3B5C50J1234567')
+      const vin = new Vin('WBA3B5C50J1234567')
       expect(vin.manufacturer).toBe('BMW')
     })
 
     it('should return "Mercedes-Benz" for WDD WMI', () => {
-      const vin = Vin.create('WDDGF4HB3CR123456')
+      const vin = new Vin('WDDGF4HB3CR123456')
       expect(vin.manufacturer).toBe('Mercedes-Benz')
     })
 
     it('should return "Porsche" for WP0 WMI', () => {
-      const vin = Vin.create('WP0ZZZ99ZTS390000')
+      const vin = new Vin('WP0ZZZ99ZTS390000')
       expect(vin.manufacturer).toBe('Porsche')
     })
 
     it('should return "Toyota" for JTD WMI (japanese)', () => {
-      const vin = Vin.create('JTDKB20EX20012345')
+      const vin = new Vin('JTDKB20EX20012345')
       expect(vin.manufacturer).toBe('Toyota')
     })
 
     it('should return "Honda" for JHM WMI (japanese)', () => {
-      const vin = Vin.create('JHMCM56557C404321')
+      const vin = new Vin('JHMCM56557C404321')
       expect(vin.manufacturer).toBe('Honda')
     })
 
     it('should return "Ford" for WF0 WMI (european)', () => {
-      const vin = Vin.create('WF0MXXGCM5X123456')
+      const vin = new Vin('WF0MXXGCM5X123456')
       expect(vin.manufacturer).toBe('Ford')
     })
 
     it('should return "Chevrolet" for 1G1 WMI (american)', () => {
-      const vin = Vin.create('1G1BC52E5P7123456')
+      const vin = new Vin('1G1BC52E5P7123456')
       expect(vin.manufacturer).toBe('Chevrolet')
     })
 
     it('should return null for unknown WMI (XTA)', () => {
-      const vin = Vin.create('XTAZZZ8V5JA123456')
+      const vin = new Vin('XTAZZZ8V5JA123456')
       expect(vin.manufacturer).toBeNull()
     })
 
     it('should return null for unknown WMI (99 prefix)', () => {
-      const vin = Vin.create('99ZZZZ8V5JA123456')
+      const vin = new Vin('99ZZZZ8V5JA123456')
       expect(vin.manufacturer).toBeNull()
     })
   })
 
   describe('Vin.modelYear', () => {
     it('should return 2018 for position 10 "J"', () => {
-      const vin = Vin.create('WAUZZZ8V5JA123456')
+      const vin = new Vin('WAUZZZ8V5JA123456')
       expect(vin.modelYear).toBe(2018)
     })
 
     it('should return 2020 for position 10 "L"', () => {
-      const vin = Vin.create('JKAZR2A1XLA000111')
+      const vin = new Vin('JKAZR2A1XLA000111')
       expect(vin.modelYear).toBe(2020)
     })
 
     it('should return 2010 for position 10 "A"', () => {
-      const vin = Vin.create('WAUZZZ8V5A1234567')
+      const vin = new Vin('WAUZZZ8V5A1234567')
       expect(vin.modelYear).toBe(2010)
     })
 
     it('should return 2005 for position 10 "5"', () => {
-      const vin = Vin.create('WF0MXXGCM5X123456')
+      const vin = new Vin('WF0MXXGCM5X123456')
       expect(vin.modelYear).toBe(2005)
     })
 
     it('should return 2002 for position 10 "2"', () => {
-      const vin = Vin.create('JTDKB20EX20012345')
+      const vin = new Vin('JTDKB20EX20012345')
       expect(vin.modelYear).toBe(2002)
     })
 
     it('should return 2007 for position 10 "7"', () => {
-      const vin = Vin.create('JHMCM56557C404321')
+      const vin = new Vin('JHMCM56557C404321')
       expect(vin.modelYear).toBe(2007)
     })
 
     it('should return 2023 for position 10 "P"', () => {
-      const vin = Vin.create('1G1BC52E5P7123456')
+      const vin = new Vin('1G1BC52E5P7123456')
       expect(vin.modelYear).toBe(2023)
     })
 
     it('should return 2026 for position 10 "T"', () => {
-      const vin = Vin.create('WP0ZZZ99ZTS390000')
+      const vin = new Vin('WP0ZZZ99ZTS390000')
       expect(vin.modelYear).toBe(2026)
     })
 
     it('should return null for invalid char "U" at position 10', () => {
-      const vin = Vin.create('WAUZZZ8V5UA123456')
+      const vin = new Vin('WAUZZZ8V5UA123456')
       expect(vin.modelYear).toBeNull()
     })
 
     it('should return null for invalid char "Z" at position 10', () => {
-      const vin = Vin.create('JKAZR2A1XZA000111')
+      const vin = new Vin('JKAZR2A1XZA000111')
       expect(vin.modelYear).toBeNull()
     })
 
     it('should return null for invalid char "0" at position 10', () => {
-      const vin = Vin.create('WP0ZZZ99Z0S390000')
+      const vin = new Vin('WP0ZZZ99Z0S390000')
       expect(vin.modelYear).toBeNull()
     })
   })

@@ -5,14 +5,14 @@ import { ObdSimulator } from '@/infrastructure/obd/simulator.js'
 import { ObdSimulatorRepository } from '@/infrastructure/obd/simulatorAdapter.js'
 import { processVehicleDiagnosis, DIAGNOSIS_TIMEOUT_MS, withTimeout } from '@/application/use-cases/processVehicleDiagnosis.js'
 import type { CognitiveDiagnosisResult } from '@/application/use-cases/executeCognitiveDiagnosis.js'
-import type { DiagnosisResult } from '@/domain/diagnosisResult.js'
+import type { DiagnosisResult } from '@/domain/value-objects/diagnosisResult.js'
 import { executeCognitiveDiagnosis } from '@/application/use-cases/executeCognitiveDiagnosis.js'
 import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
 import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
 import type { LlmClientPort, ToolCallHandler } from '@/application/ports/llmClient.port.js'
-import { Vin, FALLBACK_VIN } from '@/domain/vin.js'
-import { VehicleType } from '@/domain/simulationScenario.js'
-import type { SimulationScenario } from '@/domain/simulationScenario.js'
+import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
+import { VehicleType } from '@/infrastructure/obd/simulationScenario.js'
+import type { SimulationScenario } from '@/infrastructure/obd/simulationScenario.js'
 
 
 /** Timeout del diagnóstico cognitivo: el bucle de tool calling puede durar varias llamadas API. */
@@ -76,7 +76,7 @@ const TCP_DIRECT_SCENARIO: SimulationScenario = {
     model: 'unknown',
     year: 0,
     engineType: 'unknown',
-    vin: Vin.create(FALLBACK_VIN),
+    vin: new Vin(FALLBACK_VIN),
   },
 }
 

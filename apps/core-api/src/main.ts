@@ -3,10 +3,10 @@ import { createServer } from '@/infrastructure/http/server.js'
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
 import { SqliteRefreshTokenStore } from '@/infrastructure/persistence/sqlite/refreshTokenStore.js'
 import { createAuthService } from '@/infrastructure/services/authService.js'
-import { Vin } from '@/domain/vin.js'
-import { VehicleType } from '@/domain/simulationScenario.js'
-import type { SimulationScenario } from '@/domain/simulationScenario.js'
-import type { LiveData } from '@/domain/liveData.js'
+import { Vin } from '@/domain/value-objects/vin.js'
+import { VehicleType } from '@/infrastructure/obd/simulationScenario.js'
+import type { SimulationScenario } from '@/infrastructure/obd/simulationScenario.js'
+import { LiveData } from '@/domain/value-objects/liveData.js'
 import { Elm327TcpRepository } from '@/infrastructure/obd/elm327TcpRepository.js'
 import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
 import { createAnthropicClient } from '@/infrastructure/llm/anthropicClient.js'
@@ -41,19 +41,9 @@ const authService = createAuthService({
   tokenStore,
 })
 
-const audiIdleData: LiveData = {
-  rpm: 750,
-  coolantTemp: 90,
-  speed: 0,
-  intakeTemp: 25,
-}
+const audiIdleData = new LiveData({ rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 })
 
-const kawaData: LiveData = {
-  rpm: 4500,
-  coolantTemp: 105,
-  speed: 0,
-  intakeTemp: 28,
-}
+const kawaData = new LiveData({ rpm: 4500, coolantTemp: 105, speed: 0, intakeTemp: 28 })
 
 const scenarios: SimulationScenario[] = [
   {
@@ -67,7 +57,7 @@ const scenarios: SimulationScenario[] = [
       model: 'A3',
       year: 2018,
       engineType: '2.0 TFSI',
-      vin: Vin.create('WAUZZZ8V5JA123456'),
+      vin: new Vin('WAUZZZ8V5JA123456'),
     },
   },
   {
@@ -81,7 +71,7 @@ const scenarios: SimulationScenario[] = [
       model: 'Z900',
       year: 2020,
       engineType: '948cc Inline-4',
-      vin: Vin.create('JKAZR2A1XLA000111'),
+      vin: new Vin('JKAZR2A1XLA000111'),
     },
   },
 ]

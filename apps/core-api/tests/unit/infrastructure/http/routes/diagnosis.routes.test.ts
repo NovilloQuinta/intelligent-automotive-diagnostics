@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest'
 import request from 'supertest'
 import express from 'express'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
-import { Vin } from '@/domain/vin.js'
-import type { SimulationScenario } from '@/domain/simulationScenario.js'
+import { Vin } from '@/domain/value-objects/vin.js'
+import type { SimulationScenario } from '@/infrastructure/obd/simulationScenario.js'
 import type { ObdRepositoryPort } from '@/application/ports/obdRepository.port.js'
 import type { LlmClientPort, ToolCallTrace } from '@/application/ports/llmClient.port.js'
 
@@ -19,7 +19,7 @@ const mockScenarios: SimulationScenario[] = [
       model: 'A3',
       year: 2018,
       engineType: '2.0 TFSI',
-      vin: Vin.create('WAUZZZ8V5JA123456'),
+      vin: new Vin('WAUZZZ8V5JA123456'),
     },
   },
   {
@@ -33,7 +33,7 @@ const mockScenarios: SimulationScenario[] = [
       model: 'Z900',
       year: 2020,
       engineType: '948cc Inline-4',
-      vin: Vin.create('JKAZR2A1XLA000111'),
+      vin: new Vin('JKAZR2A1XLA000111'),
     },
   },
 ]
@@ -59,7 +59,7 @@ const mockObdRepo: ObdRepositoryPort = {
     model: 'unknown',
     year: 2018,
     engineType: 'unknown',
-    vin: Vin.create('WAUZZZ8V5JA123456'),
+    vin: new Vin('WAUZZZ8V5JA123456'),
   })),
   setPower: vi.fn(async () => undefined),
 }

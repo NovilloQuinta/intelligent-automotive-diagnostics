@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { FreezeFrame, FreezeFrameError } from '@/domain/freezeFrame.js'
+import { FreezeFrame, FreezeFrameError } from '@/domain/value-objects/freezeFrame.js'
 
 describe('FreezeFrame', () => {
   describe('create', () => {
     it('should create a FreezeFrame with dtcCode and pidValues', () => {
-      const frame = FreezeFrame.create({ dtcCode: 'P0301', pidValues: { rpm: 800 } })
+      const frame = new FreezeFrame({ dtcCode: 'P0301', pidValues: { rpm: 800 } })
 
       expect(frame).toBeInstanceOf(FreezeFrame)
       expect(frame.dtcCode).toBe('P0301')
@@ -12,19 +12,19 @@ describe('FreezeFrame', () => {
     })
 
     it('should throw FreezeFrameError when dtcCode is empty', () => {
-      expect(() => FreezeFrame.create({ dtcCode: '', pidValues: { rpm: 800 } })).toThrow(
+      expect(() => new FreezeFrame({ dtcCode: '', pidValues: { rpm: 800 } })).toThrow(
         FreezeFrameError,
       )
     })
 
     it('should throw FreezeFrameError when pidValues is empty', () => {
-      expect(() => FreezeFrame.create({ dtcCode: 'P0301', pidValues: {} })).toThrow(
+      expect(() => new FreezeFrame({ dtcCode: 'P0301', pidValues: {} })).toThrow(
         FreezeFrameError,
       )
     })
 
     it('should expose readonly dtcCode and pidValues', () => {
-      const frame = FreezeFrame.create({
+      const frame = new FreezeFrame({
         dtcCode: 'P0301',
         pidValues: { rpm: 800, coolantTemp: 95 },
       })
@@ -36,7 +36,7 @@ describe('FreezeFrame', () => {
 
   describe('pidKeys', () => {
     it('should return the frozen PID keys in order', () => {
-      const frame = FreezeFrame.create({
+      const frame = new FreezeFrame({
         dtcCode: 'P0301',
         pidValues: { rpm: 800, coolantTemp: 95, speed: 60 },
       })
@@ -47,13 +47,13 @@ describe('FreezeFrame', () => {
 
   describe('getPidValue', () => {
     it('should return the frozen value for an existing PID', () => {
-      const frame = FreezeFrame.create({ dtcCode: 'P0301', pidValues: { rpm: 800 } })
+      const frame = new FreezeFrame({ dtcCode: 'P0301', pidValues: { rpm: 800 } })
 
       expect(frame.getPidValue('rpm')).toBe(800)
     })
 
     it('should return undefined for an unknown PID', () => {
-      const frame = FreezeFrame.create({ dtcCode: 'P0301', pidValues: { rpm: 800 } })
+      const frame = new FreezeFrame({ dtcCode: 'P0301', pidValues: { rpm: 800 } })
 
       expect(frame.getPidValue('fuelLevel')).toBeUndefined()
     })
