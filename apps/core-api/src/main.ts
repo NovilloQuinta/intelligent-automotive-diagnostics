@@ -14,12 +14,14 @@ import { createOpenAiClient } from '@/infrastructure/llm/openAiClient.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import { loadConfig, assertProductionSecrets } from '@/infrastructure/configuration/index.js'
 import { SqliteAuditLogRepository } from '@/infrastructure/persistence/sqlite/auditLogRepository.js'
+import { Logger } from '@/infrastructure/observability/logger.js'
 
 const config = loadConfig()
 assertProductionSecrets(config)
 
 const db = getDb(config.DB_PATH)
 const auditRepo = new SqliteAuditLogRepository(db)
+const logger = new Logger(config.NODE_ENV, db)
 const userRepo = new SqliteUserRepository(db)
 const tokenStore = new SqliteRefreshTokenStore(db)
 const authService = createAuthService({
@@ -96,8 +98,9 @@ const app = createServer({
   allowedOrigins: config.ALLOWED_ORIGINS,
   nodeEnv: config.NODE_ENV,
   auditRepo,
+  logger,
 })
 
 app.listen(config.PORT, () => {
-  console.log(`API listening on http://localhost:${config.PORT} (OBD_MODE=${config.OBD_MODE})`)
+  logger.info(`API listening on http://localhost:${config.PORT}`, { OBD_MODE: config.OBD_MODE })
 })

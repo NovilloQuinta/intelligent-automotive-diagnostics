@@ -4,8 +4,10 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { createServer } from '@/infrastructure/http/server.js'
 import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.js'
+import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 
 const mockAuditRepo: AuditLogRepository = { create: async () => {} }
+const mockLogger: LoggerPort = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
 import { SqliteRefreshTokenStore } from '@/infrastructure/persistence/sqlite/refreshTokenStore.js'
 import { createAuthService } from '@/infrastructure/services/authService.js'
@@ -63,6 +65,7 @@ describe('Auth integration', () => {
       allowedOrigins: '*',
       nodeEnv: 'test',
       auditRepo: mockAuditRepo,
+      logger: mockLogger,
     })
   })
 

@@ -103,3 +103,12 @@ export const auditLogs = sqliteTable('audit_logs', {
   durationMs: integer('duration_ms'),
   createdAt: text('created_at').notNull().default("datetime('now')"),
 })
+
+/** Logs de aplicacion para trazabilidad de errores y eventos. */
+export const logs = sqliteTable('logs', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  level: text('level').notNull(),
+  message: text('message').notNull(),
+  context: text('context'),
+  createdAt: text('created_at').notNull().default("datetime('now')"),
+})

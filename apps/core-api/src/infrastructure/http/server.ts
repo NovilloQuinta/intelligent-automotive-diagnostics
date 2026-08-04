@@ -15,6 +15,7 @@ import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
+import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 
 /** Dependencias del servidor Express. */
 export interface ServerDependencies {
@@ -29,6 +30,7 @@ export interface ServerDependencies {
   readonly llmClient?: LlmClientPort
   readonly allowedOrigins: string
   readonly nodeEnv: string
+  readonly logger: LoggerPort
 }
 
 /** Middleware base: seguridad, logging y parseo JSON. */
@@ -82,11 +84,11 @@ function mountInfoRoutes(app: express.Application, nodeEnv: string): void {
 }
 
 /** Error handler global: responde 500 sin filtrar detalles internos. */
-function mountErrorHandler(app: express.Application): void {
+function mountErrorHandler(app: express.Application, logger: LoggerPort): void {
   app.use(
     (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
       const message = err instanceof Error ? err.message : 'Unknown error'
-      console.error(`[ERROR] ${message}`)
+      logger.error(message)
       res.status(500).json({ error: 'Internal server error' })
     },
   )
@@ -119,7 +121,7 @@ export function createServer(deps: ServerDependencies): express.Application {
     }),
   )
 
-  mountErrorHandler(app)
+  mountErrorHandler(app, deps.logger)
 
   return app
 }
