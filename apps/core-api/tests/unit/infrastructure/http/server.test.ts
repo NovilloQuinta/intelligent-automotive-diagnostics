@@ -6,9 +6,11 @@ import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js
 import { Vin } from '@/domain/value-objects/vin.js'
 import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
+import type { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 
 const mockAuditRepo: AuditLogRepository = { create: async () => {} }
 const mockLogger: LoggerPort = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
+const mockAuthController = { register: vi.fn(), login: vi.fn(), refresh: vi.fn() } as unknown as AuthController
 
 const mockScenarios: SimulationScenario[] = [
   {
@@ -45,7 +47,7 @@ let baseUrl: string
 let httpServer: Server
 
 beforeAll(async () => {
-  const app = createServer({ scenarios: mockScenarios, allowedOrigins: 'http://localhost:3000', nodeEnv: 'test', auditRepo: mockAuditRepo, logger: mockLogger })
+  const app = createServer({ scenarios: mockScenarios, allowedOrigins: 'http://localhost:3000', nodeEnv: 'test', auditRepo: mockAuditRepo, logger: mockLogger, authController: mockAuthController })
   await new Promise<void>((resolve) => {
     httpServer = app.listen(0, () => resolve())
   })
@@ -236,7 +238,7 @@ describe('HTTP server', () => {
     }
 
     beforeAll(async () => {
-      const app = createServer({ scenarios: [], obdRepo: mockObdRepo, allowedOrigins: 'http://localhost:3000', nodeEnv: 'test', auditRepo: mockAuditRepo, logger: mockLogger })
+      const app = createServer({ scenarios: [], obdRepo: mockObdRepo, allowedOrigins: 'http://localhost:3000', nodeEnv: 'test', auditRepo: mockAuditRepo, logger: mockLogger, authController: mockAuthController })
       await new Promise<void>((resolve) => {
         tcpServer = app.listen(0, () => resolve())
       })

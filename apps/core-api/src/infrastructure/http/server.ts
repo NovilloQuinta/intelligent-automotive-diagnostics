@@ -10,21 +10,17 @@ import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.
 import { createAuthMiddleware } from '@/infrastructure/http/middleware/auth.middleware.js'
 import { createAuthRoutes } from '@/infrastructure/http/routes/auth.routes.js'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
-import type { UserRepository } from '@/application/ports/UserRepository.js'
-import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
-import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
+import type { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 
 /** Dependencias del servidor Express. */
 export interface ServerDependencies {
   readonly scenarios: SimulationScenario[]
   readonly rateLimit?: Partial<RateLimiterConfig>
   readonly auditRepo: AuditLogRepository
-  readonly userRepo?: UserRepository
-  readonly authService?: AuthServicePort
-  readonly tokenStore?: RefreshTokenRepository
+  readonly authController: AuthController
   readonly accessTokenSecret?: string
   readonly obdRepo?: ObdRepository
   readonly llmClient?: LlmClientPort
@@ -101,10 +97,8 @@ export function createServer(deps: ServerDependencies): express.Application {
   applyBaseMiddleware(app, deps)
   applyCors(app, deps.allowedOrigins)
 
-  if (deps.userRepo && deps.authService && deps.tokenStore) {
-    app.use('/api/auth', createRateLimiter({ windowMinutes: 15, maxRequests: 20 }))
-    app.use('/api/auth', createAuthRoutes(deps.userRepo, deps.authService, deps.tokenStore))
-  }
+  app.use('/api/auth', createRateLimiter({ windowMinutes: 15, maxRequests: 20 }))
+  app.use('/api/auth', createAuthRoutes(deps.authController))
 
   mountInfoRoutes(app, deps.nodeEnv)
 

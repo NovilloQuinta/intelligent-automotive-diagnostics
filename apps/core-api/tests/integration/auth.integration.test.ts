@@ -5,6 +5,10 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { createServer } from '@/infrastructure/http/server.js'
 import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
+import { RegisterUserUseCase } from '@/application/use-cases/RegisterUserUseCase.js'
+import { LoginUserUseCase } from '@/application/use-cases/LoginUserUseCase.js'
+import { RefreshTokenUseCase } from '@/application/use-cases/RefreshTokenUseCase.js'
+import { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 
 const mockAuditRepo: AuditLogRepository = { create: async () => {} }
 const mockLogger: LoggerPort = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
@@ -55,12 +59,16 @@ describe('Auth integration', () => {
       tokenStore,
     })
 
+    const authController = new AuthController(
+      new RegisterUserUseCase(userRepo, authService, tokenStore),
+      new LoginUserUseCase(userRepo, authService, tokenStore),
+      new RefreshTokenUseCase(authService),
+    )
+
     app = createServer({
       scenarios: [],
       rateLimit: { windowMinutes: 60, maxRequests: 1000 },
-      userRepo,
-      authService,
-      tokenStore,
+      authController,
       accessTokenSecret: ACCESS_SECRET,
       allowedOrigins: '*',
       nodeEnv: 'test',
