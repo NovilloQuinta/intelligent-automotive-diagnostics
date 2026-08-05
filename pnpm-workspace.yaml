@@ -2,13 +2,15 @@ packages:
   - 'apps/*'
 
 allowBuilds:
-  '@scarf/scarf': set this to true or false
+  '@scarf/scarf': false
   bcrypt: set this to true or false
   better-sqlite3: set this to true or false
   esbuild: true
   onnxruntime-node: true
+  png-img: false
   protobufjs: true
   sharp: true
+  wd: false
 
 onlyBuiltDependencies:
   - '@scarf/scarf'
