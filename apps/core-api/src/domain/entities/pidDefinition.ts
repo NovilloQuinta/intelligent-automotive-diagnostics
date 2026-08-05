@@ -1,3 +1,4 @@
+import { Formula } from '../value-objects/formula.js'
 import type { PidCode } from '../value-objects/pidCode.js'
 
 /** Error lanzado cuando falla la validacion de un PidDefinition. */
@@ -16,7 +17,7 @@ export class PidDefinition {
   readonly pidCode: PidCode
   readonly name: string
   readonly description?: string
-  readonly formula: string
+  readonly formula: Formula
   readonly unit?: string
   readonly dataBytes: number
   readonly pidType: string
@@ -55,7 +56,7 @@ export class PidDefinition {
     this.pidCode = params.pidCode
     this.name = params.name.trim()
     this.description = params.description
-    this.formula = params.formula
+    this.formula = new Formula(params.formula)
     this.unit = params.unit
     this.dataBytes = params.dataBytes
     this.pidType = params.pidType

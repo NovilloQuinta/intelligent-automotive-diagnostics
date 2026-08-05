@@ -1,4 +1,4 @@
-import { evaluatePid } from './pidParser.js'
+import { Formula } from '@/domain/value-objects/formula.js'
 import { bigEndian } from './hexUtils.js'
 
 /** Entrada de fórmula para un PID/DID con su expresión aritmética y bytes esperados. */
@@ -27,7 +27,7 @@ export interface PidFormulaCatalog {
    * @param pid - Código PID/DID (ej. `'0C'`, `'1130'`)
    * @param bytes - Array de bytes de respuesta (valores 0-255)
    * @returns Valor físico calculado
-   * @throws {import('./pidParser.js').PidParseError} Si la fórmula es inválida o los bytes son insuficientes.
+   * @throws {import('@/domain/services/pidFormula.js').PidParseError} Si la fórmula es inválida o los bytes son insuficientes.
    */
   apply(mode: string, pid: string, bytes: number[]): number
 }
@@ -36,19 +36,24 @@ export interface PidFormulaCatalog {
  * Definición mínima de PID necesaria para convertir a entrada de fórmula.
  * Acepta cualquier objeto con estructura `{ pidCode: { key }, formula, dataBytes }`,
  * incluyendo instancias de `PidCode` y `PidDefinition`.
+ *
+ * `formula` acepta tanto `string` como objetos con `toString()` (ej. {@link Formula} VO).
  */
 export interface PidDefinitionLike {
   readonly pidCode: { readonly key: string }
-  readonly formula: string
+  readonly formula: string | { toString(): string }
   readonly dataBytes: number
 }
 
 /**
  * Convierte un array de definiciones PID a entradas de catálogo de fórmulas.
  *
- * Cada definición con `formula !== ''` se convierte en una tupla `[key, PidFormulaEntry]`.
- * Se filtran automáticamente las definiciones con `formula === ''` (ej. PIDs tipo ASCII
+ * Cada definición con fórmula no vacía se convierte en una tupla `[key, PidFormulaEntry]`.
+ * Se filtran automáticamente las definiciones con fórmula vacía (ej. PIDs tipo ASCII
  * como VIN que no tienen fórmula aritmética).
+ *
+ * La conversión `Formula → string` ocurre aquí vía `toString()` cuando la definición
+ * proviene de una entidad `PidDefinition` del dominio.
  *
  * @param definitions - Iterable de objetos con `{ pidCode: { key }, formula, dataBytes }`
  * @returns Array inmutable de tuplas `[key, PidFormulaEntry]` listas para el catálogo
@@ -58,10 +63,11 @@ export function pidDefinitionsToFormulaEntries(
 ): Array<readonly [string, PidFormulaEntry]> {
   const entries: Array<readonly [string, PidFormulaEntry]> = []
   for (const def of definitions) {
-    if (def.formula === '') continue
+    const formulaStr = typeof def.formula === 'string' ? def.formula : def.formula.toString()
+    if (formulaStr === '') continue
     entries.push([
       def.pidCode.key,
-      { formula: def.formula, dataBytes: def.dataBytes },
+      { formula: formulaStr, dataBytes: def.dataBytes },
     ] as const)
   }
   return entries
@@ -97,7 +103,7 @@ export function createPidFormulaCatalog(
     apply(mode: string, pid: string, bytes: number[]): number {
       const entry = map.get(`${mode} ${pid.toUpperCase()}`)
       if (!entry) return bigEndian(bytes)
-      return evaluatePid(entry.formula, bytes.slice(0, entry.dataBytes))
+      return new Formula(entry.formula).evaluate(bytes.slice(0, entry.dataBytes))
     },
   }
 }

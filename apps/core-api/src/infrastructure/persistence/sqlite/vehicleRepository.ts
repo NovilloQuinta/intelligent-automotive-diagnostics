@@ -1,6 +1,7 @@
 import { eq, sql } from 'drizzle-orm'
 import * as schema from './schema.js'
 import { Vin } from '@/domain/value-objects/vin.js'
+import { Formula } from '@/domain/value-objects/formula.js'
 import { PidCode } from '@/domain/value-objects/pidCode.js'
 import type { DiagnosticsDb } from './db.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
@@ -117,7 +118,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
         pidCode: pid.pidCode.pid,
         name: pid.name,
         description: pid.description ?? null,
-        formula: pid.formula,
+        formula: pid.formula.toString(),
         unit: pid.unit ?? null,
         dataBytes: pid.dataBytes,
         pidType: pid.pidType,
@@ -159,7 +160,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
       pidCode: new PidCode(r.mode, r.pidCode),
       name: r.name,
       description: r.description ?? undefined,
-      formula: r.formula,
+      formula: new Formula(r.formula),
       unit: r.unit ?? undefined,
       dataBytes: r.dataBytes,
       pidType: r.pidType as PidDefinition['pidType'],
@@ -184,7 +185,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
       pidCode: new PidCode(r.mode, r.pidCode),
       name: r.name,
       description: r.description ?? undefined,
-      formula: r.formula,
+      formula: new Formula(r.formula),
       unit: r.unit ?? undefined,
       dataBytes: r.dataBytes,
       pidType: r.pidType as PidDefinition['pidType'],

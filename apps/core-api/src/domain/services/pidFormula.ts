@@ -6,7 +6,6 @@ export class PidParseError extends Error {
   }
 }
 
-/** Precedencia de operadores (menor número = menor precedencia). */
 const PRECEDENCE: Record<string, number> = {
   '|': 1,
   '&': 2,
@@ -16,17 +15,15 @@ const PRECEDENCE: Record<string, number> = {
   '-': 4,
   '*': 5,
   '/': 5,
-  u: 6, // unary minus (right-associative en la práctica)
+  u: 6,
 }
 
 const BINARY_OPS = new Set(Object.keys(PRECEDENCE))
 
-/** Tokens que son operadores o paréntesis. */
 function isOpOrParen(t: string): boolean {
   return BINARY_OPS.has(t) || t === '('
 }
 
-/** Convierte una fórmula a array de tokens. */
 function tokenize(formula: string): string[] {
   const tokens: string[] = []
   let i = 0
@@ -87,7 +84,6 @@ function tokenize(formula: string): string[] {
   return tokens
 }
 
-/** Convierte tokens infijos a notación postfija (Shunting-yard de Dijkstra). */
 function toPostfix(infixTokens: string[]): string[] {
   const output: string[] = []
   const ops: string[] = []
@@ -95,11 +91,9 @@ function toPostfix(infixTokens: string[]): string[] {
   for (let i = 0; i < infixTokens.length; i++) {
     let token = infixTokens[i]
 
-    // Unario + o -
     if ((token === '+' || token === '-') && (i === 0 || isOpOrParen(infixTokens[i - 1]))) {
       token = token === '-' ? 'u' : token
-      if (token === '+') continue // unario + es no-op
-      // unario - se marca como 'u'
+      if (token === '+') continue
     }
 
     if (/^[0-9.]+$/.test(token) || token === 'raw' || /^[A-H]$/.test(token)) {
@@ -111,9 +105,8 @@ function toPostfix(infixTokens: string[]): string[] {
         output.push(ops.pop()!)
       }
       if (ops.length === 0) throw new PidParseError('Unmatched closing parenthesis')
-      ops.pop() // sacar '('
+      ops.pop()
     } else {
-      // Operador binario o unario
       const prec = token === 'u' ? 99 : (PRECEDENCE[token] ?? -1)
       if (prec < 0) throw new PidParseError(`Unknown operator: ${token}`)
 
@@ -137,14 +130,12 @@ function toPostfix(infixTokens: string[]): string[] {
   return output
 }
 
-/** Computa el valor de `raw` (bytes concatenados como big-endian integer). */
 function computeRaw(bytes: number[]): number {
   let result = 0
   for (const b of bytes) result = (result << 8) | b
   return result
 }
 
-/** Evalúa una expresión en notación postfija con los bytes crudos. */
 function evaluatePostfix(postfix: string[], bytes: number[]): number {
   const stack: number[] = []
 
@@ -205,11 +196,22 @@ function evaluatePostfix(postfix: string[], bytes: number[]): number {
   return stack[0]
 }
 
-/** Evalúa una fórmula de PID OBD-II según notación SAE J1979 usando Shunting-yard.
- * @param formula — expresión como `(A*256+B)/4`, `A-40`, `A<<16|B<<8|C`
+/** Valida la sintaxis de una formula (caracteres, parentesis, operadores) sin evaluar aritmetica.
+ * @param formula — Expresion a validar
+ * @throws PidParseError si la sintaxis es invalida
+ */
+export function validateFormulaSyntax(formula: string): void {
+  if (formula.trim().length === 0) throw new PidParseError('Empty formula')
+  const tokens = tokenize(formula)
+  if (tokens.length === 0) throw new PidParseError('Empty formula')
+  toPostfix(tokens)
+}
+
+/** Evalua una formula de PID OBD-II (SAE J1979).
+ * @param formula — expresion como `(A*256+B)/4`, `A-40`
  * @param bytes — bytes de la respuesta OBD
- * @returns Valor físico calculado
- * @throws PidParseError — si la fórmula es inválida o hay división por cero
+ * @returns Valor fisico calculado
+ * @throws PidParseError si la formula es invalida o hay division por cero
  */
 export function evaluatePid(formula: string, bytes: number[]): number {
   if (formula.trim().length === 0) throw new PidParseError('Empty formula')
