@@ -1,6 +1,20 @@
 import type { TelemetrySnapshot } from "@/components/dashboard/types";
 
 // ---------------------------------------------------------------------------
+// SAE J1979 — Mode 01 response header & PID identifiers
+// ---------------------------------------------------------------------------
+
+const OBD_MODE_01_RESPONSE = "41"; // Mode 01 (current data) response header
+const OBD_PID_RPM = "0C"; // Engine RPM
+const OBD_PID_COOLANT = "05"; // Engine coolant temperature
+const OBD_PID_SPEED = "0D"; // Vehicle speed
+const OBD_PID_INTAKE = "0F"; // Intake air temperature
+
+// RPM PID formula: (A * 256 + B) / 4 → high byte = value >> 2, low = value & 3
+const RPM_HIGH_BYTE_SHIFT = 2;
+const RPM_LOW_BYTE_MASK = 3;
+
+// ---------------------------------------------------------------------------
 // Jitter ranges — SAE J1979 typical sensor noise
 // ---------------------------------------------------------------------------
 
@@ -11,9 +25,13 @@ const JITTER = {
   SPEED_KPH: 2, // ±2 km/h (tiny for idle, noticeable on-road)
 } as const;
 
+// jitter() formula scaling — maps rand() ∈ [0, 1] to [-range, +range]
+const JITTER_CENTER = 0.5; // rand() value that yields zero jitter
+const JITTER_AMPLITUDE = 2; // doubles the offset to reach ±range
+
 /** Pseudo-random number in [-range, +range]. */
 function jitter(range: number, rand: () => number): number {
-  return (rand() - 0.5) * 2 * range;
+  return (rand() - JITTER_CENTER) * JITTER_AMPLITUDE * range;
 }
 
 /** Clamps value to at least 0. */
@@ -38,7 +56,7 @@ function toRawData(
   intake: number,
 ): string {
   const hex = (v: number) => v.toString(16).toUpperCase().padStart(2, "0");
-  return `41 0C ${hex(rpm >> 2)} ${hex(rpm & 3)} 41 05 ${hex(coolant)} 41 0D ${hex(speed)} 41 0F ${hex(intake)}`;
+  return `${OBD_MODE_01_RESPONSE} ${OBD_PID_RPM} ${hex(rpm >> RPM_HIGH_BYTE_SHIFT)} ${hex(rpm & RPM_LOW_BYTE_MASK)} ${OBD_MODE_01_RESPONSE} ${OBD_PID_COOLANT} ${hex(coolant)} ${OBD_MODE_01_RESPONSE} ${OBD_PID_SPEED} ${hex(speed)} ${OBD_MODE_01_RESPONSE} ${OBD_PID_INTAKE} ${hex(intake)}`;
 }
 
 // ---------------------------------------------------------------------------

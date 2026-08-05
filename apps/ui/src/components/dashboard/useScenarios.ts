@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { Scenario } from "./types";
@@ -30,14 +30,10 @@ export function useScenarios() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const selectScenario = useCallback((id: string) => {
-    setSelectedId(id);
-  }, []);
-
   return {
     scenarios,
     selectedId,
-    setSelectedId: selectScenario,
+    setSelectedId,
     scenariosError: error,
   };
 }

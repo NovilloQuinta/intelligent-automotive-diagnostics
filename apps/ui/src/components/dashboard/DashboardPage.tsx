@@ -1,4 +1,4 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Navigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { useScenarios } from "./useScenarios";
 import { useLiveTelemetry } from "./useLiveTelemetry";
@@ -10,7 +10,6 @@ import { DiagnosisPanel } from "./DiagnosisPanel";
 
 /** Main OBD-II dashboard page: telemetry gauges, vehicle selection, DTC panel, and AI diagnosis. */
 export function DashboardPage() {
-  const navigate = useNavigate();
   const auth = useAuth();
 
   // All hooks must be called unconditionally (React rules-of-hooks)
@@ -20,10 +19,8 @@ export function DashboardPage() {
   const { live, streamOk } = useLiveTelemetry(selectedScenario);
   const { loading, result, runDiagnosis } = useDiagnosis(selectedId);
 
-  // Redirect to login if not authenticated (after hooks)
   if (auth.status === "anonymous") {
-    navigate({ to: "/login", replace: true });
-    return null;
+    return <Navigate to="/login" replace />;
   }
 
   const rpm = live?.rpm ?? result?.parsedValues.rpm ?? null;

@@ -8,6 +8,8 @@ import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import { RegisterUserUseCase } from '@/application/use-cases/RegisterUserUseCase.js'
 import { LoginUserUseCase } from '@/application/use-cases/LoginUserUseCase.js'
 import { RefreshTokenUseCase } from '@/application/use-cases/RefreshTokenUseCase.js'
+import { GetCurrentUserUseCase } from '@/application/use-cases/GetCurrentUserUseCase.js'
+import { LogoutUserUseCase } from '@/application/use-cases/LogoutUserUseCase.js'
 import { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 
 const mockAuditRepo: AuditLogRepository = { create: async () => {} }
@@ -63,6 +65,8 @@ describe('Auth integration', () => {
       new RegisterUserUseCase(userRepo, authService, tokenStore),
       new LoginUserUseCase(userRepo, authService, tokenStore),
       new RefreshTokenUseCase(authService),
+      new GetCurrentUserUseCase(userRepo),
+      new LogoutUserUseCase(tokenStore),
     )
 
     app = createServer({
@@ -212,6 +216,54 @@ describe('Auth integration', () => {
         .expect(200)
 
       expect(Array.isArray(res.body.scenarios)).toBe(true)
+    })
+  })
+
+  describe('GET /api/auth/me', () => {
+    it('should return the current user without passwordHash', async () => {
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'juan@test.com', password: 'Pass1234!' })
+        .expect(200)
+
+      const res = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${loginRes.body.accessToken}`)
+        .expect(200)
+
+      expect(res.body).not.toHaveProperty('passwordHash')
+      expect(res.body.id).toBeGreaterThan(0)
+      expect(res.body.email).toBe('juan@test.com')
+      expect(res.body.isWorkshop).toBe(false)
+    })
+
+    it('should return 401 without a token', async () => {
+      await request(app).get('/api/auth/me').expect(401)
+    })
+  })
+
+  describe('POST /api/auth/logout', () => {
+    it('should revoke the refresh token so refresh with the same token returns 401', async () => {
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'juan@test.com', password: 'Pass1234!' })
+        .expect(200)
+
+      const logoutRes = await request(app)
+        .post('/api/auth/logout')
+        .send({ refreshToken: loginRes.body.refreshToken })
+        .expect(200)
+
+      expect(logoutRes.body.success).toBe(true)
+
+      await request(app)
+        .post('/api/auth/refresh')
+        .send({ refreshToken: loginRes.body.refreshToken })
+        .expect(401)
+    })
+
+    it('should return 400 when refreshToken is missing', async () => {
+      await request(app).post('/api/auth/logout').send({}).expect(400)
     })
   })
 })

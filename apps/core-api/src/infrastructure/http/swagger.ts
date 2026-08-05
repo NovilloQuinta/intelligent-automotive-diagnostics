@@ -88,6 +88,52 @@ export const openApiSpec = {
         },
       },
     },
+    '/api/auth/me': {
+      get: {
+        tags: ['Auth'],
+        summary: 'Get current user',
+        description:
+          'Devuelve el usuario autenticado a partir del access token JWT, sin passwordHash.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Current user profile',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/UserProfile' } },
+            },
+          },
+          '401': { description: 'Access token required or invalid' },
+          '404': { description: 'User not found' },
+        },
+      },
+    },
+    '/api/auth/logout': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Logout',
+        description: 'Revoca el refresh token indicado para invalidar la sesion.',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': { schema: { $ref: '#/components/schemas/RefreshRequest' } },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Logout successful',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { success: { type: 'boolean', example: true } },
+                },
+              },
+            },
+          },
+          '400': { description: 'Validation error' },
+        },
+      },
+    },
     '/api/scenarios': {
       get: {
         tags: ['Diagnosis'],
@@ -191,6 +237,20 @@ export const openApiSpec = {
         required: ['refreshToken'],
         properties: {
           refreshToken: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIs...' },
+        },
+      },
+      UserProfile: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer' },
+          username: { type: 'string' },
+          email: { type: 'string' },
+          userType: { type: 'string', enum: ['individual', 'workshop'] },
+          businessName: { type: 'string', nullable: true },
+          taxId: { type: 'string', nullable: true },
+          address: { type: 'string', nullable: true },
+          createdAt: { type: 'string' },
+          isWorkshop: { type: 'boolean' },
         },
       },
       TokenPair: {

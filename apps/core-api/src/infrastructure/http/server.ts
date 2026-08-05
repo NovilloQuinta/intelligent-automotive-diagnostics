@@ -97,13 +97,17 @@ export function createServer(deps: ServerDependencies): express.Application {
   applyBaseMiddleware(app, deps)
   applyCors(app, deps.allowedOrigins)
 
+  const authMiddleware = deps.accessTokenSecret
+    ? createAuthMiddleware(deps.accessTokenSecret)
+    : undefined
+
   app.use('/api/auth', createRateLimiter({ windowMinutes: 15, maxRequests: 20 }))
-  app.use('/api/auth', createAuthRoutes(deps.authController))
+  app.use('/api/auth', createAuthRoutes(deps.authController, authMiddleware))
 
   mountInfoRoutes(app, deps.nodeEnv)
 
-  if (deps.accessTokenSecret) {
-    app.use(createAuthMiddleware(deps.accessTokenSecret))
+  if (authMiddleware) {
+    app.use(authMiddleware)
   }
 
   app.use(
