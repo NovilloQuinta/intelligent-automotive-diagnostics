@@ -9,5 +9,6 @@ export function toAuditValues(input: CreateAuditLogInput) {
     ip: input.ip ?? null,
     userAgent: input.userAgent ?? null,
     durationMs: input.durationMs ?? null,
+    userId: input.userId ?? null,
   }
 }

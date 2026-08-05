@@ -1,5 +1,7 @@
+import { randomUUID } from 'node:crypto'
 import express from 'express'
 import helmet from 'helmet'
+import cors from 'cors'
 import swaggerUi from 'swagger-ui-express'
 import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import { openApiSpec } from '@/infrastructure/http/swagger.js'
@@ -31,29 +33,43 @@ export interface ServerDependencies {
 
 /** Middleware base: seguridad, logging y parseo JSON. */
 function applyBaseMiddleware(app: express.Application, deps: ServerDependencies): void {
-  app.use(helmet())
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'none'"],
+        },
+      },
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+      },
+      frameguard: { action: 'deny' },
+    }),
+  )
   app.use(createRateLimiter(deps.rateLimit))
   app.use(createAuditLogger(deps.auditRepo))
   app.use(express.json({ limit: '10kb' }))
 }
 
-/** CORS con allowlist de origins. */
+/** CORS con allowlist de origins usando el paquete `cors`. */
 function applyCors(app: express.Application, allowedOrigins: string): void {
   const origins = allowedOrigins.split(',')
-  app.use((req, res, next) => {
-    const origin = req.headers.origin
-    res.setHeader('Vary', 'Origin')
-    if (origin && origins.includes(origin)) {
-      res.setHeader('Access-Control-Allow-Origin', origin)
-    }
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-    if (req.method === 'OPTIONS') {
-      res.status(204).end()
-      return
-    }
-    next()
-  })
+
+  app.use(
+    cors({
+      origin(origin, callback) {
+        if (!origin || origins.includes(origin)) {
+          callback(null, origin ?? true)
+        } else {
+          callback(new Error('Not allowed by CORS'))
+        }
+      },
+      methods: ['GET', 'POST', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization'],
+      maxAge: 600,
+    }),
+  )
 }
 
 /** Rutas de información: spec OpenAPI, swagger UI y health check. */
@@ -63,6 +79,19 @@ function mountInfoRoutes(app: express.Application, nodeEnv: string): void {
   })
 
   if (nodeEnv !== 'production') {
+    app.use(
+      '/api-docs',
+      helmet({
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", 'data:'],
+          },
+        },
+      }),
+    )
     app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec))
   }
 
@@ -94,21 +123,46 @@ function mountErrorHandler(app: express.Application, logger: LoggerPort): void {
 export function createServer(deps: ServerDependencies): express.Application {
   const app = express()
 
+  // Confiar en el proxy inverso para obtener IPs reales
+  app.set('trust proxy', 1)
+
+  // X-Request-Id: header de correlacion para trazabilidad
+  app.use((req, _res, next) => {
+    req.headers['x-request-id'] = req.headers['x-request-id'] ?? randomUUID()
+    next()
+  })
+
   applyBaseMiddleware(app, deps)
   applyCors(app, deps.allowedOrigins)
+
+  // Archivos estaticos (security.txt, etc.)
+  app.use(express.static('public'))
 
   const authMiddleware = deps.accessTokenSecret
     ? createAuthMiddleware(deps.accessTokenSecret)
     : undefined
 
+  const loginLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 5 })
+  const refreshLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 10 })
+
   app.use('/api/auth', createRateLimiter({ windowMinutes: 15, maxRequests: 20 }))
-  app.use('/api/auth', createAuthRoutes(deps.authController, authMiddleware))
+  app.use(
+    '/api/auth',
+    createAuthRoutes(deps.authController, authMiddleware, loginLimiter, refreshLimiter),
+  )
 
   mountInfoRoutes(app, deps.nodeEnv)
 
   if (authMiddleware) {
     app.use(authMiddleware)
   }
+
+  // Rate limits para endpoints sensibles de diagnostico
+  const diagnosisLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 20 })
+  const cognitiveLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 5 })
+
+  app.use('/api/diagnosis', diagnosisLimiter)
+  app.use('/api/mcp/cognitive-diagnosis', cognitiveLimiter)
 
   app.use(
     '/api',
