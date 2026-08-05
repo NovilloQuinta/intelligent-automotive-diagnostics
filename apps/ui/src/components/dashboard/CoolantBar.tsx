@@ -1,14 +1,20 @@
-import { AlertTriangle, Thermometer } from 'lucide-react'
-import { useAnimatedNumber } from './useAnimatedNumber'
-import { COOLANT_TICK_POSITIONS, GAUGE, GRADIENTS } from './types'
-import { clampPct } from '@/lib/utils'
+import { AlertTriangle, Thermometer } from "lucide-react";
+import { useAnimatedNumber } from "./useAnimatedNumber";
+import { COOLANT_TICK_POSITIONS, GAUGE, GRADIENTS } from "./types";
+import { clampPct } from "@/lib/utils";
 
 /** Vertical thermometer bar showing coolant temperature with alarm threshold. */
-export function CoolantBar({ value, loading }: { value: number | null; loading: boolean }) {
-  const display = useAnimatedNumber(value)
-  const v = value ?? 0
-  const alarm = v > GAUGE.COOLANT_ALARM
-  const pct = clampPct(display / GAUGE.COOLANT_MAX)
+export function CoolantBar({
+  value,
+  loading,
+}: {
+  value: number | null;
+  loading: boolean;
+}) {
+  const display = useAnimatedNumber(value);
+  const v = value ?? 0;
+  const alarm = v > GAUGE.COOLANT_ALARM;
+  const pct = clampPct(display / GAUGE.COOLANT_MAX);
 
   return (
     <div
@@ -30,7 +36,9 @@ export function CoolantBar({ value, loading }: { value: number | null; loading: 
             style={{
               height: `${pct * 100}%`,
               background: GRADIENTS.coolant,
-              boxShadow: alarm ? GRADIENTS.coolantAlarmGlow : GRADIENTS.coolantGlow,
+              boxShadow: alarm
+                ? GRADIENTS.coolantAlarmGlow
+                : GRADIENTS.coolantGlow,
             }}
           />
           {COOLANT_TICK_POSITIONS.map((t) => (
@@ -43,9 +51,9 @@ export function CoolantBar({ value, loading }: { value: number | null; loading: 
         </div>
         <div className="flex flex-col">
           <span
-            className={`mono text-4xl font-bold leading-none ${alarm ? 'text-destructive' : 'text-foreground'}`}
+            className={`mono text-4xl font-bold leading-none ${alarm ? "text-destructive" : "text-foreground"}`}
           >
-            {loading ? '--' : Math.round(display)}
+            {loading ? "--" : Math.round(display)}
           </span>
           <span className="mono mt-1 text-xs text-muted-foreground">°C</span>
           {alarm && (
@@ -56,5 +64,5 @@ export function CoolantBar({ value, loading }: { value: number | null; loading: 
         </div>
       </div>
     </div>
-  )
+  );
 }

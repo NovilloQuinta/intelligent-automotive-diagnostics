@@ -10,69 +10,43 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiDiagnosisRouteImport } from './routes/api/diagnosis'
-import { Route as ApiScenariosRouteImport } from './routes/api/scenarios'
-import { Route as ApiTelemetryScenarioIdRouteImport } from './routes/api/telemetry.$scenarioId'
+import { Route as LoginRouteImport } from './routes/login'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiDiagnosisRoute = ApiDiagnosisRouteImport.update({
-  id: '/api/diagnosis',
-  path: '/api/diagnosis',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiScenariosRoute = ApiScenariosRouteImport.update({
-  id: '/api/scenarios',
-  path: '/api/scenarios',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiTelemetryScenarioIdRoute = ApiTelemetryScenarioIdRouteImport.update({
-  id: '/api/telemetry/$scenarioId',
-  path: '/api/telemetry/$scenarioId',
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/api/diagnosis': typeof ApiDiagnosisRoute
-  '/api/scenarios': typeof ApiScenariosRoute
-  '/api/telemetry/$scenarioId': typeof ApiTelemetryScenarioIdRoute
+  '/login': typeof LoginRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/api/diagnosis': typeof ApiDiagnosisRoute
-  '/api/scenarios': typeof ApiScenariosRoute
-  '/api/telemetry/$scenarioId': typeof ApiTelemetryScenarioIdRoute
+  '/login': typeof LoginRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/api/diagnosis': typeof ApiDiagnosisRoute
-  '/api/scenarios': typeof ApiScenariosRoute
-  '/api/telemetry/$scenarioId': typeof ApiTelemetryScenarioIdRoute
+  '/login': typeof LoginRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    '/' | '/api/diagnosis' | '/api/scenarios' | '/api/telemetry/$scenarioId'
+  fullPaths: '/' | '/login'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/diagnosis' | '/api/scenarios' | '/api/telemetry/$scenarioId'
-  id:
-    | '__root__'
-    | '/'
-    | '/api/diagnosis'
-    | '/api/scenarios'
-    | '/api/telemetry/$scenarioId'
+  to: '/' | '/login'
+  id: '__root__' | '/' | '/login'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ApiDiagnosisRoute: typeof ApiDiagnosisRoute
-  ApiScenariosRoute: typeof ApiScenariosRoute
-  ApiTelemetryScenarioIdRoute: typeof ApiTelemetryScenarioIdRoute
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -84,25 +58,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/diagnosis': {
-      id: '/api/diagnosis'
-      path: '/api/diagnosis'
-      fullPath: '/api/diagnosis'
-      preLoaderRoute: typeof ApiDiagnosisRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/scenarios': {
-      id: '/api/scenarios'
-      path: '/api/scenarios'
-      fullPath: '/api/scenarios'
-      preLoaderRoute: typeof ApiScenariosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/telemetry/$scenarioId': {
-      id: '/api/telemetry/$scenarioId'
-      path: '/api/telemetry/$scenarioId'
-      fullPath: '/api/telemetry/$scenarioId'
-      preLoaderRoute: typeof ApiTelemetryScenarioIdRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -110,9 +70,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ApiDiagnosisRoute: ApiDiagnosisRoute,
-  ApiScenariosRoute: ApiScenariosRoute,
-  ApiTelemetryScenarioIdRoute: ApiTelemetryScenarioIdRoute,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,26 +1,49 @@
-import { useEffect, useState } from 'react'
-import type { LiveFrame } from './types'
+import { useEffect, useRef, useState } from "react";
+import type { Scenario, TelemetrySnapshot } from "./types";
+import { jitterFrame } from "@/lib/jitter";
 
-/** Subscribes to the SSE telemetry stream for the given scenario. */
-export function useLiveTelemetry(selectedId: string) {
-  const [live, setLive] = useState<LiveFrame | null>(null)
-  const [streamOk, setStreamOk] = useState(false)
+const TICK_MS = 500;
+
+/**
+ * Generates live telemetry by jittering the selected scenario's baseline
+ * sensorValues at 2 Hz. Replaces the old SSE-based fake stream.
+ *
+ * When no scenario is selected, returns `null` live data and `streamOk: false`.
+ */
+export function useLiveTelemetry(scenario: Scenario | null) {
+  const [live, setLive] = useState<TelemetrySnapshot | null>(null);
+  const [streamOk, setStreamOk] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    if (!selectedId) return
-    setLive(null)
-    setStreamOk(false)
-    const es = new EventSource(`/api/telemetry/${encodeURIComponent(selectedId)}`)
-    es.addEventListener('open', () => setStreamOk(true))
-    es.addEventListener('tick', (ev) => {
-      try {
-        setLive(JSON.parse((ev as MessageEvent).data) as LiveFrame)
-        setStreamOk(true)
-      } catch { /* malformed SSE frame — skip */ }
-    })
-    es.onerror = () => setStreamOk(false)
-    return () => { es.close(); setStreamOk(false) }
-  }, [selectedId])
+    // Clear previous interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
 
-  return { live, streamOk }
+    if (!scenario) {
+      setLive(null);
+      setStreamOk(false);
+      return;
+    }
+
+    // Emit first frame immediately
+    setLive(jitterFrame(scenario.sensorValues, Date.now()));
+    setStreamOk(true);
+
+    // Then tick at TICK_MS
+    intervalRef.current = setInterval(() => {
+      setLive(jitterFrame(scenario.sensorValues, Date.now()));
+    }, TICK_MS);
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [scenario]);
+
+  return { live, streamOk };
 }

@@ -1,30 +1,54 @@
-import { useScenarios } from './useScenarios'
-import { useLiveTelemetry } from './useLiveTelemetry'
-import { useDiagnosis } from './useDiagnosis'
-import { TopBar } from './TopBar'
-import { TelemetrySection } from './TelemetrySection'
-import { DtcPanel } from './DtcPanel'
-import { DiagnosisPanel } from './DiagnosisPanel'
+import { useNavigate } from "@tanstack/react-router";
+import { useAuth } from "@/lib/auth-context";
+import { useScenarios } from "./useScenarios";
+import { useLiveTelemetry } from "./useLiveTelemetry";
+import { useDiagnosis } from "./useDiagnosis";
+import { TopBar } from "./TopBar";
+import { TelemetrySection } from "./TelemetrySection";
+import { DtcPanel } from "./DtcPanel";
+import { DiagnosisPanel } from "./DiagnosisPanel";
 
 /** Main OBD-II dashboard page: telemetry gauges, vehicle selection, DTC panel, and AI diagnosis. */
 export function DashboardPage() {
-  const { scenarios, selectedId, setSelectedId, scenariosError } = useScenarios()
-  const { live, streamOk } = useLiveTelemetry(selectedId)
-  const { loading, result, runDiagnosis } = useDiagnosis(selectedId)
+  const navigate = useNavigate();
+  const auth = useAuth();
 
-  const rpm = live?.rpm ?? result?.parsedValues.rpm ?? null
-  const coolant = live?.coolantTemp ?? result?.parsedValues.coolantTemp ?? null
-  const speed = live?.speed ?? result?.parsedValues.speed ?? null
-  const intake = live?.intakeTemp ?? result?.parsedValues.intakeTemp ?? null
-  const rawSummary = live?.rawData ?? result?.rawData ?? null
+  // All hooks must be called unconditionally (React rules-of-hooks)
+  const { scenarios, selectedId, setSelectedId, scenariosError } =
+    useScenarios();
+  const selectedScenario = scenarios.find((s) => s.id === selectedId) ?? null;
+  const { live, streamOk } = useLiveTelemetry(selectedScenario);
+  const { loading, result, runDiagnosis } = useDiagnosis(selectedId);
+
+  // Redirect to login if not authenticated (after hooks)
+  if (auth.status === "anonymous") {
+    navigate({ to: "/login", replace: true });
+    return null;
+  }
+
+  const rpm = live?.rpm ?? result?.parsedValues.rpm ?? null;
+  const coolant = live?.coolantTemp ?? result?.parsedValues.coolantTemp ?? null;
+  const speed = live?.speed ?? result?.parsedValues.speed ?? null;
+  const intake = live?.intakeTemp ?? result?.parsedValues.intakeTemp ?? null;
+  const rawSummary = live?.rawData ?? result?.rawData ?? null;
 
   const telemetryStatus = loading
-    ? 'Diagnosticando…' : streamOk ? 'Streaming ECU · 2 Hz'
-    : selectedId ? 'Conectando…' : 'Sin vehículo'
+    ? "Diagnosticando…"
+    : streamOk
+      ? "Streaming ECU · 2 Hz"
+      : selectedId
+        ? "Conectando…"
+        : "Sin vehículo";
 
   return (
     <div className="relative z-10 flex min-h-screen flex-col">
-      <TopBar scenarios={scenarios} selectedId={selectedId} onSelect={setSelectedId} loading={loading} />
+      <TopBar
+        scenarios={scenarios}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
+        loading={loading}
+        onLogout={() => auth.logout()}
+      />
       {scenariosError && (
         <div className="border-b border-destructive/30 bg-destructive/10 px-6 py-2 text-sm text-destructive">
           {scenariosError}
@@ -34,14 +58,25 @@ export function DashboardPage() {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-6">
           <TelemetrySection
             values={{ rpm, coolant, speed, intake }}
-            rawSummary={rawSummary} loading={loading}
-            streamOk={streamOk} canDiagnose={!!selectedId}
+            rawSummary={rawSummary}
+            loading={loading}
+            streamOk={streamOk}
+            canDiagnose={!!selectedId}
             telemetryStatus={telemetryStatus}
             onDiagnose={runDiagnosis}
           />
           <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:gap-6">
-            <DtcPanel codes={result?.dtcCodes ?? null} severity={result?.severity ?? null} empty={!result && !loading} />
-            <DiagnosisPanel text={result?.diagnosisText ?? null} severity={result?.severity ?? null} empty={!result && !loading} loading={loading} />
+            <DtcPanel
+              codes={result?.dtcCodes ?? null}
+              severity={result?.severity ?? null}
+              empty={!result && !loading}
+            />
+            <DiagnosisPanel
+              text={result?.diagnosisText ?? null}
+              severity={result?.severity ?? null}
+              empty={!result && !loading}
+              loading={loading}
+            />
           </section>
         </div>
       </main>
@@ -55,5 +90,5 @@ export function DashboardPage() {
         </div>
       </footer>
     </div>
-  )
+  );
 }
