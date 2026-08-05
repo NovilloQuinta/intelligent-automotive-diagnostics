@@ -1,0 +1,27 @@
+services:
+  elm327:
+    build:
+      context: .
+      dockerfile: docker/elm327/Dockerfile
+    ports:
+      - "35000:35000"
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/core-api/Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET:-change-me-in-production}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET:-change-me-in-production}
+      - OBD_MODE=${OBD_MODE:-sync}
+    volumes:
+      - api-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  api-data:
