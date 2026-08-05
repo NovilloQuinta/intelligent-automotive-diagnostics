@@ -15,6 +15,8 @@ import { seedScenarios } from '@/infrastructure/simulation/seedScenarios.js'
 import { RegisterUserUseCase } from '@/application/use-cases/RegisterUserUseCase.js'
 import { LoginUserUseCase } from '@/application/use-cases/LoginUserUseCase.js'
 import { RefreshTokenUseCase } from '@/application/use-cases/RefreshTokenUseCase.js'
+import { GetCurrentUserUseCase } from '@/application/use-cases/GetCurrentUserUseCase.js'
+import { LogoutUserUseCase } from '@/application/use-cases/LogoutUserUseCase.js'
 import { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 import type { AppConfig } from '@/infrastructure/configuration/index.js'
 
@@ -41,9 +43,17 @@ export function buildApp(config: AppConfig): Application {
   const registerUseCase = new RegisterUserUseCase(userRepo, authService, tokenStore)
   const loginUseCase = new LoginUserUseCase(userRepo, authService, tokenStore)
   const refreshUseCase = new RefreshTokenUseCase(authService)
+  const getCurrentUserUseCase = new GetCurrentUserUseCase(userRepo)
+  const logoutUseCase = new LogoutUserUseCase(tokenStore)
 
   // ── Controladores ──
-  const authController = new AuthController(registerUseCase, loginUseCase, refreshUseCase)
+  const authController = new AuthController(
+    registerUseCase,
+    loginUseCase,
+    refreshUseCase,
+    getCurrentUserUseCase,
+    logoutUseCase,
+  )
 
   // ── OBD ──
   const obdRepo: ObdRepository | undefined =

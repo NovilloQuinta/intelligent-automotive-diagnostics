@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -64,10 +64,16 @@ function AuthPage() {
   const [tab, setTab] = useState<"login" | "register">("login");
   const [serverError, setServerError] = useState<string | null>(null);
 
-  // If already authed, redirect to dashboard
+  if (auth.status === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0d1117]">
+        <p className="text-muted-foreground">Cargando…</p>
+      </div>
+    );
+  }
+
   if (auth.status === "authed") {
-    navigate({ to: "/", replace: true });
-    return null;
+    return <Navigate to="/" replace />;
   }
 
   return (

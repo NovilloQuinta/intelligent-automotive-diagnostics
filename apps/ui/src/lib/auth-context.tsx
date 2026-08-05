@@ -25,7 +25,7 @@ type AuthState = {
   user: AuthUser | null;
   login: (input: LoginInput) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 };
 
 // ---------------------------------------------------------------------------
@@ -47,8 +47,8 @@ export function useAuth(): AuthState {
 
 /**
  * Provides JWT auth state to the entire app.
- * On mount: if tokens exist in localStorage, validates them via GET /api/auth/me
- * (falls back to stored user from register if /me is unavailable).
+ * On mount: if tokens exist in localStorage, validates them via GET /api/auth/me.
+ * The user object is never persisted locally — /me is the single source of truth.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>("loading");
@@ -71,17 +71,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       })
       .catch(() => {
-        // getMe failed (no /me endpoint or token expired without refresh) —
-        // fall back to stored user from register
+        // /me failed — tokens are invalid or the server is unreachable.
+        // No stored-user fallback: go anonymous.
         if (!cancelled) {
-          const stored = api.getStoredUser();
-          if (stored) {
-            setUser(stored);
-            setStatus("authed");
-          } else {
-            api.logout();
-            setStatus("anonymous");
-          }
+          void api.logout();
+          setStatus("anonymous");
         }
       });
     return () => {
@@ -91,25 +85,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (input: LoginInput) => {
     await api.login(input);
-    // After login, try to get user info; if /me fails, use stored fallback
     try {
       const u = await api.getMe();
       setUser(u);
+      setStatus("authed");
     } catch {
-      const stored = api.getStoredUser();
-      if (stored) setUser(stored);
+      // No user without /me — never fall back to a stale stored user.
+      setUser(null);
+      setStatus("anonymous");
     }
-    setStatus("authed");
   }, []);
 
   const register = useCallback(async (input: RegisterInput) => {
-    const result = await api.register(input);
-    setUser(result.user);
-    setStatus("authed");
+    try {
+      const result = await api.register(input);
+      setUser(result.user);
+      setStatus("authed");
+    } catch (error) {
+      // A failed registration leaves the user signed out — re-throw so the
+      // caller (e.g. the register form) can surface the error message.
+      setUser(null);
+      setStatus("anonymous");
+      throw error;
+    }
   }, []);
 
-  const logout = useCallback(() => {
-    api.logout();
+  const logout = useCallback(async () => {
+    await api.logout();
     setUser(null);
     setStatus("anonymous");
   }, []);

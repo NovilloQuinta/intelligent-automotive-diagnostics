@@ -16,12 +16,6 @@ export function useLiveTelemetry(scenario: Scenario | null) {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    // Clear previous interval
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-
     if (!scenario) {
       setLive(null);
       setStreamOk(false);

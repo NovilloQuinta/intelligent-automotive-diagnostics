@@ -3,6 +3,7 @@ import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
 import { Email } from '@/domain/value-objects/email.js'
 import { persistRefreshToken } from '@/application/shared/hashToken.js'
+import { toSafeUser } from '@/application/shared/safeUser.js'
 import {
   registerUserSchema,
   type RegisterUserInput,
@@ -39,9 +40,7 @@ export class RegisterUserUseCase {
     const tokens = this.authService.generateTokens(user.id)
     await persistRefreshToken(this.tokenStore, user.id, tokens)
 
-    const { passwordHash: _, ...rest } = user
-    const safeUser = { ...rest, isWorkshop: user.isWorkshop }
-    return { user: safeUser, accessToken: tokens.accessToken, refreshToken: tokens.refreshToken }
+    return { user: toSafeUser(user), accessToken: tokens.accessToken, refreshToken: tokens.refreshToken }
   }
 }
 

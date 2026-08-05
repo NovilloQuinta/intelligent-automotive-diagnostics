@@ -14,6 +14,32 @@ function VehicleIcon({
   );
 }
 
+function VehicleInfo({
+  vehicleType,
+  name,
+  make,
+  model,
+  year,
+}: {
+  vehicleType: Scenario["vehicleType"];
+  name: string;
+  make?: string;
+  model?: string;
+  year?: number;
+}) {
+  return (
+    <>
+      <VehicleIcon vehicleType={vehicleType} />
+      <div className="flex-1">
+        <div className="text-sm font-medium">{name}</div>
+        <div className="mono text-[10px] uppercase tracking-wider text-muted-foreground">
+          {make && model && year ? `${make} ${model} · ${year}` : "—"}
+        </div>
+      </div>
+    </>
+  );
+}
+
 function DropdownOption({
   s,
   value,
@@ -33,13 +59,13 @@ function DropdownOption({
       }}
       className={`flex w-full items-center gap-3 px-3 py-2 text-left transition hover:bg-white/5 ${s.id === value ? "bg-white/[0.04]" : ""}`}
     >
-      <VehicleIcon vehicleType={s.vehicleType} />
-      <div className="flex-1">
-        <div className="text-sm">{s.name}</div>
-        <div className="mono text-[10px] uppercase tracking-wider text-muted-foreground">
-          {s.vehicleInfo.make} {s.vehicleInfo.model} · {s.vehicleInfo.year}
-        </div>
-      </div>
+      <VehicleInfo
+        vehicleType={s.vehicleType}
+        name={s.name}
+        make={s.vehicleInfo.make}
+        model={s.vehicleInfo.model}
+        year={s.vehicleInfo.year}
+      />
     </button>
   );
 }
@@ -51,7 +77,6 @@ type Props = {
   disabled: boolean;
 };
 
-/** Dropdown vehicle selector with car/moto icons, plate info, and click-outside dismissal. */
 /** Calls callback when a mousedown event occurs outside the given ref element. */
 function useClickOutside(
   ref: React.RefObject<HTMLDivElement | null>,
@@ -85,17 +110,13 @@ export function VehicleSelector({
         onClick={() => setOpen((o) => !o)}
         className="flex min-w-[240px] items-center gap-3 rounded-md border border-white/10 bg-black/40 px-3 py-2 text-left transition hover:border-primary/40 hover:bg-black/50 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <VehicleIcon vehicleType={current?.vehicleType ?? "car"} />
-        <div className="flex-1">
-          <div className="text-sm font-medium">
-            {current?.name ?? "Seleccionar vehículo"}
-          </div>
-          <div className="mono text-[10px] uppercase tracking-wider text-muted-foreground">
-            {current
-              ? `${current.vehicleInfo.make} ${current.vehicleInfo.model} · ${current.vehicleInfo.year}`
-              : "—"}
-          </div>
-        </div>
+        <VehicleInfo
+          vehicleType={current?.vehicleType ?? "car"}
+          name={current?.name ?? "Seleccionar vehículo"}
+          make={current?.vehicleInfo.make}
+          model={current?.vehicleInfo.model}
+          year={current?.vehicleInfo.year}
+        />
         <ChevronDown
           className={`h-4 w-4 text-muted-foreground transition ${open ? "rotate-180" : ""}`}
         />

@@ -14,7 +14,6 @@ import type {
 const KEYS = {
   accessToken: "iad.accessToken",
   refreshToken: "iad.refreshToken",
-  user: "iad.user",
 } as const;
 
 function getTokens(): AuthTokens | null {
@@ -35,20 +34,6 @@ function setTokens(tokens: AuthTokens): void {
 function clearTokens(): void {
   localStorage.removeItem(KEYS.accessToken);
   localStorage.removeItem(KEYS.refreshToken);
-  localStorage.removeItem(KEYS.user);
-}
-
-function getStoredUser(): AuthUser | null {
-  try {
-    const raw = localStorage.getItem(KEYS.user);
-    return raw ? (JSON.parse(raw) as AuthUser) : null;
-  } catch {
-    return null;
-  }
-}
-
-function setStoredUser(user: AuthUser): void {
-  localStorage.setItem(KEYS.user, JSON.stringify(user));
 }
 
 // ---------------------------------------------------------------------------
@@ -99,15 +84,39 @@ async function refreshAccessToken(): Promise<AuthTokens> {
 }
 
 // ---------------------------------------------------------------------------
+// Fetch timeouts
+// ---------------------------------------------------------------------------
+
+/** Default timeout for authenticated requests. */
+const DEFAULT_TIMEOUT_MS = 10_000;
+
+/** Timeout for cognitive diagnosis — the backend itself allows 60s. */
+const COGNITIVE_TIMEOUT_MS = 60_000;
+
+// ---------------------------------------------------------------------------
 // Authenticated fetch
 // ---------------------------------------------------------------------------
+
+/** True when fetch rejected because a signal aborted (timeout or caller). */
+function isAbortError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "name" in error &&
+    (error.name === "AbortError" || error.name === "TimeoutError")
+  );
+}
 
 /**
  * Wraps fetch() with automatic JWT auth and single-flight token refresh.
  * On 401: refreshes the token once and retries. On refresh failure, clears
  * storage and throws {@link AuthError}.
+ *
+ * Adds a 10s timeout via {@link AbortSignal.timeout} unless the caller
+ * provides its own signal (which is then respected as-is). A timeout is not
+ * an auth error: tokens are never cleared and {@link Error} is thrown.
  */
-async function apiFetch(
+export async function apiFetch(
   path: string,
   init: RequestInit = {},
 ): Promise<Response> {
@@ -120,7 +129,18 @@ async function apiFetch(
     headers["Authorization"] = `Bearer ${tokens.accessToken}`;
   }
 
-  let res = await fetch(path, { ...init, headers });
+  const signal = init.signal ?? AbortSignal.timeout(DEFAULT_TIMEOUT_MS);
+  const requestInit = { ...init, headers, signal };
+
+  let res: Response;
+  try {
+    res = await fetch(path, requestInit);
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new Error("La petición tardó demasiado");
+    }
+    throw error;
+  }
 
   if (res.status === 401 && tokens?.refreshToken) {
     // Single-flight: all concurrent 401s share one refresh
@@ -133,7 +153,7 @@ async function apiFetch(
     try {
       const newTokens = await refreshPromise;
       headers["Authorization"] = `Bearer ${newTokens.accessToken}`;
-      res = await fetch(path, { ...init, headers });
+      res = await fetch(path, { ...requestInit, headers });
     } catch {
       clearTokens();
       throw new AuthError();
@@ -141,6 +161,38 @@ async function apiFetch(
   }
 
   return res;
+}
+
+// ---------------------------------------------------------------------------
+// Shared response error handling
+// ---------------------------------------------------------------------------
+
+/**
+ * Throws when a response is not ok. Extracts the server error message from
+ * the body (`details` first for validation errors, then `error`), falling
+ * back to `fallbackMsg` when the body has no usable message.
+ */
+export async function assertOk(
+  res: Response,
+  fallbackMsg: string,
+): Promise<void> {
+  if (res.ok) return;
+  const body = (await res.json().catch(() => ({}))) as {
+    error?: unknown;
+    details?: unknown;
+  };
+  const msg =
+    typeof body.details === "string"
+      ? body.details
+      : Array.isArray(body.details)
+        ? body.details
+            .map((d) => (d as { message?: string }).message)
+            .filter((m): m is string => typeof m === "string")
+            .join(", ")
+        : typeof body.error === "string"
+          ? body.error
+          : fallbackMsg;
+  throw new Error(msg);
 }
 
 // ---------------------------------------------------------------------------
@@ -162,6 +214,30 @@ export type CognitiveOutput = {
 /** Register response from backend. */
 type RegisterResponse = AuthTokens & { user: AuthUser };
 
+// ---------------------------------------------------------------------------
+// Server-side logout — best-effort revocation of the refresh token
+// ---------------------------------------------------------------------------
+
+/** POST /api/auth/logout — revokes the refresh token server-side. Never throws. */
+async function logoutServer(): Promise<void> {
+  const tokens = getTokens();
+  if (!tokens?.refreshToken) return;
+  try {
+    const res = await fetch("/api/auth/logout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken: tokens.refreshToken }),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    });
+    if (!res.ok) {
+      // Best-effort: server-side revocation is optional, local cleanup is not.
+      return;
+    }
+  } catch {
+    // Network failure — ignore; local cleanup happens in api.logout().
+  }
+}
+
 export const api = {
   // ---- Auth ----
 
@@ -171,11 +247,9 @@ export const api = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
     });
-    if (!res.ok) {
-      const err = (await res.json().catch(() => ({}))) as { error?: string };
-      throw new Error(err.error ?? `Login failed (${res.status})`);
-    }
+    await assertOk(res, `Login failed (${res.status})`);
     const tokens = (await res.json()) as AuthTokens;
     setTokens(tokens);
     return tokens;
@@ -189,28 +263,14 @@ export const api = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
     });
-    if (!res.ok) {
-      const err = (await res.json().catch(() => ({}))) as {
-        error?: string;
-        details?: unknown;
-      };
-      const msg =
-        typeof err.details === "string"
-          ? err.details
-          : Array.isArray(err.details)
-            ? (err.details as Array<{ message: string }>)
-                .map((d) => d.message)
-                .join(", ")
-            : (err.error ?? `Register failed (${res.status})`);
-      throw new Error(msg);
-    }
+    await assertOk(res, `Register failed (${res.status})`);
     const data = (await res.json()) as RegisterResponse;
     setTokens({
       accessToken: data.accessToken,
       refreshToken: data.refreshToken,
     });
-    setStoredUser(data.user);
     return {
       user: data.user,
       tokens: {
@@ -220,18 +280,11 @@ export const api = {
     };
   },
 
-  /** GET /api/auth/me — returns current user. Falls back to stored user. */
+  /** GET /api/auth/me — returns current user (no local persistence). */
   async getMe(): Promise<AuthUser> {
     const res = await apiFetch("/api/auth/me");
-    if (!res.ok) {
-      // Fallback to stored user (from register)
-      const stored = getStoredUser();
-      if (stored) return stored;
-      throw new AuthError();
-    }
-    const user = (await res.json()) as AuthUser;
-    setStoredUser(user);
-    return user;
+    if (!res.ok) throw new AuthError();
+    return (await res.json()) as AuthUser;
   },
 
   // ---- Data ----
@@ -250,10 +303,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ scenarioId }),
     });
-    if (!res.ok) {
-      const err = (await res.json().catch(() => ({}))) as { error?: string };
-      throw new Error(err.error ?? `Diagnosis failed (${res.status})`);
-    }
+    await assertOk(res, `Diagnosis failed (${res.status})`);
     return (await res.json()) as DiagnosisResponse;
   },
 
@@ -265,13 +315,9 @@ export const api = {
     const res = await apiFetch("/api/mcp/cognitive-diagnosis", {
       method: "POST",
       body: JSON.stringify({ scenarioId, query }),
+      signal: AbortSignal.timeout(COGNITIVE_TIMEOUT_MS),
     });
-    if (!res.ok) {
-      const err = (await res.json().catch(() => ({}))) as { error?: string };
-      throw new Error(
-        err.error ?? `Cognitive diagnosis failed (${res.status})`,
-      );
-    }
+    await assertOk(res, `Cognitive diagnosis failed (${res.status})`);
     return (await res.json()) as CognitiveOutput;
   },
 
@@ -288,8 +334,13 @@ export const api = {
 
   // ---- Session management ----
 
-  /** Clears all stored auth data. */
-  logout(): void {
+  /**
+   * Revokes the refresh token server-side (best-effort) and clears local
+   * tokens. Never throws: network or server errors are swallowed so local
+   * cleanup always happens.
+   */
+  async logout(): Promise<void> {
+    await logoutServer();
     clearTokens();
   },
 
@@ -297,7 +348,4 @@ export const api = {
   hasTokens(): boolean {
     return getTokens() !== null;
   },
-
-  /** Returns the stored user (from register or /me). */
-  getStoredUser,
 };
