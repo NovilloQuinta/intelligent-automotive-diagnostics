@@ -47,6 +47,116 @@ type LoginFormData = z.infer<typeof loginSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
 
 // ---------------------------------------------------------------------------
+// Password strength
+// ---------------------------------------------------------------------------
+
+type StrengthLevel = "none" | "weak" | "medium" | "strong";
+
+const STRENGTH_META: Record<
+  StrengthLevel,
+  { label: string; color: string; pct: number }
+> = {
+  none: { label: "Sin contraseña", color: "bg-border", pct: 0 },
+  weak: { label: "Débil", color: "bg-destructive", pct: 25 },
+  medium: { label: "Moderada", color: "bg-warning", pct: 60 },
+  strong: { label: "Segura", color: "bg-success", pct: 100 },
+};
+
+function computeStrength(password: string): StrengthLevel {
+  if (password.length === 0) return "none";
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (password.length >= 12) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[a-z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+  if (score <= 2) return "weak";
+  if (score <= 4) return "medium";
+  return "strong";
+}
+
+function PasswordStrengthMeter({
+  password,
+}: {
+  password: string;
+}) {
+  const meta = STRENGTH_META[computeStrength(password)];
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex gap-1">
+        {["weak", "medium", "strong"].map((level) => {
+          const lvl = level as StrengthLevel;
+          const cmp = STRENGTH_META[lvl];
+          const filled = meta.pct >= cmp.pct;
+          return (
+            <div
+              key={level}
+              className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
+                filled ? cmp.color : "bg-white/10"
+              }`}
+            />
+          );
+        })}
+      </div>
+      {password.length > 0 && (
+        <p
+          className="text-xs transition-colors duration-300"
+          style={{ color: meta.color.replace("bg-", "") }}
+        >
+          {meta.label}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Password requirement item shown below the password field. */
+function PwdReq({
+  met,
+  text,
+}: {
+  met: boolean;
+  text: string;
+}) {
+  return (
+    <li
+      className={`flex items-center gap-1.5 text-[11px] transition-colors ${
+        met ? "text-success" : "text-muted-foreground"
+      }`}
+    >
+      <span className={`text-xs ${met ? "text-success" : "text-muted-foreground/50"}`}>
+        {met ? "●" : "○"}
+      </span>
+      {text}
+    </li>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Required label helper
+// ---------------------------------------------------------------------------
+
+/** Label with a red asterisk for required fields. */
+function RequiredLabel({
+  htmlFor,
+  children,
+}: {
+  htmlFor: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Label htmlFor={htmlFor}>
+      {children}
+      <span className="ml-0.5 text-destructive" aria-hidden="true">
+        *
+      </span>
+    </Label>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Route
 // ---------------------------------------------------------------------------
 
@@ -167,7 +277,7 @@ function LoginForm({
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="login-email">Email</Label>
+        <RequiredLabel htmlFor="login-email">Email</RequiredLabel>
         <Input
           id="login-email"
           type="email"
@@ -180,7 +290,7 @@ function LoginForm({
         )}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="login-password">Contraseña</Label>
+        <RequiredLabel htmlFor="login-password">Contraseña</RequiredLabel>
         <Input
           id="login-password"
           type="password"
@@ -227,11 +337,20 @@ function RegisterForm({
   });
 
   const userType = watch("userType");
+  const password = watch("password") ?? "";
+
+  const pwdChecks = {
+    minLength: password.length >= 8,
+    hasUpper: /[A-Z]/.test(password),
+    hasLower: /[a-z]/.test(password),
+    hasNumber: /[0-9]/.test(password),
+    hasSpecial: /[^A-Za-z0-9]/.test(password),
+  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="reg-username">Usuario</Label>
+        <RequiredLabel htmlFor="reg-username">Usuario</RequiredLabel>
         <Input
           id="reg-username"
           placeholder="usuario123"
@@ -241,9 +360,12 @@ function RegisterForm({
         {errors.username && (
           <p className="text-xs text-destructive">{errors.username.message}</p>
         )}
+        <p className="text-[11px] text-muted-foreground">
+          Entre 3 y 50 caracteres
+        </p>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="reg-email">Email</Label>
+        <RequiredLabel htmlFor="reg-email">Email</RequiredLabel>
         <Input
           id="reg-email"
           type="email"
@@ -256,7 +378,7 @@ function RegisterForm({
         )}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="reg-password">Contraseña</Label>
+        <RequiredLabel htmlFor="reg-password">Contraseña</RequiredLabel>
         <Input
           id="reg-password"
           type="password"
@@ -267,9 +389,22 @@ function RegisterForm({
         {errors.password && (
           <p className="text-xs text-destructive">{errors.password.message}</p>
         )}
+        <PasswordStrengthMeter password={password} />
+        {password.length > 0 && (
+          <ul className="space-y-0.5 pl-0.5">
+            <PwdReq met={pwdChecks.minLength} text="Mínimo 8 caracteres" />
+            <PwdReq met={pwdChecks.hasUpper} text="Al menos una mayúscula" />
+            <PwdReq met={pwdChecks.hasLower} text="Al menos una minúscula" />
+            <PwdReq met={pwdChecks.hasNumber} text="Al menos un número" />
+            <PwdReq
+              met={pwdChecks.hasSpecial}
+              text="Al menos un carácter especial"
+            />
+          </ul>
+        )}
       </div>
       <div className="space-y-2">
-        <Label htmlFor="reg-userType">Tipo de usuario</Label>
+        <RequiredLabel htmlFor="reg-userType">Tipo de usuario</RequiredLabel>
         <Select
           value={userType}
           onValueChange={(v) =>
@@ -301,7 +436,9 @@ function RegisterForm({
       {userType === "workshop" && (
         <>
           <div className="space-y-2">
-            <Label htmlFor="reg-businessName">Nombre del taller</Label>
+            <RequiredLabel htmlFor="reg-businessName">
+              Nombre del taller
+            </RequiredLabel>
             <Input
               id="reg-businessName"
               placeholder="Talleres AutoPro S.L."
@@ -309,7 +446,7 @@ function RegisterForm({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="reg-taxId">CIF / NIF</Label>
+            <RequiredLabel htmlFor="reg-taxId">CIF / NIF</RequiredLabel>
             <Input
               id="reg-taxId"
               placeholder="B12345678"
