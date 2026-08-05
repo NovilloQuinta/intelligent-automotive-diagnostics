@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const mockRateLimitHandler = vi.fn()
 
@@ -9,9 +9,16 @@ vi.mock('express-rate-limit', () => ({
 import { createRateLimiter } from '@/infrastructure/http/middleware/rate-limiter.middleware.js'
 import { rateLimit } from 'express-rate-limit'
 
+const originalNodeEnv = process.env.NODE_ENV
+
 describe('createRateLimiter', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    process.env.NODE_ENV = 'production'
+  })
+
+  afterEach(() => {
+    process.env.NODE_ENV = originalNodeEnv
   })
 
   it('should call rateLimit with correct default configuration', () => {
