@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import {
-  createAnthropicClient,
-  AnthropicTimeoutError,
-  AnthropicApiError,
-} from '@/infrastructure/llm/anthropicClient.js'
+import { createAnthropicClient } from '@/infrastructure/llm/anthropicClient.js'
+import { LlmTimeoutError, LlmApiError } from '@/infrastructure/llm/llmErrors.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
 
@@ -89,7 +86,7 @@ describe('AnthropicClient', () => {
     expect(handler).not.toHaveBeenCalled()
   })
 
-  // ── 4.2: Tool calling simple (1 iteración) ──
+  // ── 4.2: Tool calling simple (1 iteracion) ──
 
   it('should execute tool and return final text after tool_use then end_turn', async () => {
     const toolBlock = toolUseBlock('toolu_001', 'read_pid', { mode: '01', pid: '0C' })
@@ -323,7 +320,7 @@ describe('AnthropicClient', () => {
 
   // ── 5.3: Timeout de API ──
 
-  it('should throw AnthropicTimeoutError when SDK throws timeout', async () => {
+  it('should throw LlmTimeoutError when SDK throws timeout', async () => {
     const timeoutErr = new Error('Connection timed out')
     timeoutErr.name = 'APIConnectionTimeoutError'
     mockCreate.mockRejectedValue(timeoutErr)
@@ -335,12 +332,12 @@ describe('AnthropicClient', () => {
         tools: [],
         handler,
       }),
-    ).rejects.toThrow(AnthropicTimeoutError)
+    ).rejects.toThrow(LlmTimeoutError)
   })
 
   // ── 5.4: Error de API (4xx/5xx) ──
 
-  it('should throw AnthropicApiError when SDK throws API error', async () => {
+  it('should throw LlmApiError when SDK throws API error', async () => {
     mockCreate.mockRejectedValue(new Error('401 Unauthorized'))
 
     await expect(
@@ -350,6 +347,6 @@ describe('AnthropicClient', () => {
         tools: [],
         handler,
       }),
-    ).rejects.toThrow(AnthropicApiError)
+    ).rejects.toThrow(LlmApiError)
   })
 })
