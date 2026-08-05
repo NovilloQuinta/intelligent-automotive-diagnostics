@@ -3,14 +3,12 @@ import Anthropic from '@anthropic-ai/sdk'
 import type { McpToolDefinition } from '@/application/dto/McpToolDefinition.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { LlmMessageInput } from '@/application/dto/LlmMessageInput.js'
-import type { LlmResponse } from '@/application/dto/LlmResponse.js'
 import type { LlmSingleResponse } from '@/application/dto/LlmSingleResponse.js'
 import { mcpToolDefinitionSchema } from '@/infrastructure/llm/toolDefinitionSchema.js'
 import { wrapSdkError } from '@/infrastructure/llm/sdkErrorUtils.js'
-import { ExecuteLlmToolCalling } from '@/application/use-cases/ExecuteLlmToolCalling.js'
+import { composeLlmClient } from '@/infrastructure/llm/composeLlmClient.js'
 
 const DEFAULT_MODEL = 'claude-sonnet-4-20250514'
-const DEFAULT_MAX_ITERATIONS = 10
 const DEFAULT_TIMEOUT_MS = 30_000
 const DEFAULT_MAX_TOKENS = 4096
 
@@ -132,16 +130,5 @@ function createThinAdapter(config: AnthropicClientConfig) {
 /** Crea un cliente LLM que se comunica con la API de Anthropic Claude. */
 export function createAnthropicClient(config: AnthropicClientConfig): LlmClientPort {
   const parsed = anthropicClientConfigSchema.parse(config)
-  const maxIterations = parsed.maxIterations ?? DEFAULT_MAX_ITERATIONS
-  const thinAdapter = createThinAdapter(config)
-  const toolCallingUseCase = new ExecuteLlmToolCalling(thinAdapter.sendSingleMessage, maxIterations)
-
-  return {
-    sendMessage(input: LlmMessageInput): Promise<LlmResponse> {
-      return toolCallingUseCase.execute(input)
-    },
-    sendSingleMessage(input: LlmMessageInput): Promise<LlmSingleResponse> {
-      return thinAdapter.sendSingleMessage(input)
-    },
-  }
+  return composeLlmClient(createThinAdapter(config), parsed.maxIterations)
 }
