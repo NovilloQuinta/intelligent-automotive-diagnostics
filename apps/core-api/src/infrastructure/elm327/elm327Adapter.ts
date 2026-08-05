@@ -5,7 +5,6 @@ import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import { createPidFormulaCatalog, pidDefinitionsToFormulaEntries } from './pidFormulas.js'
 import { ALL_SEED_PIDS } from '../persistence/sqlite/seed-pids.js'
-import { decodeVin } from './vinDecoder.js'
 
 import { Elm327ConnectionError, Elm327NoDataError, Elm327ParseError } from './errors.js'
 import {
@@ -85,7 +84,7 @@ export class Elm327TcpRepository implements ObdRepository {
   /** Lee el VIN del vehiculo via comando 09 02. */
   async readVin(): Promise<string> {
     const raw = await this.client.sendCommand('09 02')
-    return decodeVin(parseVinResponse(raw))
+    return Vin.fromBytes(parseVinResponse(raw)).value
   }
 
   /** Obtiene la informacion del vehiculo conectado al emulador. */

@@ -249,4 +249,27 @@ describe('Vin', () => {
       expect(vin.modelYear).toBeNull()
     })
   })
+
+  describe('fromBytes', () => {
+    it('should decode 17 ASCII bytes to valid VIN', () => {
+      const bytes = 'WAUZZZ8V5JA123456'.split('').map((c) => c.charCodeAt(0))
+      const vin = Vin.fromBytes(bytes)
+      expect(vin.value).toBe('WAUZZZ8V5JA123456')
+    })
+
+    it('should throw on wrong byte count', () => {
+      expect(() => Vin.fromBytes([0x57, 0x41])).toThrow(VinDecodeError)
+    })
+
+    it('should throw on forbidden characters in bytes', () => {
+      const bytes = 'WAIZZZ8V5JA123456'.split('').map((c) => c.charCodeAt(0))
+      expect(() => Vin.fromBytes(bytes)).toThrow(VinDecodeError)
+    })
+
+    it('should convert lowercase to uppercase', () => {
+      const bytes = 'wauzzz8v5ja123456'.split('').map((c) => c.charCodeAt(0))
+      const vin = Vin.fromBytes(bytes)
+      expect(vin.value).toBe('WAUZZZ8V5JA123456')
+    })
+  })
 })

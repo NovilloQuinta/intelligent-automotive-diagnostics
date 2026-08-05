@@ -148,6 +148,14 @@ export class Vin {
     this.value = cleaned
   }
 
+  /** Crea un Vin desde bytes ASCII (respuesta Mode 09 PID 02). */
+  static fromBytes(bytes: number[]): Vin {
+    if (bytes.length !== 17) {
+      throw new VinDecodeError(`VIN must be exactly 17 characters, got ${bytes.length} bytes`)
+    }
+    return new Vin(String.fromCharCode(...bytes))
+  }
+
   /** Comprueba el check digit del VIN (posicion 9, 0-indexed: 8). */
   isCheckDigitValid(): boolean {
     let sum = 0
