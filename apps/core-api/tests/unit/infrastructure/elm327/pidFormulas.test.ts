@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { createPidFormulaCatalog, pidDefinitionsToFormulaEntries } from '@/infrastructure/elm327/pidFormulas.js'
-import type { PidFormulaEntry, PidDefinitionLike } from '@/infrastructure/elm327/pidFormulas.js'
+import { createPidFormulaCatalog } from '@/infrastructure/elm327/pidFormulas.js'
+import type { PidFormulaEntry } from '@/infrastructure/elm327/pidFormulas.js'
 
 describe('pidFormulas', () => {
   describe('createPidFormulaCatalog', () => {
@@ -54,32 +54,23 @@ describe('pidFormulas', () => {
     })
   })
 
-  describe('pidDefinitionsToFormulaEntries', () => {
-    it('should convert PidDefinition-like array to formula entries', () => {
-      const defs: PidDefinitionLike[] = [
-        { pidCode: { key: '01 0C' }, formula: '(A*256+B)/4', dataBytes: 2 },
-        { pidCode: { key: '01 05' }, formula: 'A-40', dataBytes: 1 },
+  describe('case insensitivity', () => {
+    it('should normalize mode and pid to uppercase in get()', () => {
+      const entries: Array<readonly [string, PidFormulaEntry]> = [
+        ['01 0C', { formula: '(A*256+B)/4', dataBytes: 2 }],
       ]
-      const entries = pidDefinitionsToFormulaEntries(defs)
-      expect(entries).toHaveLength(2)
-      expect(entries[0]![0]).toBe('01 0C')
-      expect(entries[0]![1]).toEqual({ formula: '(A*256+B)/4', dataBytes: 2 })
-      expect(entries[1]![0]).toBe('01 05')
-      expect(entries[1]![1]).toEqual({ formula: 'A-40', dataBytes: 1 })
+      const catalog = createPidFormulaCatalog(entries)
+      expect(catalog.get('01', '0c')).toEqual({ formula: '(A*256+B)/4', dataBytes: 2 })
+      expect(catalog.get('01', '0C')).toEqual({ formula: '(A*256+B)/4', dataBytes: 2 })
     })
 
-    it('should filter out definitions with empty formula', () => {
-      const defs: PidDefinitionLike[] = [
-        { pidCode: { key: '09 02' }, formula: '', dataBytes: 17 },
-        { pidCode: { key: '01 0C' }, formula: '(A*256+B)/4', dataBytes: 2 },
+    it('should normalize mode and pid to uppercase in apply()', () => {
+      const entries: Array<readonly [string, PidFormulaEntry]> = [
+        ['01 0C', { formula: '(A*256+B)/4', dataBytes: 2 }],
       ]
-      const entries = pidDefinitionsToFormulaEntries(defs)
-      expect(entries).toHaveLength(1)
-      expect(entries[0]![0]).toBe('01 0C')
-    })
-
-    it('should return empty array for empty input', () => {
-      expect(pidDefinitionsToFormulaEntries([])).toEqual([])
+      const catalog = createPidFormulaCatalog(entries)
+      expect(catalog.apply('01', '0c', [0x0c, 0x80])).toBe(800)
+      expect(catalog.apply('01', '0C', [0x0c, 0x80])).toBe(800)
     })
   })
 })

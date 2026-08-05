@@ -3,7 +3,9 @@ import { DtcCode } from '@/domain/value-objects/dtcCode.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
-import { createPidFormulaCatalog, pidDefinitionsToFormulaEntries } from './pidFormulas.js'
+import { createPidFormulaCatalog } from './pidFormulas.js'
+import type { PidFormulaCatalog } from './pidFormulas.js'
+import { pidDefinitionsToFormulaEntries } from './pidDefinitionMapper.js'
 import { ALL_SEED_PIDS } from '../persistence/sqlite/seed-pids.js'
 
 import { Elm327ConnectionError, Elm327NoDataError, Elm327ParseError } from './errors.js'
@@ -34,7 +36,7 @@ const UNKNOWN_FREEZE_FRAME_DTC = 'UNKNOWN'
  */
 export class Elm327TcpRepository implements ObdRepository {
   private readonly client: ReturnType<typeof createElm327TcpClient>
-  private readonly pidFormulas: ReturnType<typeof createPidFormulaCatalog>
+  private readonly pidFormulas: PidFormulaCatalog
 
   constructor(config: Elm327TcpConfig) {
     this.client = createElm327TcpClient(config)
