@@ -25,9 +25,9 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
-- **Ultimo paso**: Pipeline `refactor-elm327-adapter-srp` COMPLETADO (13/13 pasos). 5 modulos extraidos: errors, hexUtils, protocol, pidFormulas, tcpTransport. Adapter reducido de ~400 → 117 lineas. Commit `c5efab6` en rama `refactor/elm327-adapter-srp`.
-- **Tests**: 483 pasando (38 test files)
-- **CI**: verde — lint, format, test, build
+- **Ultimo paso**: Pipeline `dynamic-pid-formulas` — Step 1/7, Task 0 (RED→GREEN): Migrados 16 VAG Mode 22 DIDs de pidFormulas.ts a seed-pids.ts. `VAG_AUDI_MODE_22_PIDS` creada con 16 entradas. `ALL_SEED_PIDS` ahora con 37 entradas (16+1+4+16). Test `seed-pids.test.ts` creado (5 tests).
+- **Tests**: 487 pasando (39 test files)
+- **CI**: verde — lint, test
 
 ## REGLAS DE SESION
 

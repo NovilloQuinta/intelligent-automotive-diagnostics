@@ -1,70 +1,93 @@
 import { evaluatePid } from './pidParser.js'
 import { bigEndian } from './hexUtils.js'
 
-/** Entrada de fórmula para un PID/DID. */
-interface PidFormulaEntry {
+/** Entrada de fórmula para un PID/DID con su expresión aritmética y bytes esperados. */
+export interface PidFormulaEntry {
   readonly formula: string
   readonly dataBytes: number
 }
 
-/** Catálogo de fórmulas con consulta `get(mode, pid)` y aplicación `apply`. */
-interface PidFormulaCatalog {
-  /** Devuelve la entrada de fórmula para un PID, o undefined si no existe. */
+/**
+ * Catálogo de fórmulas PID con consulta `get(mode, pid)` y aplicación `apply`.
+ *
+ * El catálogo es **puro**: no contiene datos hardcodeados. Recibe sus entradas
+ * externamente y las almacena en un `Map<key, PidFormulaEntry>` para búsqueda O(1).
+ */
+export interface PidFormulaCatalog {
+  /**
+   * Devuelve la entrada de fórmula para un PID, o `undefined` si no existe.
+   * @param mode - Modo OBD (ej. `'01'`, `'22'`)
+   * @param pid - Código PID/DID (ej. `'0C'`, `'1130'`)
+   */
   get(mode: string, pid: string): PidFormulaEntry | undefined
-  /** Aplica la fórmula del PID a los bytes dados, o fallback big-endian si es desconocido. */
+
+  /**
+   * Aplica la fórmula del PID a los bytes dados, o fallback big-endian si es desconocido.
+   * @param mode - Modo OBD (ej. `'01'`, `'22'`)
+   * @param pid - Código PID/DID (ej. `'0C'`, `'1130'`)
+   * @param bytes - Array de bytes de respuesta (valores 0-255)
+   * @returns Valor físico calculado
+   * @throws {import('./pidParser.js').PidParseError} Si la fórmula es inválida o los bytes son insuficientes.
+   */
   apply(mode: string, pid: string, bytes: number[]): number
 }
 
-/** Fórmulas estándar Mode 01 (SAE J1979) — 16 PIDs globales con clave "01 XX". */
-export const STANDARD_MODE_01_FORMULAS: Record<string, PidFormulaEntry> = {
-  '01 04': { formula: 'A*100/255', dataBytes: 1 },
-  '01 05': { formula: 'A-40', dataBytes: 1 },
-  '01 06': { formula: 'A*100/128-100', dataBytes: 1 },
-  '01 07': { formula: 'A*100/128-100', dataBytes: 1 },
-  '01 0B': { formula: 'A', dataBytes: 1 },
-  '01 0C': { formula: '(A*256+B)/4', dataBytes: 2 },
-  '01 0D': { formula: 'A', dataBytes: 1 },
-  '01 0E': { formula: 'A/2-64', dataBytes: 1 },
-  '01 0F': { formula: 'A-40', dataBytes: 1 },
-  '01 10': { formula: '(A*256+B)/100', dataBytes: 2 },
-  '01 11': { formula: 'A*100/255', dataBytes: 1 },
-  '01 2F': { formula: 'A*100/255', dataBytes: 1 },
-  '01 31': { formula: 'A*256+B', dataBytes: 2 },
-  '01 42': { formula: '(A*256+B)/1000', dataBytes: 2 },
-  '01 46': { formula: 'A-40', dataBytes: 1 },
-  '01 5C': { formula: 'A-40', dataBytes: 1 },
+/**
+ * Definición mínima de PID necesaria para convertir a entrada de fórmula.
+ * Acepta cualquier objeto con estructura `{ pidCode: { key }, formula, dataBytes }`,
+ * incluyendo instancias de `PidCode` y `PidDefinition`.
+ */
+export interface PidDefinitionLike {
+  readonly pidCode: { readonly key: string }
+  readonly formula: string
+  readonly dataBytes: number
 }
 
-/** Fórmulas VAG Mode 22 (DIDs reales del escenario Audi A3 2.0 TDI, Ross-Tech). */
-export const VAG_MODE_22_FORMULAS: Record<string, PidFormulaEntry> = {
-  '1130': { formula: '(A*256+B)/4', dataBytes: 2 }, // Engine Speed
-  '115C': { formula: 'A*256+B', dataBytes: 2 }, // Charge Air Pressure — Actual (mbar)
-  '115E': { formula: 'A*256+B', dataBytes: 2 }, // Charge Air Pressure — Specified (mbar)
-  F430: { formula: 'A', dataBytes: 1 }, // Coolant Temperature (VAG scaling 1:1)
-  F432: { formula: 'A', dataBytes: 1 }, // Intake Air Temperature
-  F477: { formula: '(A*256+B)*0.01', dataBytes: 2 }, // Fuel Rail Pressure — Actual (bar)
-  F47D: { formula: '(A*256+B)*0.01', dataBytes: 2 }, // Fuel Rail Pressure — Specified (bar)
-  '1035': { formula: 'A', dataBytes: 1 }, // EGR Duty Cycle — Actual (%)
-  '1250': { formula: 'A*256+B', dataBytes: 2 }, // Engine Torque (Nm)
-  '1132': { formula: '(A*256+B)*0.01', dataBytes: 2 }, // Injection Quantity (mg/stroke)
-  '1184': { formula: 'A*256+B', dataBytes: 2 }, // Intake Air Mass (mg/stroke)
-  '1410': { formula: '(A*256+B)*0.01', dataBytes: 2 }, // DPF Soot Mass (g)
-  '140E': { formula: 'A*256+B', dataBytes: 2 }, // DPF Differential Pressure (mbar)
-  F449: { formula: 'A', dataBytes: 1 }, // Accelerator Pedal Position (%)
-  '1462': { formula: '(A*256+B)/100', dataBytes: 2 }, // Battery Voltage (V)
-  F40D: { formula: 'A', dataBytes: 1 }, // Vehicle Speed (km/h)
+/**
+ * Convierte un array de definiciones PID a entradas de catálogo de fórmulas.
+ *
+ * Cada definición con `formula !== ''` se convierte en una tupla `[key, PidFormulaEntry]`.
+ * Se filtran automáticamente las definiciones con `formula === ''` (ej. PIDs tipo ASCII
+ * como VIN que no tienen fórmula aritmética).
+ *
+ * @param definitions - Iterable de objetos con `{ pidCode: { key }, formula, dataBytes }`
+ * @returns Array inmutable de tuplas `[key, PidFormulaEntry]` listas para el catálogo
+ */
+export function pidDefinitionsToFormulaEntries(
+  definitions: Iterable<PidDefinitionLike>,
+): Array<readonly [string, PidFormulaEntry]> {
+  const entries: Array<readonly [string, PidFormulaEntry]> = []
+  for (const def of definitions) {
+    if (def.formula === '') continue
+    entries.push([
+      def.pidCode.key,
+      { formula: def.formula, dataBytes: def.dataBytes },
+    ] as const)
+  }
+  return entries
 }
 
-/** Crea un catálogo de fórmulas PID que combina Mode 01 SAE + Mode 22 VAG. */
-export function createPidFormulaCatalog(): PidFormulaCatalog {
-  const map = new Map<string, PidFormulaEntry>()
-
-  for (const [key, entry] of Object.entries(STANDARD_MODE_01_FORMULAS)) {
-    map.set(key, entry)
-  }
-  for (const [did, entry] of Object.entries(VAG_MODE_22_FORMULAS)) {
-    map.set(`22 ${did}`, entry)
-  }
+/**
+ * Crea un catálogo de fórmulas PID a partir de entradas externas.
+ *
+ * El catálogo es puramente un `Map` indexado por clave compuesta `"MODE PID"`.
+ * `get` y `apply` normalizan la búsqueda a mayúsculas. Si un PID no está en el
+ * catálogo, `apply` usa fallback big-endian (`(A*256+B)` para 2 bytes, `A` para 1).
+ *
+ * @param entries - Iterable de tuplas `[key, PidFormulaEntry]` (ej. salida de `pidDefinitionsToFormulaEntries`)
+ * @returns Catálogo inmutable con métodos `get` y `apply`
+ *
+ * @example
+ * ```ts
+ * const entries = pidDefinitionsToFormulaEntries(STANDARD_MODE_01_PIDS)
+ * const catalog = createPidFormulaCatalog(entries)
+ * catalog.apply('01', '0C', [0x0C, 0x80]) // → 800
+ * ```
+ */
+export function createPidFormulaCatalog(
+  entries: Iterable<readonly [string, PidFormulaEntry]>,
+): PidFormulaCatalog {
+  const map = new Map<string, PidFormulaEntry>(entries)
 
   return {
     get(mode: string, pid: string): PidFormulaEntry | undefined {
@@ -73,7 +96,7 @@ export function createPidFormulaCatalog(): PidFormulaCatalog {
 
     apply(mode: string, pid: string, bytes: number[]): number {
       const entry = map.get(`${mode} ${pid.toUpperCase()}`)
-      if (!entry || entry.formula === '') return bigEndian(bytes)
+      if (!entry) return bigEndian(bytes)
       return evaluatePid(entry.formula, bytes.slice(0, entry.dataBytes))
     },
   }

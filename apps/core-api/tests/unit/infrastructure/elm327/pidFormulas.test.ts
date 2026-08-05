@@ -1,65 +1,85 @@
 import { describe, it, expect } from 'vitest'
-import { createPidFormulaCatalog } from '@/infrastructure/elm327/pidFormulas.js'
-import { STANDARD_MODE_01_PIDS } from '@/infrastructure/persistence/sqlite/seed-pids.js'
+import { createPidFormulaCatalog, pidDefinitionsToFormulaEntries } from '@/infrastructure/elm327/pidFormulas.js'
+import type { PidFormulaEntry, PidDefinitionLike } from '@/infrastructure/elm327/pidFormulas.js'
 
 describe('pidFormulas', () => {
-  const catalog = createPidFormulaCatalog()
-
-  describe('get(mode, pid)', () => {
-    it('should return formula entry for Mode 01 PID 0C (RPM)', () => {
-      const entry = catalog.get('01', '0C')
-      expect(entry).toEqual({ formula: '(A*256+B)/4', dataBytes: 2 })
+  describe('createPidFormulaCatalog', () => {
+    it('should return undefined from get() when catalog is empty', () => {
+      const catalog = createPidFormulaCatalog([])
+      expect(catalog.get('01', '0C')).toBeUndefined()
     })
 
-    it('should return formula entry for Mode 22 VAG DID 1130 (Engine Speed)', () => {
-      const entry = catalog.get('22', '1130')
-      expect(entry).toEqual({ formula: '(A*256+B)/4', dataBytes: 2 })
+    it('should use big-endian fallback from apply() when catalog is empty', () => {
+      const catalog = createPidFormulaCatalog([])
+      expect(catalog.apply('01', '0C', [0x0c, 0x80])).toBe(3200)
     })
 
-    it('should return undefined for unknown PID', () => {
-      const entry = catalog.get('01', 'ZZ')
-      expect(entry).toBeUndefined()
-    })
-  })
-
-  describe('apply(mode, pid, bytes)', () => {
-    it('should compute RPM from Mode 01 0C bytes [0C, 80] → 800', () => {
+    it('should get and apply Mode 01 PID 0C (RPM) with the correct formula', () => {
+      const entries: Array<readonly [string, PidFormulaEntry]> = [
+        ['01 0C', { formula: '(A*256+B)/4', dataBytes: 2 }],
+      ]
+      const catalog = createPidFormulaCatalog(entries)
+      expect(catalog.get('01', '0C')).toEqual({ formula: '(A*256+B)/4', dataBytes: 2 })
       expect(catalog.apply('01', '0C', [0x0c, 0x80])).toBe(800)
     })
 
-    it('should compute coolant temp from Mode 01 05 byte [82] → 90', () => {
-      expect(catalog.apply('01', '05', [0x82])).toBe(90)
-    })
-
-    it('should compute RPM from Mode 22 DID 1130 bytes [0C, 80] → 800', () => {
+    it('should get and apply Mode 22 DID 1130 (Engine Speed) correctly', () => {
+      const entries: Array<readonly [string, PidFormulaEntry]> = [
+        ['22 1130', { formula: '(A*256+B)/4', dataBytes: 2 }],
+      ]
+      const catalog = createPidFormulaCatalog(entries)
+      expect(catalog.get('22', '1130')).toEqual({ formula: '(A*256+B)/4', dataBytes: 2 })
       expect(catalog.apply('22', '1130', [0x0c, 0x80])).toBe(800)
     })
 
-    it('should compute coolant temp from Mode 22 DID F430 byte [5A] → 90', () => {
-      expect(catalog.apply('22', 'F430', [0x5a])).toBe(90)
+    it('should fallback to big-endian for unknown PID', () => {
+      const catalog = createPidFormulaCatalog([])
+      expect(catalog.apply('01', 'XX', [0x0c, 0x80])).toBe(3200)
     })
 
-    it('should fallback to big-endian for unknown PID [0C, 80] → 3200', () => {
-      expect(catalog.apply('01', 'XX', [0x0c, 0x80])).toBe(3200)
+    it('should compute coolant temp from Mode 01 05 byte [82] → 90', () => {
+      const entries: Array<readonly [string, PidFormulaEntry]> = [
+        ['01 05', { formula: 'A-40', dataBytes: 1 }],
+      ]
+      const catalog = createPidFormulaCatalog(entries)
+      expect(catalog.apply('01', '05', [0x82])).toBe(90)
+    })
+
+    it('should compute coolant temp from Mode 22 DID F430 byte [5A] → 90', () => {
+      const entries: Array<readonly [string, PidFormulaEntry]> = [
+        ['22 F430', { formula: 'A', dataBytes: 1 }],
+      ]
+      const catalog = createPidFormulaCatalog(entries)
+      expect(catalog.apply('22', 'F430', [0x5a])).toBe(90)
     })
   })
 
-  describe('parity with STANDARD_MODE_01_PIDS', () => {
-    it('should match formula and dataBytes for all 16 standard PIDs', () => {
-      for (const pid of STANDARD_MODE_01_PIDS) {
-        const entry = catalog.get(pid.pidCode.mode, pid.pidCode.pid)
-        expect(entry, `Missing formula for ${pid.pidCode.key}`).toBeDefined()
-        expect(entry!.formula, `Formula mismatch for ${pid.pidCode.key}`).toBe(pid.formula)
-        expect(entry!.dataBytes, `dataBytes mismatch for ${pid.pidCode.key}`).toBe(pid.dataBytes)
-      }
+  describe('pidDefinitionsToFormulaEntries', () => {
+    it('should convert PidDefinition-like array to formula entries', () => {
+      const defs: PidDefinitionLike[] = [
+        { pidCode: { key: '01 0C' }, formula: '(A*256+B)/4', dataBytes: 2 },
+        { pidCode: { key: '01 05' }, formula: 'A-40', dataBytes: 1 },
+      ]
+      const entries = pidDefinitionsToFormulaEntries(defs)
+      expect(entries).toHaveLength(2)
+      expect(entries[0]![0]).toBe('01 0C')
+      expect(entries[0]![1]).toEqual({ formula: '(A*256+B)/4', dataBytes: 2 })
+      expect(entries[1]![0]).toBe('01 05')
+      expect(entries[1]![1]).toEqual({ formula: 'A-40', dataBytes: 1 })
     })
 
-    it('should have exactly 16 Mode 01 entries (no more, no less)', () => {
-      const count = STANDARD_MODE_01_PIDS.filter((pid) => {
-        const entry = catalog.get(pid.pidCode.mode, pid.pidCode.pid)
-        return entry !== undefined && entry.formula === pid.formula
-      }).length
-      expect(count).toBe(16)
+    it('should filter out definitions with empty formula', () => {
+      const defs: PidDefinitionLike[] = [
+        { pidCode: { key: '09 02' }, formula: '', dataBytes: 17 },
+        { pidCode: { key: '01 0C' }, formula: '(A*256+B)/4', dataBytes: 2 },
+      ]
+      const entries = pidDefinitionsToFormulaEntries(defs)
+      expect(entries).toHaveLength(1)
+      expect(entries[0]![0]).toBe('01 0C')
+    })
+
+    it('should return empty array for empty input', () => {
+      expect(pidDefinitionsToFormulaEntries([])).toEqual([])
     })
   })
 })
