@@ -14,6 +14,10 @@ export function createRateLimiter(config?: Partial<RateLimiterConfig>) {
   const windowMinutes = config?.windowMinutes ?? DEFAULT_WINDOW_MINUTES
   const maxRequests = config?.maxRequests ?? DEFAULT_MAX_REQUESTS
 
+  if (process.env.NODE_ENV !== 'production') {
+    return (_req: unknown, _res: unknown, next: () => void) => next()
+  }
+
   return rateLimit({
     windowMs: windowMinutes * 60 * 1000,
     limit: maxRequests,

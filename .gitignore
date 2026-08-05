@@ -45,3 +45,5 @@ apps/ui/.output/
 apps/ui/.vinxi/
 apps/ui/.tanstack/
 apps/ui/routeTree.gen.ts
+.playwright-mcp/
+apps/ui/test-results/
