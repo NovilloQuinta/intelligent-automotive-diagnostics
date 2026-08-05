@@ -25,8 +25,8 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
-- **Ultimo paso**: Pipeline multi-paso `refactor-elm327-adapter-srp` — MODULO 3/5 completado (protocol.ts extraido). 7 funciones movidas: formatCommand, stripEcho, parseModeResponse, parseMode22Response, parseVinResponse, parseDtcResponse, parseSupportedPidBitmask. Adapter reducido de 271 → 203 lineas. Pendiente: MODULO 4/5 (connection.ts) + MODULO 5/5 (edge cases).
-- **Tests**: 467 pasando (36 test files)
+- **Ultimo paso**: Pipeline `refactor-elm327-adapter-srp` COMPLETADO (13/13 pasos). 5 modulos extraidos: errors, hexUtils, protocol, pidFormulas, tcpTransport. Adapter reducido de ~400 → 117 lineas. Commit `c5efab6` en rama `refactor/elm327-adapter-srp`.
+- **Tests**: 483 pasando (38 test files)
 - **CI**: verde — lint, format, test, build
 
 ## REGLAS DE SESION
