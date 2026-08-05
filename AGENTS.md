@@ -25,8 +25,8 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
-- **Ultimo paso**: Pipeline `dynamic-pid-formulas` — Step 1/7, Task 0 (RED→GREEN): Migrados 16 VAG Mode 22 DIDs de pidFormulas.ts a seed-pids.ts. `VAG_AUDI_MODE_22_PIDS` creada con 16 entradas. `ALL_SEED_PIDS` ahora con 37 entradas (16+1+4+16). Test `seed-pids.test.ts` creado (5 tests).
-- **Tests**: 487 pasando (39 test files)
+- **Ultimo paso**: Auditoría Clean Architecture de `infrastructure/elm327/`. Eliminado `isotp/` (código muerto, 7 ficheros: 4 src + 3 tests). Confirmada disciplina de capas: 0 violaciones domain→infra, application→infra.
+- **Tests**: 453 pasando, 3 fallos pre-existentes en vehicleRepository (formula VO vs string), 39→36 test files (eliminados 3 tests isotp)
 - **CI**: verde — lint, test
 
 ## REGLAS DE SESION
@@ -37,6 +37,7 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 3. **1 paso a la vez** — no mezclar responsabilidades, no adelantar trabajo
 4. **TDD estricto**: RED (test que falla) → GREEN (codigo minimo) → REFACTOR
 5. **Trabajar en ramas, NO en main** — cada cambio en su rama (`git checkout -b feat/xxx` o `fix/xxx`). Solo merge a main cuando CI pase verde. Cambios menores (docs, chore, style) directo a main.
+5b. **Verificar ruta del worktree antes de escribir** — si trabajas en un worktree (`.claude/worktrees/xxx/`), TODO agente y toda operacion `Write`/`Edit` DEBE usar la ruta del worktree, NUNCA la del repo principal. Antes de escribir un archivo, confirma que el path contiene `.claude/worktrees/`. Si un agente escribe en el repo principal estando en un worktree, es un fallo critico.
 6. **Checks pre-push**: `pnpm lint && pnpm format && pnpm test && pnpm build`
 7. **Preguntar antes de commitear/pushear** — mostrar resumen de cambios, esperar OK humano
 8. **Tras cada paso**: actualizar `SESION ACTUAL` en este mismo fichero
