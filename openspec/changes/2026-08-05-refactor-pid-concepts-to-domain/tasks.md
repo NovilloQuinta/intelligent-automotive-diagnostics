@@ -54,7 +54,7 @@ TDD estricto: RED → GREEN → REFACTOR. Rama: `feat/refactor-pid-concepts-to-d
 
 ### 2.0 GREEN — Crear `application/ports/PidFormulaCatalog.ts`
 
-- [ ] 2.0.1 Crear `apps/core-api/src/application/ports/PidFormulaCatalog.ts`:
+- [x] 2.0.1 Crear `apps/core-api/src/application/ports/PidFormulaCatalog.ts`:
   - Copiar la interface `PidFormulaCatalog` desde `infrastructure/elm327/pidFormulas.ts:11-28`
   - Cambiar import de `PidFormulaEntry` a `@/domain/pidFormulaEntry.js`
   - TSDoc en la interface y sus métodos (conservar TSDoc existente)
