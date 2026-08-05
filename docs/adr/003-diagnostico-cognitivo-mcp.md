@@ -1,7 +1,7 @@
 # ADR 003: Diagnóstico Cognitivo con IA vía MCP
 
 **Estado:** Aprobado
-**Fecha:** 2026-07-10
+**Fecha:** 2026-07-10 | **Actualizado:** 2026-08-05
 **Contexto:** Integración de un LLM como "cerebro" del diagnóstico
 
 ---
@@ -26,15 +26,44 @@ Se adopta el **Model Context Protocol (MCP) de Anthropic** como el adaptador de 
 LLM (Claude)  ←→  MCP Server (mcpServer.ts)  ←→  Use Cases + Simulador
 ```
 
-El MCP Server expone **tools** que el LLM puede invocar:
+El MCP Server expone **tools** que el LLM puede invocar via los puertos `ObdRepository` y `VehicleRepository`:
 
-| Tool | Descripción | Use Case asociado |
+| Tool | Descripción | Puerto |
 |---|---|---|
-| `get_vehicle_data` | Devuelve valores actuales de sensores (RPM, temp, velocidad) | Lectura directa del simulador |
-| `get_dtc_codes` | Devuelve códigos de error activos | Lectura directa del simulador |
-| `run_deterministic_diagnosis` | Ejecuta el diagnóstico por umbrales clásico | `ProcessVehicleDiagnosis` |
-| `switch_scenario` | Cambia el escenario de simulación en vivo | `SwitchSimulationScenario` |
-| `get_system_health` | Diagnóstico completo del estado del vehículo | Compuesto: datos + DTCs + umbrales |
+| `read_pid` | Lee un PID OBD-II (Mode 01 estándar, 22 fabricante) | `ObdRepository.readPid` |
+| `get_dtc_codes` | Códigos de error activos (Service 03) | `ObdRepository.readDtcCodes` |
+| `get_freeze_frame` | Datos congelados del momento del fallo (Service 02) | `ObdRepository.getFreezeFrame` |
+| `read_vin` | VIN del vehículo (Service 09 PID 02) | `ObdRepository.readVin` |
+| `get_vehicle_info` | Marca, modelo, año, tipo de motor | `ObdRepository.getVehicleInfo` |
+| `get_available_pids` | PIDs conocidos para un vehículo | `VehicleRepository.findPidsByVehicle` |
+
+### Buenas prácticas MCP aplicadas
+
+Durante la revisión de infraestructura (2026-08-05) se auditaron las [best practices oficiales de MCP](https://modelcontextprotocol.info/docs/best-practices/) y se aplicaron dos patrones clave:
+
+**1. Tool execution errors con `isError: true`**
+
+Cada handler de tool está envuelto en `withErrorHandling()`, que captura excepciones y las devuelve como errores de ejecución MCP:
+
+```ts
+{ content: [{ type: 'text', text: err.message }], isError: true }
+```
+
+Esto permite que el LLM reciba el mensaje de error real y pueda auto-corregirse (ej. reintentar con otro PID), en lugar de recibir un error de protocolo JSON-RPC genérico. El spec de MCP recomienda este patrón para que los modelos puedan recuperarse de fallos.
+
+**2. Fail-safe en la capa de transporte, no en MCP**
+
+Los patrones de resiliencia (retry con backoff exponencial, circuit breaker) se implementan en `infrastructure/elm327/tcpTransport.ts`, no en el servidor MCP. La separación de responsabilidades es:
+
+```
+MCP tool → ObdRepository → tcpTransport (retry + circuit breaker) → red
+ ↑                          ↑
+ isError: true              fail-safe patterns
+```
+
+- **Retry**: 3 reintentos con backoff (200ms → 400ms → 800ms) en fallos de conexión.
+- **Circuit breaker**: tras 5 fallos consecutivos, rechaza comandos durante 30s.
+- El MCP solo ve el resultado final (éxito o `isError: true`), sin conocer los detalles de red.
 
 ### Flujo de diagnóstico cognitivo
 
@@ -78,7 +107,9 @@ La conexion al LLM se abstrae mediante el patron Port/Adapter (`application/port
 ## Referencias
 
 - [Model Context Protocol Specification](https://spec.modelcontextprotocol.io) (Anthropic, 2024)
+- [MCP Best Practices](https://modelcontextprotocol.info/docs/best-practices/) — arquitectura, error handling, fail-safe patterns
+- [MCP Specification — Tool Execution Errors](https://modelcontextprotocol.io/specification/2026-07-28/server/tools#error-handling)
 - ADR 001: `001-arquitectura-del-sistema.md` (Clean Architecture base)
 - ADR 006: `006-llm-client-adapter.md` (Adaptador multi-proveedor LLM)
-- `application/use-cases/executeCognitiveDiagnosis.ts` — implementacion de referencia
-- `infrastructure/mcp/mcpServer.ts` — servidor MCP con herramientas
+- `infrastructure/mcp/mcpServer.ts` — servidor MCP con tools y error handling
+- `infrastructure/elm327/tcpTransport.ts` — transporte TCP con retry y circuit breaker

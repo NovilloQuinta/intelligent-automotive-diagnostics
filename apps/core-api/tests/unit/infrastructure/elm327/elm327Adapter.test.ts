@@ -33,7 +33,7 @@ const HOST = 'localhost'
 const PORT = 35000
 
 function makeRepo(timeout?: number): Elm327TcpRepository {
-  return new Elm327TcpRepository({ host: HOST, port: PORT, timeout })
+  return new Elm327TcpRepository({ host: HOST, port: PORT, timeout, maxRetries: 0 })
 }
 
 function lastSocket(): MockSocket {

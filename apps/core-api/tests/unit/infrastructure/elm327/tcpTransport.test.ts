@@ -83,7 +83,7 @@ describe('createElm327TcpClient', () => {
 
   it('timeout (10ms) → rechaza con Elm327ConnectionError', async () => {
     vi.useFakeTimers()
-    const client = createClient({ host: HOST, port: PORT, timeout: 10 })
+    const client = createClient({ host: HOST, port: PORT, timeout: 10, maxRetries: 0 })
     const promise = client.sendCommand('01 0C')
     expectSent('01 0C')
 
@@ -94,7 +94,7 @@ describe('createElm327TcpClient', () => {
   })
 
   it('error ECONNREFUSED en el socket → rechaza con Elm327ConnectionError', async () => {
-    const client = createClient({ host: HOST, port: PORT })
+    const client = createClient({ host: HOST, port: PORT, maxRetries: 0 })
     const promise = client.sendCommand('01 0C')
     expectSent('01 0C')
 
@@ -115,7 +115,7 @@ describe('createElm327TcpClient', () => {
   })
 
   it('destruye el socket y limpia el timer tras error', async () => {
-    const client = createClient({ host: HOST, port: PORT })
+    const client = createClient({ host: HOST, port: PORT, maxRetries: 0 })
     const promise = client.sendCommand('01 0C')
     expectSent('01 0C')
 
@@ -126,5 +126,66 @@ describe('createElm327TcpClient', () => {
 
     await expect(promise).rejects.toBeInstanceOf(Elm327ConnectionError)
     expect(lastSocket().destroy).toHaveBeenCalled()
+  })
+
+  it('reintenta en ECONNREFUSED y resuelve al segundo intento', async () => {
+    vi.useFakeTimers()
+    const client = createClient({ host: HOST, port: PORT, maxRetries: 1, backoffMs: 100 })
+
+    const err = new Error('connect ECONNREFUSED')
+    ;(err as NodeJS.ErrnoException).code = 'ECONNREFUSED'
+
+    const promise = client.sendCommand('01 0C')
+    expectSent('01 0C')
+
+    // Primer intento: falla
+    lastSocket().emit('error', err)
+
+    await vi.advanceTimersByTimeAsync(100)
+
+    // Segundo intento: éxito
+    respond(ECHO_RPM)
+    await expect(promise).resolves.toBe(ECHO_RPM)
+    vi.useRealTimers()
+  })
+
+  it('agota reintentos y rechaza tras todos los intentos fallidos', async () => {
+    vi.useFakeTimers()
+    const client = createClient({ host: HOST, port: PORT, maxRetries: 2, backoffMs: 100 })
+
+    const err = new Error('connect ECONNREFUSED')
+    ;(err as NodeJS.ErrnoException).code = 'ECONNREFUSED'
+
+    const promise = client.sendCommand('01 0C')
+
+    // 3 intentos (initial + 2 retries), todos fallan
+    lastSocket().emit('error', err)
+    await vi.advanceTimersByTimeAsync(100)
+    lastSocket().emit('error', err)
+    await vi.advanceTimersByTimeAsync(200)
+    lastSocket().emit('error', err)
+
+    await expect(promise).rejects.toBeInstanceOf(Elm327ConnectionError)
+    vi.useRealTimers()
+  })
+
+  it('circuit breaker: rechaza comandos tras 5 fallos consecutivos', async () => {
+    const client = createClient({ host: HOST, port: PORT, maxRetries: 0 })
+
+    const err = new Error('connect ECONNREFUSED')
+    ;(err as NodeJS.ErrnoException).code = 'ECONNREFUSED'
+
+    for (let i = 0; i < 5; i++) {
+      const promise = client.sendCommand('01 0C')
+      lastSocket().emit('error', err)
+      await expect(promise).rejects.toBeInstanceOf(Elm327ConnectionError)
+    }
+
+    // Circuito abierto: el sexto intento rechaza inmediatamente
+    const promise = client.sendCommand('01 0C')
+    await expect(promise).rejects.toMatchObject({
+      name: 'Elm327ConnectionError',
+      message: expect.stringContaining('circuit open'),
+    })
   })
 })
