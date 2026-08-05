@@ -7,6 +7,7 @@ import type { McpToolDefinition } from '@/application/dto/McpToolDefinition.js'
 /** Resultado de invocar una tool MCP (siempre contenido de tipo texto). */
 export interface ToolCallResult {
   content: Array<{ type: 'text'; text: string }>
+  isError?: boolean
 }
 
 /** Tool handler: firma de una función que procesa una tool MCP. */
@@ -60,6 +61,18 @@ type ToolRegistrar = (
   handler: ToolHandler,
 ) => void
 
+/** Envuelve un handler de tool para convertir excepciones en errores de ejecución MCP (isError: true). */
+function withErrorHandling(handler: ToolHandler): ToolHandler {
+  return async (args) => {
+    try {
+      return await handler(args)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      return { content: [{ type: 'text' as const, text: message }], isError: true }
+    }
+  }
+}
+
 /** Registra las 6 tools de diagnóstico OBD-II sobre el repositorio inyectado. */
 function registerDiagnosticTools(
   register: ToolRegistrar,
@@ -70,25 +83,30 @@ function registerDiagnosticTools(
     'read_pid',
     'Read an OBD-II PID value. Mode 01 for standard PIDs, 22 for manufacturer-specific.',
     { mode: z.string(), pid: z.string() },
-    async ({ mode, pid }) => {
+    withErrorHandling(async ({ mode, pid }) => {
       const value = await repo.readPid(mode as string, pid as string)
       return { content: [{ type: 'text' as const, text: String(value) }] }
-    },
+    }),
   )
 
-  register('get_dtc_codes', 'Read stored Diagnostic Trouble Codes (Service 03).', {}, async () => {
-    const dtcs = await repo.readDtcCodes()
-    if (dtcs.length === 0)
-      return { content: [{ type: 'text' as const, text: 'No DTC codes detected.' }] }
-    const text = dtcs.map((d) => `${d.code}: ${d.description || 'no description'}`).join('\n')
-    return { content: [{ type: 'text' as const, text }] }
-  })
+  register(
+    'get_dtc_codes',
+    'Read stored Diagnostic Trouble Codes (Service 03).',
+    {},
+    withErrorHandling(async () => {
+      const dtcs = await repo.readDtcCodes()
+      if (dtcs.length === 0)
+        return { content: [{ type: 'text' as const, text: 'No DTC codes detected.' }] }
+      const text = dtcs.map((d) => `${d.code}: ${d.description || 'no description'}`).join('\n')
+      return { content: [{ type: 'text' as const, text }] }
+    }),
+  )
 
   register(
     'get_freeze_frame',
     'Get freeze frame data (Service 02).',
     { dtc: z.string().optional() },
-    async ({ dtc }) => {
+    withErrorHandling(async ({ dtc }) => {
       const frame = await repo.getFreezeFrame(dtc as string | undefined)
       if (!frame)
         return { content: [{ type: 'text' as const, text: 'No freeze frame data available.' }] }
@@ -98,31 +116,41 @@ function registerDiagnosticTools(
       return {
         content: [{ type: 'text' as const, text: `DTC ${frame.dtcCode} freeze frame: ${values}` }],
       }
-    },
+    }),
   )
 
-  register('read_vin', 'Read VIN (Service 09 PID 02).', {}, async () => {
-    const vin = await repo.readVin()
-    return { content: [{ type: 'text' as const, text: vin }] }
-  })
+  register(
+    'read_vin',
+    'Read VIN (Service 09 PID 02).',
+    {},
+    withErrorHandling(async () => {
+      const vin = await repo.readVin()
+      return { content: [{ type: 'text' as const, text: vin }] }
+    }),
+  )
 
-  register('get_vehicle_info', 'Get vehicle make, model, year, engine.', {}, async () => {
-    const info = await repo.getVehicleInfo()
-    return {
-      content: [
-        {
-          type: 'text' as const,
-          text: `${info.make} ${info.model} (${info.year}) — ${info.engineType}`,
-        },
-      ],
-    }
-  })
+  register(
+    'get_vehicle_info',
+    'Get vehicle make, model, year, engine.',
+    {},
+    withErrorHandling(async () => {
+      const info = await repo.getVehicleInfo()
+      return {
+        content: [
+          {
+            type: 'text' as const,
+            text: `${info.make} ${info.model} (${info.year}) — ${info.engineType}`,
+          },
+        ],
+      }
+    }),
+  )
 
   register(
     'get_available_pids',
     'List known PIDs for a vehicle.',
     { vehicleId: z.number().optional() },
-    async ({ vehicleId }) => {
+    withErrorHandling(async ({ vehicleId }) => {
       if (!vehicleRepo) {
         return { content: [{ type: 'text' as const, text: 'No PIDs available for this vehicle.' }] }
       }
@@ -136,7 +164,7 @@ function registerDiagnosticTools(
         )
         .join('\n')
       return { content: [{ type: 'text' as const, text }] }
-    },
+    }),
   )
 }
 

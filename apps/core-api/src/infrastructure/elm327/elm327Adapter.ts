@@ -30,7 +30,7 @@ export type { Elm327TcpConfig } from './tcpTransport.js'
 const UNKNOWN_FREEZE_FRAME_DTC = 'UNKNOWN'
 
 /**
- * Adaptador OBD-II sobre TCP al emulador ELM327 (Docker, puerto 35000).
+ * Adaptador OBD-II sobre TCP a dispositivo ELM327 (Docker, puerto 35000).
  * Conexión efímera por comando, parseo ELM327 sin headers (AT H0 por defecto),
  * aplicación de fórmulas SAE J1979 + VAG Mode 22, decodificación DTC SAE J2012.
  */
@@ -43,7 +43,7 @@ export class Elm327TcpRepository implements ObdRepository {
     this.pidFormulas = createPidFormulaCatalog(toFormulaEntries(ALL_SEED_PIDS))
   }
 
-  /** Lee un PID OBD-II del emulador ELM327 y devuelve su valor físico. */
+  /** Lee un PID OBD-II del dispositivo ELM327 y devuelve su valor físico. */
   async readPid(mode: string, pid: string): Promise<number> {
     const raw = await this.client.sendCommand(formatCommand(mode, pid))
     const entry = this.pidFormulas.get(mode, pid)
@@ -89,7 +89,7 @@ export class Elm327TcpRepository implements ObdRepository {
     return Vin.fromBytes(parseVinResponse(raw)).value
   }
 
-  /** Obtiene la informacion del vehiculo conectado al emulador. */
+  /** Obtiene la informacion del vehiculo conectado al dispositivo ELM327. */
   async getVehicleInfo(): Promise<VehicleInfo> {
     try {
       const vin = new Vin(await this.readVin())
@@ -112,7 +112,7 @@ export class Elm327TcpRepository implements ObdRepository {
     }
   }
 
-  /** Controla el estado de alimentacion del emulador ELM327. */
+  /** Controla el estado de alimentacion del dispositivo ELM327. */
   async setPower(_on: boolean): Promise<void> {
     // No-op: el adaptador no controla la alimentación del hardware
   }

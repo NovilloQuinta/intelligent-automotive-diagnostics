@@ -1,4 +1,4 @@
-/** Error de conexión TCP con el emulador ELM327 (timeout, rechazo, socket error). */
+/** Error de conexión TCP con el dispositivo ELM327 (timeout, rechazo, socket error). */
 export class Elm327ConnectionError extends Error {
   constructor(message: string) {
     super(message)
@@ -6,7 +6,7 @@ export class Elm327ConnectionError extends Error {
   }
 }
 
-/** El emulador responde "NO DATA" — PID/DTC no soportado. */
+/** El dispositivo responde "NO DATA" — PID/DTC no soportado. */
 export class Elm327NoDataError extends Error {
   constructor(raw: string) {
     super(`ELM327: no data for command (raw: "${raw}")`)

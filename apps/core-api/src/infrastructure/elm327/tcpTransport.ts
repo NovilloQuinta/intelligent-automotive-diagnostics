@@ -1,7 +1,7 @@
 import { createConnection } from 'node:net'
 import { Elm327ConnectionError } from './errors.js'
 
-/** Configuración del transporte TCP al emulador ELM327. */
+/** Configuración del transporte TCP al dispositivo ELM327. */
 export interface Elm327TcpConfig {
   readonly host: string
   readonly port: number
@@ -13,7 +13,7 @@ export interface Elm327TcpConfig {
 export const DEFAULT_TIMEOUT_MS = 3000
 
 /**
- * Cliente TCP efímero para el emulador ELM327.
+ * Cliente TCP efímero para dispositivos ELM327.
  * Cada `sendCommand` abre una nueva conexión, envía el comando,
  * espera la respuesta hasta el prompt `>`, y cierra la conexión.
  */
