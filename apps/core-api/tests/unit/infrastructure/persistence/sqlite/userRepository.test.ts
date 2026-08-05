@@ -39,7 +39,9 @@ describe('SqliteUserRepository', () => {
         business_name TEXT,
         tax_id TEXT,
         address TEXT,
-        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        failed_login_attempts INTEGER NOT NULL DEFAULT 0,
+        locked_until TEXT
       );
 
       CREATE TABLE IF NOT EXISTS refresh_tokens (

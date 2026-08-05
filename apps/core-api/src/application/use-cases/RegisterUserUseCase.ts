@@ -1,6 +1,7 @@
 import type { UserRepository } from '@/application/ports/UserRepository.js'
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
+import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import { Email } from '@/domain/value-objects/email.js'
 import { persistRefreshToken } from '@/application/shared/hashToken.js'
 import { toSafeUser } from '@/application/shared/safeUser.js'
@@ -13,6 +14,7 @@ export class RegisterUserUseCase {
     private readonly userRepo: UserRepository,
     private readonly authService: AuthServicePort,
     private readonly tokenStore: RefreshTokenRepository,
+    private readonly logger?: LoggerPort,
   ) {}
 
   async execute(input: RegisterUserInput): Promise<RegisterUserOutput> {
@@ -20,7 +22,7 @@ export class RegisterUserUseCase {
 
     const existing = await this.userRepo.findByEmail(parsed.email)
     if (existing) {
-      throw new EmailAlreadyRegisteredError(parsed.email)
+      throw new EmailAlreadyRegisteredError()
     }
 
     const passwordHash = await this.authService.hashPassword(parsed.password)
@@ -37,6 +39,12 @@ export class RegisterUserUseCase {
     const tokens = this.authService.generateTokens(user.id)
     await persistRefreshToken(this.tokenStore, user.id, tokens)
 
+    this.logger?.info('auth.register', {
+      userId: user.id,
+      userType: parsed.userType,
+      email: parsed.email,
+    })
+
     return {
       user: toSafeUser(user),
       accessToken: tokens.accessToken,
@@ -47,8 +55,8 @@ export class RegisterUserUseCase {
 
 /** Error lanzado cuando el email ya esta registrado. */
 export class EmailAlreadyRegisteredError extends Error {
-  constructor(email: string) {
-    super(`Email already registered: ${email}`)
+  constructor() {
+    super('Email already registered')
     this.name = 'EmailAlreadyRegisteredError'
   }
 }

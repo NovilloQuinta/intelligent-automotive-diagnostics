@@ -4,7 +4,14 @@ import { z } from 'zod'
 export const registerUserSchema = z.object({
   username: z.string().min(3).max(50),
   email: z.string().email().max(255),
-  password: z.string().min(8).max(128),
+  password: z
+    .string()
+    .min(8)
+    .max(128)
+    .regex(
+      /^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).*$/,
+      'Password must contain at least 1 uppercase letter, 1 number, and 1 special character',
+    ),
   userType: z.enum(['individual', 'workshop']),
   businessName: z.string().max(200).optional(),
   taxId: z.string().max(50).optional(),

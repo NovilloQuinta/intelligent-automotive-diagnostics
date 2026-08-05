@@ -19,6 +19,8 @@ export class User {
   readonly taxId?: string | null
   readonly address?: string | null
   readonly createdAt: string
+  readonly failedLoginAttempts: number
+  readonly lockedUntil: string | null
 
   constructor(params: {
     id: number
@@ -30,6 +32,8 @@ export class User {
     taxId?: string | null
     address?: string | null
     createdAt: string
+    failedLoginAttempts?: number
+    lockedUntil?: string | null
   }) {
     if (!params.username.trim() || params.username.trim().length < 3)
       throw new UserError('username must be at least 3 characters')
@@ -43,6 +47,8 @@ export class User {
     this.taxId = params.taxId
     this.address = params.address
     this.createdAt = params.createdAt
+    this.failedLoginAttempts = params.failedLoginAttempts ?? 0
+    this.lockedUntil = params.lockedUntil ?? null
   }
 
   /** Indica si el usuario es un taller. */
