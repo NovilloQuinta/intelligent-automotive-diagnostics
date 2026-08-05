@@ -1,10 +1,11 @@
 import { z } from 'zod'
 import OpenAI from 'openai'
+import type { McpToolDefinition } from '@/application/dto/McpToolDefinition.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { LlmMessageInput } from '@/application/dto/LlmMessageInput.js'
 import type { LlmResponse } from '@/application/dto/LlmResponse.js'
 import type { LlmSingleResponse } from '@/application/dto/LlmSingleResponse.js'
-import { openAiToolAdapter } from '@/infrastructure/llm/openAiToolAdapter.js'
+import { mcpToolDefinitionSchema } from '@/infrastructure/llm/toolDefinitionSchema.js'
 import { wrapSdkError } from '@/infrastructure/llm/sdkErrorUtils.js'
 import { LlmApiError } from '@/infrastructure/llm/llmErrors.js'
 import { ExecuteLlmToolCalling } from '@/application/use-cases/ExecuteLlmToolCalling.js'
@@ -28,6 +29,18 @@ const openAiClientConfigSchema = z.object({
   maxIterations: z.number().int().positive().max(100).optional(),
   timeoutMs: z.number().int().positive().max(120_000).optional(),
 })
+
+function toOpenAiTool(tool: McpToolDefinition): OpenAI.Chat.Completions.ChatCompletionTool {
+  const parsed = mcpToolDefinitionSchema.parse(tool)
+  return {
+    type: 'function' as const,
+    function: {
+      name: parsed.name,
+      description: parsed.description,
+      parameters: (parsed.schema ?? { type: 'object', properties: {} }) as Record<string, unknown>,
+    },
+  }
+}
 
 function buildOpenAiMessages(
   input: LlmMessageInput,
@@ -104,7 +117,7 @@ function createThinAdapter(config: OpenAiClientConfig) {
     let response: OpenAI.Chat.Completions.ChatCompletion
     try {
       response = await client.chat.completions.create(
-        { model: parsed.model, messages, tools: input.tools.map(openAiToolAdapter), stream: false },
+        { model: parsed.model, messages, tools: input.tools.map(toOpenAiTool), stream: false },
         { timeout: timeoutMs },
       )
     } catch (error: unknown) {
