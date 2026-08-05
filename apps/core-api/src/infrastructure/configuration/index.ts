@@ -25,13 +25,19 @@ export function loadConfig(): AppConfig {
   return configSchema.parse(process.env)
 }
 
-/** Valida secretos de produccion: lanza si JWT secrets tienen valores por defecto. */
+/** Valida secretos de produccion: lanza si JWT secrets tienen valores por defecto o plantilla. */
 export function assertProductionSecrets(config: AppConfig): void {
   if (config.NODE_ENV !== 'production') return
-  if (config.ACCESS_TOKEN_SECRET === 'dev-access-secret') {
+  if (
+    config.ACCESS_TOKEN_SECRET === 'dev-access-secret' ||
+    config.ACCESS_TOKEN_SECRET === 'change-me-in-production'
+  ) {
     throw new Error('ACCESS_TOKEN_SECRET must be set in production')
   }
-  if (config.REFRESH_TOKEN_SECRET === 'dev-refresh-secret') {
+  if (
+    config.REFRESH_TOKEN_SECRET === 'dev-refresh-secret' ||
+    config.REFRESH_TOKEN_SECRET === 'change-me-in-production'
+  ) {
     throw new Error('REFRESH_TOKEN_SECRET must be set in production')
   }
 }

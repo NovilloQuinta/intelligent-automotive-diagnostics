@@ -40,11 +40,11 @@ export function buildApp(config: AppConfig): Application {
   })
 
   // ── Use cases de auth ──
-  const registerUseCase = new RegisterUserUseCase(userRepo, authService, tokenStore)
-  const loginUseCase = new LoginUserUseCase(userRepo, authService, tokenStore)
-  const refreshUseCase = new RefreshTokenUseCase(authService)
+  const registerUseCase = new RegisterUserUseCase(userRepo, authService, tokenStore, logger)
+  const loginUseCase = new LoginUserUseCase(userRepo, authService, tokenStore, logger)
+  const refreshUseCase = new RefreshTokenUseCase(authService, logger)
   const getCurrentUserUseCase = new GetCurrentUserUseCase(userRepo)
-  const logoutUseCase = new LogoutUserUseCase(tokenStore)
+  const logoutUseCase = new LogoutUserUseCase(tokenStore, logger)
 
   // ── Controladores ──
   const authController = new AuthController(

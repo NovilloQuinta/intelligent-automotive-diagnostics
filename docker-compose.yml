@@ -16,8 +16,8 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=4000
-      - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET:-change-me-in-production}
-      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET:-change-me-in-production}
+      - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
       - OBD_MODE=${OBD_MODE:-sync}
     volumes:
       - api-data:/app/data

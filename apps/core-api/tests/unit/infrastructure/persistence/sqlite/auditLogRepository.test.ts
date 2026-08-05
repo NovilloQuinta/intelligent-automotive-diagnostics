@@ -36,6 +36,7 @@ describe('SqliteAuditLogRepository', () => {
         ip TEXT,
         user_agent TEXT,
         duration_ms INTEGER,
+        user_id INTEGER,
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
     `)

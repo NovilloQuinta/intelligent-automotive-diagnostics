@@ -17,6 +17,8 @@ export function toUser(row: UserRow): User {
     taxId: row.taxId,
     address: row.address,
     createdAt: row.createdAt,
+    failedLoginAttempts: row.failedLoginAttempts,
+    lockedUntil: row.lockedUntil,
   })
 }
 

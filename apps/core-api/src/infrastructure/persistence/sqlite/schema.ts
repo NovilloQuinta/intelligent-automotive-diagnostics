@@ -78,6 +78,8 @@ export const users = sqliteTable('users', {
   taxId: text('tax_id'),
   address: text('address'),
   createdAt: text('created_at').notNull().default("datetime('now')"),
+  failedLoginAttempts: integer('failed_login_attempts').notNull().default(0),
+  lockedUntil: text('locked_until'),
 })
 
 /** Refresh tokens para renovar access tokens sin reautenticacion. */
@@ -101,6 +103,7 @@ export const auditLogs = sqliteTable('audit_logs', {
   ip: text('ip'),
   userAgent: text('user_agent'),
   durationMs: integer('duration_ms'),
+  userId: integer('user_id'),
   createdAt: text('created_at').notNull().default("datetime('now')"),
 })
 

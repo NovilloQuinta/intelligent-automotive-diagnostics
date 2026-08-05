@@ -15,6 +15,7 @@ export function createAuditLogger(repo: AuditLogRepository) {
         ip: req.ip ?? null,
         userAgent: (req.headers?.['user-agent'] as string) ?? null,
         durationMs,
+        userId: req.userId ?? null,
       }
 
       repo.create(entry).catch((err: unknown) => {

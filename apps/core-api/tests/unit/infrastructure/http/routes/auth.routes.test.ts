@@ -36,6 +36,8 @@ function createMocks(
       address: null,
       createdAt: '2024-01-01T00:00:00Z',
     }),
+    incrementFailedLogin: vi.fn().mockResolvedValue(undefined),
+    resetFailedLogins: vi.fn().mockResolvedValue(undefined),
     ...overrides.userRepo,
   }
 
@@ -104,7 +106,7 @@ describe('authRoutes', () => {
       const res = await request(app).post('/api/auth/register').send({
         username: 'juan',
         email: 'juan@mail.com',
-        password: 'password123',
+        password: 'Password1!',
         userType: 'individual',
       })
 
@@ -122,7 +124,7 @@ describe('authRoutes', () => {
       const res = await request(app).post('/api/auth/register').send({
         username: 'juan',
         email: 'juan@mail.com',
-        password: 'password123',
+        password: 'Password1!',
         userType: 'individual',
       })
 
@@ -151,7 +153,7 @@ describe('authRoutes', () => {
       })
       const res = await request(app)
         .post('/api/auth/login')
-        .send({ email: 'juan@mail.com', password: 'password123' })
+        .send({ email: 'juan@mail.com', password: 'Password1!' })
 
       expect(res.status).toBe(200)
       expect(res.body.accessToken).toBeDefined()
@@ -178,7 +180,7 @@ describe('authRoutes', () => {
       const { app } = createTestApp()
       const res = await request(app)
         .post('/api/auth/login')
-        .send({ email: 'noexiste@mail.com', password: 'password123' })
+        .send({ email: 'noexiste@mail.com', password: 'Password1!' })
 
       expect(res.status).toBe(401)
     })

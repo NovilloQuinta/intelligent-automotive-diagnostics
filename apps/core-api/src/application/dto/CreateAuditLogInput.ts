@@ -6,4 +6,5 @@ export interface CreateAuditLogInput {
   readonly ip?: string | null
   readonly userAgent?: string | null
   readonly durationMs?: number | null
+  readonly userId?: number | null
 }
