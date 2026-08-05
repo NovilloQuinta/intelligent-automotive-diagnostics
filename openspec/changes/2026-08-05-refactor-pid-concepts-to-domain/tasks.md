@@ -18,23 +18,23 @@ TDD estricto: RED → GREEN → REFACTOR. Rama: `feat/refactor-pid-concepts-to-d
 
 ### 1.0 RED — Mover test de bigEndian a dominio
 
-- [ ] 1.0.1 Crear `tests/unit/domain/bigEndian.test.ts`:
+- [x] 1.0.1 Crear `tests/unit/domain/bigEndian.test.ts`:
   - Copiar los tests del bloque `describe('bigEndian', ...)` desde `tests/unit/infrastructure/elm327/hexUtils.test.ts` (líneas 36-48)
   - Importar `bigEndian` desde `@/domain/bigEndian.js`
   - RED esperado: `Cannot find module '@/domain/bigEndian.js'`
-- [ ] 1.0.2 `pnpm test -- tests/unit/domain/bigEndian` — RED (módulo no existe aún)
+- [x] 1.0.2 `pnpm test -- tests/unit/domain/bigEndian` — RED (módulo no existe aún)
 
 ### 1.1 GREEN — Crear `domain/bigEndian.ts`
 
-- [ ] 1.1.1 Crear `apps/core-api/src/domain/bigEndian.ts`:
+- [x] 1.1.1 Crear `apps/core-api/src/domain/bigEndian.ts`:
   - Copiar la función `bigEndian` desde `infrastructure/elm327/hexUtils.ts:27-29`
   - Añadir TSDoc: `/** Int big-endian de todos los bytes (fallback para PIDs sin fórmula conocida). */`
   - Export nombrado, 0 imports
-- [ ] 1.1.2 `pnpm test -- tests/unit/domain/bigEndian` — GREEN (3 tests pasan)
+- [x] 1.1.2 `pnpm test -- tests/unit/domain/bigEndian` — GREEN (3 tests pasan)
 
 ### 1.2 GREEN — Crear `domain/pidFormulaEntry.ts`
 
-- [ ] 1.2.1 Crear `apps/core-api/src/domain/pidFormulaEntry.ts`:
+- [x] 1.2.1 Crear `apps/core-api/src/domain/pidFormulaEntry.ts`:
   - Copiar la interface `PidFormulaEntry` desde `infrastructure/elm327/pidFormulas.ts:5-8`
   - Añadir TSDoc: `/** Entrada de fórmula para un PID/DID con su expresión aritmética y bytes esperados. */`
   - Export nombrado, 0 imports
@@ -42,11 +42,11 @@ TDD estricto: RED → GREEN → REFACTOR. Rama: `feat/refactor-pid-concepts-to-d
 
 ### 1.3 CLEANUP — Eliminar tests de bigEndian de hexUtils.test.ts
 
-- [ ] 1.3.1 Modificar `tests/unit/infrastructure/elm327/hexUtils.test.ts`:
+- [x] 1.3.1 Modificar `tests/unit/infrastructure/elm327/hexUtils.test.ts`:
   - Eliminar el bloque `describe('bigEndian', ...)` (líneas 36-48) y su import de `bigEndian`
   - Eliminar `bigEndian` del import en línea 2: `import { parseHexBytes } from '@/infrastructure/elm327/hexUtils.js'`
   - El fichero conserva solo tests de `parseHexBytes` (7 tests)
-- [ ] 1.3.2 `pnpm test -- tests/unit/infrastructure/elm327/hexUtils` — GREEN (7 tests de parseHexBytes)
+- [x] 1.3.2 `pnpm test -- tests/unit/infrastructure/elm327/hexUtils` — GREEN (7 tests de parseHexBytes)
 
 ---
 
