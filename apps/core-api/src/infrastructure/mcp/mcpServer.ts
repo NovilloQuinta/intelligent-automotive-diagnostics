@@ -152,12 +152,37 @@ function registerDiagnosticTools(
   repo: ObdRepository,
   vehicleRepo: VehicleRepository | undefined,
 ): void {
-  register('read_pid', 'Read an OBD-II PID value. Mode 01, 22 for manufacturer-specific.', { mode: z.string(), pid: z.string() }, withErrorHandling(handleReadPid(repo)))
-  register('get_dtc_codes', 'Read stored Diagnostic Trouble Codes (Service 03).', {}, withErrorHandling(handleGetDtcCodes(repo)))
-  register('get_freeze_frame', 'Get freeze frame data (Service 02).', { dtc: z.string().optional() }, withErrorHandling(handleGetFreezeFrame(repo)))
+  register(
+    'read_pid',
+    'Read an OBD-II PID value. Mode 01, 22 for manufacturer-specific.',
+    { mode: z.string(), pid: z.string() },
+    withErrorHandling(handleReadPid(repo)),
+  )
+  register(
+    'get_dtc_codes',
+    'Read stored Diagnostic Trouble Codes (Service 03).',
+    {},
+    withErrorHandling(handleGetDtcCodes(repo)),
+  )
+  register(
+    'get_freeze_frame',
+    'Get freeze frame data (Service 02).',
+    { dtc: z.string().optional() },
+    withErrorHandling(handleGetFreezeFrame(repo)),
+  )
   register('read_vin', 'Read VIN (Service 09 PID 02).', {}, withErrorHandling(handleReadVin(repo)))
-  register('get_vehicle_info', 'Get vehicle make, model, year, engine.', {}, withErrorHandling(handleGetVehicleInfo(repo)))
-  register('get_available_pids', 'List known PIDs for a vehicle.', { vehicleId: z.number().optional() }, withErrorHandling(handleGetAvailablePids(vehicleRepo)))
+  register(
+    'get_vehicle_info',
+    'Get vehicle make, model, year, engine.',
+    {},
+    withErrorHandling(handleGetVehicleInfo(repo)),
+  )
+  register(
+    'get_available_pids',
+    'List known PIDs for a vehicle.',
+    { vehicleId: z.number().optional() },
+    withErrorHandling(handleGetAvailablePids(vehicleRepo)),
+  )
 }
 
 /** Crea un servidor MCP con tools de diagnóstico OBD-II. */
