@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import {
-  createOpenAiClient,
-  OpenAiTimeoutError,
-  OpenAiApiError,
-} from '@/infrastructure/llm/openAiClient.js'
+import { createOpenAiClient } from '@/infrastructure/llm/openAiClient.js'
+import { LlmTimeoutError, LlmApiError } from '@/infrastructure/llm/llmErrors.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
 import type OpenAI from 'openai'
@@ -321,9 +318,9 @@ describe('OpenAiClient', () => {
     expect(mockHandler).toHaveBeenCalledTimes(3)
   })
 
-  // ── Escenario: Timeout de API → OpenAiTimeoutError ──
+  // ── Escenario: Timeout de API → LlmTimeoutError ──
 
-  it('should throw OpenAiTimeoutError when SDK throws timeout', async () => {
+  it('should throw LlmTimeoutError when SDK throws timeout', async () => {
     const timeoutErr = new Error('Connection timed out')
     timeoutErr.name = 'APIConnectionTimeoutError'
     mockCreate.mockRejectedValue(timeoutErr)
@@ -335,12 +332,12 @@ describe('OpenAiClient', () => {
         tools: [],
         handler,
       }),
-    ).rejects.toThrow(OpenAiTimeoutError)
+    ).rejects.toThrow(LlmTimeoutError)
   })
 
-  // ── Escenario: Error de API (4xx/5xx) → OpenAiApiError ──
+  // ── Escenario: Error de API (4xx/5xx) → LlmApiError ──
 
-  it('should throw OpenAiApiError when SDK throws API error', async () => {
+  it('should throw LlmApiError when SDK throws API error', async () => {
     mockCreate.mockRejectedValue(new Error('401 Unauthorized'))
 
     await expect(
@@ -350,12 +347,12 @@ describe('OpenAiClient', () => {
         tools: [],
         handler,
       }),
-    ).rejects.toThrow(OpenAiApiError)
+    ).rejects.toThrow(LlmApiError)
   })
 
   // ── Escenario: Sanitizacion de errores (no expone mensajes crudos) ──
 
-  it('should NOT expose raw SDK error message in OpenAiApiError', async () => {
+  it('should NOT expose raw SDK error message in LlmApiError', async () => {
     mockCreate.mockRejectedValue(new Error('Sensitive internal details'))
 
     try {
@@ -367,7 +364,7 @@ describe('OpenAiClient', () => {
       })
       expect.fail('Expected an error to be thrown')
     } catch (error: unknown) {
-      expect(error).toBeInstanceOf(OpenAiApiError)
+      expect(error).toBeInstanceOf(LlmApiError)
       expect((error as Error).message).not.toContain('Sensitive')
       expect((error as Error).message).not.toContain('internal')
       expect((error as Error).message).not.toContain('details')
@@ -500,7 +497,11 @@ describe('OpenAiClient', () => {
 
   it('should throw ZodError when baseURL is missing', () => {
     expect(() =>
-      createOpenAiClient({ apiKey: 'sk-test', baseURL: '' as unknown as string, model: 'gpt-4o' }),
+      createOpenAiClient({
+        apiKey: 'sk-test',
+        baseURL: '' as unknown as string,
+        model: 'gpt-4o',
+      }),
     ).toThrow()
   })
 
