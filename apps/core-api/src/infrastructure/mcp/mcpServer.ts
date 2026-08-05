@@ -131,7 +131,7 @@ function registerDiagnosticTools(
         return { content: [{ type: 'text' as const, text: 'No PIDs available for this vehicle.' }] }
       const text = pids
         .map(
-          (p) => `${p.pidCode.mode} ${p.pidCode.pid}: ${p.name} (${p.formula}) [${p.unit ?? ''}]`,
+          (p) => `${p.pidCode.mode} ${p.pidCode.pid}: ${p.name} (${p.formula.toString()}) [${p.unit ?? ''}]`,
         )
         .join('\n')
       return { content: [{ type: 'text' as const, text }] }
