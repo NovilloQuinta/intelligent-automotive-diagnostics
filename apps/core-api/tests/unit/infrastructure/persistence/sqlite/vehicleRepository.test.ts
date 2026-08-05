@@ -234,7 +234,7 @@ describe('SqliteVehicleRepository', () => {
 
       expect(result).not.toBeNull()
       expect(result!.name).toBe('Engine RPM')
-      expect(result!.formula).toBe('(A*256+B)/4')
+      expect(result!.formula.expression).toBe('(A*256+B)/4')
     })
 
     it('should return null for unknown PID', async () => {

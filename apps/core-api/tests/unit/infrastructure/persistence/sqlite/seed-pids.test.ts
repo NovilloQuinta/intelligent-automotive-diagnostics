@@ -19,14 +19,14 @@ describe('seed-pids', () => {
     it('should have DID 1130 with formula (A*256+B)/4 and dataBytes 2', () => {
       const did = VAG_AUDI_MODE_22_PIDS.find((p) => p.pidCode.pid === '1130')
       expect(did).toBeDefined()
-      expect(did!.formula).toBe('(A*256+B)/4')
+      expect(did!.formula.expression).toBe('(A*256+B)/4')
       expect(did!.dataBytes).toBe(2)
     })
 
     it('should have DID F430 with formula A and dataBytes 1', () => {
       const did = VAG_AUDI_MODE_22_PIDS.find((p) => p.pidCode.pid === 'F430')
       expect(did).toBeDefined()
-      expect(did!.formula).toBe('A')
+      expect(did!.formula.expression).toBe('A')
       expect(did!.dataBytes).toBe(1)
     })
   })
