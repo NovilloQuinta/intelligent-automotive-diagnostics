@@ -27,9 +27,32 @@
 
 ```bash
 pnpm install
-cd apps/core-api
-pnpm dev
-open http://localhost:4000/api-docs
+
+# 2. Iniciar backend + frontend
+pnpm dev:all
+# o por separado:
+#   pnpm dev      → backend (http://localhost:4000)
+#   pnpm dev:ui   → frontend (http://localhost:5173)
+
+# 3. Dashboard: http://localhost:5173
+#    Swagger UI: http://localhost:4000/api-docs
+```
+
+### Dashboard UI (apps/ui)
+
+React 19 SPA con dashboard OBD-II profesional:
+
+- **Gauges en tiempo real**: RPM, velocidad, temperatura de refrigerante y admision
+- **Selector de vehiculos**: escenarios reales del backend (Audi A3, Kawasaki Z900)
+- **Panel DTC**: codigos de fallo con severidad
+- **Diagnostico**: determinista via API + cognitivo via LLM (si esta configurado)
+- **Auth JWT**: login/registro con formularios validados (Zod + react-hook-form)
+
+```bash
+cd apps/ui
+pnpm dev          # desarrollo (Vite proxy → backend :4000)
+pnpm build        # build produccion
+pnpm preview      # previsualizar build
 ```
 
 **Endpoints:**

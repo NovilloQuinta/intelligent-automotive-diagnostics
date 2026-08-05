@@ -41,3 +41,7 @@ pnpm-debug.log*
 data/
 *.db
 .claude/settings.local.json
+apps/ui/.output/
+apps/ui/.vinxi/
+apps/ui/.tanstack/
+apps/ui/routeTree.gen.ts
