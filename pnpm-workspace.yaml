@@ -20,3 +20,6 @@ onlyBuiltDependencies:
 
 overrides:
   protobufjs: '>=7.5.5'
+  handlebars: '>=4.7.7'
+  uglify-js: '>=3.18.0'
+  form-data: '>=2.5.4'
