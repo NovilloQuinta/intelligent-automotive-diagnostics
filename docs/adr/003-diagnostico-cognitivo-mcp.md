@@ -51,6 +51,17 @@ Cada handler de tool está envuelto en `withErrorHandling()`, que captura excepc
 
 Esto permite que el LLM reciba el mensaje de error real y pueda auto-corregirse (ej. reintentar con otro PID), en lugar de recibir un error de protocolo JSON-RPC genérico. El spec de MCP recomienda este patrón para que los modelos puedan recuperarse de fallos.
 
+Los errores se categorizan según las best practices de MCP para que el LLM pueda decidir la acción correcta:
+
+| Error | Categoría | Significado para el LLM |
+|---|---|---|
+| `Elm327NoDataError` | `client_error` | PID/DTC no soportado por la ECU → probar otro PID |
+| `Elm327ConnectionError` | `external_error` | Dispositivo ELM327 no disponible → reintentar más tarde |
+| `Elm327ParseError` | `server_error` | Respuesta corrupta → notificar al usuario |
+| Cualquier otro | `server_error` | Fallo interno inesperado → notificar al usuario |
+
+El mensaje se prefija con la categoría: `[external_error] ELM327 connection error...`
+
 **2. Fail-safe en la capa de transporte, no en MCP**
 
 Los patrones de resiliencia (retry con backoff exponencial, circuit breaker) se implementan en `infrastructure/elm327/tcpTransport.ts`, no en el servidor MCP. La separación de responsabilidades es:
