@@ -112,7 +112,27 @@ Estructura tu respuesta así:
 - Violaciones graves: 2
 - Advertencias: 1
 - ¿Aprobado? ❌ (corregir graves antes de merge)
+
+---gate_result---
+{ "result": "FAIL", "grave": 2, "warnings": 1 }
 ```
+
+El bloque `---gate_result---` DEBE ser la ÚLTIMA línea del informe y usar JSON válido:
+- `result`: `"PASS"` (0 graves), `"PASS_WITH_WARNINGS"` (0 graves, warnings > 0), o `"FAIL"` (graves > 0)
+- `grave`: número de violaciones graves de capa (domain→application, application→infrastructure, `new` en capa incorrecta)
+- `warnings`: número de advertencias no bloqueantes (naming, code smell, TSDoc, magic strings)
+
+## Modo Pipeline
+
+Si existe el archivo `.opencode/pipeline-state.json` en la raíz del proyecto:
+
+1. **Leer** `.opencode/pipeline-state.json` y localizar el step actual (`pipeline_plan[current_step - 1]`)
+2. **Enfocar la revisión SOLO** en los archivos listados en `files_to_review` del step actual
+3. **NO revisar** archivos fuera de `files_to_review` (aunque estén en el mismo directorio o relacionados)
+4. **Emitir el `---gate_result---`** al final del informe para que el orquestador evalúe el gate
+
+Si NO existe `pipeline-state.json`, el reviewer opera en modo normal: revisa todos los
+archivos modificados en la rama o indicados por el usuario.
 
 ## Lo que NUNCA debes hacer
 

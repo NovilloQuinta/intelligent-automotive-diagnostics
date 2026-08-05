@@ -25,7 +25,7 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
-- **Ultimo paso**: Refactor completo de las 3 capas (dominio, aplicacion, infraestructura). Dominio: `entities/` + `value-objects/`, clases con constructor publico + validacion inline, `id` obligatorio, sin `static create()`. Aplicacion: puertos PascalCase (repo sin Port, servicios con Port), DTOs en `dto/` (1 por fichero), use cases a clases con `execute()`. Infraestructura: `controllers/`, `configuration/` (Zod), `observability/` (pino), `persistence/mappers/`, `composition/composition.ts`, audit middleware wireado.
+- **Ultimo paso**: Separados `refactor-rich-domain-model` y `extract-cognitive-diagnosis-parser` en cambios abiertos (pendientes de sync de delta specs). Sigue en `changes/` hasta sync. Pendiente: `refactor-elm327-adapter-srp` (disenado, sin empezar).
 - **Tests**: 432 pasando (33 test files)
 - **CI**: verde — lint, format, test, build
 
@@ -54,6 +54,69 @@ Invoca con `@nombre` o via Task tool. Definidos en `.opencode/agents/`.
 | `@reviewer` | deepseek-v4-flash | Revisa TypeScript, TSDoc, Clean Architecture, DRY, KISS, code smells (read-only) |
 | `@quality` | deepseek-v4-flash | Ejecuta lint + test + coverage + audit y reporta |
 | `@security` | deepseek-v4-flash | Audita reglas OWASP: CORS, helmet, JWT, rate-limit, Zod (read-only) |
+
+## PIPELINE MULTI-PASO
+
+El modo pipeline permite ejecutar tareas de forma secuencial con review gates entre
+cada paso: writer → reviewer → (corregir si FAIL) → siguiente tarea.
+
+### Activación
+
+Usa keywords como `pipeline`, `multi-paso`, `paso a paso`, `con revisión`,
+`review gate`, o `tdd con review`. El `@orchestrator` detecta estas keywords y
+emite un JSON con `mode: "pipeline"` y un `pipeline_plan`.
+
+### Flujo
+
+```
+Usuario: "implementa las tareas con pipeline"
+           ↓
+   @orchestrator (mode: pipeline)
+     - Diseña pipeline_plan con steps alternados (implement → review → ...)
+     - Guarda plan en .opencode/pipeline-state.json
+     - Emite step 1 → delega a @writer
+           ↓
+   @writer (modo pipeline — 1 módulo)
+     - Implementa task del step actual
+     - Reporta con ---pipeline_context---
+           ↓
+   @orchestrator (re-invocación)
+     - Lee pipeline-state.json + evalúa gate
+     - Si gate_after: emite step review → delega a @reviewer
+           ↓
+   @reviewer (modo pipeline — solo files_to_review)
+     - Revisa archivos indicados
+     - Reporta con ---gate_result---
+           ↓
+   @orchestrator (evalúa gate)
+     - FAIL (violaciones graves) → re-emite step implement (misma task)
+     - PASS_WITH_WARNINGS → emite siguiente step (con warnings)
+     - PASS → emite siguiente step
+           ↓
+   ... (ciclo se repite hasta completar pipeline_plan)
+           ↓
+   @orchestrator elimina pipeline-state.json → pipeline completado
+```
+
+### Review Gate Decision Tree
+
+| gate_result.result | Condición | Acción |
+|---|---|---|
+| `FAIL` | Violaciones graves > max_grave_violations | Re-implementar misma task |
+| `PASS_WITH_WARNINGS` | graves = 0, warnings > 0 pero <= max_warnings | Avanzar (con warnings en payload) |
+| `PASS` | graves = 0, warnings = 0 | Avanzar |
+
+### Archivo de estado
+
+- **`.opencode/pipeline-state.json`**: creado por el orquestador al iniciar pipeline,
+  eliminado al completar. Contiene `pipeline_plan`, `current_step`, `completed_steps`,
+  `gate_results`, y timestamps.
+
+### Reglas de delegación actualizadas
+
+- **1 tarea = 1 agente en 1 step.** No se delegan múltiples agentes en paralelo.
+- **Pipeline secuencial SÍ está permitido**: un agente tras otro, con review gates validados por el orquestador.
+- Si un sub-agente se desvía de su fase (ej. writer intenta revisar), el orquestador cancela y re-enruta.
 
 ## SKILLS
 

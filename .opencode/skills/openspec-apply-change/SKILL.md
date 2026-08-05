@@ -143,7 +143,7 @@ What would you like to do?
 ```
 
 **Guardrails**
-- Keep going through tasks until done or blocked
+- Keep going through tasks until done or blocked, UNLESS `.opencode/pipeline-state.json` exists (see Pipeline Mode below — single-task execution)
 - Always read context files before starting (from the apply instructions output)
 - If task is ambiguous, pause and ask before implementing
 - If implementation reveals issues, pause and suggest artifact updates
@@ -151,6 +151,32 @@ What would you like to do?
 - Update task checkbox immediately after completing each task
 - Pause on errors, blockers, or unclear requirements - don't guess
 - Use contextFiles from CLI output, don't assume specific file names
+
+**Pipeline Mode**
+
+Si existe el archivo `.opencode/pipeline-state.json` en la raíz del proyecto,
+el skill opera en **modo single-task** (un solo módulo por invocación):
+
+1. **Leer** `.opencode/pipeline-state.json` para identificar el `task_id` del step actual
+2. **Implementar SOLO la task** con ese `task_id`, NO continuar con el resto de tareas
+3. **Emitir reporte** con el bloque `---pipeline_context---` al finalizar:
+
+```
+## Implementing: <change-name> (schema: <schema-name>, pipeline step N/M)
+
+Working on task: <task_summary>
+[...implementation happens...]
+✓ Task complete — stopping for pipeline gate
+
+---pipeline_context---
+{ "step": N, "phase": "implement", "gate_required": true }
+```
+
+4. **No hacer loop** sobre el resto de tareas. El orquestador decidirá el siguiente
+   paso tras evaluar el review gate.
+
+Si NO existe `pipeline-state.json`: comportamiento normal — loop sobre todas las
+tareas hasta completar o encontrar un bloqueo.
 
 **Fluid Workflow Integration**
 

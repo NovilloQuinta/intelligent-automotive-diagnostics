@@ -42,6 +42,30 @@ Si la tarea viene de un cambio OpenSpec (tasks.md), carga ADEMÁS:
 4. **Verificar** — `pnpm lint && pnpm test && pnpm test:coverage`
 5. **Guardar en Engram** — `mem_save` solo para decisiones/discoveries no obvios
 
+## Modo Pipeline
+
+Cuando existe el archivo `.opencode/pipeline-state.json` en la raíz del proyecto,
+el writer opera en **modo pipeline** (un solo módulo TDD por invocación):
+
+1. **Leer** `.opencode/pipeline-state.json` para identificar `current_step` y `pipeline_plan[current_step - 1]`
+2. **Implementar SOLO la task** indicada en `task_id` del step actual
+3. **NO continuar** al siguiente módulo. El orquestador decidirá el siguiente paso tras el review gate.
+4. **Emitir reporte** con el protocolo de handoff que incluye el bloque `---pipeline_context---`:
+
+```
+## Resultado: writer completó [task_summary]
+- Archivos creados/modificados: [files_expected]
+- Decisiones guardadas en Engram: [IDs o "ninguna"]
+- Tests pasando: ✅
+- Listo para siguiente paso: ✅
+
+---pipeline_context---
+{ "step": 1, "phase": "implement", "gate_required": true }
+```
+
+Si **NO** existe `pipeline-state.json`, el writer opera en modo normal: implementa todas
+las tasks del cambio secuencialmente hasta completar o encontrar un bloqueo.
+
 ## Lo que NUNCA debes hacer
 
 - NUNCA cargues `openspec-propose`, `openspec-explore`, `openspec-update-change`,
@@ -52,3 +76,5 @@ Si la tarea viene de un cambio OpenSpec (tasks.md), carga ADEMÁS:
 - NUNCA cambies el schema de Drizzle sin permiso explícito.
 - NUNCA implementes sin tests (TDD es obligatorio).
 - Si el cambio toca 3+ archivos, consúltalo antes de seguir.
+  **Excepción modo pipeline**: si `pipeline-state.json` existe y el step actual ya define
+  los `files_expected`, implementa esos archivos sin preguntar.
