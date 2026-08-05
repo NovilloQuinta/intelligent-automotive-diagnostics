@@ -3,9 +3,9 @@ import { DtcCode } from '@/domain/value-objects/dtcCode.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
-import { createPidFormulaCatalog } from './pidFormulas.js'
-import type { PidFormulaCatalog } from './pidFormulas.js'
-import { pidDefinitionsToFormulaEntries } from './pidDefinitionMapper.js'
+import { createPidFormulaCatalog } from './pidFormulaCatalog.js'
+import type { PidFormulaCatalog } from '@/application/ports/PidFormulaCatalog.js'
+import { toFormulaEntries } from '@/application/shared/formulaEntries.js'
 import { ALL_SEED_PIDS } from '../persistence/sqlite/seed-pids.js'
 
 import { Elm327ConnectionError, Elm327NoDataError, Elm327ParseError } from './errors.js'
@@ -40,7 +40,7 @@ export class Elm327TcpRepository implements ObdRepository {
 
   constructor(config: Elm327TcpConfig) {
     this.client = createElm327TcpClient(config)
-    this.pidFormulas = createPidFormulaCatalog(pidDefinitionsToFormulaEntries(ALL_SEED_PIDS))
+    this.pidFormulas = createPidFormulaCatalog(toFormulaEntries(ALL_SEED_PIDS))
   }
 
   /** Lee un PID OBD-II del emulador ELM327 y devuelve su valor físico. */

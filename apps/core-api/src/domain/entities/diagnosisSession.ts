@@ -21,7 +21,8 @@ export class DiagnosisSession {
     startedAt: string
     endedAt?: string
   }) {
-    if (params.vehicleId <= 0) throw new DiagnosisSessionError(`vehicleId must be > 0, got ${params.vehicleId}`)
+    if (params.vehicleId <= 0)
+      throw new DiagnosisSessionError(`vehicleId must be > 0, got ${params.vehicleId}`)
     if (params.scenarioId !== undefined && !params.scenarioId.trim()) {
       throw new DiagnosisSessionError('scenarioId must not be empty')
     }

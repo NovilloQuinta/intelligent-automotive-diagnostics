@@ -40,7 +40,10 @@ export class VehicleProfile {
   }) {
     if (!params.make.trim()) throw new VehicleProfileError('make must not be empty')
     if (!params.model.trim()) throw new VehicleProfileError('model must not be empty')
-    if (params.year !== 0 && params.year < MIN_YEAR) throw new VehicleProfileError(`year must be 0 (unknown) or >= ${MIN_YEAR}, got ${params.year}`)
+    if (params.year !== 0 && params.year < MIN_YEAR)
+      throw new VehicleProfileError(
+        `year must be 0 (unknown) or >= ${MIN_YEAR}, got ${params.year}`,
+      )
     if (!params.engineType.trim()) throw new VehicleProfileError('engineType must not be empty')
     this.id = params.id
     this.make = params.make.trim()

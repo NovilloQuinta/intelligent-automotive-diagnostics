@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { parseHexBytes, bigEndian } from '@/infrastructure/elm327/hexUtils.js'
+import { parseHexBytes } from '@/infrastructure/elm327/hexUtils.js'
 import { Elm327ParseError } from '@/infrastructure/elm327/errors.js'
 
 describe('hexUtils', () => {
@@ -30,20 +30,6 @@ describe('hexUtils', () => {
 
     it('should throw Elm327ParseError for token longer than 2 chars', () => {
       expect(() => parseHexBytes('1FF')).toThrow(Elm327ParseError)
-    })
-  })
-
-  describe('bigEndian', () => {
-    it('should compute big-endian integer from byte array', () => {
-      expect(bigEndian([0x0c, 0x80])).toBe(3200)
-    })
-
-    it('should compute big-endian for 0x01, 0x00', () => {
-      expect(bigEndian([0x01, 0x00])).toBe(256)
-    })
-
-    it('should return 0 for empty array', () => {
-      expect(bigEndian([])).toBe(0)
     })
   })
 })

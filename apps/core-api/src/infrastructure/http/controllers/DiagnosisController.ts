@@ -2,7 +2,11 @@ import type { Request, Response } from 'express'
 import { z } from 'zod'
 import { ObdSimulator } from '@/infrastructure/simulation/simulator.js'
 import { ObdSimulatorRepository } from '@/infrastructure/simulation/simulatorAdapter.js'
-import { ProcessVehicleDiagnosisUseCase, DIAGNOSIS_TIMEOUT_MS, withTimeout } from '@/application/use-cases/ProcessVehicleDiagnosisUseCase.js'
+import {
+  ProcessVehicleDiagnosisUseCase,
+  DIAGNOSIS_TIMEOUT_MS,
+  withTimeout,
+} from '@/application/use-cases/ProcessVehicleDiagnosisUseCase.js'
 import { ExecuteCognitiveDiagnosisUseCase } from '@/application/use-cases/ExecuteCognitiveDiagnosisUseCase.js'
 import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
@@ -114,7 +118,9 @@ export class DiagnosisController {
   mcpTool = async (req: Request<{ toolName: string }>, res: Response): Promise<void> => {
     const paramsParsed = McpToolParamsSchema.safeParse(req.params)
     if (!paramsParsed.success) {
-      res.status(400).json({ error: ERROR_MESSAGES.invalidToolName, details: paramsParsed.error.issues })
+      res
+        .status(400)
+        .json({ error: ERROR_MESSAGES.invalidToolName, details: paramsParsed.error.issues })
       return
     }
 
@@ -143,7 +149,9 @@ export class DiagnosisController {
       return
     }
 
-    const bodySchema = this.deps.obdRepo ? CognitiveDiagnosisBodyTcpSchema : CognitiveDiagnosisBodySchema
+    const bodySchema = this.deps.obdRepo
+      ? CognitiveDiagnosisBodyTcpSchema
+      : CognitiveDiagnosisBodySchema
     const resolved = this.parseBodyAndResolve(res, req.body, bodySchema)
     if (!resolved) return
 
@@ -171,7 +179,11 @@ export class DiagnosisController {
   private parseBodyAndResolve<T extends { scenarioId?: string }>(
     res: Response,
     body: unknown,
-    schema: { safeParse: (data: unknown) => { success: true; data: T } | { success: false; error: { issues: unknown[] } } },
+    schema: {
+      safeParse: (
+        data: unknown,
+      ) => { success: true; data: T } | { success: false; error: { issues: unknown[] } }
+    },
   ): { repository: ObdRepository; data: T } | null {
     const parsed = schema.safeParse(body)
     if (!parsed.success) {
@@ -223,14 +235,22 @@ export class DiagnosisController {
   }): Promise<ExecuteCognitiveDiagnosisOutput> {
     const diagnosis = (async () => {
       const vehicleContext = await params.repository.getVehicleInfo()
-      const useCase = new ExecuteCognitiveDiagnosisUseCase(params.llmClient, params.tools, params.handler)
+      const useCase = new ExecuteCognitiveDiagnosisUseCase(
+        params.llmClient,
+        params.tools,
+        params.handler,
+      )
       return useCase.execute({
         userQuery: params.userQuery,
         vehicleContext,
       })
     })()
 
-    return withTimeout(diagnosis, this.deps.cognitiveTimeoutMs ?? COGNITIVE_DIAGNOSIS_TIMEOUT_MS, ERROR_MESSAGES.cognitiveTimedOut)
+    return withTimeout(
+      diagnosis,
+      this.deps.cognitiveTimeoutMs ?? COGNITIVE_DIAGNOSIS_TIMEOUT_MS,
+      ERROR_MESSAGES.cognitiveTimedOut,
+    )
   }
 
   private buildDiagnosisText(result: DiagnosisResult): string {

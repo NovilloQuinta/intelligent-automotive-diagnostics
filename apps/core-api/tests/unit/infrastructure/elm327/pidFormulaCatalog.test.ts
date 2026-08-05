@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { createPidFormulaCatalog } from '@/infrastructure/elm327/pidFormulas.js'
-import type { PidFormulaEntry } from '@/infrastructure/elm327/pidFormulas.js'
+import { createPidFormulaCatalog } from '@/infrastructure/elm327/pidFormulaCatalog.js'
+import type { PidFormulaEntry } from '@/domain/pidFormulaEntry.js'
 
-describe('pidFormulas', () => {
+describe('pidFormulaCatalog', () => {
   describe('createPidFormulaCatalog', () => {
     it('should return undefined from get() when catalog is empty', () => {
       const catalog = createPidFormulaCatalog([])

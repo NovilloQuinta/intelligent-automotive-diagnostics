@@ -22,8 +22,3 @@ export function parseHexBytes(hex: string): number[] {
       return Number.parseInt(token, 16)
     })
 }
-
-/** Int big-endian de todos los bytes (fallback para PIDs sin fórmula conocida). */
-export function bigEndian(bytes: number[]): number {
-  return bytes.reduce((acc, b) => acc * 256 + b, 0)
-}

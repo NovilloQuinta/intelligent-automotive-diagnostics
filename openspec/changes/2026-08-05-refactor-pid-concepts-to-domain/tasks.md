@@ -60,38 +60,38 @@ TDD estricto: RED → GREEN → REFACTOR. Rama: `feat/refactor-pid-concepts-to-d
   - TSDoc en la interface y sus métodos (conservar TSDoc existente)
   - Export nombrado
   - **Sin test dedicado** — interface/type definition, validado por tests de `pidFormulaCatalog.test.ts`
-- [ ] 2.0.2 Verificar disciplina: `grep "from '@/infrastructure" apps/core-api/src/application/ports/PidFormulaCatalog.ts` → 0 matches
+- [x] 2.0.2 Verificar disciplina: `grep "from '@/infrastructure" apps/core-api/src/application/ports/PidFormulaCatalog.ts` → 0 matches
 
 ### 2.1 RED — Mover test de pidDefinitionMapper a application/shared
 
-- [ ] 2.1.1 Crear `tests/unit/application/shared/pidDefinitionsToFormulaEntries.test.ts`:
+- [x] 2.1.1 Crear `tests/unit/application/shared/pidDefinitionsToFormulaEntries.test.ts`:
   - Copiar TODO el contenido de `tests/unit/infrastructure/elm327/pidDefinitionMapper.test.ts`
   - Actualizar imports:
     - `pidDefinitionsToFormulaEntries` → desde `@/application/shared/pidDefinitionsToFormulaEntries.js`
     - `PidFormulaSource` → desde `@/application/shared/pidFormulaSource.js`
   - Cambiar `describe('pidDefinitionMapper', ...)` → `describe('pidDefinitionsToFormulaEntries', ...)`
   - RED esperado: `Cannot find module '@/application/shared/pidFormulaSource.js'` o `.../pidDefinitionsToFormulaEntries.js'`
-- [ ] 2.1.2 `pnpm test -- tests/unit/application/shared/pidDefinitionsToFormulaEntries` — RED
+- [x] 2.1.2 `pnpm test -- tests/unit/application/shared/pidDefinitionsToFormulaEntries` — RED
 
 ### 2.2 GREEN — Crear `application/shared/pidFormulaSource.ts`
 
-- [ ] 2.2.1 Crear `apps/core-api/src/application/shared/pidFormulaSource.ts`:
+- [x] 2.2.1 Crear `apps/core-api/src/application/shared/pidFormulaSource.ts`:
   - Copiar la interface `PidFormulaSource` desde `infrastructure/elm327/pidDefinitionMapper.ts:10-14`
   - Conservar TSDoc existente
   - Export nombrado, 0 imports
-- [ ] 2.2.2 `pnpm test -- tests/unit/application/shared/pidDefinitionsToFormulaEntries` — RED (aún falta `pidDefinitionsToFormulaEntries.ts`)
+- [x] 2.2.2 `pnpm test -- tests/unit/application/shared/pidDefinitionsToFormulaEntries` — RED (aún falta `pidDefinitionsToFormulaEntries.ts`)
 
 ### 2.3 GREEN — Crear `application/shared/pidDefinitionsToFormulaEntries.ts`
 
-- [ ] 2.3.1 Crear `apps/core-api/src/application/shared/pidDefinitionsToFormulaEntries.ts`:
+- [x] 2.3.1 Crear `apps/core-api/src/application/shared/pidDefinitionsToFormulaEntries.ts`:
   - Copiar la función `pidDefinitionsToFormulaEntries` desde `infrastructure/elm327/pidDefinitionMapper.ts:22-35`
   - Actualizar imports:
     - `PidFormulaEntry` → desde `@/domain/pidFormulaEntry.js`
     - `PidFormulaSource` → desde `./pidFormulaSource.js`
   - TSDoc conservado
   - Export nombrado
-- [ ] 2.3.2 `pnpm test -- tests/unit/application/shared/pidDefinitionsToFormulaEntries` — GREEN (4 tests pasan)
-- [ ] 2.3.3 Verificar disciplina: `grep "from '@/infrastructure" apps/core-api/src/application/shared/pidDefinitionsToFormulaEntries.ts` → 0 matches
+- [x] 2.3.2 `pnpm test -- tests/unit/application/shared/pidDefinitionsToFormulaEntries` — GREEN (4 tests pasan)
+- [x] 2.3.3 Verificar disciplina: `grep "from '@/infrastructure" apps/core-api/src/application/shared/pidDefinitionsToFormulaEntries.ts` → 0 matches
 
 ---
 
@@ -99,18 +99,18 @@ TDD estricto: RED → GREEN → REFACTOR. Rama: `feat/refactor-pid-concepts-to-d
 
 ### 3.1 RED — Mover test de pidFormulas a pidFormulaCatalog
 
-- [ ] 3.1.1 Crear `tests/unit/infrastructure/elm327/pidFormulaCatalog.test.ts`:
+- [x] 3.1.1 Crear `tests/unit/infrastructure/elm327/pidFormulaCatalog.test.ts`:
   - Copiar TODO el contenido de `tests/unit/infrastructure/elm327/pidFormulas.test.ts`
   - Actualizar imports:
     - `createPidFormulaCatalog` → desde `@/infrastructure/elm327/pidFormulaCatalog.js`
     - `PidFormulaEntry` → desde `@/domain/pidFormulaEntry.js`
   - Cambiar `describe('pidFormulas', ...)` → `describe('pidFormulaCatalog', ...)`
   - RED esperado: `Cannot find module '@/infrastructure/elm327/pidFormulaCatalog.js'`
-- [ ] 3.1.2 `pnpm test -- tests/unit/infrastructure/elm327/pidFormulaCatalog` — RED
+- [x] 3.1.2 `pnpm test -- tests/unit/infrastructure/elm327/pidFormulaCatalog` — RED
 
 ### 3.2 GREEN — Crear `infrastructure/elm327/pidFormulaCatalog.ts`
 
-- [ ] 3.2.1 Crear `apps/core-api/src/infrastructure/elm327/pidFormulaCatalog.ts`:
+- [x] 3.2.1 Crear `apps/core-api/src/infrastructure/elm327/pidFormulaCatalog.ts`:
   - Copiar `pidKey` (private helper) y `createPidFormulaCatalog` (factory) desde `pidFormulas.ts`
   - Actualizar imports:
     - `evaluatePid` → desde `@/domain/services/pidFormula.js`
@@ -120,23 +120,23 @@ TDD estricto: RED → GREEN → REFACTOR. Rama: `feat/refactor-pid-concepts-to-d
   - Eliminar exports de `PidFormulaEntry` y `PidFormulaCatalog` (ya no viven aquí)
   - `pidKey` sigue siendo función privada (no exportada)
   - TSDoc conservado en `createPidFormulaCatalog`
-- [ ] 3.2.2 `pnpm test -- tests/unit/infrastructure/elm327/pidFormulaCatalog` — GREEN (mismos tests que antes, imports actualizados)
+- [x] 3.2.2 `pnpm test -- tests/unit/infrastructure/elm327/pidFormulaCatalog` — GREEN (mismos tests que antes, imports actualizados)
 
 ### 3.3 GREEN — Actualizar imports en `elm327Adapter.ts`
 
-- [ ] 3.3.1 Modificar `apps/core-api/src/infrastructure/elm327/elm327Adapter.ts`:
+- [x] 3.3.1 Modificar `apps/core-api/src/infrastructure/elm327/elm327Adapter.ts`:
   - Cambiar línea 6: `import { createPidFormulaCatalog } from './pidFormulas.js'` → `from './pidFormulaCatalog.js'`
   - Cambiar línea 7: `import type { PidFormulaCatalog } from './pidFormulas.js'` → `from '@/application/ports/PidFormulaCatalog.js'`
   - Cambiar línea 8: `import { pidDefinitionsToFormulaEntries } from './pidDefinitionMapper.js'` → `from '@/application/shared/pidDefinitionsToFormulaEntries.js'`
   - El resto del fichero SIN CAMBIOS
-- [ ] 3.3.2 `pnpm test -- tests/unit/infrastructure/elm327/elm327Adapter` — GREEN (mockea TCP, el catálogo es interno)
+- [x] 3.3.2 `pnpm test -- tests/unit/infrastructure/elm327/elm327Adapter` — GREEN (mockea TCP, el catálogo es interno)
 
 ### 3.4 GREEN — Eliminar `bigEndian` de `hexUtils.ts`
 
-- [ ] 3.4.1 Modificar `apps/core-api/src/infrastructure/elm327/hexUtils.ts`:
+- [x] 3.4.1 Modificar `apps/core-api/src/infrastructure/elm327/hexUtils.ts`:
   - Eliminar la función `bigEndian` (líneas 27-29) y su TSDoc
   - El fichero conserva `parseHexBytes` y `HEX_TOKEN_RE`
-- [ ] 3.4.2 `pnpm test -- tests/unit/infrastructure/elm327/hexUtils` — GREEN (solo tests de parseHexBytes)
+- [x] 3.4.2 `pnpm test -- tests/unit/infrastructure/elm327/hexUtils` — GREEN (solo tests de parseHexBytes)
 
 ---
 
@@ -144,33 +144,33 @@ TDD estricto: RED → GREEN → REFACTOR. Rama: `feat/refactor-pid-concepts-to-d
 
 ### 4.1 Eliminar `pidFormulas.ts`
 
-- [ ] 4.1.1 Verificar que ningún otro fichero importa de `pidFormulas.ts` (salvo el test ya renombrado):
+- [x] 4.1.1 Verificar que ningún otro fichero importa de `pidFormulas.ts` (salvo el test ya renombrado):
   ```bash
   grep -r "from.*pidFormulas" apps/core-api/src/ --include="*.ts" | grep -v pidFormulaCatalog
   ```
   Debe devolver 0 resultados (elm327Adapter.ts ya apunta a pidFormulaCatalog.ts).
-- [ ] 4.1.2 Eliminar `apps/core-api/src/infrastructure/elm327/pidFormulas.ts`
-- [ ] 4.1.3 Eliminar `apps/core-api/tests/unit/infrastructure/elm327/pidFormulas.test.ts` (ya migrado a `pidFormulaCatalog.test.ts`)
-- [ ] 4.1.4 `pnpm test` — GREEN (el test de pidFormulaCatalog.test.ts cubre la misma lógica)
+- [x] 4.1.2 Eliminar `apps/core-api/src/infrastructure/elm327/pidFormulas.ts`
+- [x] 4.1.3 Eliminar `apps/core-api/tests/unit/infrastructure/elm327/pidFormulas.test.ts` (ya migrado a `pidFormulaCatalog.test.ts`)
+- [x] 4.1.4 `pnpm test` — GREEN (el test de pidFormulaCatalog.test.ts cubre la misma lógica)
 
 ### 4.2 Eliminar `pidDefinitionMapper.ts`
 
-- [ ] 4.2.1 Verificar que ningún otro fichero importa de `pidDefinitionMapper.ts`:
+- [x] 4.2.1 Verificar que ningún otro fichero importa de `pidDefinitionMapper.ts`:
   ```bash
   grep -r "from.*pidDefinitionMapper" apps/core-api/src/ --include="*.ts"
   ```
   Debe devolver 0 resultados (elm327Adapter.ts ya apunta a application/shared/).
-- [ ] 4.2.2 Eliminar `apps/core-api/src/infrastructure/elm327/pidDefinitionMapper.ts`
-- [ ] 4.2.3 Eliminar `apps/core-api/tests/unit/infrastructure/elm327/pidDefinitionMapper.test.ts` (ya migrado a `application/shared/`)
-- [ ] 4.2.4 `pnpm test` — GREEN
+- [x] 4.2.2 Eliminar `apps/core-api/src/infrastructure/elm327/pidDefinitionMapper.ts`
+- [x] 4.2.3 Eliminar `apps/core-api/tests/unit/infrastructure/elm327/pidDefinitionMapper.test.ts` (ya migrado a `application/shared/`)
+- [x] 4.2.4 `pnpm test` — GREEN
 
 ---
 
 ## Fase 5: Verificación final
 
-- [ ] 5.1 `pnpm lint && pnpm format && pnpm test && pnpm build` — todo verde
-- [ ] 5.2 Verificar conteo de tests: mismo número que baseline (453 passing). Ajuste esperado: se crean 2 test files nuevos (domain/bigEndian, application/shared/pidDefinitionsToFormulaEntries), se eliminan 2 test files viejos (pidFormulas.test.ts, pidDefinitionMapper.test.ts), 1 test file se renombra (pidFormulaCatalog.test.ts), 1 test file se reduce (hexUtils.test.ts pierde tests de bigEndian). Neto: mismo número de tests.
-- [ ] 5.3 Checklist Clean Architecture:
+- [x] 5.1 `pnpm lint && pnpm format && pnpm test && pnpm build` — todo verde
+- [x] 5.2 Verificar conteo de tests: mismo número que baseline (453 passing). Ajuste esperado: se crean 2 test files nuevos (domain/bigEndian, application/shared/pidDefinitionsToFormulaEntries), se eliminan 2 test files viejos (pidFormulas.test.ts, pidDefinitionMapper.test.ts), 1 test file se renombra (pidFormulaCatalog.test.ts), 1 test file se reduce (hexUtils.test.ts pierde tests de bigEndian). Neto: mismo número de tests.
+- [x] 5.3 Checklist Clean Architecture:
   ```bash
   # 0 imports de infra en application/
   grep -r "from '@/infrastructure" apps/core-api/src/application/ && echo "FAIL" || echo "OK: 0 infra imports in application"
@@ -187,11 +187,11 @@ TDD estricto: RED → GREEN → REFACTOR. Rama: `feat/refactor-pid-concepts-to-d
   # hexUtils.ts ya no exporta bigEndian
   grep "bigEndian" apps/core-api/src/infrastructure/elm327/hexUtils.ts && echo "FAIL" || echo "OK: bigEndian removed from hexUtils"
   ```
-- [ ] 5.4 Verificar que `pidFormulaCatalog.ts` no exporta `pidKey` (debe ser privada):
+- [x] 5.4 Verificar que `pidFormulaCatalog.ts` no exporta `pidKey` (debe ser privada):
   ```bash
   grep "export.*pidKey" apps/core-api/src/infrastructure/elm327/pidFormulaCatalog.ts && echo "FAIL: pidKey exported" || echo "OK: pidKey private"
   ```
-- [ ] 5.5 Verificar que los imports de `PidFormulaEntry` desde infrastructure ya no pasan por infra:
+- [x] 5.5 Verificar que los imports de `PidFormulaEntry` desde infrastructure ya no pasan por infra:
   ```bash
   grep "from.*pidFormulas.*PidFormulaEntry" apps/core-api/src/infrastructure/ -r && echo "FAIL: stale import" || echo "OK"
   ```
@@ -200,7 +200,7 @@ TDD estricto: RED → GREEN → REFACTOR. Rama: `feat/refactor-pid-concepts-to-d
 
 ## Fase 6: Cierre
 
-- [ ] 6.1 Actualizar `SESION ACTUAL` en `AGENTS.md`:
+- [x] 6.1 Actualizar `SESION ACTUAL` en `AGENTS.md`:
   ```
   - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
   - **Ultimo paso**: Refactor `refactor-pid-concepts-to-domain` completado. PidFormulaEntry → domain/, PidFormulaCatalog → application/ports/, bigEndian → domain/, PidFormulaSource + pidDefinitionsToFormulaEntries → application/shared/. createPidFormulaCatalog → infrastructure/elm327/pidFormulaCatalog.ts. Eliminados pidFormulas.ts y pidDefinitionMapper.ts.

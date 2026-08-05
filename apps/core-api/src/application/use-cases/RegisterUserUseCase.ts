@@ -4,10 +4,7 @@ import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRep
 import { Email } from '@/domain/value-objects/email.js'
 import { persistRefreshToken } from '@/application/shared/hashToken.js'
 import { toSafeUser } from '@/application/shared/safeUser.js'
-import {
-  registerUserSchema,
-  type RegisterUserInput,
-} from '@/application/dto/RegisterUserInput.js'
+import { registerUserSchema, type RegisterUserInput } from '@/application/dto/RegisterUserInput.js'
 import type { RegisterUserOutput } from '@/application/dto/RegisterUserOutput.js'
 
 /** Caso de uso: registro de usuario nuevo. */
@@ -40,7 +37,11 @@ export class RegisterUserUseCase {
     const tokens = this.authService.generateTokens(user.id)
     await persistRefreshToken(this.tokenStore, user.id, tokens)
 
-    return { user: toSafeUser(user), accessToken: tokens.accessToken, refreshToken: tokens.refreshToken }
+    return {
+      user: toSafeUser(user),
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    }
   }
 }
 

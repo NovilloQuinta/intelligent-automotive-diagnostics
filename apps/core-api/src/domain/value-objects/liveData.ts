@@ -17,10 +17,14 @@ export class LiveData {
     if (params.rpm < 0) throw new LiveDataError(`RPM must be >= 0, got ${params.rpm}`)
     if (params.speed < 0) throw new LiveDataError(`Speed must be >= 0, got ${params.speed}`)
     if (params.coolantTemp < -40 || params.coolantTemp > 215) {
-      throw new LiveDataError(`Coolant temperature must be between -40 and 215°C, got ${params.coolantTemp}`)
+      throw new LiveDataError(
+        `Coolant temperature must be between -40 and 215°C, got ${params.coolantTemp}`,
+      )
     }
     if (params.intakeTemp < -40 || params.intakeTemp > 215) {
-      throw new LiveDataError(`Intake air temperature must be between -40 and 215°C, got ${params.intakeTemp}`)
+      throw new LiveDataError(
+        `Intake air temperature must be between -40 and 215°C, got ${params.intakeTemp}`,
+      )
     }
     this.rpm = params.rpm
     this.coolantTemp = params.coolantTemp

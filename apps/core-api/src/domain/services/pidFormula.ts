@@ -220,3 +220,8 @@ export function evaluatePid(formula: string, bytes: number[]): number {
   const postfix = toPostfix(tokens)
   return evaluatePostfix(postfix, bytes)
 }
+
+/** Int big-endian de todos los bytes (fallback para PIDs sin fórmula conocida). */
+export function bigEndian(bytes: number[]): number {
+  return bytes.reduce((acc, b) => acc * 256 + b, 0)
+}

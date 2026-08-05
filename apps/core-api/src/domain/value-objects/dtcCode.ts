@@ -17,7 +17,9 @@ export class DtcCode {
   constructor(params: { code: string; description?: string }) {
     const code = params.code.trim().toUpperCase()
     if (!DTC_REGEX.test(code)) {
-      throw new DtcCodeError(`Invalid DTC format: "${params.code}". Must match SAE J2012 (e.g. P0301).`)
+      throw new DtcCodeError(
+        `Invalid DTC format: "${params.code}". Must match SAE J2012 (e.g. P0301).`,
+      )
     }
     this.code = code
     this.description = params.description ?? ''

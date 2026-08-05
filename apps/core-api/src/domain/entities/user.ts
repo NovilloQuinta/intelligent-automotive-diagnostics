@@ -31,7 +31,8 @@ export class User {
     address?: string | null
     createdAt: string
   }) {
-    if (!params.username.trim() || params.username.trim().length < 3) throw new UserError('username must be at least 3 characters')
+    if (!params.username.trim() || params.username.trim().length < 3)
+      throw new UserError('username must be at least 3 characters')
     if (!params.passwordHash) throw new UserError('passwordHash must not be empty')
     this.id = params.id
     this.username = params.username.trim()

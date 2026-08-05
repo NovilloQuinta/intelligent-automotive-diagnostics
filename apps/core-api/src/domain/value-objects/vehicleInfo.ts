@@ -22,7 +22,10 @@ export class VehicleInfo {
   constructor(params: { make: string; model: string; year: number; engineType: string; vin: Vin }) {
     if (!params.make.trim()) throw new VehicleInfoError('make must not be empty')
     if (!params.model.trim()) throw new VehicleInfoError('model must not be empty')
-    if (params.year !== 0 && params.year < MIN_VEHICLE_YEAR) throw new VehicleInfoError(`year must be 0 (unknown) or >= ${MIN_VEHICLE_YEAR}, got ${params.year}`)
+    if (params.year !== 0 && params.year < MIN_VEHICLE_YEAR)
+      throw new VehicleInfoError(
+        `year must be 0 (unknown) or >= ${MIN_VEHICLE_YEAR}, got ${params.year}`,
+      )
     if (!params.engineType.trim()) throw new VehicleInfoError('engineType must not be empty')
     this.make = params.make.trim()
     this.model = params.model.trim()

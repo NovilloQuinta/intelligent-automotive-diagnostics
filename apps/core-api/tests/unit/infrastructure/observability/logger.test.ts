@@ -69,7 +69,9 @@ describe('Logger', () => {
     logger.info('third')
 
     const logs = db.select().from(schema.logs).all()
-    const infos = logs.filter((l) => l.message === 'first' || l.message === 'second' || l.message === 'third')
+    const infos = logs.filter(
+      (l) => l.message === 'first' || l.message === 'second' || l.message === 'third',
+    )
     expect(infos).toHaveLength(3)
   })
 

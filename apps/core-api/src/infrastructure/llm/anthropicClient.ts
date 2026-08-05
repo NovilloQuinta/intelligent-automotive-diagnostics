@@ -1,8 +1,6 @@
 import { z } from 'zod'
 import Anthropic from '@anthropic-ai/sdk'
-import type {
-  LlmClientPort,
-} from '@/application/ports/LlmClientPort.js'
+import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { LlmMessageInput } from '@/application/dto/LlmMessageInput.js'
 import type { LlmResponse } from '@/application/dto/LlmResponse.js'
 import type { ToolCallTrace } from '@/application/dto/ToolCallTrace.js'

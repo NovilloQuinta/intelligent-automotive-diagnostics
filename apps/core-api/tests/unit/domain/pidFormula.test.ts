@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { evaluatePid, PidParseError } from '@/domain/services/pidFormula.js'
+import { evaluatePid, bigEndian, PidParseError } from '@/domain/services/pidFormula.js'
 
 describe('evaluatePid', () => {
   // ─── 1. Un test por cada fórmula de PID del catálogo (20 tests) ───
@@ -98,7 +98,6 @@ describe('evaluatePid', () => {
 
   describe('operator handling', () => {
     it('should handle bitwise OR', () => {
-      // 0x01 | 0xa4 = 0xa5 = 165
       expect(evaluatePid('A|B', [0x01, 0xa4])).toBe(165)
     })
 
@@ -115,7 +114,6 @@ describe('evaluatePid', () => {
     })
 
     it('should respect shift precedence over OR', () => {
-      // A=1, B=0xA4: (1<<8)|0xA4 = 256|164 = 420
       expect(evaluatePid('A<<8|B', [0x01, 0xa4])).toBe(0x01a4)
     })
 
@@ -194,5 +192,19 @@ describe('evaluatePid', () => {
     it('should handle decimal constant', () => {
       expect(evaluatePid('A*0.352', [0x64])).toBeCloseTo(35.2)
     })
+  })
+})
+
+describe('bigEndian', () => {
+  it('should compute big-endian integer from byte array', () => {
+    expect(bigEndian([0x0c, 0x80])).toBe(3200)
+  })
+
+  it('should compute big-endian for 0x01, 0x00', () => {
+    expect(bigEndian([0x01, 0x00])).toBe(256)
+  })
+
+  it('should return 0 for empty array', () => {
+    expect(bigEndian([])).toBe(0)
   })
 })

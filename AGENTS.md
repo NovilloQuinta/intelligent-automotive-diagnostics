@@ -25,9 +25,9 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
-- **Ultimo paso**: Auditoría Clean Architecture de `infrastructure/elm327/`. Eliminado `isotp/` (código muerto, 7 ficheros: 4 src + 3 tests). Confirmada disciplina de capas: 0 violaciones domain→infra, application→infra.
-- **Tests**: 453 pasando, 3 fallos pre-existentes en vehicleRepository (formula VO vs string), 39→36 test files (eliminados 3 tests isotp)
-- **CI**: verde — lint, test
+- **Ultimo paso**: Refactor `refactor-pid-concepts-to-domain` completado. PidFormulaEntry → domain/, PidFormulaCatalog → application/ports/, bigEndian → domain/, PidFormulaSource + pidDefinitionsToFormulaEntries → application/shared/. createPidFormulaCatalog → infrastructure/elm327/pidFormulaCatalog.ts. Eliminados pidFormulas.ts y pidDefinitionMapper.ts. hexUtils.ts depurado (solo parseHexBytes).
+- **Tests**: 453 pasando, 3 fallos pre-existentes en vehicleRepository (formula VO vs string), 40 test files
+- **CI**: verde — lint, format, test, build
 
 ## REGLAS DE SESION
 

@@ -16,7 +16,11 @@ export class DiagnosisResult {
   readonly dtcCodes: DtcCode[]
   readonly freezeFrame: FreezeFrame | null
 
-  constructor(params: { parsedValues: LiveData; dtcCodes: DtcCode[]; freezeFrame: FreezeFrame | null }) {
+  constructor(params: {
+    parsedValues: LiveData
+    dtcCodes: DtcCode[]
+    freezeFrame: FreezeFrame | null
+  }) {
     this.parsedValues = params.parsedValues
     this.dtcCodes = [...params.dtcCodes]
     this.freezeFrame = params.freezeFrame

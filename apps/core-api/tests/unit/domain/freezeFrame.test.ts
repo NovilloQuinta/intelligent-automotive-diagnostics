@@ -18,9 +18,7 @@ describe('FreezeFrame', () => {
     })
 
     it('should throw FreezeFrameError when pidValues is empty', () => {
-      expect(() => new FreezeFrame({ dtcCode: 'P0301', pidValues: {} })).toThrow(
-        FreezeFrameError,
-      )
+      expect(() => new FreezeFrame({ dtcCode: 'P0301', pidValues: {} })).toThrow(FreezeFrameError)
     })
 
     it('should expose readonly dtcCode and pidValues', () => {

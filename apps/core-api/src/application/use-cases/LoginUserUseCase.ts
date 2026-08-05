@@ -2,10 +2,7 @@ import type { UserRepository } from '@/application/ports/UserRepository.js'
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
 import { persistRefreshToken } from '@/application/shared/hashToken.js'
-import {
-  loginUserSchema,
-  type LoginUserInput,
-} from '@/application/dto/LoginUserInput.js'
+import { loginUserSchema, type LoginUserInput } from '@/application/dto/LoginUserInput.js'
 import type { LoginUserOutput } from '@/application/dto/LoginUserOutput.js'
 
 /** Caso de uso: inicio de sesion. */

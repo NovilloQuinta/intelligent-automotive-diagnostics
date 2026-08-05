@@ -11,10 +11,7 @@ export class SqliteUserRepository implements UserRepository {
   constructor(private readonly db: DiagnosticsDb) {}
 
   async create(input: CreateUserInput): Promise<User> {
-    const result = await this.db
-      .insert(schema.users)
-      .values(toCreateValues(input))
-      .returning()
+    const result = await this.db.insert(schema.users).values(toCreateValues(input)).returning()
 
     return toUser(result[0])
   }

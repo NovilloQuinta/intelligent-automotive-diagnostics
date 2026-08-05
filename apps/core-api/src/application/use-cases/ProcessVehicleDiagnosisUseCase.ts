@@ -35,19 +35,18 @@ export class ProcessVehicleDiagnosisUseCase {
   constructor(private readonly repo: ObdRepository) {}
 
   async execute(): Promise<DiagnosisResult> {
-    const [rpm, coolantTemp, speed, intakeTemp, dtcCodes, freezeFrame] =
-      await withTimeout(
-        Promise.all([
-          this.repo.readPid(MODE_CURRENT_DATA, PID_RPM),
-          this.repo.readPid(MODE_CURRENT_DATA, PID_COOLANT_TEMP),
-          this.repo.readPid(MODE_CURRENT_DATA, PID_SPEED),
-          this.repo.readPid(MODE_CURRENT_DATA, PID_INTAKE_TEMP),
-          this.repo.readDtcCodes(),
-          this.repo.getFreezeFrame(),
-        ]),
-        DIAGNOSIS_TIMEOUT_MS,
-        `Diagnosis timed out after ${DIAGNOSIS_TIMEOUT_MS}ms`,
-      )
+    const [rpm, coolantTemp, speed, intakeTemp, dtcCodes, freezeFrame] = await withTimeout(
+      Promise.all([
+        this.repo.readPid(MODE_CURRENT_DATA, PID_RPM),
+        this.repo.readPid(MODE_CURRENT_DATA, PID_COOLANT_TEMP),
+        this.repo.readPid(MODE_CURRENT_DATA, PID_SPEED),
+        this.repo.readPid(MODE_CURRENT_DATA, PID_INTAKE_TEMP),
+        this.repo.readDtcCodes(),
+        this.repo.getFreezeFrame(),
+      ]),
+      DIAGNOSIS_TIMEOUT_MS,
+      `Diagnosis timed out after ${DIAGNOSIS_TIMEOUT_MS}ms`,
+    )
 
     const parsedValues = new LiveData({ rpm, coolantTemp, speed, intakeTemp })
     return new DiagnosisResult({ parsedValues, dtcCodes, freezeFrame })

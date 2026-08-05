@@ -46,7 +46,8 @@ export class PidDefinition {
   }) {
     if (!params.name.trim()) throw new PidDefinitionError('PID name must not be empty')
     if (!params.formula.trim()) throw new PidDefinitionError('PID formula must not be empty')
-    if (params.dataBytes < 1) throw new PidDefinitionError(`dataBytes must be >= 1, got ${params.dataBytes}`)
+    if (params.dataBytes < 1)
+      throw new PidDefinitionError(`dataBytes must be >= 1, got ${params.dataBytes}`)
     if (params.confidence < 0 || params.confidence > 1) {
       throw new PidDefinitionError(`confidence must be between 0 and 1, got ${params.confidence}`)
     }
