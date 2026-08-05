@@ -1,10 +1,11 @@
 import { z } from 'zod'
 import Anthropic from '@anthropic-ai/sdk'
+import type { McpToolDefinition } from '@/application/dto/McpToolDefinition.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { LlmMessageInput } from '@/application/dto/LlmMessageInput.js'
 import type { LlmResponse } from '@/application/dto/LlmResponse.js'
 import type { LlmSingleResponse } from '@/application/dto/LlmSingleResponse.js'
-import { mcpToolAdapter } from '@/infrastructure/llm/mcpToolAdapter.js'
+import { mcpToolDefinitionSchema } from '@/infrastructure/llm/toolDefinitionSchema.js'
 import { wrapSdkError } from '@/infrastructure/llm/sdkErrorUtils.js'
 import { ExecuteLlmToolCalling } from '@/application/use-cases/ExecuteLlmToolCalling.js'
 
@@ -40,6 +41,17 @@ function serializeArgs(input: unknown): Record<string, unknown> {
   if (input === null || input === undefined) return {}
   if (typeof input === 'object' && !Array.isArray(input)) return input as Record<string, unknown>
   return {}
+}
+
+const DEFAULT_TOOL_SCHEMA: Record<string, unknown> = { type: 'object', properties: {} }
+
+function toAnthropicTool(tool: McpToolDefinition): Anthropic.Messages.Tool {
+  const parsed = mcpToolDefinitionSchema.parse(tool)
+  return {
+    name: parsed.name,
+    description: parsed.description,
+    input_schema: (parsed.schema ?? DEFAULT_TOOL_SCHEMA) as Anthropic.Messages.Tool.InputSchema,
+  }
 }
 
 const anthropicClientConfigSchema = z.object({
@@ -106,7 +118,7 @@ function createThinAdapter(config: AnthropicClientConfig) {
         max_tokens: DEFAULT_MAX_TOKENS,
         system: input.systemPrompt,
         messages,
-        tools: input.tools.map(mcpToolAdapter),
+        tools: input.tools.map(toAnthropicTool),
       })
     } catch (error: unknown) {
       wrapSdkError('Anthropic', error)
