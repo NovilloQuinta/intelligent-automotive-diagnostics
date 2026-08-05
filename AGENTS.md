@@ -25,8 +25,8 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
-- **Ultimo paso**: Refactor `refactor-pid-concepts-to-domain` completado. PidFormulaEntry → domain/, PidFormulaCatalog → application/ports/, bigEndian → domain/, PidFormulaSource + pidDefinitionsToFormulaEntries → application/shared/. createPidFormulaCatalog → infrastructure/elm327/pidFormulaCatalog.ts. Eliminados pidFormulas.ts y pidDefinitionMapper.ts. hexUtils.ts depurado (solo parseHexBytes).
-- **Tests**: 453 pasando, 3 fallos pre-existentes en vehicleRepository (formula VO vs string), 40 test files
+- **Ultimo paso**: Resueltas 5 CVEs criticas transitivas de `gemini` con overrides (handlebars, uglify-js, form-data). Arreglados tambien pnpm allowBuilds (valores string → boolean).
+- **Tests**: 458 pasando, 0 fallos, 37 test files
 - **CI**: verde — lint, format, test, build
 
 ## REGLAS DE SESION
