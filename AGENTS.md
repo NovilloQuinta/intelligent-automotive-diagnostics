@@ -25,8 +25,8 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
-- **Ultimo paso**: Separados `refactor-rich-domain-model` y `extract-cognitive-diagnosis-parser` en cambios abiertos (pendientes de sync de delta specs). Sigue en `changes/` hasta sync. Pendiente: `refactor-elm327-adapter-srp` (disenado, sin empezar).
-- **Tests**: 432 pasando (33 test files)
+- **Ultimo paso**: Pipeline multi-paso `refactor-elm327-adapter-srp` — MODULO 3/5 completado (protocol.ts extraido). 7 funciones movidas: formatCommand, stripEcho, parseModeResponse, parseMode22Response, parseVinResponse, parseDtcResponse, parseSupportedPidBitmask. Adapter reducido de 271 → 203 lineas. Pendiente: MODULO 4/5 (connection.ts) + MODULO 5/5 (edge cases).
+- **Tests**: 467 pasando (36 test files)
 - **CI**: verde — lint, format, test, build
 
 ## REGLAS DE SESION
