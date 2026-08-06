@@ -30,3 +30,6 @@ overrides:
   png-img: '>=3.1.0'
   node-fetch: '>=2.6.7'
   braces: '>=3.0.3'
+  hono: '>=4.12.34'
+  '@hono/node-server': '>=2.0.5'
+  postcss: '>=8.5.23'
