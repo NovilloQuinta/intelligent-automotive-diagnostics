@@ -1,7 +1,10 @@
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import { hashToken } from '@/application/shared/hashToken.js'
-import { refreshTokenSchema, type RefreshTokenInput } from '@/application/dto/RefreshTokenInput.js'
+import {
+  refreshTokenSchema,
+  type RefreshTokenInput,
+} from '@/application/dto/auth/RefreshTokenInput.js'
 
 /** Caso de uso: cierre de sesion. Revoca el refresh token para invalidarlo. */
 export class LogoutUserUseCase {

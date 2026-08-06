@@ -5,8 +5,11 @@ import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import { Email } from '@/domain/value-objects/email.js'
 import { persistRefreshToken } from '@/application/shared/hashToken.js'
 import { toSafeUser } from '@/application/shared/safeUser.js'
-import { registerUserSchema, type RegisterUserInput } from '@/application/dto/RegisterUserInput.js'
-import type { RegisterUserOutput } from '@/application/dto/RegisterUserOutput.js'
+import {
+  registerUserSchema,
+  type RegisterUserInput,
+} from '@/application/dto/auth/RegisterUserInput.js'
+import type { RegisterUserOutput } from '@/application/dto/auth/RegisterUserOutput.js'
 
 /** Caso de uso: registro de usuario nuevo. */
 export class RegisterUserUseCase {

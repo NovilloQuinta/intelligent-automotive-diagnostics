@@ -1,5 +1,5 @@
 import type { User } from '@/domain/entities/user.js'
-import type { CreateUserInput } from '@/application/dto/CreateUserInput.js'
+import type { CreateUserInput } from '@/application/dto/auth/CreateUserInput.js'
 
 /** Contrato para la persistencia de usuarios. */
 export interface UserRepository {

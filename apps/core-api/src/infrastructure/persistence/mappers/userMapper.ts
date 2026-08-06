@@ -1,6 +1,6 @@
 import type * as schema from '../sqlite/schema.js'
 import { User } from '@/domain/entities/user.js'
-import type { CreateUserInput } from '@/application/dto/CreateUserInput.js'
+import type { CreateUserInput } from '@/application/dto/auth/CreateUserInput.js'
 import { Email } from '@/domain/value-objects/email.js'
 
 type UserRow = typeof schema.users.$inferSelect

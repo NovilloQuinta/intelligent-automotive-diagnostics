@@ -16,7 +16,7 @@ import type { LiveData } from '@/domain/value-objects/liveData.js'
 import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import { VehicleType, type SimulationScenario } from '@/infrastructure/simulation/scenario.js'
-import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/ExecuteCognitiveDiagnosisOutput.js'
+import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
 
 const COGNITIVE_DIAGNOSIS_TIMEOUT_MS = 60_000
 

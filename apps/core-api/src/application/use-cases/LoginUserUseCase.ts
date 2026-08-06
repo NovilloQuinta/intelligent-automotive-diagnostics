@@ -3,8 +3,8 @@ import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import { persistRefreshToken } from '@/application/shared/hashToken.js'
-import { loginUserSchema, type LoginUserInput } from '@/application/dto/LoginUserInput.js'
-import type { LoginUserOutput } from '@/application/dto/LoginUserOutput.js'
+import { loginUserSchema, type LoginUserInput } from '@/application/dto/auth/LoginUserInput.js'
+import type { LoginUserOutput } from '@/application/dto/auth/LoginUserOutput.js'
 
 /** Caso de uso: inicio de sesion. */
 export class LoginUserUseCase {
