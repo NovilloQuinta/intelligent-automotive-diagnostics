@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
-import type { TokenPair } from '@/application/dto/TokenPair.js'
+import type { TokenPair } from '@/application/dto/auth/TokenPair.js'
 
 const ALGORITHM_SHA256 = 'sha256'
 const ENCODING_HEX = 'hex'

@@ -3,7 +3,7 @@ import {
   ExecuteLlmToolCalling,
   type LlmSingleMessageSender,
 } from '@/application/use-cases/ExecuteLlmToolCalling.js'
-import type { LlmSingleResponse } from '@/application/dto/LlmSingleResponse.js'
+import type { LlmSingleResponse } from '@/application/dto/llm/LlmSingleResponse.js'
 import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 

@@ -1,7 +1,10 @@
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
-import { refreshTokenSchema, type RefreshTokenInput } from '@/application/dto/RefreshTokenInput.js'
-import type { RefreshTokenOutput } from '@/application/dto/RefreshTokenOutput.js'
+import {
+  refreshTokenSchema,
+  type RefreshTokenInput,
+} from '@/application/dto/auth/RefreshTokenInput.js'
+import type { RefreshTokenOutput } from '@/application/dto/auth/RefreshTokenOutput.js'
 
 /** Caso de uso: rotacion de refresh token. */
 export class RefreshTokenUseCase {

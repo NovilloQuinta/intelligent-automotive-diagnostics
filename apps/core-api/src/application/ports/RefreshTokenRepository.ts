@@ -1,4 +1,4 @@
-import type { RefreshTokenRecord } from '@/application/dto/RefreshTokenRecord.js'
+import type { RefreshTokenRecord } from '@/application/dto/auth/RefreshTokenRecord.js'
 
 /** Contrato para persistir y consultar refresh tokens. */
 export interface RefreshTokenRepository {

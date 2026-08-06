@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import * as schema from './schema.js'
 import type { DiagnosticsDb } from './db.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
-import type { RefreshTokenRecord } from '@/application/dto/RefreshTokenRecord.js'
+import type { RefreshTokenRecord } from '@/application/dto/auth/RefreshTokenRecord.js'
 import { toRefreshTokenRecord } from '@/infrastructure/persistence/mappers/refreshTokenMapper.js'
 
 /** Implementacion de {@link RefreshTokenRepository} con SQLite via Drizzle ORM. */

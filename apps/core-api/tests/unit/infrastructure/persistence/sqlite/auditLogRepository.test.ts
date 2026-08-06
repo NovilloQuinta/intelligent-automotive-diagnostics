@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { SqliteAuditLogRepository } from '@/infrastructure/persistence/sqlite/auditLogRepository.js'
-import type { CreateAuditLogInput } from '@/application/dto/CreateAuditLogInput.js'
+import type { CreateAuditLogInput } from '@/application/dto/audit/CreateAuditLogInput.js'
 
 const mockLog: CreateAuditLogInput = {
   method: 'GET',

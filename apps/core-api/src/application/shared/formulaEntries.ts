@@ -1,5 +1,5 @@
 import type { PidFormulaEntry } from '@/domain/pidFormulaEntry.js'
-import type { PidFormulaSource } from '@/application/dto/PidFormulaSource.js'
+import type { PidFormulaSource } from '@/application/dto/diagnosis/PidFormulaSource.js'
 
 /**
  * Convierte definiciones PID a entradas de catálogo de fórmulas.

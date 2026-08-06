@@ -6,7 +6,7 @@ import * as schema from './schema.js'
 import type { DiagnosticsDb } from './db.js'
 import type { UserRepository } from '@/application/ports/UserRepository.js'
 import { User } from '@/domain/entities/user.js'
-import type { CreateUserInput } from '@/application/dto/CreateUserInput.js'
+import type { CreateUserInput } from '@/application/dto/auth/CreateUserInput.js'
 import { toUser, toCreateValues } from '@/infrastructure/persistence/mappers/userMapper.js'
 
 /** Implementacion de {@link UserRepository} con SQLite via Drizzle ORM. */

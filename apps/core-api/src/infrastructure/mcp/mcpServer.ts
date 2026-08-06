@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { z } from 'zod'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
-import type { McpToolDefinition } from '@/application/dto/McpToolDefinition.js'
+import type { McpToolDefinition } from '@/application/dto/llm/McpToolDefinition.js'
 import {
   Elm327ConnectionError,
   Elm327NoDataError,
