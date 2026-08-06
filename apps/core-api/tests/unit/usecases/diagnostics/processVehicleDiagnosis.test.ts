@@ -103,4 +103,78 @@ describe('processVehicleDiagnosis', () => {
     expect(result).not.toHaveProperty('diagnosisText')
     expect(result).not.toHaveProperty('rawData')
   })
+
+  it('should wait for each read to resolve before starting the next one (strict sequentiality)', async () => {
+    const order: string[] = []
+    let resolveFirstRpm!: (value: number) => void
+    const firstRpmPromise = new Promise<number>((resolve) => {
+      resolveFirstRpm = resolve
+    })
+
+    const repo = mockRepo({
+      readPid: vi.fn().mockImplementation((mode: string, pid: string) => {
+        order.push(`readPid(${mode},${pid})`)
+        if (pid === '0C') return firstRpmPromise
+        return Promise.resolve(0)
+      }),
+      readDtcCodes: vi.fn().mockImplementation(() => {
+        order.push('readDtcCodes')
+        return Promise.resolve([])
+      }),
+      getFreezeFrame: vi.fn().mockImplementation(() => {
+        order.push('getFreezeFrame')
+        return Promise.resolve(null)
+      }),
+    })
+
+    const resultPromise = new ProcessVehicleDiagnosisUseCase(repo).execute()
+
+    // Let the first readPid land and the use case suspend on its promise
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(order).toEqual(['readPid(01,0C)'])
+
+    resolveFirstRpm(750)
+    await resultPromise
+
+    expect(order).toEqual([
+      'readPid(01,0C)',
+      'readPid(01,05)',
+      'readPid(01,0D)',
+      'readPid(01,0F)',
+      'readDtcCodes',
+      'getFreezeFrame',
+    ])
+  })
+
+  it('should call repository methods in the documented sequential order', async () => {
+    const order: string[] = []
+
+    const repo = mockRepo({
+      readPid: vi.fn().mockImplementation((mode: string, pid: string) => {
+        order.push(`readPid(${mode},${pid})`)
+        return Promise.resolve(0)
+      }),
+      readDtcCodes: vi.fn().mockImplementation(() => {
+        order.push('readDtcCodes')
+        return Promise.resolve([])
+      }),
+      getFreezeFrame: vi.fn().mockImplementation(() => {
+        order.push('getFreezeFrame')
+        return Promise.resolve(null)
+      }),
+    })
+
+    await new ProcessVehicleDiagnosisUseCase(repo).execute()
+
+    expect(order).toEqual([
+      'readPid(01,0C)',
+      'readPid(01,05)',
+      'readPid(01,0D)',
+      'readPid(01,0F)',
+      'readDtcCodes',
+      'getFreezeFrame',
+    ])
+  })
 })

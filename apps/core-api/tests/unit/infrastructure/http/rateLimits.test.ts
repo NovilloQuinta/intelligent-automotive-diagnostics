@@ -9,6 +9,8 @@ import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
+import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
+import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 
 const mockAuditRepo: AuditLogRepository = { create: async () => {} }
 const mockLogger: LoggerPort = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
@@ -66,8 +68,10 @@ interface BootedApp {
 /** Bootea una instancia fresca de la app con limiters activos (NODE_ENV=production). */
 async function bootApp(): Promise<BootedApp> {
   const app = createServer({
-    scenarios: mockScenarios,
-    llmClient: mockLlmClient,
+    diagnosisController: new DiagnosisController(
+      new DiagnosisService(mockScenarios, undefined, mockLlmClient, mockLogger),
+      mockLogger,
+    ),
     allowedOrigins: 'http://localhost:3000',
     nodeEnv: 'test',
     auditRepo: mockAuditRepo,

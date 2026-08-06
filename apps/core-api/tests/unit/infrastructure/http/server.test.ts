@@ -7,6 +7,8 @@ import { Vin } from '@/domain/value-objects/vin.js'
 import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
+import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
+import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 
 const mockAuditRepo: AuditLogRepository = { create: async () => {} }
 const mockLogger: LoggerPort = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
@@ -54,7 +56,10 @@ let httpServer: Server
 
 beforeAll(async () => {
   const app = createServer({
-    scenarios: mockScenarios,
+    diagnosisController: new DiagnosisController(
+      new DiagnosisService(mockScenarios, undefined, undefined, mockLogger),
+      mockLogger,
+    ),
     allowedOrigins: 'http://localhost:3000',
     nodeEnv: 'test',
     auditRepo: mockAuditRepo,
@@ -252,8 +257,10 @@ describe('HTTP server', () => {
 
     beforeAll(async () => {
       const app = createServer({
-        scenarios: [],
-        obdRepo: mockObdRepo,
+        diagnosisController: new DiagnosisController(
+          new DiagnosisService([], mockObdRepo, undefined, mockLogger),
+          mockLogger,
+        ),
         allowedOrigins: 'http://localhost:3000',
         nodeEnv: 'test',
         auditRepo: mockAuditRepo,

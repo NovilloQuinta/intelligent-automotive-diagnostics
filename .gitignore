@@ -41,6 +41,9 @@ pnpm-debug.log*
 data/
 *.db
 .claude/settings.local.json
+
+# Agent worktrees (nested git repos — never track)
+.claude/worktrees/
 apps/ui/.output/
 apps/ui/.vinxi/
 apps/ui/.tanstack/

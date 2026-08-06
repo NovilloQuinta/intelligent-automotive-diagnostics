@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -36,7 +37,14 @@ const loginSchema = z.object({
 const registerSchema = z.object({
   username: z.string().min(3, "Mínimo 3 caracteres").max(50),
   email: z.string().email("Email inválido").max(255),
-  password: z.string().min(8, "Mínimo 8 caracteres").max(128),
+  password: z
+    .string()
+    .min(8, "Mínimo 8 caracteres")
+    .max(128)
+    .regex(
+      /^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).*$/,
+      "Debe incluir 1 mayúscula, 1 número y 1 carácter especial",
+    ),
   userType: z.enum(["individual", "workshop"]),
   businessName: z.string().max(200).optional(),
   taxId: z.string().max(50).optional(),
@@ -291,9 +299,8 @@ function LoginForm({
       </div>
       <div className="space-y-2">
         <RequiredLabel htmlFor="login-password">Contraseña</RequiredLabel>
-        <Input
+        <PasswordInput
           id="login-password"
-          type="password"
           placeholder="••••••••"
           autoComplete="current-password"
           {...register("password")}
@@ -379,9 +386,8 @@ function RegisterForm({
       </div>
       <div className="space-y-2">
         <RequiredLabel htmlFor="reg-password">Contraseña</RequiredLabel>
-        <Input
+        <PasswordInput
           id="reg-password"
-          type="password"
           placeholder="Mínimo 8 caracteres"
           autoComplete="new-password"
           {...register("password")}

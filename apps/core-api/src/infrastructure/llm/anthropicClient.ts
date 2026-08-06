@@ -2,6 +2,7 @@ import { z } from 'zod'
 import Anthropic from '@anthropic-ai/sdk'
 import type { McpToolDefinition } from '@/application/dto/McpToolDefinition.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
+import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { LlmSingleResponse } from '@/application/dto/LlmSingleResponse.js'
 import type { LlmConversationItem } from '@/application/dto/LlmMessageInput.js'
 import { mcpToolDefinitionSchema } from '@/infrastructure/llm/toolDefinitionSchema.js'
@@ -18,6 +19,7 @@ export interface AnthropicClientConfig {
   readonly model?: string
   readonly maxIterations?: number
   readonly timeoutMs?: number
+  readonly logger?: LoggerPort
 }
 
 function extractText(content: Anthropic.Messages.ContentBlock[]): string {
@@ -130,5 +132,9 @@ const createThinAdapter = createLlmAdapter<
 /** Crea un cliente LLM que se comunica con la API de Anthropic Claude. */
 export function createAnthropicClient(config: AnthropicClientConfig): LlmClientPort {
   const parsed = anthropicClientConfigSchema.parse(config)
-  return composeLlmClient(createThinAdapter(config).sendSingleMessage, parsed.maxIterations)
+  return composeLlmClient(
+    createThinAdapter(config).sendSingleMessage,
+    parsed.maxIterations,
+    config.logger ?? console,
+  )
 }

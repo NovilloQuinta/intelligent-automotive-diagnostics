@@ -120,16 +120,62 @@ describe("AuthPage", () => {
     const passwordInput = container.querySelector('#reg-password') as HTMLInputElement;
     fireEvent.change(usernameInput, { target: { value: "juan" } });
     fireEvent.change(emailInput, { target: { value: "j@b.com" } });
-    fireEvent.change(passwordInput, { target: { value: "12345678" } });
+    fireEvent.change(passwordInput, { target: { value: "Password123!" } });
     fireEvent.click(screen.getByRole("button", { name: /Crear cuenta/i }));
 
     await waitFor(() => {
       expect(register).toHaveBeenCalledWith(expect.objectContaining({
         username: "juan",
         email: "j@b.com",
-        password: "12345678",
+        password: "Password123!",
         userType: "individual",
       }));
     });
+  });
+
+  it("rejects a register password missing complexity requirements", async () => {
+    const register = vi.fn().mockResolvedValue(undefined);
+    mockAuthState.register = register;
+    const { container } = render(<AuthPage />);
+
+    fireEvent.mouseDown(screen.getByText("Registrarse"));
+    await waitFor(() => {
+      expect(screen.getByText("Crear cuenta")).toBeDefined();
+    });
+
+    const usernameInput = container.querySelector('#reg-username') as HTMLInputElement;
+    const emailInput = container.querySelector('#reg-email') as HTMLInputElement;
+    const passwordInput = container.querySelector('#reg-password') as HTMLInputElement;
+    fireEvent.change(usernameInput, { target: { value: "juan" } });
+    fireEvent.change(emailInput, { target: { value: "j@b.com" } });
+    fireEvent.change(passwordInput, { target: { value: "password123" } });
+    fireEvent.click(screen.getByRole("button", { name: /Crear cuenta/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText("Debe incluir 1 mayúscula, 1 número y 1 carácter especial"),
+      ).toBeDefined();
+    });
+    expect(register).not.toHaveBeenCalled();
+  });
+
+  it("toggles password visibility on login and register forms", async () => {
+    const { container } = render(<AuthPage />);
+
+    const loginPassword = container.querySelector('#login-password') as HTMLInputElement;
+    expect(loginPassword.type).toBe("password");
+    fireEvent.click(screen.getByLabelText("Mostrar contraseña"));
+    expect(loginPassword.type).toBe("text");
+    fireEvent.click(screen.getByLabelText("Ocultar contraseña"));
+    expect(loginPassword.type).toBe("password");
+
+    fireEvent.mouseDown(screen.getByText("Registrarse"));
+    await waitFor(() => {
+      expect(container.querySelector('#reg-password')).not.toBeNull();
+    });
+    const regPassword = container.querySelector('#reg-password') as HTMLInputElement;
+    expect(regPassword.type).toBe("password");
+    fireEvent.click(screen.getByLabelText("Mostrar contraseña"));
+    expect(regPassword.type).toBe("text");
   });
 });
