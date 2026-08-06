@@ -3,7 +3,6 @@ import express from 'express'
 import helmet from 'helmet'
 import cors from 'cors'
 import swaggerUi from 'swagger-ui-express'
-import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import { openApiSpec } from '@/infrastructure/http/swagger.js'
 import { createRateLimiter } from '@/infrastructure/http/middleware/rate-limiter.middleware.js'
 import type { RateLimiterConfig } from '@/infrastructure/http/middleware/rate-limiter.middleware.js'
@@ -12,20 +11,17 @@ import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.
 import { createAuthMiddleware } from '@/infrastructure/http/middleware/auth.middleware.js'
 import { createAuthRoutes } from '@/infrastructure/http/routes/auth.routes.js'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
-import type { ObdRepository } from '@/application/ports/ObdRepository.js'
-import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
+import type { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 
 /** Dependencias del servidor Express. */
 export interface ServerDependencies {
-  readonly scenarios: SimulationScenario[]
   readonly rateLimit?: Partial<RateLimiterConfig>
   readonly auditRepo: AuditLogRepository
   readonly authController: AuthController
+  readonly diagnosisController: DiagnosisController
   readonly accessTokenSecret?: string
-  readonly obdRepo?: ObdRepository
-  readonly llmClient?: LlmClientPort
   readonly allowedOrigins: string
   readonly nodeEnv: string
   readonly logger: LoggerPort
@@ -164,14 +160,7 @@ export function createServer(deps: ServerDependencies): express.Application {
   app.use('/api/diagnosis', diagnosisLimiter)
   app.use('/api/mcp/cognitive-diagnosis', cognitiveLimiter)
 
-  app.use(
-    '/api',
-    createDiagnosisRoutes({
-      scenarios: deps.scenarios,
-      obdRepo: deps.obdRepo,
-      llmClient: deps.llmClient,
-    }),
-  )
+  app.use('/api', createDiagnosisRoutes(deps.diagnosisController))
 
   mountErrorHandler(app, deps.logger)
 
