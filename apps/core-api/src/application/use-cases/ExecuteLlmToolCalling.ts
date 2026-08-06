@@ -44,8 +44,8 @@ export class ExecuteLlmToolCalling {
     this.maxIterations = maxIterations
   }
 
-  async execute(input: LlmMessageInput): Promise<LlmResponse> {
-    const { systemPrompt, userMessage, tools, handler } = input
+  async execute(input: LlmMessageInput, handler: ToolCallHandler): Promise<LlmResponse> {
+    const { systemPrompt, userMessage, tools } = input
     const toolNames = new Set(tools.map((t) => t.name))
     const conversationHistory: LlmConversationItem[] = [
       { __type: 'user_message', content: userMessage },
@@ -57,7 +57,6 @@ export class ExecuteLlmToolCalling {
         systemPrompt,
         userMessage,
         tools,
-        handler,
         conversationHistory: [...conversationHistory],
       })
 

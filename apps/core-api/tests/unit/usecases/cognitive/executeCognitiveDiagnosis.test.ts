@@ -57,10 +57,12 @@ describe('executeCognitiveDiagnosis', () => {
     })
 
     expect(llmClient.sendMessage).toHaveBeenCalledTimes(1)
-    const input = (llmClient.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    const callArgs = (llmClient.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0]
+    const input = callArgs[0]
+    const handlerArg = callArgs[1]
     expect(input.systemPrompt).toContain('diagnost')
     expect(input.tools).toBe(sixTools)
-    expect(input.handler).toBe(handler)
+    expect(handlerArg).toBe(handler)
     expect(input.userMessage).toContain('¿Por qué tiembla el motor al ralentí?')
     expect(input.userMessage).toContain('Audi')
     expect(input.userMessage).toContain('A3')
@@ -82,9 +84,9 @@ describe('executeCognitiveDiagnosis', () => {
       handler,
     })
 
-    const input = (llmClient.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
-    expect(input.handler).toBe(handler)
-    await expect(input.handler('read_pid', { mode: '01', pid: '0C' })).resolves.toBe('750')
+    const handlerArg = (llmClient.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][1]
+    expect(handlerArg).toBe(handler)
+    await expect(handlerArg('read_pid', { mode: '01', pid: '0C' })).resolves.toBe('750')
     expect(callTool).toHaveBeenCalledWith('read_pid', { mode: '01', pid: '0C' })
   })
 
