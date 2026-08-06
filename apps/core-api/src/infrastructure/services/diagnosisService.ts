@@ -6,7 +6,7 @@ import {
   withTimeout,
 } from '@/application/use-cases/ProcessVehicleDiagnosisUseCase.js'
 import { ExecuteCognitiveDiagnosisUseCase } from '@/application/use-cases/ExecuteCognitiveDiagnosisUseCase.js'
-import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
+import { createMcpServer, type ToolCallResult } from '@/infrastructure/mcp/mcpServer.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
@@ -33,6 +33,30 @@ export class CognitiveDiagnosisUnavailableError extends Error {
   constructor(message: string = 'Cognitive diagnosis is not available') {
     super(message)
     this.name = 'CognitiveDiagnosisUnavailableError'
+  }
+}
+
+/** Error lanzado cuando una tool MCP solicitada no existe en el servidor. */
+export class ToolNotFoundError extends Error {
+  constructor(readonly toolName: string) {
+    super(`Tool not found: ${toolName}`)
+    this.name = 'ToolNotFoundError'
+  }
+}
+
+/** Error lanzado cuando una llamada a tool MCP excede el timeout. */
+export class ToolCallTimeoutError extends Error {
+  constructor(message: string = 'Tool call timed out') {
+    super(message)
+    this.name = 'ToolCallTimeoutError'
+  }
+}
+
+/** Error lanzado cuando el diagnostico cognitivo excede el timeout. */
+export class CognitiveDiagnosisTimeoutError extends Error {
+  constructor(message: string = 'Cognitive diagnosis timed out') {
+    super(message)
+    this.name = 'CognitiveDiagnosisTimeoutError'
   }
 }
 
@@ -68,7 +92,13 @@ export class DiagnosisService {
     private readonly obdRepo: ObdRepository | undefined,
     private readonly llmClient: LlmClientPort | undefined,
     private readonly logger: LoggerPort,
+    private readonly cognitiveTimeoutMs: number = COGNITIVE_DIAGNOSIS_TIMEOUT_MS,
   ) {}
+
+  /** True cuando se opera contra un ELM327 TCP real (modo directo, sin scenarios). */
+  get isDirectConnection(): boolean {
+    return this.obdRepo !== undefined
+  }
 
   listScenarios(): SimulationScenario[] {
     return this.obdRepo ? [TCP_DIRECT_SCENARIO] : this.scenarios
@@ -111,11 +141,18 @@ export class DiagnosisService {
       return useCase.execute({ userQuery, vehicleContext })
     })()
 
-    return withTimeout(
-      diagnosis,
-      COGNITIVE_DIAGNOSIS_TIMEOUT_MS,
-      'Cognitive diagnosis timed out',
-    )
+    try {
+      return await withTimeout(
+        diagnosis,
+        this.cognitiveTimeoutMs,
+        'Cognitive diagnosis timed out',
+      )
+    } catch (err) {
+      if (err instanceof Error && err.message === 'Cognitive diagnosis timed out') {
+        throw new CognitiveDiagnosisTimeoutError()
+      }
+      throw err
+    }
   }
 
   async callMcpTool(
@@ -125,11 +162,22 @@ export class DiagnosisService {
   ): Promise<string> {
     const repository = this.resolveRepository(scenarioId)
     const mcp = createMcpServer(repository)
-    const result = await withTimeout(
-      mcp.callTool(toolName, args ?? {}),
-      DIAGNOSIS_TIMEOUT_MS,
-      'Tool call timed out',
-    )
+    let result: ToolCallResult
+    try {
+      result = await withTimeout(
+        mcp.callTool(toolName, args ?? {}),
+        DIAGNOSIS_TIMEOUT_MS,
+        'Tool call timed out',
+      )
+    } catch (err) {
+      if (err instanceof Error && err.message.startsWith('Tool not found')) {
+        throw new ToolNotFoundError(toolName)
+      }
+      if (err instanceof Error && err.message === 'Tool call timed out') {
+        throw new ToolCallTimeoutError()
+      }
+      throw err
+    }
     return result.content[0].text
   }
 

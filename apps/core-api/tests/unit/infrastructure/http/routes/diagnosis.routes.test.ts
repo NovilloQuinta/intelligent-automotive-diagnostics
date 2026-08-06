@@ -2,10 +2,20 @@ import { describe, it, expect, vi } from 'vitest'
 import request from 'supertest'
 import express from 'express'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
+import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
+import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmClientPort, ToolCallTrace } from '@/application/ports/LlmClientPort.js'
+import type { LoggerPort } from '@/application/ports/LoggerPort.js'
+
+const mockLogger: LoggerPort = {
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+}
 
 const mockScenarios: SimulationScenario[] = [
   {
@@ -41,7 +51,8 @@ const mockScenarios: SimulationScenario[] = [
 function createApp() {
   const app = express()
   app.use(express.json())
-  const router = createDiagnosisRoutes({ scenarios: mockScenarios })
+  const service = new DiagnosisService(mockScenarios, undefined, undefined, mockLogger)
+  const router = createDiagnosisRoutes(new DiagnosisController(service, mockLogger))
   app.use('/api', router)
   return app
 }
@@ -67,7 +78,8 @@ const mockObdRepo: ObdRepository = {
 function createTcpApp() {
   const app = express()
   app.use(express.json())
-  const router = createDiagnosisRoutes({ scenarios: mockScenarios, obdRepo: mockObdRepo })
+  const service = new DiagnosisService(mockScenarios, mockObdRepo, undefined, mockLogger)
+  const router = createDiagnosisRoutes(new DiagnosisController(service, mockLogger))
   app.use('/api', router)
   return app
 }
@@ -83,7 +95,14 @@ function mockLlmClient(overrides: Partial<LlmClientPort> = {}): LlmClientPort {
 function createCognitiveApp(llmClient: LlmClientPort, cognitiveTimeoutMs?: number) {
   const app = express()
   app.use(express.json())
-  const router = createDiagnosisRoutes({ scenarios: mockScenarios, llmClient, cognitiveTimeoutMs })
+  const service = new DiagnosisService(
+    mockScenarios,
+    undefined,
+    llmClient,
+    mockLogger,
+    cognitiveTimeoutMs,
+  )
+  const router = createDiagnosisRoutes(new DiagnosisController(service, mockLogger))
   app.use('/api', router)
   return app
 }
