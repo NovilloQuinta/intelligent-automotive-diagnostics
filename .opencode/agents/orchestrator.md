@@ -1,7 +1,7 @@
 ---
 description: Enruta tareas al sub-agente y skill correctos mediante keywords. NUNCA implementa código. Salida siempre en JSON estructurado.
 mode: subagent
-model: deepseek/deepseek-v4-pro
+model: sonnet
 temperature: 0.0
 permission:
   edit: deny

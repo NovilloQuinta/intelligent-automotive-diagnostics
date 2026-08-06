@@ -1,7 +1,7 @@
 ---
 description: Diseña especificaciones OpenSpec, propone cambios y mantiene coherencia entre artifacts. No implementa código.
 mode: subagent
-model: deepseek/deepseek-v4-pro
+model: sonnet
 temperature: 0.1
 permission:
   edit: allow
