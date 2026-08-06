@@ -26,6 +26,7 @@ describe("api", () => {
   let api: typeof import("../../../src/lib/api").api;
   let apiFetch: typeof import("../../../src/lib/api").apiFetch;
   let assertOk: typeof import("../../../src/lib/api").assertOk;
+  let GENERIC_ERROR_MESSAGE: typeof import("../../../src/lib/api").GENERIC_ERROR_MESSAGE;
 
   beforeEach(async () => {
     localStorage.clear();
@@ -35,6 +36,7 @@ describe("api", () => {
     api = mod.api;
     apiFetch = mod.apiFetch;
     assertOk = mod.assertOk;
+    GENERIC_ERROR_MESSAGE = mod.GENERIC_ERROR_MESSAGE;
   });
 
   // -----------------------------------------------------------------------
@@ -105,7 +107,7 @@ describe("api", () => {
       ).rejects.toThrow("email must be valid, password too short");
     });
 
-    it("falls back to the status message when the register error body is unreadable", async () => {
+    it("throws the generic message on a 500, never the raw status fallback", async () => {
       vi.stubGlobal(
         "fetch",
         vi.fn().mockResolvedValueOnce({
@@ -124,7 +126,7 @@ describe("api", () => {
           password: "12345678",
           userType: "individual",
         }),
-      ).rejects.toThrow("Register failed (500)");
+      ).rejects.toThrow(GENERIC_ERROR_MESSAGE);
     });
   });
 
@@ -240,11 +242,12 @@ describe("api", () => {
       const mockFetch = vi.fn().mockResolvedValueOnce({
         ok: false,
         status: 401,
+        json: async () => ({}),
       });
       vi.stubGlobal("fetch", mockFetch);
 
       await expect(api.getScenarios()).rejects.toThrow(
-        "Failed to fetch scenarios (401)",
+        GENERIC_ERROR_MESSAGE,
       );
       // Only the original call happened — no refresh was attempted
       expect(mockFetch).toHaveBeenCalledTimes(1);
@@ -379,14 +382,14 @@ describe("api", () => {
   // -----------------------------------------------------------------------
 
   describe("apiFetch error handling", () => {
-    it("rethrows non-abort errors unchanged", async () => {
+    it("wraps non-abort network errors into the generic message", async () => {
       vi.stubGlobal(
         "fetch",
         vi.fn().mockRejectedValue(new TypeError("Network request failed")),
       );
 
       await expect(apiFetch("/api/scenarios")).rejects.toThrow(
-        "Network request failed",
+        GENERIC_ERROR_MESSAGE,
       );
     });
 
@@ -401,18 +404,24 @@ describe("api", () => {
       );
     });
 
-    it("rethrows non-abort rejections that are not Error instances", async () => {
+    it("wraps non-abort rejections that are not Error instances into the generic message", async () => {
       // Plain object without a `name` property
       vi.stubGlobal("fetch", vi.fn().mockRejectedValueOnce({}));
-      await expect(apiFetch("/api/scenarios")).rejects.toEqual({});
+      await expect(apiFetch("/api/scenarios")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
 
       // null
       vi.stubGlobal("fetch", vi.fn().mockRejectedValueOnce(null));
-      await expect(apiFetch("/api/scenarios")).rejects.toBeNull();
+      await expect(apiFetch("/api/scenarios")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
 
       // string
       vi.stubGlobal("fetch", vi.fn().mockRejectedValueOnce("boom"));
-      await expect(apiFetch("/api/scenarios")).rejects.toBe("boom");
+      await expect(apiFetch("/api/scenarios")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
     });
   });
 
@@ -444,7 +453,7 @@ describe("api", () => {
       });
     });
 
-    it("throws the server error message when the diagnosis fails", async () => {
+    it("throws the generic message on a 500, never the raw server error", async () => {
       setStoredTokens();
       vi.stubGlobal(
         "fetch",
@@ -456,7 +465,7 @@ describe("api", () => {
       );
 
       await expect(api.runDiagnosis("audi-a3-idle")).rejects.toThrow(
-        "OBD timeout",
+        GENERIC_ERROR_MESSAGE,
       );
     });
   });
@@ -495,7 +504,7 @@ describe("api", () => {
       });
     });
 
-    it("throws the server error message when the diagnosis fails", async () => {
+    it("throws the generic message on a 503, never the raw server error", async () => {
       setStoredTokens();
       vi.stubGlobal(
         "fetch",
@@ -508,10 +517,10 @@ describe("api", () => {
 
       await expect(
         api.getCognitiveDiagnosis("audi-a3-idle"),
-      ).rejects.toThrow("LLM unavailable");
+      ).rejects.toThrow(GENERIC_ERROR_MESSAGE);
     });
 
-    it("throws the status fallback when the error body is unreadable", async () => {
+    it("throws the generic message on a 503 even when the error body is unreadable", async () => {
       setStoredTokens();
       vi.stubGlobal(
         "fetch",
@@ -526,7 +535,7 @@ describe("api", () => {
 
       await expect(
         api.getCognitiveDiagnosis("audi-a3-idle"),
-      ).rejects.toThrow("Cognitive diagnosis failed (503)");
+      ).rejects.toThrow(GENERIC_ERROR_MESSAGE);
     });
   });
 
@@ -853,11 +862,33 @@ describe("api", () => {
       );
     });
 
-    it("uses the fallback message when the body is not parseable", async () => {
+    it("throws the generic message when the body is not parseable on a 5xx", async () => {
       const res = new Response("not json", { status: 500 });
 
       await expect(assertOk(res, "Diagnosis failed (500)")).rejects.toThrow(
-        "Diagnosis failed (500)",
+        GENERIC_ERROR_MESSAGE,
+      );
+    });
+
+    it("throws the generic message on any 5xx, ignoring the fallback and body.error", async () => {
+      const res = new Response(
+        JSON.stringify({ error: "Database connection refused at 10.0.0.5" }),
+        { status: 502 },
+      );
+
+      await expect(assertOk(res, "Diagnosis failed (502)")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
+    });
+
+    it("still surfaces the curated server message for 4xx responses", async () => {
+      const res = new Response(
+        JSON.stringify({ error: "Email already registered" }),
+        { status: 409 },
+      );
+
+      await expect(assertOk(res, "Register failed (409)")).rejects.toThrow(
+        "Email already registered",
       );
     });
   });
