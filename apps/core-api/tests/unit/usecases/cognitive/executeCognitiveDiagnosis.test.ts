@@ -78,11 +78,7 @@ describe('executeCognitiveDiagnosis', () => {
       sendMessage: vi.fn().mockResolvedValue(cognitiveResponse('ok')),
     })
 
-    await new ExecuteCognitiveDiagnosisUseCase(llmClient, sixTools, handler).execute({
-      llmClient,
-      tools: sixTools,
-      handler,
-    })
+    await new ExecuteCognitiveDiagnosisUseCase(llmClient, sixTools, handler).execute({})
 
     const handlerArg = (llmClient.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][1]
     expect(handlerArg).toBe(handler)
