@@ -7,6 +7,7 @@ function makeConfig(overrides: Partial<AppConfig> = {}): AppConfig {
     NODE_ENV: 'production',
     PORT: 4000,
     DB_PATH: ':memory:',
+    LANCEDB_PATH: 'data/lancedb',
     OBD_MODE: 'sync',
     ELM327_HOST: 'localhost',
     ELM327_PORT: 35000,
