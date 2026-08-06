@@ -25,8 +25,8 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
-- **Ultimo paso**: Cambio `fix-clean-architecture-deviations` implementado en rama `fix/clean-architecture-deviations` (6 commits locales: b442fb8, 6ae89e1, 0b8a9e3, 304c2b6, 20d95e9, 734c440, + docs). `DiagnosisService` extraido a `src/infrastructure/services/diagnosisService.ts` (errores tipados: `DiagnosisScenarioNotFoundError`, `CognitiveDiagnosisUnavailableError`, `ToolNotFoundError`, `ToolCallTimeoutError`, `CognitiveDiagnosisTimeoutError`); `DiagnosisController` recibe el servicio por constructor; `LoggerPort` inyectado en `ExecuteLlmToolCalling` (sin `console.error`); composicion centralizada en `composition.ts`.
-- **Tests**: 488 pasando, 0 fallos, 41 test files
+- **Ultimo paso**: Ambos cambios mergeados a `main`. (1) `fix-clean-architecture-deviations`: `DiagnosisService` extraido a `src/infrastructure/services/diagnosisService.ts` (errores tipados: `DiagnosisScenarioNotFoundError`, `CognitiveDiagnosisUnavailableError`, `ToolNotFoundError`, `ToolCallTimeoutError`, `CognitiveDiagnosisTimeoutError`); `DiagnosisController` recibe el servicio por constructor; `LoggerPort` inyectado en `ExecuteLlmToolCalling` (sin `console.error`); composicion centralizada en `composition.ts`. (2) `refactor-elm327-persistent-session`: sesión TCP persistente con cola FIFO, auto-reconexión con backoff exponencial y cierre graceful; circuit breaker eliminado; `ProcessVehicleDiagnosisUseCase` ejecuta lecturas secuencialmente.
+- **Tests**: 489 pasando, 0 fallos, 41 test files
 - **CI**: verde — lint, format, test, build
 
 ## REGLAS DE SESION
