@@ -84,6 +84,18 @@ async function refreshAccessToken(): Promise<AuthTokens> {
 }
 
 // ---------------------------------------------------------------------------
+// Safe, user-facing error messages
+// ---------------------------------------------------------------------------
+
+/**
+ * Shown for unexpected failures (server 5xx, network errors) instead of the
+ * raw error. Never surfaces server internals, stack traces, or status codes
+ * to the user.
+ */
+export const GENERIC_ERROR_MESSAGE =
+  "Ha ocurrido un problema. Si el problema persiste, contacta con soporte.";
+
+// ---------------------------------------------------------------------------
 // Fetch timeouts
 // ---------------------------------------------------------------------------
 
@@ -139,7 +151,9 @@ export async function apiFetch(
     if (isAbortError(error)) {
       throw new Error("La petición tardó demasiado");
     }
-    throw error;
+    // Network failures (offline, DNS, CORS…) surface a browser-specific
+    // message — never show that raw text to the user.
+    throw new Error(GENERIC_ERROR_MESSAGE);
   }
 
   if (res.status === 401 && tokens?.refreshToken) {
@@ -168,15 +182,21 @@ export async function apiFetch(
 // ---------------------------------------------------------------------------
 
 /**
- * Throws when a response is not ok. Extracts the server error message from
- * the body (`details` first for validation errors, then `error`), falling
- * back to `fallbackMsg` when the body has no usable message.
+ * Throws when a response is not ok. For 4xx responses, extracts the curated
+ * server error message from the body (`details` first for validation
+ * errors, then `error`), falling back to `fallbackMsg` when the body has no
+ * usable message. For 5xx responses, always throws
+ * {@link GENERIC_ERROR_MESSAGE} — server internals are never shown to the
+ * user, regardless of what the body contains.
  */
 export async function assertOk(
   res: Response,
   fallbackMsg: string,
 ): Promise<void> {
   if (res.ok) return;
+  if (res.status >= 500) {
+    throw new Error(GENERIC_ERROR_MESSAGE);
+  }
   const body = (await res.json().catch(() => ({}))) as {
     error?: unknown;
     details?: unknown;
@@ -249,7 +269,7 @@ export const api = {
       body: JSON.stringify(input),
       signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
     });
-    await assertOk(res, `Login failed (${res.status})`);
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
     const tokens = (await res.json()) as AuthTokens;
     setTokens(tokens);
     return tokens;
@@ -265,7 +285,7 @@ export const api = {
       body: JSON.stringify(input),
       signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
     });
-    await assertOk(res, `Register failed (${res.status})`);
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
     const data = (await res.json()) as RegisterResponse;
     setTokens({
       accessToken: data.accessToken,
@@ -292,7 +312,7 @@ export const api = {
   /** GET /api/scenarios — returns unwrapped scenario list. */
   async getScenarios(): Promise<Scenario[]> {
     const res = await apiFetch("/api/scenarios");
-    if (!res.ok) throw new Error(`Failed to fetch scenarios (${res.status})`);
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
     const data = (await res.json()) as ScenariosResponse;
     return data.scenarios;
   },
@@ -303,7 +323,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ scenarioId }),
     });
-    await assertOk(res, `Diagnosis failed (${res.status})`);
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
     return (await res.json()) as DiagnosisResponse;
   },
 
@@ -317,7 +337,7 @@ export const api = {
       body: JSON.stringify({ scenarioId, query }),
       signal: AbortSignal.timeout(COGNITIVE_TIMEOUT_MS),
     });
-    await assertOk(res, `Cognitive diagnosis failed (${res.status})`);
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
     return (await res.json()) as CognitiveOutput;
   },
 
