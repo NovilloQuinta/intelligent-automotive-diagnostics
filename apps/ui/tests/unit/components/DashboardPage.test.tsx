@@ -135,12 +135,14 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Conectado")).toBeDefined();
     // Telemetry section
     expect(screen.getByText("Telemetría en vivo")).toBeDefined();
-    // DTC panel empty state
+    // DTC panel + PIDs table empty state (both render the same prompt)
     expect(
-      screen.getByText("Selecciona un vehículo y pulsa INICIAR DIAGNÓSTICO"),
-    ).toBeDefined();
+      screen.getAllByText("Selecciona un vehículo y pulsa INICIAR DIAGNÓSTICO"),
+    ).toHaveLength(2);
     // Diagnosis panel heading
     expect(screen.getByText("Diagnóstico IA")).toBeDefined();
+    // PIDs table heading
+    expect(screen.getByText("PIDs Leídos")).toBeDefined();
     // Footer
     expect(screen.getByText("Protocolo: ISO 15765-4 CAN")).toBeDefined();
     // No redirect when authed
@@ -288,5 +290,10 @@ describe("DashboardPage", () => {
     expect(
       screen.queryByText("Selecciona un vehículo y pulsa INICIAR DIAGNÓSTICO"),
     ).toBeNull();
+    // PIDs table lists all 4 generic PIDs with their code and OK status
+    expect(screen.getByText("4 registrados")).toBeDefined();
+    expect(screen.getByText("01 0C")).toBeDefined();
+    expect(screen.getByText("850 RPM")).toBeDefined();
+    expect(screen.getAllByText("OK")).toHaveLength(4);
   });
 });
