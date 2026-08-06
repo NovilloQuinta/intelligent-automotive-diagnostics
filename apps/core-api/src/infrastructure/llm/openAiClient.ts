@@ -2,6 +2,7 @@ import { z } from 'zod'
 import OpenAI from 'openai'
 import type { McpToolDefinition } from '@/application/dto/McpToolDefinition.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
+import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { LlmSingleResponse } from '@/application/dto/LlmSingleResponse.js'
 import type { LlmConversationItem } from '@/application/dto/LlmMessageInput.js'
 import { mcpToolDefinitionSchema } from '@/infrastructure/llm/toolDefinitionSchema.js'
@@ -18,6 +19,7 @@ export interface OpenAiClientConfig {
   readonly model: string
   readonly maxIterations?: number
   readonly timeoutMs?: number
+  readonly logger?: LoggerPort
 }
 
 const openAiClientConfigSchema = z.object({
@@ -142,5 +144,9 @@ const createThinAdapter = createLlmAdapter<
 /** Crea un cliente LLM provider-agnostic via API compatible con OpenAI. */
 export function createOpenAiClient(config: OpenAiClientConfig): LlmClientPort {
   const parsed = openAiClientConfigSchema.parse(config)
-  return composeLlmClient(createThinAdapter(config).sendSingleMessage, parsed.maxIterations)
+  return composeLlmClient(
+    createThinAdapter(config).sendSingleMessage,
+    parsed.maxIterations,
+    config.logger ?? console,
+  )
 }

@@ -9,6 +9,7 @@ import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import { createAnthropicClient } from '@/infrastructure/llm/anthropicClient.js'
 import { createOpenAiClient } from '@/infrastructure/llm/openAiClient.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
+import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import { SqliteAuditLogRepository } from '@/infrastructure/persistence/sqlite/auditLogRepository.js'
 import { Logger } from '@/infrastructure/observability/logger.js'
 import { seedScenarios } from '@/infrastructure/simulation/seedScenarios.js'
@@ -19,6 +20,26 @@ import { GetCurrentUserUseCase } from '@/application/use-cases/GetCurrentUserUse
 import { LogoutUserUseCase } from '@/application/use-cases/LogoutUserUseCase.js'
 import { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 import type { AppConfig } from '@/infrastructure/configuration/index.js'
+
+/** Crea el cliente LLM segun el proveedor configurado, o undefined si no hay provider. */
+function createLlmClient(config: AppConfig, logger: LoggerPort): LlmClientPort | undefined {
+  if (config.LLM_PROVIDER === 'anthropic') {
+    return createAnthropicClient({
+      apiKey: config.ANTHROPIC_API_KEY ?? '',
+      model: config.LLM_MODEL,
+      logger,
+    })
+  }
+  if (config.LLM_PROVIDER === 'openai') {
+    return createOpenAiClient({
+      apiKey: config.LLM_API_KEY ?? '',
+      baseURL: config.LLM_BASE_URL ?? '',
+      model: config.LLM_MODEL ?? '',
+      logger,
+    })
+  }
+  return undefined
+}
 
 /** Composition Root: cablea todas las dependencias y devuelve la app Express configurada. */
 export function buildApp(config: AppConfig): Application {
@@ -62,19 +83,7 @@ export function buildApp(config: AppConfig): Application {
       : undefined
 
   // ── LLM ──
-  let llmClient: LlmClientPort | undefined
-  if (config.LLM_PROVIDER === 'anthropic') {
-    llmClient = createAnthropicClient({
-      apiKey: config.ANTHROPIC_API_KEY ?? '',
-      model: config.LLM_MODEL,
-    })
-  } else if (config.LLM_PROVIDER === 'openai') {
-    llmClient = createOpenAiClient({
-      apiKey: config.LLM_API_KEY ?? '',
-      baseURL: config.LLM_BASE_URL ?? '',
-      model: config.LLM_MODEL ?? '',
-    })
-  }
+  const llmClient = createLlmClient(config, logger)
 
   // ── Servidor ──
   return createServer({
