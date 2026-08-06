@@ -11,6 +11,8 @@ import { RefreshTokenUseCase } from '@/application/use-cases/RefreshTokenUseCase
 import { GetCurrentUserUseCase } from '@/application/use-cases/GetCurrentUserUseCase.js'
 import { LogoutUserUseCase } from '@/application/use-cases/LogoutUserUseCase.js'
 import { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
+import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
+import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 
 const mockAuditRepo: AuditLogRepository = { create: async () => {} }
 const mockLogger: LoggerPort = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
@@ -72,7 +74,10 @@ describe('Auth integration', () => {
     )
 
     app = createServer({
-      scenarios: [],
+      diagnosisController: new DiagnosisController(
+        new DiagnosisService([], undefined, undefined, mockLogger),
+        mockLogger,
+      ),
       rateLimit: { windowMinutes: 60, maxRequests: 1000 },
       authController,
       accessTokenSecret: ACCESS_SECRET,
