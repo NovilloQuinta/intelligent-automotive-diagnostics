@@ -22,7 +22,11 @@
 #   PROVIDER="github:deepseek-r1"
 #   PROVIDER="minimax"
 #   PROVIDER="minimax:MiniMax-M3"
-PROVIDER="opencode"
+
+# Se usa `claude` y no `opencode`: opencode solo tiene credencial de DeepSeek guardada,
+# mientras que opencode.json apunta a modelos de Anthropic (sonnet/haiku). Esa combinacion
+# devuelve "Unexpected server error" y bloquea todos los commits.
+PROVIDER="claude"
 
 # File patterns to include in review (comma-separated)
 # Default: * (all files)
