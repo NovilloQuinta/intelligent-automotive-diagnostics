@@ -1,50 +1,64 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { render, screen } from "@testing-library/react";
 
-const { mockHasTokens } = vi.hoisted(() => ({
-  mockHasTokens: { value: true },
-}));
+const mockAuthState = {
+  status: "anonymous" as "loading" | "authed" | "anonymous",
+  user: null as unknown,
+  login: vi.fn(),
+  register: vi.fn(),
+  logout: vi.fn(),
+};
 
-// Mock the router infrastructure: createFileRoute(path) -> (config) -> Route.
-// The real redirect() throws a sentinel the router catches; we replicate the
-// sentinel throw so beforeLoad's contract can be asserted directly.
 vi.mock("@tanstack/react-router", () => ({
-  createFileRoute: () => (config: Record<string, unknown>) => ({ ...config }),
-  redirect: (opts: { to: string }) => {
-    throw Object.assign(new Error(`Redirect to ${opts.to}`), { to: opts.to });
-  },
+  createFileRoute: () => (config: Record<string, unknown>) => ({
+    ...config,
+    options: { component: config.component },
+  }),
 }));
 
-vi.mock("../../../src/lib/api", () => ({
-  api: { hasTokens: () => mockHasTokens.value },
+vi.mock("../../../src/lib/auth-context", () => ({
+  useAuth: () => mockAuthState,
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
+vi.mock("../../../src/components/dashboard/DashboardPage", () => ({
+  DashboardPage: () => <div data-testid="dashboard-page" />,
+}));
+
+vi.mock("../../../src/components/landing/LandingPage", () => ({
+  LandingPage: () => <div data-testid="landing-page" />,
 }));
 
 import { Route } from "../../../src/routes/index";
+const HomeRoute = (Route as unknown as { options: { component: React.ComponentType } })
+  .options.component;
 
 describe("index route", () => {
   beforeEach(() => {
-    mockHasTokens.value = true;
+    mockAuthState.status = "anonymous";
   });
 
-  it("should pass beforeLoad when tokens exist", () => {
-    expect(() => (Route as unknown as { beforeLoad: () => void }).beforeLoad()).not.toThrow();
+  it("renders the landing page when anonymous", () => {
+    render(<HomeRoute />);
+
+    expect(screen.getByTestId("landing-page")).toBeDefined();
+    expect(screen.queryByTestId("dashboard-page")).toBeNull();
   });
 
-  it("should throw a redirect to /login when no tokens exist", () => {
-    mockHasTokens.value = false;
+  it("renders the dashboard when authed", () => {
+    mockAuthState.status = "authed";
+    render(<HomeRoute />);
 
-    let thrown: { to?: string } | null = null;
-    try {
-      (Route as unknown as { beforeLoad: () => void }).beforeLoad();
-    } catch (e) {
-      thrown = e as { to?: string };
-    }
-
-    expect(thrown).not.toBeNull();
-    expect(thrown?.to).toBe("/login");
+    expect(screen.getByTestId("dashboard-page")).toBeDefined();
+    expect(screen.queryByTestId("landing-page")).toBeNull();
   });
 
-  it("should expose the DashboardPage as the route component", () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((Route as any).component).toBeDefined();
+  it("renders a loading state while auth status is resolving", () => {
+    mockAuthState.status = "loading";
+    render(<HomeRoute />);
+
+    expect(screen.getByText("Cargando…")).toBeDefined();
+    expect(screen.queryByTestId("dashboard-page")).toBeNull();
+    expect(screen.queryByTestId("landing-page")).toBeNull();
   });
 });
