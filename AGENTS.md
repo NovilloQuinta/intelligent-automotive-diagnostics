@@ -25,8 +25,8 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
-- **Ultimo paso**: Resueltas 5 CVEs criticas transitivas de `gemini` con overrides (handlebars, uglify-js, form-data). Arreglados tambien pnpm allowBuilds (valores string → boolean).
-- **Tests**: 458 pasando, 0 fallos, 37 test files
+- **Ultimo paso**: Archivado `owasp-security-hardening` (rama `chore/archive-owasp-security-hardening`). Tasks reconciliadas (18/18), cambio movido a archive/2026-08-06-owasp-security-hardening.
+- **Tests**: 469 pasando, 0 fallos, 39 test files
 - **CI**: verde — lint, format, test, build
 
 ## REGLAS DE SESION
