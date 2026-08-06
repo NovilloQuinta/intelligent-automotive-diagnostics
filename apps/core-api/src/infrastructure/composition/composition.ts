@@ -19,6 +19,8 @@ import { RefreshTokenUseCase } from '@/application/use-cases/RefreshTokenUseCase
 import { GetCurrentUserUseCase } from '@/application/use-cases/GetCurrentUserUseCase.js'
 import { LogoutUserUseCase } from '@/application/use-cases/LogoutUserUseCase.js'
 import { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
+import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
+import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 import type { AppConfig } from '@/infrastructure/configuration/index.js'
 
 /** Crea el cliente LLM segun el proveedor configurado, o undefined si no hay provider. */
@@ -41,56 +43,88 @@ function createLlmClient(config: AppConfig, logger: LoggerPort): LlmClientPort |
   return undefined
 }
 
-/** Composition Root: cablea todas las dependencias y devuelve la app Express configurada. */
-export function buildApp(config: AppConfig): Application {
+interface PersistenceRepositories {
+  readonly db: ReturnType<typeof getDb>
+  readonly auditRepo: SqliteAuditLogRepository
+  readonly userRepo: SqliteUserRepository
+  readonly tokenStore: SqliteRefreshTokenStore
+}
+
+/** Crea los repositorios SQLite y devuelve la conexion compartida. */
+function createPersistenceRepositories(config: AppConfig): PersistenceRepositories {
   const db = getDb(config.DB_PATH)
+  return {
+    db,
+    auditRepo: new SqliteAuditLogRepository(db),
+    userRepo: new SqliteUserRepository(db),
+    tokenStore: new SqliteRefreshTokenStore(db),
+  }
+}
 
-  // ── Repositorios ──
-  const auditRepo = new SqliteAuditLogRepository(db)
-  const logger = new Logger(config.NODE_ENV, db)
-  const userRepo = new SqliteUserRepository(db)
-  const tokenStore = new SqliteRefreshTokenStore(db)
+interface AuthStack {
+  readonly authService: ReturnType<typeof createAuthService>
+  readonly registerUseCase: RegisterUserUseCase
+  readonly loginUseCase: LoginUserUseCase
+  readonly refreshUseCase: RefreshTokenUseCase
+  readonly getCurrentUserUseCase: GetCurrentUserUseCase
+  readonly logoutUseCase: LogoutUserUseCase
+}
 
-  // ── Servicios ──
+/** Crea el servicio de autenticacion y sus casos de uso. */
+function createAuthStack(
+  config: AppConfig,
+  repos: Pick<PersistenceRepositories, 'userRepo' | 'tokenStore'>,
+  logger: LoggerPort,
+): AuthStack {
   const authService = createAuthService({
     accessTokenSecret: config.ACCESS_TOKEN_SECRET,
     refreshTokenSecret: config.REFRESH_TOKEN_SECRET,
     accessTokenExpiresIn: '15m',
     refreshTokenExpiresIn: '7d',
-    tokenStore,
+    tokenStore: repos.tokenStore,
   })
+  return {
+    authService,
+    registerUseCase: new RegisterUserUseCase(repos.userRepo, authService, repos.tokenStore, logger),
+    loginUseCase: new LoginUserUseCase(repos.userRepo, authService, repos.tokenStore, logger),
+    refreshUseCase: new RefreshTokenUseCase(authService, logger),
+    getCurrentUserUseCase: new GetCurrentUserUseCase(repos.userRepo),
+    logoutUseCase: new LogoutUserUseCase(repos.tokenStore, logger),
+  }
+}
 
-  // ── Use cases de auth ──
-  const registerUseCase = new RegisterUserUseCase(userRepo, authService, tokenStore, logger)
-  const loginUseCase = new LoginUserUseCase(userRepo, authService, tokenStore, logger)
-  const refreshUseCase = new RefreshTokenUseCase(authService, logger)
-  const getCurrentUserUseCase = new GetCurrentUserUseCase(userRepo)
-  const logoutUseCase = new LogoutUserUseCase(tokenStore, logger)
+/** Crea el repositorio OBD del modo configurado (TCP real o simulacion). */
+function createObdRepository(config: AppConfig): ObdRepository | undefined {
+  if (config.OBD_MODE !== 'tcp') return undefined
+  return new Elm327TcpRepository({ host: config.ELM327_HOST, port: config.ELM327_PORT })
+}
 
-  // ── Controladores ──
+/** Composition Root: cablea todas las dependencias y devuelve la app Express configurada. */
+export function buildApp(config: AppConfig): Application {
+  const { db, auditRepo, userRepo, tokenStore } = createPersistenceRepositories(config)
+  const logger = new Logger(config.NODE_ENV, db)
+  const auth = createAuthStack(config, { userRepo, tokenStore }, logger)
   const authController = new AuthController(
-    registerUseCase,
-    loginUseCase,
-    refreshUseCase,
-    getCurrentUserUseCase,
-    logoutUseCase,
+    auth.registerUseCase,
+    auth.loginUseCase,
+    auth.refreshUseCase,
+    auth.getCurrentUserUseCase,
+    auth.logoutUseCase,
   )
 
-  // ── OBD ──
-  const obdRepo: ObdRepository | undefined =
-    config.OBD_MODE === 'tcp'
-      ? new Elm327TcpRepository({ host: config.ELM327_HOST, port: config.ELM327_PORT })
-      : undefined
-
-  // ── LLM ──
+  const obdRepo = createObdRepository(config)
   const llmClient = createLlmClient(config, logger)
-
-  // ── Servidor ──
-  return createServer({
-    scenarios: config.OBD_MODE === 'tcp' ? [] : seedScenarios,
+  const diagnosisService = new DiagnosisService(
+    config.OBD_MODE === 'tcp' ? [] : seedScenarios,
     obdRepo,
     llmClient,
+    logger,
+  )
+  const diagnosisController = new DiagnosisController(diagnosisService, logger)
+
+  return createServer({
     authController,
+    diagnosisController,
     auditRepo,
     logger,
     allowedOrigins: config.ALLOWED_ORIGINS,
