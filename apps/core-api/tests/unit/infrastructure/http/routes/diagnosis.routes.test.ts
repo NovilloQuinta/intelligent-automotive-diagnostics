@@ -234,11 +234,10 @@ describe('diagnosisRoutes', () => {
 
       expect(res.status).toBe(200)
       expect(res.body).toEqual({ tool: 'read_pid', result: '750' })
-      expect(service.callMcpTool).toHaveBeenCalledWith(
-        'read_pid',
-        'audi-a3-idle',
-        { mode: '01', pid: '0C' },
-      )
+      expect(service.callMcpTool).toHaveBeenCalledWith('read_pid', 'audi-a3-idle', {
+        mode: '01',
+        pid: '0C',
+      })
     })
 
     it('should return 404 when the tool does not exist', async () => {

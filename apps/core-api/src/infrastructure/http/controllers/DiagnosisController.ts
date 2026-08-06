@@ -23,9 +23,7 @@ const ERROR_MESSAGES = {
 
 /** Campo scenarioId: requerido en modo simulacion, opcional en modo TCP directo. */
 function scenarioIdField(required: boolean): z.ZodType<string | undefined> {
-  return required
-    ? z.string().min(1, 'scenarioId is required')
-    : z.string().min(1).optional()
+  return required ? z.string().min(1, 'scenarioId is required') : z.string().min(1).optional()
 }
 
 const DiagnosisBodySchema = z.object({ scenarioId: scenarioIdField(true) })
@@ -105,7 +103,11 @@ export class DiagnosisController {
     }
 
     try {
-      const result = await this.service.callMcpTool(toolName, parsed.data.scenarioId, parsed.data.args)
+      const result = await this.service.callMcpTool(
+        toolName,
+        parsed.data.scenarioId,
+        parsed.data.args,
+      )
       res.status(200).json({ tool: toolName, result })
     } catch (err) {
       this.handleToolError(err, res)
