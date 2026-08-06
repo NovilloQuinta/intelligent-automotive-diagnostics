@@ -1,7 +1,7 @@
 ---
 description: Ejecuta lint, tests, coverage y audit. Reporta fallos y regresiones. Solo lectura de código.
 mode: subagent
-model: deepseek/deepseek-v4-flash
+model: haiku
 temperature: 0.1
 permission:
   edit: deny

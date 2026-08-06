@@ -49,12 +49,12 @@ Invoca con `@nombre` o via Task tool. Definidos en `.opencode/agents/`.
 
 | Agente | Modelo | Rol |
 |---|---|---|
-| `@orchestrator` | deepseek-v4-pro | Enruta tareas al sub-agente y skill correctos. Salida JSON estructurada. |
-| `@writer` | deepseek-v4-pro | Implementa codigo con TDD + Clean Architecture + Zod |
-| `@architect` | deepseek-v4-pro | Disena specs OpenSpec, propone cambios, mantiene coherencia entre artifacts |
-| `@reviewer` | deepseek-v4-flash | Revisa TypeScript, TSDoc, Clean Architecture, DRY, KISS, code smells (read-only) |
-| `@quality` | deepseek-v4-flash | Ejecuta lint + test + coverage + audit y reporta |
-| `@security` | deepseek-v4-flash | Audita reglas OWASP: CORS, helmet, JWT, rate-limit, Zod (read-only) |
+| `@orchestrator` | sonnet | Enruta tareas al sub-agente y skill correctos. Salida JSON estructurada. |
+| `@writer` | sonnet | Implementa codigo con TDD + Clean Architecture + Zod |
+| `@architect` | sonnet | Disena specs OpenSpec, propone cambios, mantiene coherencia entre artifacts |
+| `@reviewer` | haiku | Revisa TypeScript, TSDoc, Clean Architecture, DRY, KISS, code smells (read-only) |
+| `@quality` | haiku | Ejecuta lint + test + coverage + audit y reporta |
+| `@security` | haiku | Audita reglas OWASP: CORS, helmet, JWT, rate-limit, Zod (read-only) |
 
 ## PIPELINE MULTI-PASO
 
