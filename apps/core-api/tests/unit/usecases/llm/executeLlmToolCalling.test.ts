@@ -5,6 +5,7 @@ import {
 } from '@/application/use-cases/ExecuteLlmToolCalling.js'
 import type { LlmSingleResponse } from '@/application/dto/LlmSingleResponse.js'
 import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
+import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 
 /** Tool definition de ejemplo. */
 const sampleToolDef = {
@@ -14,6 +15,16 @@ const sampleToolDef = {
     type: 'object',
     properties: { mode: { type: 'string' }, pid: { type: 'string' } },
   } as Record<string, unknown>,
+}
+
+/** Helper: crea un mock de LoggerPort con spies para cada nivel. */
+function createMockLogger(): LoggerPort {
+  return {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  }
 }
 
 /** Helper: crea una respuesta single de texto. */
@@ -37,7 +48,8 @@ describe('ExecuteLlmToolCalling', () => {
       .fn<LlmSingleMessageSender>()
       .mockResolvedValue(textSingleResponse('Diagnostico completo.'))
     const handler: ToolCallHandler = vi.fn()
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10)
+    const mockLogger = createMockLogger()
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
 
     const result = await useCase.execute(
       {
@@ -67,7 +79,8 @@ describe('ExecuteLlmToolCalling', () => {
       .mockResolvedValueOnce(textSingleResponse('RPM: 800 — normal.'))
 
     const mockHandler = vi.fn<ToolCallHandler>().mockResolvedValue('RPM value: 800')
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10)
+    const mockLogger = createMockLogger()
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
 
     const result = await useCase.execute(
       {
@@ -112,7 +125,8 @@ describe('ExecuteLlmToolCalling', () => {
       .mockResolvedValueOnce('RPM: 800')
       .mockResolvedValueOnce('DTCs: P0101, P0302')
       .mockResolvedValueOnce('VIN: WAUZZZ8X')
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10)
+    const mockLogger = createMockLogger()
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
 
     const result = await useCase.execute(
       {
@@ -147,7 +161,8 @@ describe('ExecuteLlmToolCalling', () => {
       .mockResolvedValueOnce(textSingleResponse('No pude leer el PID.'))
 
     const mockHandler = vi.fn<ToolCallHandler>().mockRejectedValue(new Error('OBD timeout'))
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10)
+    const mockLogger = createMockLogger()
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
 
     const result = await useCase.execute(
       {
@@ -162,6 +177,9 @@ describe('ExecuteLlmToolCalling', () => {
     expect(result.toolCalls).toHaveLength(1)
     expect(result.toolCalls[0].result).toBe('Tool execution failed: read_pid')
     expect(result.text).toContain('No pude leer el PID')
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      expect.stringContaining("Tool handler error for 'read_pid'"),
+    )
   })
 
   // ── Tool desconocida ──
@@ -174,7 +192,8 @@ describe('ExecuteLlmToolCalling', () => {
       )
       .mockResolvedValueOnce(textSingleResponse('Intentare con otra herramienta.'))
 
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10)
+    const mockLogger = createMockLogger()
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
 
     const result = await useCase.execute(
       {
@@ -203,7 +222,8 @@ describe('ExecuteLlmToolCalling', () => {
       )
     }
     const mockHandler = vi.fn<ToolCallHandler>().mockResolvedValue('RPM: 800')
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10)
+    const mockLogger = createMockLogger()
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
 
     await expect(
       useCase.execute(
@@ -232,7 +252,8 @@ describe('ExecuteLlmToolCalling', () => {
       )
     }
     const mockHandler = vi.fn<ToolCallHandler>().mockResolvedValue('RPM: 800')
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 3)
+    const mockLogger = createMockLogger()
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 3, mockLogger)
 
     await expect(
       useCase.execute(
