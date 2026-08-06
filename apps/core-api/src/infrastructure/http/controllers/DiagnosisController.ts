@@ -2,11 +2,8 @@ import type { Request, Response } from 'express'
 import { z } from 'zod'
 import { ObdSimulator } from '@/infrastructure/simulation/simulator.js'
 import { ObdSimulatorRepository } from '@/infrastructure/simulation/simulatorAdapter.js'
-import {
-  ProcessVehicleDiagnosisUseCase,
-  DIAGNOSIS_TIMEOUT_MS,
-  withTimeout,
-} from '@/application/use-cases/ProcessVehicleDiagnosisUseCase.js'
+import { ProcessVehicleDiagnosisUseCase } from '@/application/use-cases/ProcessVehicleDiagnosisUseCase.js'
+import { DIAGNOSIS_TIMEOUT_MS, withTimeout } from '@/application/shared/withTimeout.js'
 import { ExecuteCognitiveDiagnosisUseCase } from '@/application/use-cases/ExecuteCognitiveDiagnosisUseCase.js'
 import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'

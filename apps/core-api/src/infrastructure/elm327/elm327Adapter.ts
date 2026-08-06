@@ -31,8 +31,11 @@ const UNKNOWN_FREEZE_FRAME_DTC = 'UNKNOWN'
 
 /**
  * Adaptador OBD-II sobre TCP a dispositivo ELM327 (Docker, puerto 35000).
- * Conexión efímera por comando, parseo ELM327 sin headers (AT H0 por defecto),
- * aplicación de fórmulas SAE J1979 + VAG Mode 22, decodificación DTC SAE J2012.
+ * Conexión persistente: `createElm327TcpClient` abre un único socket TCP de forma
+ * eager en el constructor (con cola FIFO y auto-reconexión con backoff), parseo
+ * ELM327 sin headers (AT H0 por defecto), aplicación de fórmulas SAE J1979 +
+ * VAG Mode 22, decodificación DTC SAE J2012. `close()` permite un shutdown
+ * graceful de la conexión al detenerse la aplicación.
  */
 export class Elm327TcpRepository implements ObdRepository {
   private readonly client: ReturnType<typeof createElm327TcpClient>
@@ -41,6 +44,18 @@ export class Elm327TcpRepository implements ObdRepository {
   constructor(config: Elm327TcpConfig) {
     this.client = createElm327TcpClient(config)
     this.pidFormulas = createPidFormulaCatalog(toFormulaEntries(ALL_SEED_PIDS))
+    // Conexión eager: el ciclo de vida del adapter es "nace al arrancar la app,
+    // muere al detenerse". El constructor no puede ser async, así que connect()
+    // se dispara sin esperar; si falla solo se loguea y NO se tira: la
+    // auto-reconexión del transporte restaura el socket para la primera petición.
+    this.client.connect().catch((err: unknown) => {
+      console.error('[Elm327TcpRepository] eager connect failed:', err)
+    })
+  }
+
+  /** Cierra la conexión TCP persistente de forma graceful (shutdown de la app). */
+  async close(): Promise<void> {
+    await this.client.close()
   }
 
   /** Lee un PID OBD-II del dispositivo ELM327 y devuelve su valor físico. */

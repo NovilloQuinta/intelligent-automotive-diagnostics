@@ -9,44 +9,34 @@ import {
   PID_INTAKE_TEMP,
 } from '@/domain/pids.js'
 
-/** Timeout para lecturas OBD individuales (ms). Compartido con MCP tool calls. */
-export const DIAGNOSIS_TIMEOUT_MS = 10_000
+// Re-export para compatibilidad hacia atras — los consumidores deben migrar
+// gradualmente a @/application/shared/withTimeout.js.
+export { DIAGNOSIS_TIMEOUT_MS, withTimeout } from '@/application/shared/withTimeout.js'
 
 /**
- * Envuelve una promesa con un timeout. Suprime late rejection de la rama
- * perdedora para evitar {@link https://nodejs.org/api/process.html#event-unhandledrejection|unhandledRejection}.
+ * Caso de uso: diagnostico determinista via OBD-II.
+ * Lee las 6 magnitudes de forma secuencial para respetar la conexion TCP
+ * compartida del transporte ELM327 (la cola del transporte serializa igualmente).
  */
-export function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  errorMessage: string,
-): Promise<T> {
-  const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error(errorMessage)), timeoutMs),
-  )
-
-  return Promise.race([promise, timeout]).finally(() => {
-    promise.catch(() => {})
-  })
-}
-
-/** Caso de uso: diagnostico determinista via OBD-II. */
 export class ProcessVehicleDiagnosisUseCase {
   constructor(private readonly repo: ObdRepository) {}
 
+  /**
+   * Ejecuta el diagnostico completo: 4 lecturas de PID (RPM, temperatura
+   * refrigerante, velocidad, temperatura admision) + codigos DTC + freeze frame.
+   * @returns DiagnosisResult con la live data parseada, los DTCs y el freeze frame
+   * @throws Error — si alguna lectura falla (timeout de comando o caida de la
+   *   conexion; el transporte rechaza con Elm327ConnectionError)
+   */
   async execute(): Promise<DiagnosisResult> {
-    const [rpm, coolantTemp, speed, intakeTemp, dtcCodes, freezeFrame] = await withTimeout(
-      Promise.all([
-        this.repo.readPid(MODE_CURRENT_DATA, PID_RPM),
-        this.repo.readPid(MODE_CURRENT_DATA, PID_COOLANT_TEMP),
-        this.repo.readPid(MODE_CURRENT_DATA, PID_SPEED),
-        this.repo.readPid(MODE_CURRENT_DATA, PID_INTAKE_TEMP),
-        this.repo.readDtcCodes(),
-        this.repo.getFreezeFrame(),
-      ]),
-      DIAGNOSIS_TIMEOUT_MS,
-      `Diagnosis timed out after ${DIAGNOSIS_TIMEOUT_MS}ms`,
-    )
+    // Lecturas secuenciales sobre la conexion compartida: el transporte TCP ya
+    // serializa los comandos, por lo que el diagnostico se ejecuta comando a comando.
+    const rpm = await this.repo.readPid(MODE_CURRENT_DATA, PID_RPM)
+    const coolantTemp = await this.repo.readPid(MODE_CURRENT_DATA, PID_COOLANT_TEMP)
+    const speed = await this.repo.readPid(MODE_CURRENT_DATA, PID_SPEED)
+    const intakeTemp = await this.repo.readPid(MODE_CURRENT_DATA, PID_INTAKE_TEMP)
+    const dtcCodes = await this.repo.readDtcCodes()
+    const freezeFrame = await this.repo.getFreezeFrame()
 
     const parsedValues = new LiveData({ rpm, coolantTemp, speed, intakeTemp })
     return new DiagnosisResult({ parsedValues, dtcCodes, freezeFrame })
