@@ -7,6 +7,7 @@ import { TopBar } from "./TopBar";
 import { TelemetrySection } from "./TelemetrySection";
 import { DtcPanel } from "./DtcPanel";
 import { DiagnosisPanel } from "./DiagnosisPanel";
+import { PidsTable } from "./PidsTable";
 
 /** Main OBD-II dashboard page: telemetry gauges, vehicle selection, DTC panel, and AI diagnosis. */
 export function DashboardPage() {
@@ -62,7 +63,7 @@ export function DashboardPage() {
             telemetryStatus={telemetryStatus}
             onDiagnose={runDiagnosis}
           />
-          <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:gap-6">
+          <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:gap-6">
             <DtcPanel
               codes={result?.dtcCodes ?? null}
               severity={result?.severity ?? null}
@@ -73,6 +74,10 @@ export function DashboardPage() {
               severity={result?.severity ?? null}
               empty={!result && !loading}
               loading={loading}
+            />
+            <PidsTable
+              parsedValues={result?.parsedValues ?? null}
+              empty={!result && !loading}
             />
           </section>
         </div>
