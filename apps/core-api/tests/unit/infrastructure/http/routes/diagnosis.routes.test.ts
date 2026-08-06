@@ -204,7 +204,9 @@ describe('diagnosisRoutes', () => {
         .post('/api/mcp/cognitive-diagnosis')
         .send({ scenarioId: 'audi-a3-idle', query: '¿Por qué tiembla el motor al ralentí?' })
 
-      const input = (llmClient.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
+      const callArgs = (llmClient.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0]
+      const input = callArgs[0]
+      const handlerArg = callArgs[1]
       expect(input.tools).toHaveLength(6)
       expect(input.tools.map((t: { name: string }) => t.name)).toEqual([
         'read_pid',
@@ -216,7 +218,7 @@ describe('diagnosisRoutes', () => {
       ])
       expect(input.userMessage).toContain('¿Por qué tiembla el motor al ralentí?')
       expect(input.userMessage).toContain('Audi A3')
-      await expect(input.handler('read_pid', { mode: '01', pid: '0C' })).resolves.toBe('750')
+      await expect(handlerArg('read_pid', { mode: '01', pid: '0C' })).resolves.toBe('750')
     })
 
     it('should return 404 when the scenario does not exist', async () => {

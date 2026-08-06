@@ -45,12 +45,14 @@ export class ExecuteCognitiveDiagnosisUseCase {
   async execute(input: ExecuteCognitiveDiagnosisInput): Promise<ExecuteCognitiveDiagnosisOutput> {
     const { userQuery, vehicleContext } = input
 
-    const { text, toolCalls } = await this.llmClient.sendMessage({
-      systemPrompt: COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT,
-      userMessage: buildUserMessage(userQuery, vehicleContext),
-      tools: this.tools,
-      handler: this.handler,
-    })
+    const { text, toolCalls } = await this.llmClient.sendMessage(
+      {
+        systemPrompt: COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT,
+        userMessage: buildUserMessage(userQuery, vehicleContext),
+        tools: this.tools,
+      },
+      this.handler,
+    )
 
     const parsed = parseCognitiveDiagnosis(text)
     return {

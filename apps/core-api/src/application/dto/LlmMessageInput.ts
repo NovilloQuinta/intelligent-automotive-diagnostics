@@ -1,5 +1,4 @@
 import type { McpToolDefinition } from './McpToolDefinition.js'
-import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
 
 /** Elemento del historial de conversacion entre el LLM y el adaptador. */
 export type LlmConversationItem =
@@ -12,11 +11,10 @@ export type LlmConversationItem =
       readonly isError: boolean
     }
 
-/** Entrada para los metodos del puerto LLM. */
+/** Entrada para los metodos del puerto LLM (sin handler, que viaja por separado). */
 export interface LlmMessageInput {
   readonly systemPrompt: string
   readonly userMessage: string
   readonly tools: readonly McpToolDefinition[]
-  readonly handler: ToolCallHandler
   readonly conversationHistory?: readonly LlmConversationItem[]
 }
