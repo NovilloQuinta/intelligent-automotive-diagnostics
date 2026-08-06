@@ -20,19 +20,23 @@ import {
 import { createElm327TcpClient } from './tcpTransport.js'
 import type { Elm327TcpConfig } from './tcpTransport.js'
 
-/** Errores del adaptador ELM327 — re-exportados desde {@link ./errors.ts}. */
+/** Re-export de compatibilidad — errores ELM327 desde {@link ./errors.ts}. */
 export { Elm327ConnectionError, Elm327NoDataError, Elm327ParseError }
-
-/** Configuración del adaptador TCP — re-exportada desde {@link ./tcpTransport.ts}. */
+/** Re-export de compatibilidad — config TCP desde {@link ./tcpTransport.ts}. */
 export type { Elm327TcpConfig } from './tcpTransport.js'
 
-/** Código DTC de placeholder cuando la respuesta ELM327 no identifica el DTC que disparó el freeze frame. */
 const UNKNOWN_FREEZE_FRAME_DTC = 'UNKNOWN'
 
 /**
  * Adaptador OBD-II sobre TCP a dispositivo ELM327 (Docker, puerto 35000).
- * Conexión efímera por comando, parseo ELM327 sin headers (AT H0 por defecto),
- * aplicación de fórmulas SAE J1979 + VAG Mode 22, decodificación DTC SAE J2012.
+ *
+ * Abre una única conexión TCP persistente en el constructor (con cola FIFO y
+ * auto-reconexión con backoff) y la reutiliza para todas las lecturas. Esto
+ * evita la saturación del dispositivo que causaban los sockets efímeros (6
+ * comandos por diagnóstico, cada uno abriendo y cerrando su propio socket).
+ *
+ * El constructor dispara `connect()` sin esperar: si falla, la auto-reconexión
+ * del transporte restaura el socket en la primera petición.
  */
 export class Elm327TcpRepository implements ObdRepository {
   private readonly client: ReturnType<typeof createElm327TcpClient>
@@ -41,9 +45,16 @@ export class Elm327TcpRepository implements ObdRepository {
   constructor(config: Elm327TcpConfig) {
     this.client = createElm327TcpClient(config)
     this.pidFormulas = createPidFormulaCatalog(toFormulaEntries(ALL_SEED_PIDS))
+    this.client.connect().catch((err: unknown) => {
+      console.error('[Elm327TcpRepository] eager connect failed:', err)
+    })
   }
 
-  /** Lee un PID OBD-II del dispositivo ELM327 y devuelve su valor físico. */
+  /** Shutdown graceful de la conexión TCP al detenerse la aplicación. */
+  async close(): Promise<void> {
+    await this.client.close()
+  }
+
   async readPid(mode: string, pid: string): Promise<number> {
     const raw = await this.client.sendCommand(formatCommand(mode, pid))
     const entry = this.pidFormulas.get(mode, pid)
@@ -52,14 +63,12 @@ export class Elm327TcpRepository implements ObdRepository {
     return this.pidFormulas.apply(mode, pid, bytes)
   }
 
-  /** Consulta los PIDs soportados por la ECU via comando 01 00. */
   async getSupportedPids(): Promise<string[]> {
     const raw = await this.client.sendCommand('01 00')
     const bytes = parseModeResponse(raw)
     return parseSupportedPidBitmask(bytes)
   }
 
-  /** Devuelve el freeze frame del DTC indicado via comando 02 0C. */
   async getFreezeFrame(dtc?: string): Promise<FreezeFrame | null> {
     const raw = await this.client.sendCommand('02 0C')
     if (/NO DATA/i.test(raw)) return null
@@ -70,7 +79,6 @@ export class Elm327TcpRepository implements ObdRepository {
     })
   }
 
-  /** Lee los codigos DTC almacenados en la ECU via comando 03. */
   async readDtcCodes(): Promise<DtcCode[]> {
     const raw = await this.client.sendCommand('03')
     return parseDtcResponse(raw).map(
@@ -78,18 +86,15 @@ export class Elm327TcpRepository implements ObdRepository {
     )
   }
 
-  /** Limpia los codigos DTC de la ECU via comando 04. */
   async clearDtcCodes(): Promise<void> {
     await this.client.sendCommand('04')
   }
 
-  /** Lee el VIN del vehiculo via comando 09 02. */
   async readVin(): Promise<string> {
     const raw = await this.client.sendCommand('09 02')
     return Vin.fromBytes(parseVinResponse(raw)).value
   }
 
-  /** Obtiene la informacion del vehiculo conectado al dispositivo ELM327. */
   async getVehicleInfo(): Promise<VehicleInfo> {
     try {
       const vin = new Vin(await this.readVin())
@@ -101,7 +106,7 @@ export class Elm327TcpRepository implements ObdRepository {
         vin,
       }
     } catch {
-      // VIN ilegible: identificacion desconocida pero diagnóstico funcional
+      // VIN ilegible: el diagnóstico sigue siendo funcional con datos mínimos
       return {
         make: 'unknown',
         model: 'unknown',
@@ -112,7 +117,6 @@ export class Elm327TcpRepository implements ObdRepository {
     }
   }
 
-  /** Controla el estado de alimentacion del dispositivo ELM327. */
   async setPower(_on: boolean): Promise<void> {
     // No-op: el adaptador no controla la alimentación del hardware
   }
