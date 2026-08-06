@@ -130,9 +130,7 @@ describe('DiagnosisService', () => {
     it('should throw DiagnosisScenarioNotFoundError for an unknown scenario', async () => {
       const service = new DiagnosisService(mockScenarios, undefined, undefined, createMockLogger())
 
-      await expect(service.diagnose('nonexistent')).rejects.toThrow(
-        DiagnosisScenarioNotFoundError,
-      )
+      await expect(service.diagnose('nonexistent')).rejects.toThrow(DiagnosisScenarioNotFoundError)
     })
 
     it('should use the injected obdRepo directly in TCP mode', async () => {
@@ -152,9 +150,9 @@ describe('DiagnosisService', () => {
     it('should throw CognitiveDiagnosisUnavailableError without an llmClient', async () => {
       const service = new DiagnosisService(mockScenarios, undefined, undefined, createMockLogger())
 
-      await expect(
-        service.cognitiveDiagnosis({ scenarioId: 'audi-a3-idle' }),
-      ).rejects.toThrow(CognitiveDiagnosisUnavailableError)
+      await expect(service.cognitiveDiagnosis({ scenarioId: 'audi-a3-idle' })).rejects.toThrow(
+        CognitiveDiagnosisUnavailableError,
+      )
     })
 
     it('should run the cognitive use case and return the parsed output', async () => {
@@ -163,12 +161,7 @@ describe('DiagnosisService', () => {
           .fn()
           .mockResolvedValue({ text: cognitiveText, toolCalls: cognitiveToolCalls }),
       })
-      const service = new DiagnosisService(
-        mockScenarios,
-        undefined,
-        llmClient,
-        createMockLogger(),
-      )
+      const service = new DiagnosisService(mockScenarios, undefined, llmClient, createMockLogger())
 
       const result = await service.cognitiveDiagnosis({
         scenarioId: 'audi-a3-idle',
@@ -192,16 +185,11 @@ describe('DiagnosisService', () => {
           .fn()
           .mockResolvedValue({ text: cognitiveText, toolCalls: cognitiveToolCalls }),
       })
-      const service = new DiagnosisService(
-        mockScenarios,
-        undefined,
-        llmClient,
-        createMockLogger(),
-      )
+      const service = new DiagnosisService(mockScenarios, undefined, llmClient, createMockLogger())
 
-      await expect(
-        service.cognitiveDiagnosis({ scenarioId: 'no-existe' }),
-      ).rejects.toThrow(DiagnosisScenarioNotFoundError)
+      await expect(service.cognitiveDiagnosis({ scenarioId: 'no-existe' })).rejects.toThrow(
+        DiagnosisScenarioNotFoundError,
+      )
       expect(llmClient.sendMessage).not.toHaveBeenCalled()
     })
   })

@@ -81,11 +81,11 @@
 
 ## 5. Verificación final (Zero Broken Windows)
 
-- [ ] 5.1 `pnpm test` → todos los tests verdes (404+)
-- [ ] 5.2 `pnpm lint && pnpm format` → sin errores
-- [ ] 5.3 `pnpm build` → compila sin errores
-- [ ] 5.4 Verificación estructural:
+- [x] 5.1 `pnpm test` → todos los tests verdes (488)
+- [x] 5.2 `pnpm lint && pnpm format` → sin errores
+- [x] 5.3 `pnpm build` → compila sin errores
+- [x] 5.4 Verificación estructural:
   - `grep -rn "new ProcessVehicleDiagnosisUseCase\|new ExecuteCognitiveDiagnosisUseCase" src/infrastructure/http/` → vacío (solo en `DiagnosisService`)
   - `grep -rn "console\." src/application/` → vacío
   - `grep -rn "ObdSimulator\|ObdSimulatorRepository" src/infrastructure/http/` → vacío
-- [ ] 5.5 Actualizar `AGENTS.md` (SESION ACTUAL: cambio `fix-clean-architecture-deviations` completado)
+- [x] 5.5 Actualizar `AGENTS.md` (SESION ACTUAL: cambio `fix-clean-architecture-deviations` completado)

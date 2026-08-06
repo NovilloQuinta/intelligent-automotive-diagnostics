@@ -142,11 +142,7 @@ export class DiagnosisService {
     })()
 
     try {
-      return await withTimeout(
-        diagnosis,
-        this.cognitiveTimeoutMs,
-        'Cognitive diagnosis timed out',
-      )
+      return await withTimeout(diagnosis, this.cognitiveTimeoutMs, 'Cognitive diagnosis timed out')
     } catch (err) {
       if (err instanceof Error && err.message === 'Cognitive diagnosis timed out') {
         throw new CognitiveDiagnosisTimeoutError()
