@@ -25,8 +25,8 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
-- **Ultimo paso**: Archivado `owasp-security-hardening` directo en main (commits bfee545, 979e9ba). Tasks reconciliadas (18/18), cambio movido a archive/2026-08-06-owasp-security-hardening.
-- **Tests**: 469 pasando, 0 fallos, 39 test files
+- **Ultimo paso**: Cambio `refactor-elm327-persistent-session` implementado en rama `feat/refactor-elm327-persistent-session` (tasks 1-4 completadas): sesión TCP persistente con cola FIFO, auto-reconexión con backoff exponencial y cierre graceful; guard defensivo en `connect()` post-close. Review aprobado con menores (guard añadido). Pendiente de commit/archive en OpenSpec.
+- **Tests**: 484 pasando, 0 fallos, 40 test files
 - **CI**: verde — lint, format, test, build
 
 ## REGLAS DE SESION

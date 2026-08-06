@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createConnection } from 'node:net'
 import {
   Elm327TcpRepository,
@@ -18,6 +18,7 @@ vi.mock('node:net', () => {
       write: vi.fn(),
       destroy: vi.fn(),
       setTimeout: vi.fn(),
+      setKeepAlive: vi.fn(),
       emit: (event: string, ...args: unknown[]): void => {
         handlers[event]?.(...args)
       },
@@ -65,6 +66,17 @@ const RESPONSES: Record<string, string> = {
 }
 
 describe('Elm327TcpRepository', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('constructor conecta eager: createConnection 1 vez con host:port correctos, sin enviar comandos', () => {
+    makeRepo()
+    expect(createConnection).toHaveBeenCalledTimes(1)
+    expect(createConnection).toHaveBeenCalledWith({ host: HOST, port: PORT })
+    expect(lastSocket().write).not.toHaveBeenCalled()
+  })
+
   it('readPid Mode 01 RPM: mock responde "41 0C 0C 80" → 800', async () => {
     const repo = makeRepo()
     const promise = repo.readPid('01', '0C')
@@ -190,7 +202,9 @@ describe('Elm327TcpRepository', () => {
   })
 
   it('Connection refused: mock emite ECONNREFUSED → Elm327ConnectionError', async () => {
-    const repo = makeRepo()
+    // timeout corto: la auto-reconexión reintenta el comando y el reintento agota
+    // el timeout por comando — la aserción (rechazo Elm327ConnectionError) no cambia
+    const repo = makeRepo(10)
     const promise = repo.readPid('01', '0C')
     expectSent('01 0C')
     const err = new Error('connect ECONNREFUSED 127.0.0.1:35000')
@@ -214,5 +228,35 @@ describe('Elm327TcpRepository', () => {
     expectSent('01 0C')
     respond('NO DATA\r\r>')
     await expect(promise).rejects.toBeInstanceOf(Elm327NoDataError)
+  })
+
+  it('close(): destruye el socket y rechaza los comandos pendientes con Elm327ConnectionError', async () => {
+    const repo = makeRepo()
+    const socket = lastSocket()
+
+    const pending = repo.readPid('01', '0C')
+    expectSent('01 0C')
+
+    await repo.close()
+
+    expect(socket.destroy).toHaveBeenCalled()
+    await expect(pending).rejects.toMatchObject({
+      name: 'Elm327ConnectionError',
+      message: expect.stringContaining('Connection closed'),
+    })
+  })
+
+  it('tras close(): nuevos sendCommand no crean conexiones nuevas', async () => {
+    const repo = makeRepo()
+    expect(createConnection).toHaveBeenCalledTimes(1)
+
+    await repo.close()
+
+    const pending = repo.readPid('01', '0D')
+    await expect(pending).rejects.toMatchObject({
+      name: 'Elm327ConnectionError',
+      message: expect.stringContaining('Connection closed'),
+    })
+    expect(createConnection).toHaveBeenCalledTimes(1)
   })
 })
