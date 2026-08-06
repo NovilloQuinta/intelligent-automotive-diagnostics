@@ -270,6 +270,21 @@ describe('diagnosisRoutes', () => {
       expect(res.body.error).toBe('Tool call timed out')
     })
 
+    it('should return 404 when the scenario does not exist', async () => {
+      const service = createServiceStub({
+        callMcpTool: vi.fn(async () => {
+          throw new DiagnosisScenarioNotFoundError()
+        }),
+      })
+      const { app } = createApp(service)
+      const res = await request(app)
+        .post('/api/mcp/tools/read_pid')
+        .send({ scenarioId: 'no-existe' })
+
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe('Scenario not found')
+    })
+
     it('should return 400 for invalid body', async () => {
       const service = createServiceStub()
       const { app } = createApp(service)

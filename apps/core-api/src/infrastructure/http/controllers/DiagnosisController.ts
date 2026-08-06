@@ -145,6 +145,10 @@ export class DiagnosisController {
       res.status(404).json({ error: `${ERROR_MESSAGES.toolNotFound}: ${err.toolName}` })
       return
     }
+    if (err instanceof DiagnosisScenarioNotFoundError) {
+      res.status(404).json({ error: ERROR_MESSAGES.scenarioNotFound })
+      return
+    }
     if (err instanceof ToolCallTimeoutError) {
       res.status(504).json({ error: ERROR_MESSAGES.toolTimedOut })
       return
