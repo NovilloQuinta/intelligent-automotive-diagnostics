@@ -17,26 +17,16 @@ export interface Elm327TcpConfig {
 /** Timeout por defecto para comandos TCP (3 segundos). */
 export const DEFAULT_TIMEOUT_MS = 3000
 
-/** Reintentos por defecto ante fallos de envío. */
 const DEFAULT_MAX_RETRIES = 3
-
-/** Backoff base por defecto entre reintentos de envío (200ms). */
 const DEFAULT_BACKOFF_MS = 200
-
-/** Backoff base de la auto-reconexión (100ms). */
 const RECONNECT_BASE_MS = 100
-
-/** Cap por intento de reconexión: min(100ms * 2^attempt, 30s). */
 const RECONNECT_MAX_DELAY_MS = 30_000
-
-/** Cap total de la auto-reconexión: si tras 30s no se reconecta, se rechazan los comandos pendientes. */
 const RECONNECT_MAX_TOTAL_MS = 30_000
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-/** Entrada de la cola FIFO de comandos pendientes. */
 interface CommandEntry {
   readonly cmd: string
   resolve: (value: string) => void
@@ -44,7 +34,6 @@ interface CommandEntry {
   attempts: number
 }
 
-/** Comando actualmente en vuelo hacia el socket: acumula la respuesta hasta el prompt ">". */
 interface ActiveCommand {
   resolve: (value: string) => void
   reject: (reason: Error) => void
@@ -52,7 +41,8 @@ interface ActiveCommand {
   timeoutTimer: ReturnType<typeof setTimeout> | null
 }
 
-/** Error de conexión marcado para distinguir fallos del socket de fallos del comando (timeout). */
+// Marca los fallos de socket para que el drainer distinga reconexión (retry sin
+// shift) de timeout de comando (retry con backoff hasta maxRetries, luego shift).
 interface ConnectionError extends Elm327ConnectionError {
   connectionLost?: boolean
 }
@@ -61,28 +51,33 @@ function isConnectionError(err: unknown): err is ConnectionError {
   return err instanceof Elm327ConnectionError && (err as ConnectionError).connectionLost === true
 }
 
-/** API pública del cliente TCP persistente. */
+/**
+ * Cliente TCP persistente para dispositivos ELM327.
+ *
+ * Evita la saturación del dispositivo al reutilizar una única conexión TCP en
+ * vez de abrir un socket efímero por cada comando. Los comandos se encolan en
+ * una FIFO con mutex para serializar las escrituras sobre el socket compartido.
+ *
+ * Si el socket se rompe, el cliente reconecta automáticamente con backoff
+ * exponencial (100 ms base, cap 30 s por intento y 30 s totales) y reenvía el
+ * comando que estaba en vuelo. `close()` detiene la reconexión y rechaza la
+ * cola de forma graceful.
+ */
 export interface Elm327TcpClient {
-  /** Abre el socket persistente y configura sus handlers. Idempotente; no-op tras `close()`. */
+  /** Abre el socket persistente. Idempotente; no-op tras `close()`. */
   connect(): Promise<void>
-  /** Encola un comando ELM327 y resuelve con la respuesta cruda (hasta el prompt ">"). */
+  /** Encola un comando ELM327 y resuelve con la respuesta cruda hasta el prompt `>`. */
   sendCommand(cmd: string): Promise<string>
-  /** Shutdown graceful: destruye el socket, limpia timers y rechaza los comandos pendientes. No reactiva la reconexión. */
+  /** Shutdown graceful: destruye el socket, limpia timers y rechaza los comandos pendientes. */
   close(): Promise<void>
 }
 
 /**
- * Cliente TCP persistente para dispositivos ELM327 con cola FIFO y auto-reconexión.
- * Mantiene un único socket vivo (creado por `connect()`) reutilizado por todos los
- * comandos; `sendCommand` encola y serializa las escrituras. Si el socket emite
- * `error`/`close`, el cliente reconecta automáticamente con backoff exponencial
- * (100ms base, cap 30s por intento y 30s totales) y reenvía el comando en vuelo.
- * `maxRetries` solo aplica a fallos de envío (timeout del prompt ">"), no a fallos
- * de conexión. `close()` detiene la reconexión y rechaza la cola con
- * "Connection closed".
- * @param config — host/port del dispositivo y semántica de timeout/reintentos
+ * Crea un cliente TCP persistente para un dispositivo ELM327 con cola FIFO,
+ * mutex de escritura y auto-reconexión con backoff exponencial.
+ *
+ * @param config — host, port, timeout por comando y semántica de reintentos
  * @returns Cliente con `connect()`, `sendCommand()` y `close()`
- * @throws Elm327ConnectionError — timeout de comando, caída del socket o cierre del cliente
  */
 export function createElm327TcpClient(config: Elm327TcpConfig): Elm327TcpClient {
   const timeoutMs = config.timeout ?? DEFAULT_TIMEOUT_MS
@@ -96,13 +91,13 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327TcpClient 
   let reconnectStartedAt = 0
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null
   let reconnectPromise: Promise<void> | null = null
-  /** Resolver de `reconnectPromise`: permite a `close()` despertar a quien espera la reconexión. */
   let reconnectResolve: (() => void) | null = null
   let activeCommand: ActiveCommand | null = null
   const commandQueue: CommandEntry[] = []
   let isProcessing = false
 
-  /** Rechaza todos los comandos pendientes con `error` y vacía la cola. */
+  // ── Internal helpers ──────────────────────────────────────────
+
   function failQueue(error: Elm327ConnectionError): void {
     let entry = commandQueue.shift()
     while (entry !== undefined) {
@@ -111,7 +106,9 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327TcpClient 
     }
   }
 
-  /** Rechaza el comando en vuelo como fallo de conexión y dispara la reconexión. */
+  // Marca el comando en vuelo como conexión perdida y dispara la
+  // auto-reconexión. El flag `connectionLost` permite al drainer
+  // distinguir este fallo de un timeout de comando común.
   function failActiveCommand(message: string): void {
     if (activeCommand === null) return
     const command = activeCommand
@@ -122,7 +119,9 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327TcpClient 
     command.reject(error)
   }
 
-  /** Acumula la respuesta y resuelve el comando en vuelo al recibir el prompt ">". */
+  // Acumula datos del socket hasta el prompt ">" y resuelve el
+  // comando en vuelo. Ignora tráfico de sockets viejos (target !==
+  // socket) tras una reconexión.
   function onData(target: Socket, chunk: Buffer): void {
     if (target !== socket) return
     if (activeCommand === null) return
@@ -158,21 +157,16 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327TcpClient 
     target.on('close', () => onSocketClose(target))
   }
 
-  /** Crea el socket persistente y configura sus handlers. Idempotente y no-op tras `close()`. */
   async function connect(): Promise<void> {
     if (socket !== null || reconnectState === 'closed') return
     socket = createConnection({ host, port })
     bindSocketHandlers(socket)
   }
 
-  /**
-   * Programa el siguiente intento de reconexión con backoff exponencial
-   * `min(100ms * 2^attempt, 30s)`. Idempotente: si ya hay un intento en curso,
-   * no programa otro. Si se supera el cap total de 30s, rechaza la cola.
-   * El estado permanece en 'reconnecting' hasta que un comando se envía con
-   * éxito (ver `processQueue`), de modo que el cap total se mide desde el
-   * primer fallo de la sesión, no por intento.
-   */
+  // Backoff exponencial `min(100ms * 2^attempt, 30s)`. El cap total
+  // de 30s se mide desde el primer fallo de la sesión (no por
+  // intento): el estado no sale de 'reconnecting' hasta que un
+  // comando se envía con éxito en `processQueue`.
   function scheduleReconnect(): void {
     if (reconnectState === 'closed' || reconnectPromise !== null) return
     if (reconnectState !== 'reconnecting') {
@@ -203,14 +197,13 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327TcpClient 
     })
   }
 
-  /** Espera a que termine el intento de reconexión en curso. No-op si el cliente está cerrado. */
   async function reconnect(): Promise<void> {
     if (reconnectState === 'closed') return
     if (reconnectPromise === null) scheduleReconnect()
     await reconnectPromise
   }
 
-  /** Escribe el comando al socket compartido y espera la respuesta hasta el prompt ">". */
+  // Escribe el comando al socket compartido con timeout.
   function sendCommandOnce(cmd: string): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       if (socket === null) {
@@ -235,7 +228,10 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327TcpClient 
     })
   }
 
-  /** Drena la cola FIFO con mutex: reintenta por conexión (auto-reconexión) o por envío (`maxRetries`). */
+  // Drena la cola FIFO con mutex. Tres ramas de reintento por entrada:
+  //  - conexión perdida → espera reconexión, reenvía el mismo comando (sin shift)
+  //  - timeout de comando  → reintenta con backoff por entrada hasta maxRetries
+  //  - cliente cerrado      → rechaza y hace shift
   async function processQueue(): Promise<void> {
     if (isProcessing) return
     isProcessing = true
@@ -253,7 +249,6 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327TcpClient 
           }
         }
         const result = await sendCommandOnce(entry.cmd)
-        // Éxito: la sesión de reconexión termina (estado y backoff se resetean)
         reconnectAttempt = 0
         reconnectStartedAt = 0
         reconnectState = 'connected'
@@ -264,10 +259,8 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327TcpClient 
           entry.reject(err as Error)
           commandQueue.shift()
         } else if (isConnectionError(err)) {
-          // Fallo de conexión: espera a la auto-reconexión y reintenta el mismo comando (sin shift)
           await reconnect()
         } else if (entry.attempts < maxRetries) {
-          // Fallo de envío (timeout del prompt ">"): reintento con backoff
           entry.attempts++
           await sleep(backoffMs * 2 ** entry.attempts)
         } else {
@@ -279,7 +272,6 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327TcpClient 
     isProcessing = false
   }
 
-  /** Encola el comando y arranca el drenado de la cola. */
   async function sendCommand(cmd: string): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       commandQueue.push({ cmd, resolve, reject, attempts: 0 })
@@ -287,7 +279,9 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327TcpClient 
     })
   }
 
-  /** Cierre graceful: detiene la reconexión, destruye el socket y rechaza la cola con "Connection closed". */
+  // `close()` despierta a quien esté esperando la reconexión pendiente
+  // (`reconnectResolve`) para que el drainer no quede colgado con
+  // `isProcessing` en true tras cancelar el timer.
   async function close(): Promise<void> {
     if (reconnectState === 'closed') return
     reconnectState = 'closed'
@@ -295,9 +289,6 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327TcpClient 
       clearTimeout(reconnectTimer)
       reconnectTimer = null
     }
-    // Despierta a quien esté esperando la reconexión pendiente: sin esto, un
-    // `close()` durante la reconexión dejaría al drainer colgado para siempre
-    // (timer cancelado, promesa nunca resuelta) con `isProcessing` en true.
     if (reconnectResolve !== null) {
       reconnectResolve()
       reconnectResolve = null
