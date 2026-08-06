@@ -14,10 +14,18 @@ import {
   resetEmbeddingCache,
 } from '@/infrastructure/persistence/vector/embedding.js'
 
+/**
+ * Imita la forma REAL del tensor de transformers.js.
+ *
+ * Con `pooling: 'mean'` la salida es de forma `[lote, dimensiones]`, asi que `tolist()`
+ * devuelve un array ANIDADO. El mock anterior devolvia uno plano, y contra esa suposicion
+ * falsa se escribio el codigo de produccion: `createEmbedding` devolvia un array de
+ * longitud 1 en vez de 384, y ningun test lo veia.
+ */
 function makeMockTensor(values: number[]) {
   return {
     data: new Float32Array(values),
-    tolist: () => [...values],
+    tolist: () => [[...values]],
   }
 }
 

@@ -4,6 +4,7 @@ const configSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
   DB_PATH: z.string().default('data/diagnostics.db'),
+  LANCEDB_PATH: z.string().min(1).default('data/lancedb'),
   OBD_MODE: z.enum(['sync', 'tcp']).default('sync'),
   ELM327_HOST: z.string().default('localhost'),
   ELM327_PORT: z.coerce.number().int().positive().default(35000),
