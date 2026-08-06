@@ -71,13 +71,13 @@
 
 ## 4. Actualizar tests del controlador (REFACTOR)
 
-- [ ] 4.1 Actualizar `tests/unit/infrastructure/http/routes/diagnosis.routes.test.ts`:
+- [x] 4.1 Actualizar `tests/unit/infrastructure/http/routes/diagnosis.routes.test.ts`:
   - Crear mock `DiagnosisService` en vez de mockear `ObdRepository` y `LlmClientPort` por separado
   - Adaptar assertions a los métodos mock del servicio
   - Verificar que los status codes y respuestas son idénticos a antes del refactor
   - Añadir test: `DiagnosisScenarioNotFoundError` → 404
   - Añadir test: `CognitiveDiagnosisUnavailableError` → 404
-- [ ] 4.2 Verificar que los tests de integración/unit de `DiagnosisService` cubren los mismos escenarios que antes cubría el controlador
+- [x] 4.2 Verificar que los tests de integración/unit de `DiagnosisService` cubren los mismos escenarios que antes cubría el controlador
 
 ## 5. Verificación final (Zero Broken Windows)
 
