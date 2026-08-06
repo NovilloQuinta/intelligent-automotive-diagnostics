@@ -2,11 +2,11 @@ import { z } from 'zod'
 import Anthropic from '@anthropic-ai/sdk'
 import type { McpToolDefinition } from '@/application/dto/McpToolDefinition.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
-import type { LlmMessageInput } from '@/application/dto/LlmMessageInput.js'
 import type { LlmSingleResponse } from '@/application/dto/LlmSingleResponse.js'
+import type { LlmConversationItem } from '@/application/dto/LlmMessageInput.js'
 import { mcpToolDefinitionSchema } from '@/infrastructure/llm/toolDefinitionSchema.js'
-import { wrapSdkError } from '@/infrastructure/llm/sdkErrorUtils.js'
 import { composeLlmClient } from '@/infrastructure/llm/composeLlmClient.js'
+import { createLlmAdapter, buildMessages } from '@/infrastructure/llm/createLlmAdapter.js'
 
 const DEFAULT_MODEL = 'claude-sonnet-4-20250514'
 const DEFAULT_TIMEOUT_MS = 30_000
@@ -59,29 +59,32 @@ const anthropicClientConfigSchema = z.object({
   timeoutMs: z.number().int().positive().max(120_000).optional(),
 })
 
-function buildAnthropicMessages(input: LlmMessageInput): Anthropic.Messages.MessageParam[] {
-  const { userMessage, conversationHistory } = input
-  if (!conversationHistory || conversationHistory.length === 0) {
-    return [{ role: 'user', content: userMessage }]
-  }
-  return conversationHistory.map((item): Anthropic.Messages.MessageParam => {
-    if (item.__type === 'user_message') return { role: 'user', content: item.content }
-    if (item.__type === 'raw_response') {
-      const raw = item.data as Anthropic.Messages.Message
-      return { role: 'assistant', content: raw.content }
-    }
-    return {
-      role: 'user',
-      content: [
-        {
-          type: 'tool_result' as const,
-          tool_use_id: item.toolCallId,
-          content: item.content,
-          is_error: item.isError,
-        },
-      ],
-    }
-  })
+type AnthropicParsedConfig = z.infer<typeof anthropicClientConfigSchema>
+
+function buildAnthropicMessages(
+  conversationHistory: readonly LlmConversationItem[] | undefined,
+  userMessage: string,
+  _systemPrompt: string,
+): Anthropic.Messages.MessageParam[] {
+  return buildMessages<Anthropic.Messages.MessageParam>(
+    {
+      buildInitial: (um) => [{ role: 'user', content: um }],
+      buildUserMessage: (content) => ({ role: 'user', content }),
+      buildRawResponse: (data) => {
+        const raw = data as Anthropic.Messages.Message
+        return { role: 'assistant', content: raw.content }
+      },
+      buildToolResult: (callId, content, isError) => ({
+        role: 'user',
+        content: [
+          { type: 'tool_result' as const, tool_use_id: callId, content, is_error: isError },
+        ],
+      }),
+    },
+    conversationHistory,
+    userMessage,
+    _systemPrompt,
+  )
 }
 
 function parseAnthropicResponse(response: Anthropic.Messages.Message): LlmSingleResponse {
@@ -99,36 +102,33 @@ function parseAnthropicResponse(response: Anthropic.Messages.Message): LlmSingle
   }
 }
 
-function createThinAdapter(config: AnthropicClientConfig) {
-  const parsed = anthropicClientConfigSchema.parse(config)
-  const model = parsed.model ?? DEFAULT_MODEL
-  const client = new Anthropic({
-    apiKey: parsed.apiKey,
-    timeout: parsed.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-  })
-
-  async function sendSingleMessage(input: LlmMessageInput): Promise<LlmSingleResponse> {
-    const messages = buildAnthropicMessages(input)
-    let response: Anthropic.Messages.Message
-    try {
-      response = await client.messages.create({
-        model,
-        max_tokens: DEFAULT_MAX_TOKENS,
-        system: input.systemPrompt,
-        messages,
-        tools: input.tools.map(toAnthropicTool),
-      })
-    } catch (error: unknown) {
-      wrapSdkError('Anthropic', error)
-    }
-    return parseAnthropicResponse(response)
-  }
-
-  return { sendSingleMessage }
-}
+const createThinAdapter = createLlmAdapter<
+  AnthropicParsedConfig,
+  Anthropic,
+  Anthropic.Messages.Message
+>({
+  configSchema: anthropicClientConfigSchema,
+  createSdkClient: (parsedConfig) =>
+    new Anthropic({
+      apiKey: parsedConfig.apiKey,
+      timeout: parsedConfig.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    }),
+  callSdkApi: async (client, messages, tools, systemPrompt, parsedConfig) => {
+    return client.messages.create({
+      model: parsedConfig.model ?? DEFAULT_MODEL,
+      max_tokens: DEFAULT_MAX_TOKENS,
+      system: systemPrompt,
+      messages: messages as Anthropic.Messages.MessageParam[],
+      tools: tools.map(toAnthropicTool),
+    })
+  },
+  buildMessages: buildAnthropicMessages,
+  parseResponse: parseAnthropicResponse,
+  providerLabel: 'Anthropic',
+})
 
 /** Crea un cliente LLM que se comunica con la API de Anthropic Claude. */
 export function createAnthropicClient(config: AnthropicClientConfig): LlmClientPort {
   const parsed = anthropicClientConfigSchema.parse(config)
-  return composeLlmClient(createThinAdapter(config), parsed.maxIterations)
+  return composeLlmClient(createThinAdapter(config).sendSingleMessage, parsed.maxIterations)
 }

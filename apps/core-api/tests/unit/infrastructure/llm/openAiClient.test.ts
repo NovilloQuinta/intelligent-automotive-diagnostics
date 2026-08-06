@@ -112,12 +112,14 @@ describe('OpenAiClient', () => {
       openAiTextResponse('El diagnostico indica fallo en el sensor MAF.'),
     )
 
-    const result = await client.sendMessage({
-      systemPrompt: 'Eres un mecanico experto.',
-      userMessage: 'RPM 0, coolant 95C, DTC P0101',
-      tools: [],
+    const result = await client.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico experto.',
+        userMessage: 'RPM 0, coolant 95C, DTC P0101',
+        tools: [],
+      },
       handler,
-    })
+    )
 
     expect(result.text).toBe('El diagnostico indica fallo en el sensor MAF.')
     expect(result.toolCalls).toEqual([])
@@ -137,12 +139,14 @@ describe('OpenAiClient', () => {
 
     const mockHandler = vi.fn().mockResolvedValue('RPM value: 800')
 
-    const result = await client.sendMessage({
-      systemPrompt: 'Eres un mecanico experto.',
-      userMessage: 'Dame RPM',
-      tools: [sampleToolDef],
-      handler: mockHandler,
-    })
+    const result = await client.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico experto.',
+        userMessage: 'Dame RPM',
+        tools: [sampleToolDef],
+      },
+      mockHandler,
+    )
 
     expect(mockCreate).toHaveBeenCalledTimes(2)
     expect(mockHandler).toHaveBeenCalledTimes(1)
@@ -177,16 +181,18 @@ describe('OpenAiClient', () => {
       .mockResolvedValueOnce('DTCs: P0101, P0302')
       .mockResolvedValueOnce('VIN: WAUZZZ8X')
 
-    const result = await client.sendMessage({
-      systemPrompt: 'Eres un mecanico experto.',
-      userMessage: 'Diagnostico completo',
-      tools: [
-        sampleToolDef,
-        { name: 'get_dtc_codes', description: 'Get DTCs', schema: {} as Record<string, unknown> },
-        { name: 'read_vin', description: 'Read VIN', schema: {} as Record<string, unknown> },
-      ],
-      handler: mockHandler,
-    })
+    const result = await client.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico experto.',
+        userMessage: 'Diagnostico completo',
+        tools: [
+          sampleToolDef,
+          { name: 'get_dtc_codes', description: 'Get DTCs', schema: {} as Record<string, unknown> },
+          { name: 'read_vin', description: 'Read VIN', schema: {} as Record<string, unknown> },
+        ],
+      },
+      mockHandler,
+    )
 
     expect(mockCreate).toHaveBeenCalledTimes(4)
     expect(mockHandler).toHaveBeenCalledTimes(3)
@@ -212,12 +218,14 @@ describe('OpenAiClient', () => {
 
     const mockHandler = vi.fn().mockRejectedValue(new Error('OBD timeout'))
 
-    const result = await client.sendMessage({
-      systemPrompt: 'Eres un mecanico experto.',
-      userMessage: 'Diagnostico',
-      tools: [sampleToolDef],
-      handler: mockHandler,
-    })
+    const result = await client.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico experto.',
+        userMessage: 'Diagnostico',
+        tools: [sampleToolDef],
+      },
+      mockHandler,
+    )
 
     expect(mockCreate).toHaveBeenCalledTimes(2)
     expect(result.toolCalls).toHaveLength(1)
@@ -236,12 +244,14 @@ describe('OpenAiClient', () => {
 
     const mockHandler = vi.fn()
 
-    const result = await client.sendMessage({
-      systemPrompt: 'Eres un mecanico experto.',
-      userMessage: 'Diagnostico',
-      tools: [sampleToolDef], // solo read_pid registrada
-      handler: mockHandler,
-    })
+    const result = await client.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico experto.',
+        userMessage: 'Diagnostico',
+        tools: [sampleToolDef], // solo read_pid registrada
+      },
+      mockHandler,
+    )
 
     expect(mockHandler).not.toHaveBeenCalled()
     expect(result.toolCalls).toHaveLength(1)
@@ -268,12 +278,14 @@ describe('OpenAiClient', () => {
     const mockHandler = vi.fn().mockResolvedValue('RPM: 800')
 
     await expect(
-      client.sendMessage({
-        systemPrompt: 'Eres un mecanico.',
-        userMessage: 'Diagnostico',
-        tools: [sampleToolDef],
-        handler: mockHandler,
-      }),
+      client.sendMessage(
+        {
+          systemPrompt: 'Eres un mecanico.',
+          userMessage: 'Diagnostico',
+          tools: [sampleToolDef],
+        },
+        mockHandler,
+      ),
     ).rejects.toThrow('Exceeded maximum tool call iterations')
 
     expect(mockCreate).toHaveBeenCalledTimes(10)
@@ -306,12 +318,14 @@ describe('OpenAiClient', () => {
     const mockHandler = vi.fn().mockResolvedValue('RPM: 800')
 
     await expect(
-      customClient.sendMessage({
-        systemPrompt: 'Eres un mecanico.',
-        userMessage: 'Diagnostico',
-        tools: [sampleToolDef],
-        handler: mockHandler,
-      }),
+      customClient.sendMessage(
+        {
+          systemPrompt: 'Eres un mecanico.',
+          userMessage: 'Diagnostico',
+          tools: [sampleToolDef],
+        },
+        mockHandler,
+      ),
     ).rejects.toThrow('maximum tool call iterations (3)')
 
     expect(mockCreate).toHaveBeenCalledTimes(3)
@@ -326,12 +340,14 @@ describe('OpenAiClient', () => {
     mockCreate.mockRejectedValue(timeoutErr)
 
     await expect(
-      client.sendMessage({
-        systemPrompt: 'Eres un mecanico.',
-        userMessage: 'Diagnostico',
-        tools: [],
+      client.sendMessage(
+        {
+          systemPrompt: 'Eres un mecanico.',
+          userMessage: 'Diagnostico',
+          tools: [],
+        },
         handler,
-      }),
+      ),
     ).rejects.toThrow(LlmTimeoutError)
   })
 
@@ -341,12 +357,14 @@ describe('OpenAiClient', () => {
     mockCreate.mockRejectedValue(new Error('401 Unauthorized'))
 
     await expect(
-      client.sendMessage({
-        systemPrompt: 'Eres un mecanico.',
-        userMessage: 'Diagnostico',
-        tools: [],
+      client.sendMessage(
+        {
+          systemPrompt: 'Eres un mecanico.',
+          userMessage: 'Diagnostico',
+          tools: [],
+        },
         handler,
-      }),
+      ),
     ).rejects.toThrow(LlmApiError)
   })
 
@@ -356,12 +374,14 @@ describe('OpenAiClient', () => {
     mockCreate.mockRejectedValue(new Error('Sensitive internal details'))
 
     try {
-      await client.sendMessage({
-        systemPrompt: 'Eres un mecanico.',
-        userMessage: 'Diagnostico',
-        tools: [],
+      await client.sendMessage(
+        {
+          systemPrompt: 'Eres un mecanico.',
+          userMessage: 'Diagnostico',
+          tools: [],
+        },
         handler,
-      })
+      )
       expect.fail('Expected an error to be thrown')
     } catch (error: unknown) {
       expect(error).toBeInstanceOf(LlmApiError)
@@ -396,12 +416,14 @@ describe('OpenAiClient', () => {
 
     mockCreate.mockResolvedValueOnce(lengthResponse)
 
-    const result = await client.sendMessage({
-      systemPrompt: 'Eres un mecanico.',
-      userMessage: 'Diagnostico',
-      tools: [],
+    const result = await client.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Diagnostico',
+        tools: [],
+      },
       handler,
-    })
+    )
 
     expect(result.text).toBe('Diagnostico truncado...')
     expect(result.toolCalls).toEqual([])
@@ -424,15 +446,17 @@ describe('OpenAiClient', () => {
       .mockResolvedValueOnce('RPM: 800')
       .mockResolvedValueOnce('DTCs: P0101')
 
-    const result = await client.sendMessage({
-      systemPrompt: 'Eres un mecanico.',
-      userMessage: 'Diagnostico completo',
-      tools: [
-        sampleToolDef,
-        { name: 'get_dtc_codes', description: 'Get DTCs', schema: {} as Record<string, unknown> },
-      ],
-      handler: mockHandler,
-    })
+    const result = await client.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Diagnostico completo',
+        tools: [
+          sampleToolDef,
+          { name: 'get_dtc_codes', description: 'Get DTCs', schema: {} as Record<string, unknown> },
+        ],
+      },
+      mockHandler,
+    )
 
     expect(mockCreate).toHaveBeenCalledTimes(2)
     expect(mockHandler).toHaveBeenCalledTimes(2)
@@ -459,12 +483,14 @@ describe('OpenAiClient', () => {
 
     const mockHandler = vi.fn().mockResolvedValue('Parsed')
 
-    await client.sendMessage({
-      systemPrompt: 'Eres un mecanico.',
-      userMessage: 'Diagnostico',
-      tools: [sampleToolDef],
-      handler: mockHandler,
-    })
+    await client.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Diagnostico',
+        tools: [sampleToolDef],
+      },
+      mockHandler,
+    )
 
     expect(mockHandler).toHaveBeenCalledWith('read_pid', {
       mode: '01',

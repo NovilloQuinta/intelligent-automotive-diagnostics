@@ -39,12 +39,14 @@ describe('ExecuteLlmToolCalling', () => {
     const handler: ToolCallHandler = vi.fn()
     const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10)
 
-    const result = await useCase.execute({
-      systemPrompt: 'Eres un mecanico.',
-      userMessage: 'Diagnostico',
-      tools: [],
+    const result = await useCase.execute(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Diagnostico',
+        tools: [],
+      },
       handler,
-    })
+    )
 
     expect(result.text).toBe('Diagnostico completo.')
     expect(result.toolCalls).toEqual([])
@@ -67,12 +69,14 @@ describe('ExecuteLlmToolCalling', () => {
     const mockHandler = vi.fn<ToolCallHandler>().mockResolvedValue('RPM value: 800')
     const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10)
 
-    const result = await useCase.execute({
-      systemPrompt: 'Eres un mecanico.',
-      userMessage: 'Dame RPM',
-      tools: [sampleToolDef],
-      handler: mockHandler,
-    })
+    const result = await useCase.execute(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Dame RPM',
+        tools: [sampleToolDef],
+      },
+      mockHandler,
+    )
 
     expect(mockSendSingle).toHaveBeenCalledTimes(2)
     expect(mockHandler).toHaveBeenCalledTimes(1)
@@ -110,16 +114,18 @@ describe('ExecuteLlmToolCalling', () => {
       .mockResolvedValueOnce('VIN: WAUZZZ8X')
     const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10)
 
-    const result = await useCase.execute({
-      systemPrompt: 'Eres un mecanico.',
-      userMessage: 'Diagnostico completo',
-      tools: [
-        sampleToolDef,
-        { name: 'get_dtc_codes', description: 'Get DTCs', schema: {} as Record<string, unknown> },
-        { name: 'read_vin', description: 'Read VIN', schema: {} as Record<string, unknown> },
-      ],
-      handler: mockHandler,
-    })
+    const result = await useCase.execute(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Diagnostico completo',
+        tools: [
+          sampleToolDef,
+          { name: 'get_dtc_codes', description: 'Get DTCs', schema: {} as Record<string, unknown> },
+          { name: 'read_vin', description: 'Read VIN', schema: {} as Record<string, unknown> },
+        ],
+      },
+      mockHandler,
+    )
 
     expect(mockSendSingle).toHaveBeenCalledTimes(4)
     expect(mockHandler).toHaveBeenCalledTimes(3)
@@ -143,12 +149,14 @@ describe('ExecuteLlmToolCalling', () => {
     const mockHandler = vi.fn<ToolCallHandler>().mockRejectedValue(new Error('OBD timeout'))
     const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10)
 
-    const result = await useCase.execute({
-      systemPrompt: 'Eres un mecanico.',
-      userMessage: 'Diagnostico',
-      tools: [sampleToolDef],
-      handler: mockHandler,
-    })
+    const result = await useCase.execute(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Diagnostico',
+        tools: [sampleToolDef],
+      },
+      mockHandler,
+    )
 
     expect(mockSendSingle).toHaveBeenCalledTimes(2)
     expect(result.toolCalls).toHaveLength(1)
@@ -168,12 +176,14 @@ describe('ExecuteLlmToolCalling', () => {
 
     const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10)
 
-    const result = await useCase.execute({
-      systemPrompt: 'Eres un mecanico.',
-      userMessage: 'Diagnostico',
-      tools: [sampleToolDef], // solo read_pid registrada
-      handler: vi.fn(),
-    })
+    const result = await useCase.execute(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Diagnostico',
+        tools: [sampleToolDef], // solo read_pid registrada
+      },
+      vi.fn(),
+    )
 
     expect(result.toolCalls).toHaveLength(1)
     expect(result.toolCalls[0].tool).toBe('unknown_tool')
@@ -196,12 +206,14 @@ describe('ExecuteLlmToolCalling', () => {
     const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10)
 
     await expect(
-      useCase.execute({
-        systemPrompt: 'Eres un mecanico.',
-        userMessage: 'Diagnostico',
-        tools: [sampleToolDef],
-        handler: mockHandler,
-      }),
+      useCase.execute(
+        {
+          systemPrompt: 'Eres un mecanico.',
+          userMessage: 'Diagnostico',
+          tools: [sampleToolDef],
+        },
+        mockHandler,
+      ),
     ).rejects.toThrow('Exceeded maximum tool call iterations')
 
     expect(mockSendSingle).toHaveBeenCalledTimes(10)
@@ -223,12 +235,14 @@ describe('ExecuteLlmToolCalling', () => {
     const useCase = new ExecuteLlmToolCalling(mockSendSingle, 3)
 
     await expect(
-      useCase.execute({
-        systemPrompt: 'Eres un mecanico.',
-        userMessage: 'Diagnostico',
-        tools: [sampleToolDef],
-        handler: mockHandler,
-      }),
+      useCase.execute(
+        {
+          systemPrompt: 'Eres un mecanico.',
+          userMessage: 'Diagnostico',
+          tools: [sampleToolDef],
+        },
+        mockHandler,
+      ),
     ).rejects.toThrow('maximum tool call iterations (3)')
 
     expect(mockSendSingle).toHaveBeenCalledTimes(3)

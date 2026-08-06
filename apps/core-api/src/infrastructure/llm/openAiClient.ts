@@ -2,12 +2,12 @@ import { z } from 'zod'
 import OpenAI from 'openai'
 import type { McpToolDefinition } from '@/application/dto/McpToolDefinition.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
-import type { LlmMessageInput } from '@/application/dto/LlmMessageInput.js'
 import type { LlmSingleResponse } from '@/application/dto/LlmSingleResponse.js'
+import type { LlmConversationItem } from '@/application/dto/LlmMessageInput.js'
 import { mcpToolDefinitionSchema } from '@/infrastructure/llm/toolDefinitionSchema.js'
-import { wrapSdkError } from '@/infrastructure/llm/sdkErrorUtils.js'
 import { LlmApiError } from '@/infrastructure/llm/llmErrors.js'
 import { composeLlmClient } from '@/infrastructure/llm/composeLlmClient.js'
+import { createLlmAdapter, buildMessages } from '@/infrastructure/llm/createLlmAdapter.js'
 
 const DEFAULT_TIMEOUT_MS = 30_000
 
@@ -28,6 +28,8 @@ const openAiClientConfigSchema = z.object({
   timeoutMs: z.number().int().positive().max(120_000).optional(),
 })
 
+type OpenAiParsedConfig = z.infer<typeof openAiClientConfigSchema>
+
 function toOpenAiTool(tool: McpToolDefinition): OpenAI.Chat.Completions.ChatCompletionTool {
   const parsed = mcpToolDefinitionSchema.parse(tool)
   return {
@@ -41,29 +43,37 @@ function toOpenAiTool(tool: McpToolDefinition): OpenAI.Chat.Completions.ChatComp
 }
 
 function buildOpenAiMessages(
-  input: LlmMessageInput,
+  conversationHistory: readonly LlmConversationItem[] | undefined,
+  userMessage: string,
+  systemPrompt: string,
 ): OpenAI.Chat.Completions.ChatCompletionMessageParam[] {
-  const { systemPrompt, userMessage, conversationHistory } = input
-  if (!conversationHistory || conversationHistory.length === 0) {
-    return [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userMessage },
-    ]
-  }
-  return conversationHistory.map((item): OpenAI.Chat.Completions.ChatCompletionMessageParam => {
-    if (item.__type === 'user_message') return { role: 'user', content: item.content }
-    if (item.__type === 'raw_response') {
-      const raw = item.data as OpenAI.Chat.Completions.ChatCompletion
-      const msg = raw.choices[0]?.message
-      return {
-        role: 'assistant',
-        content: msg?.content ?? null,
-        tool_calls: msg?.tool_calls as
-          OpenAI.Chat.Completions.ChatCompletionMessageToolCall[] | undefined,
-      }
-    }
-    return { role: 'tool', tool_call_id: item.toolCallId, content: item.content }
-  })
+  return buildMessages<OpenAI.Chat.Completions.ChatCompletionMessageParam>(
+    {
+      buildInitial: (um, sp) => [
+        { role: 'system', content: sp },
+        { role: 'user', content: um },
+      ],
+      buildUserMessage: (content) => ({ role: 'user', content }),
+      buildRawResponse: (data) => {
+        const raw = data as OpenAI.Chat.Completions.ChatCompletion
+        const msg = raw.choices[0]?.message
+        return {
+          role: 'assistant',
+          content: msg?.content ?? null,
+          tool_calls: msg?.tool_calls as
+            OpenAI.Chat.Completions.ChatCompletionMessageToolCall[] | undefined,
+        }
+      },
+      buildToolResult: (callId, content) => ({
+        role: 'tool',
+        tool_call_id: callId,
+        content,
+      }),
+    },
+    conversationHistory,
+    userMessage,
+    systemPrompt,
+  )
 }
 
 function parseOpenAiResponse(response: OpenAI.Chat.Completions.ChatCompletion): LlmSingleResponse {
@@ -101,34 +111,36 @@ function parseOpenAiResponse(response: OpenAI.Chat.Completions.ChatCompletion): 
   return { text: null, toolCalls, raw: response }
 }
 
-function createThinAdapter(config: OpenAiClientConfig) {
-  const parsed = openAiClientConfigSchema.parse(config)
-  const timeoutMs = parsed.timeoutMs ?? DEFAULT_TIMEOUT_MS
-  const client = new OpenAI({
-    apiKey: parsed.apiKey,
-    baseURL: parsed.baseURL,
-    timeout: timeoutMs,
-  })
-
-  async function sendSingleMessage(input: LlmMessageInput): Promise<LlmSingleResponse> {
-    const messages = buildOpenAiMessages(input)
-    let response: OpenAI.Chat.Completions.ChatCompletion
-    try {
-      response = await client.chat.completions.create(
-        { model: parsed.model, messages, tools: input.tools.map(toOpenAiTool), stream: false },
-        { timeout: timeoutMs },
-      )
-    } catch (error: unknown) {
-      wrapSdkError('OpenAI', error)
-    }
-    return parseOpenAiResponse(response)
-  }
-
-  return { sendSingleMessage }
-}
+const createThinAdapter = createLlmAdapter<
+  OpenAiParsedConfig,
+  OpenAI,
+  OpenAI.Chat.Completions.ChatCompletion
+>({
+  configSchema: openAiClientConfigSchema,
+  createSdkClient: (parsedConfig) =>
+    new OpenAI({
+      apiKey: parsedConfig.apiKey,
+      baseURL: parsedConfig.baseURL,
+      timeout: parsedConfig.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+    }),
+  callSdkApi: async (client, messages, tools, _systemPrompt, parsedConfig) => {
+    return client.chat.completions.create(
+      {
+        model: parsedConfig.model,
+        messages,
+        tools: tools.map(toOpenAiTool),
+        stream: false,
+      } as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
+      { timeout: parsedConfig.timeoutMs ?? DEFAULT_TIMEOUT_MS },
+    )
+  },
+  buildMessages: buildOpenAiMessages,
+  parseResponse: parseOpenAiResponse,
+  providerLabel: 'OpenAI',
+})
 
 /** Crea un cliente LLM provider-agnostic via API compatible con OpenAI. */
 export function createOpenAiClient(config: OpenAiClientConfig): LlmClientPort {
   const parsed = openAiClientConfigSchema.parse(config)
-  return composeLlmClient(createThinAdapter(config), parsed.maxIterations)
+  return composeLlmClient(createThinAdapter(config).sendSingleMessage, parsed.maxIterations)
 }
