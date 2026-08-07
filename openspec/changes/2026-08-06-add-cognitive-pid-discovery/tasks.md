@@ -1,6 +1,6 @@
 ## 1. RED — Dominio: catálogo de PID observations
 
-- [ ] 1.1 Crear `tests/unit/domain/pidObservationCatalog.test.ts`:
+- [x] 1.1 Crear `tests/unit/domain/pidObservationCatalog.test.ts`:
   - El catálogo contiene entradas para `01 0C`, `01 05`, `01 0D`, `01 0F`, `01 11`, `01 04`, `01 42` con `name`/`unit` definidos
   - `resolvePidObservationStatus(value, def)`: `review` si `value > maxValue` cuando `maxValue` está definido
   - `resolvePidObservationStatus`: `review` si `value < minValue` cuando `minValue` está definido (caso `01 42`, voltaje bajo)
@@ -9,8 +9,8 @@
 
 ## 2. GREEN — Implementar catálogo de dominio
 
-- [ ] 2.1 Modificar `src/domain/pids.ts`: añadir `PID_ENGINE_LOAD = '04'`, `PID_THROTTLE_POSITION = '11'`, `PID_CONTROL_MODULE_VOLTAGE = '42'` con TSDoc
-- [ ] 2.2 Crear `src/domain/pidObservationCatalog.ts`:
+- [x] 2.1 Modificar `src/domain/pids.ts`: añadir `PID_ENGINE_LOAD = '04'`, `PID_THROTTLE_POSITION = '11'`, `PID_CONTROL_MODULE_VOLTAGE = '42'` con TSDoc
+- [x] 2.2 Crear `src/domain/pidObservationCatalog.ts`:
   - `interface PidObservationDefinition { name: string; unit?: string; minValue?: number; maxValue?: number }`
   - `PID_OBSERVATION_CATALOG: ReadonlyMap<string, PidObservationDefinition>` con las 7 entradas de la tabla de `design.md`
   - `resolvePidObservationStatus(value: number, def: PidObservationDefinition): 'ok' | 'review'`
