@@ -41,6 +41,8 @@ import {
 } from '@/application/knowledge/diagnosisKnowledgeMapper.js'
 import type { EmbeddingGenerator } from '@/application/ports/EmbeddingGenerator.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
+import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
+import { createSerpApiClient } from '@/infrastructure/web-search/serpApiClient.js'
 import { LiveData } from '@/domain/value-objects/liveData.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
@@ -226,6 +228,12 @@ export async function createKnowledgeStack(
   }
 }
 
+/** Crea el puerto de búsqueda web si la API key está configurada. */
+export function createWebSearchPort(config: AppConfig): WebSearchPort | undefined {
+  if (!config.WEB_SEARCH_API_KEY) return undefined
+  return createSerpApiClient({ apiKey: config.WEB_SEARCH_API_KEY })
+}
+
 /** Composition Root: cablea todas las dependencias y devuelve la app Express configurada. */
 export async function buildApp(config: AppConfig): Promise<Application> {
   const { db, auditRepo, userRepo, tokenStore } = createPersistenceRepositories(config)
@@ -241,6 +249,7 @@ export async function buildApp(config: AppConfig): Promise<Application> {
 
   const llmClient = createLlmClient(config, logger)
   const knowledgeStack = await createKnowledgeStack(config, logger)
+  const webSearch = createWebSearchPort(config)
 
   let diagnosisService: DiagnosisService
 
@@ -253,6 +262,7 @@ export async function buildApp(config: AppConfig): Promise<Application> {
       llmClient,
       logger,
       knowledgeStack,
+      webSearch,
     })
   } else {
     const obdRepo = new Elm327TcpRepository({
@@ -265,6 +275,7 @@ export async function buildApp(config: AppConfig): Promise<Application> {
       llmClient,
       logger,
       knowledgeStack,
+      webSearch,
     })
   }
 

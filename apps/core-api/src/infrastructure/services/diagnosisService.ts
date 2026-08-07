@@ -29,6 +29,7 @@ import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
+import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 
 const COGNITIVE_DIAGNOSIS_TIMEOUT_MS = 60_000
 
@@ -108,6 +109,8 @@ export interface DiagnosisServiceOptions {
   readonly llmClient?: LlmClientPort
   /** Stack de conocimiento vectorial RAG; ausente deshabilita busqueda/indexado. */
   readonly knowledgeStack?: KnowledgeStack
+  /** Puerto de búsqueda web externa; ausente deshabilita la tool `web_search`. */
+  readonly webSearch?: WebSearchPort
   readonly logger: LoggerPort
   /** Timeout del diagnostico cognitivo en ms. Por defecto 60 s. */
   readonly cognitiveTimeoutMs?: number
@@ -122,6 +125,7 @@ export class DiagnosisService {
   private readonly obdRepo: ObdRepository | undefined
   private readonly llmClient: LlmClientPort | undefined
   private readonly knowledgeStack: KnowledgeStack | undefined
+  private readonly webSearch: WebSearchPort | undefined
   private readonly logger: LoggerPort
   private readonly cognitiveTimeoutMs: number
   private readonly toolCallTimeoutMs: number
@@ -132,6 +136,7 @@ export class DiagnosisService {
     this.obdRepo = options.obdRepo
     this.llmClient = options.llmClient
     this.knowledgeStack = options.knowledgeStack
+    this.webSearch = options.webSearch
     this.logger = options.logger
     this.cognitiveTimeoutMs = options.cognitiveTimeoutMs ?? COGNITIVE_DIAGNOSIS_TIMEOUT_MS
     this.toolCallTimeoutMs = options.toolCallTimeoutMs ?? DIAGNOSIS_TIMEOUT_MS
@@ -261,7 +266,7 @@ export class DiagnosisService {
     }
     const llmClient = this.llmClient
     const repository = this.resolveRepository(scenarioId)
-    const mcp = createMcpServer(repository, undefined, this.knowledgeStack)
+    const mcp = createMcpServer(repository, undefined, this.knowledgeStack, this.webSearch)
     const tools = mcp.listTools()
     const handler: ToolCallHandler = async (name, args) => {
       const result = await mcp.callTool(name, args)
@@ -304,7 +309,7 @@ export class DiagnosisService {
     args?: Record<string, unknown>,
   ): Promise<string> {
     const repository = this.resolveRepository(scenarioId)
-    const mcp = createMcpServer(repository, undefined, this.knowledgeStack)
+    const mcp = createMcpServer(repository, undefined, this.knowledgeStack, this.webSearch)
     let result: ToolCallResult
     try {
       result = await withTimeout(
