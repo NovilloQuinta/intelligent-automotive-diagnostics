@@ -23,6 +23,7 @@ import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { DiagnosisResult, Severity } from '@/domain/value-objects/diagnosisResult.js'
+import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { LiveData } from '@/domain/value-objects/liveData.js'
 import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
@@ -115,6 +116,18 @@ export class DiagnosisService {
       diagnosisText: this.buildDiagnosisText(result),
       severity: result.severity,
     }
+  }
+
+  /**
+   * Devuelve el freeze frame del DTC seleccionado.
+   *
+   * @param scenarioId — Escenario de simulacion; opcional en modo TCP directo.
+   * @param dtc — Codigo DTC opcional; si se omite, devuelve el del escenario.
+   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe en modo simulacion.
+   */
+  async getFreezeFrame(scenarioId?: string, dtc?: string): Promise<FreezeFrame | null> {
+    const repository = this.resolveRepository(scenarioId)
+    return repository.getFreezeFrame(dtc)
   }
 
   /**

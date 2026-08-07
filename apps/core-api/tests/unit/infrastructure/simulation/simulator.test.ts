@@ -141,4 +141,32 @@ describe('ObdSimulator', () => {
     const simulator = new ObdSimulator(scenarioWithFreeze)
     expect(simulator.getFreezeFrame()).toEqual(freeze)
   })
+
+  it('should return the freeze frame when dtc matches the frame dtcCode', () => {
+    const freeze: FreezeFrame = new FreezeFrame({
+      dtcCode: 'P0301',
+      pidValues: { rpm: 750, speed: 0 },
+    })
+    const scenarioWithFreeze: SimulationScenario = {
+      ...audiIdleScenario,
+      freezeFrame: freeze,
+    }
+    const simulator = new ObdSimulator(scenarioWithFreeze)
+
+    expect(simulator.getFreezeFrame('P0301')).toEqual(freeze)
+  })
+
+  it('should return null when dtc does not match the frame dtcCode', () => {
+    const freeze: FreezeFrame = new FreezeFrame({
+      dtcCode: 'P0301',
+      pidValues: { rpm: 750, speed: 0 },
+    })
+    const scenarioWithFreeze: SimulationScenario = {
+      ...audiIdleScenario,
+      freezeFrame: freeze,
+    }
+    const simulator = new ObdSimulator(scenarioWithFreeze)
+
+    expect(simulator.getFreezeFrame('P0420')).toBeNull()
+  })
 })

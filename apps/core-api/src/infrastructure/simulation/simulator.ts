@@ -65,9 +65,10 @@ export class ObdSimulator {
   }
 
   /** Service 02 — Devuelve los datos de freeze frame simulados como instancia de FreezeFrame. */
-  getFreezeFrame(_dtc?: string): FreezeFrame | null {
+  getFreezeFrame(dtc?: string): FreezeFrame | null {
     const frame = this.scenario.freezeFrame
     if (!frame) return null
+    if (dtc !== undefined && frame.dtcCode !== dtc) return null
     return new FreezeFrame({ dtcCode: frame.dtcCode, pidValues: { ...frame.pidValues } })
   }
 

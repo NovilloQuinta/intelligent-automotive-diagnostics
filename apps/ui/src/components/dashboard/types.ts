@@ -56,6 +56,12 @@ export type TelemetrySnapshot = {
   ts: number;
 };
 
+/** OBD-II freeze frame snapshot as returned by GET /api/freeze-frame. */
+export type FreezeFrame = {
+  dtcCode: string;
+  pidValues: Record<string, number>;
+};
+
 // ---------------------------------------------------------------------------
 // Auth types
 // ---------------------------------------------------------------------------

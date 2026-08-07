@@ -2,6 +2,7 @@ import type {
   AuthTokens,
   AuthUser,
   DiagnosisResponse,
+  FreezeFrame,
   LoginInput,
   RegisterInput,
   Scenario,
@@ -325,6 +326,22 @@ export const api = {
     });
     await assertOk(res, GENERIC_ERROR_MESSAGE);
     return (await res.json()) as DiagnosisResponse;
+  },
+
+  /**
+   * GET /api/freeze-frame — returns the freeze frame for a DTC, or null when
+   * the code (or scenario) has no snapshot.
+   */
+  async getFreezeFrame(
+    scenarioId: string,
+    dtc?: string,
+  ): Promise<FreezeFrame | null> {
+    const query = new URLSearchParams({ scenarioId });
+    if (dtc) query.set("dtc", dtc);
+    const res = await apiFetch(`/api/freeze-frame?${query.toString()}`);
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+    const data = (await res.json()) as { freezeFrame: FreezeFrame | null };
+    return data.freezeFrame;
   },
 
   /** POST /api/mcp/cognitive-diagnosis — AI-powered cognitive analysis. */

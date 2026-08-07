@@ -5,6 +5,7 @@ import {
   CognitiveDiagnosisUnavailableError,
 } from '@/infrastructure/services/errors.js'
 import { Vin } from '@/domain/value-objects/vin.js'
+import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import { VehicleType, type SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmClientPort, ToolCallTrace } from '@/application/ports/LlmClientPort.js'
@@ -202,6 +203,40 @@ describe('DiagnosisService', () => {
         DiagnosisScenarioNotFoundError,
       )
       expect(llmClient.sendMessage).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('getFreezeFrame', () => {
+    it('should delegate to the repository getFreezeFrame with the dtc in TCP mode', async () => {
+      const frame = new FreezeFrame({ dtcCode: 'P0301', pidValues: { rpm: 750 } })
+      const obdRepo = createMockObdRepo()
+      vi.mocked(obdRepo.getFreezeFrame).mockResolvedValue(frame)
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepo,
+        logger: createMockLogger(),
+      })
+
+      const result = await service.getFreezeFrame(undefined, 'P0301')
+
+      expect(result).toEqual(frame)
+      expect(obdRepo.getFreezeFrame).toHaveBeenCalledWith('P0301')
+    })
+
+    it('should resolve the scenario repository and delegate in simulation mode', async () => {
+      const service = new DiagnosisService({ scenarios: mockScenarios, logger: createMockLogger() })
+
+      const result = await service.getFreezeFrame('audi-a3-idle', 'P0301')
+
+      expect(result).toBeNull()
+    })
+
+    it('should throw DiagnosisScenarioNotFoundError for an unknown scenario', async () => {
+      const service = new DiagnosisService({ scenarios: mockScenarios, logger: createMockLogger() })
+
+      await expect(service.getFreezeFrame('no-existe', 'P0301')).rejects.toThrow(
+        DiagnosisScenarioNotFoundError,
+      )
     })
   })
 

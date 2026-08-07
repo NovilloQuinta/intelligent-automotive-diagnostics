@@ -56,6 +56,15 @@ const CognitiveDiagnosisBodyTcpSchema = z.object({
   query: z.string().optional(),
 })
 
+const FreezeFrameQuerySchema = z.object({
+  scenarioId: requiredScenarioId,
+  dtc: z.string().optional(),
+})
+const FreezeFrameQueryTcpSchema = z.object({
+  scenarioId: optionalScenarioId,
+  dtc: z.string().optional(),
+})
+
 /** Controlador HTTP para los endpoints de diagnostico OBD. */
 export class DiagnosisController {
   constructor(
@@ -70,7 +79,7 @@ export class DiagnosisController {
 
   /** POST /api/diagnosis — diagnostico determinista. 400 body invalido, 404 escenario inexistente. */
   diagnose = async (req: Request, res: Response): Promise<void> => {
-    const schema = this.selectBodySchema(DiagnosisBodySchema, DiagnosisBodyTcpSchema)
+    const schema = this.selectSchema(DiagnosisBodySchema, DiagnosisBodyTcpSchema)
     const parsed = schema.safeParse(req.body)
     if (!parsed.success) {
       res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
@@ -97,7 +106,7 @@ export class DiagnosisController {
     }
 
     const { toolName } = paramsParsed.data
-    const bodySchema = this.selectBodySchema(McpToolBodySchema, McpToolBodyTcpSchema)
+    const bodySchema = this.selectSchema(McpToolBodySchema, McpToolBodyTcpSchema)
     const parsed = bodySchema.safeParse(req.body)
     if (!parsed.success) {
       res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
@@ -118,7 +127,7 @@ export class DiagnosisController {
 
   /** POST /api/mcp/cognitive-diagnosis — diagnostico LLM. 404 sin LLM configurado, 504 timeout. */
   cognitiveDiagnosis = async (req: Request, res: Response): Promise<void> => {
-    const bodySchema = this.selectBodySchema(
+    const bodySchema = this.selectSchema(
       CognitiveDiagnosisBodySchema,
       CognitiveDiagnosisBodyTcpSchema,
     )
@@ -139,7 +148,25 @@ export class DiagnosisController {
     }
   }
 
-  private selectBodySchema<T>(required: z.ZodType<T>, optional: z.ZodType<T>): z.ZodType<T> {
+  /** GET /api/freeze-frame — freeze frame del DTC seleccionado. 400 query invalida, 404 escenario inexistente. */
+  freezeFrame = async (req: Request, res: Response): Promise<void> => {
+    const schema = this.selectSchema(FreezeFrameQuerySchema, FreezeFrameQueryTcpSchema)
+    const parsed = schema.safeParse(req.query)
+    if (!parsed.success) {
+      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
+      return
+    }
+
+    try {
+      const result = await this.service.getFreezeFrame(parsed.data.scenarioId, parsed.data.dtc)
+      res.status(200).json({ freezeFrame: result })
+    } catch (err) {
+      if (this.respondIfCommonError(err, res)) return
+      this.respondUnexpected(err, res, 'Freeze frame fetch failed')
+    }
+  }
+
+  private selectSchema<T>(required: z.ZodType<T>, optional: z.ZodType<T>): z.ZodType<T> {
     return this.service.isDirectConnection ? optional : required
   }
 

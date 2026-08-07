@@ -540,6 +540,81 @@ describe("api", () => {
   });
 
   // -----------------------------------------------------------------------
+  // getFreezeFrame
+  // -----------------------------------------------------------------------
+
+  describe("getFreezeFrame", () => {
+    it("GETs /api/freeze-frame with scenarioId and dtc and returns the frame", async () => {
+      setStoredTokens();
+      const frame = { dtcCode: "P0301", pidValues: { "0C": 850 } };
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ freezeFrame: frame }),
+        });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getFreezeFrame("audi-a3-idle", "P0301");
+
+      expect(result).toEqual(frame);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/freeze-frame?scenarioId=audi-a3-idle&dtc=P0301");
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+
+    it("GETs without the dtc param when omitted", async () => {
+      setStoredTokens();
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ freezeFrame: null }),
+        });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getFreezeFrame("audi-a3-idle");
+
+      expect(result).toBeNull();
+      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(url).toBe("/api/freeze-frame?scenarioId=audi-a3-idle");
+    });
+
+    it("returns null when the backend reports no freeze frame for the code", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ freezeFrame: null }),
+        }),
+      );
+
+      const result = await api.getFreezeFrame("audi-a3-idle", "P0420");
+
+      expect(result).toBeNull();
+    });
+
+    it("throws the generic message on a 500, never the raw server error", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: "OBD exploded" }),
+        }),
+      );
+
+      await expect(api.getFreezeFrame("audi-a3-idle", "P0301")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // getCapabilities
   // -----------------------------------------------------------------------
 

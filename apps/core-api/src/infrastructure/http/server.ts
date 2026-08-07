@@ -158,6 +158,7 @@ export function createServer(deps: ServerDependencies): express.Application {
   const cognitiveLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 5 })
 
   app.use('/api/diagnosis', diagnosisLimiter)
+  app.use('/api/freeze-frame', diagnosisLimiter)
   app.use('/api/mcp/cognitive-diagnosis', cognitiveLimiter)
 
   app.use('/api', createDiagnosisRoutes(deps.diagnosisController))

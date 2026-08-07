@@ -100,7 +100,12 @@ const cognitiveOutput = {
 
 type ServiceStub = Pick<
   DiagnosisService,
-  'isDirectConnection' | 'listScenarios' | 'diagnose' | 'cognitiveDiagnosis' | 'callMcpTool'
+  | 'isDirectConnection'
+  | 'listScenarios'
+  | 'diagnose'
+  | 'cognitiveDiagnosis'
+  | 'callMcpTool'
+  | 'getFreezeFrame'
 >
 
 /** Stub de DiagnosisService: el controlador solo consume su superficie publica. */
@@ -111,6 +116,7 @@ function createServiceStub(overrides: Partial<ServiceStub> = {}): DiagnosisServi
     diagnose: vi.fn(async () => diagnoseOutput),
     cognitiveDiagnosis: vi.fn(async () => cognitiveOutput),
     callMcpTool: vi.fn(async () => '750'),
+    getFreezeFrame: vi.fn(async () => null),
     ...overrides,
   } as unknown as DiagnosisService
 }
@@ -196,6 +202,71 @@ describe('diagnosisRoutes', () => {
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('Internal server error')
       expect(JSON.stringify(res.body)).not.toContain('repo exploded')
+    })
+  })
+
+  describe('GET /api/freeze-frame', () => {
+    const frame = { dtcCode: 'P0301', pidValues: { '0C': 850 } }
+
+    it('should return the freeze frame for a matching dtc', async () => {
+      const service = createServiceStub({
+        getFreezeFrame: vi.fn(async () => frame),
+      })
+      const { app } = createApp(service)
+      const res = await request(app)
+        .get('/api/freeze-frame')
+        .query({ scenarioId: 'audi-a3-idle', dtc: 'P0301' })
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({ freezeFrame: frame })
+      expect(service.getFreezeFrame).toHaveBeenCalledWith('audi-a3-idle', 'P0301')
+    })
+
+    it('should return 200 with freezeFrame null when the dtc has no frame', async () => {
+      const service = createServiceStub({
+        getFreezeFrame: vi.fn(async () => null),
+      })
+      const { app } = createApp(service)
+      const res = await request(app)
+        .get('/api/freeze-frame')
+        .query({ scenarioId: 'audi-a3-idle', dtc: 'P0420' })
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({ freezeFrame: null })
+      expect(service.getFreezeFrame).toHaveBeenCalledWith('audi-a3-idle', 'P0420')
+    })
+
+    it('should return 404 when the scenario does not exist', async () => {
+      const service = createServiceStub({
+        getFreezeFrame: vi.fn(async () => {
+          throw new DiagnosisScenarioNotFoundError()
+        }),
+      })
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/freeze-frame').query({ scenarioId: 'no-existe' })
+
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe('Scenario not found')
+    })
+
+    it('should call the service without dtc when the query omits it', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/freeze-frame').query({ scenarioId: 'audi-a3-idle' })
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({ freezeFrame: null })
+      expect(service.getFreezeFrame).toHaveBeenCalledWith('audi-a3-idle', undefined)
+    })
+
+    it('should return 400 when scenarioId is missing', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/freeze-frame')
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid request body')
+      expect(service.getFreezeFrame).not.toHaveBeenCalled()
     })
   })
 

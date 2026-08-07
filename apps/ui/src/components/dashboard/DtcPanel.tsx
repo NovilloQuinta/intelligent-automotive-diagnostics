@@ -9,6 +9,10 @@ type Props = {
   codes: DiagnosisResponse["dtcCodes"] | null;
   severity: Severity | null;
   empty: boolean;
+  /** Code of the DTC the user selected, to highlight it. */
+  selectedCode: string | null;
+  /** Called with the DTC code when the user clicks a row. */
+  onSelect: (code: string) => void;
 };
 
 function EmptyPrompt() {
@@ -43,44 +47,63 @@ function NoCodesMessage() {
 function CodeList({
   codes,
   severity,
+  selectedCode,
+  onSelect,
 }: {
   codes: DiagnosisResponse["dtcCodes"];
   severity: Severity | null;
+  selectedCode: string | null;
+  onSelect: (code: string) => void;
 }) {
   const meta = severityMeta(severity ?? DEFAULT_SEVERITY);
   return (
     <ul className="space-y-2">
-      {codes.map((c, i) => (
-        <li
-          key={c.code}
-          className="fade-up flex items-center gap-3 rounded-lg border border-white/5 bg-black/30 p-3"
-          style={{ animationDelay: `${i * 60}ms` }}
-        >
-          <span
-            className="mono inline-flex shrink-0 items-center rounded-md px-2.5 py-1 text-sm font-bold"
-            style={{
-              background: COLORS.primary,
-              color: COLORS.background,
-              boxShadow: SVG_STROKES.dtcGlow,
-            }}
+      {codes.map((c, i) => {
+        const selected = c.code === selectedCode;
+        return (
+          <li
+            key={c.code}
+            className={`fade-up flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
+              selected
+                ? "border-primary/60 bg-primary/10"
+                : "border-white/5 bg-black/30 hover:bg-white/[0.03]"
+            }`}
+            style={{ animationDelay: `${i * 60}ms` }}
+            onClick={() => onSelect(c.code)}
+            aria-selected={selected}
           >
-            {c.code}
-          </span>
-          <span className="flex-1 text-sm text-foreground/90">
-            {c.description}
-          </span>
-          <meta.icon
-            className="h-4 w-4 shrink-0"
-            style={{ color: meta.color }}
-          />
-        </li>
-      ))}
+            <span
+              className="mono inline-flex shrink-0 items-center rounded-md px-2.5 py-1 text-sm font-bold"
+              style={{
+                background: COLORS.primary,
+                color: COLORS.background,
+                boxShadow: selected ? SVG_STROKES.dtcGlow : "none",
+              }}
+            >
+              {c.code}
+            </span>
+            <span className="flex-1 text-sm text-foreground/90">
+              {c.description}
+            </span>
+            <meta.icon
+              className="h-4 w-4 shrink-0"
+              style={{ color: meta.color }}
+            />
+          </li>
+        );
+      })}
     </ul>
   );
 }
 
 /** Panel displaying DTC fault codes with severity-based styling and empty/no-codes states. */
-export function DtcPanel({ codes, severity, empty }: Props) {
+export function DtcPanel({
+  codes,
+  severity,
+  empty,
+  selectedCode,
+  onSelect,
+}: Props) {
   return (
     <div className="panel flex min-h-0 flex-col p-4">
       <div className="mb-3 flex items-center justify-between border-b border-white/5 pb-3">
@@ -100,7 +123,12 @@ export function DtcPanel({ codes, severity, empty }: Props) {
         {empty && <EmptyPrompt />}
         {!empty && codes && codes.length === 0 && <NoCodesMessage />}
         {!empty && codes && codes.length > 0 && (
-          <CodeList codes={codes} severity={severity} />
+          <CodeList
+            codes={codes}
+            severity={severity}
+            selectedCode={selectedCode}
+            onSelect={onSelect}
+          />
         )}
       </div>
     </div>

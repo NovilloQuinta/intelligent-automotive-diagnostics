@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Navigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { useScenarios } from "./useScenarios";
@@ -6,6 +7,7 @@ import { useDiagnosis } from "./useDiagnosis";
 import { TopBar } from "./TopBar";
 import { TelemetrySection } from "./TelemetrySection";
 import { DtcPanel } from "./DtcPanel";
+import { FreezeFramePanel } from "./FreezeFramePanel";
 import { DiagnosisPanel } from "./DiagnosisPanel";
 import { PidsTable } from "./PidsTable";
 
@@ -19,6 +21,11 @@ export function DashboardPage() {
   const selectedScenario = scenarios.find((s) => s.id === selectedId) ?? null;
   const { live, streamOk } = useLiveTelemetry(selectedScenario);
   const { loading, result, runDiagnosis } = useDiagnosis(selectedId);
+  const [selectedDtc, setSelectedDtc] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSelectedDtc(null);
+  }, [selectedId]);
 
   if (auth.status === "anonymous") {
     return <Navigate to="/login" replace />;
@@ -63,12 +70,15 @@ export function DashboardPage() {
             telemetryStatus={telemetryStatus}
             onDiagnose={runDiagnosis}
           />
-          <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:gap-6">
+          <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:gap-6">
             <DtcPanel
               codes={result?.dtcCodes ?? null}
               severity={result?.severity ?? null}
               empty={!result && !loading}
+              selectedCode={selectedDtc}
+              onSelect={setSelectedDtc}
             />
+            <FreezeFramePanel scenarioId={selectedId} dtc={selectedDtc} />
             <DiagnosisPanel
               text={result?.diagnosisText ?? null}
               severity={result?.severity ?? null}

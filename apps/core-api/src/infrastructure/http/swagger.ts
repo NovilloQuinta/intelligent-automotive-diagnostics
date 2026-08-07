@@ -161,6 +161,54 @@ export const openApiSpec = {
         },
       },
     },
+    '/api/freeze-frame': {
+      get: {
+        tags: ['Diagnosis'],
+        summary: 'Get freeze frame for a DTC',
+        description:
+          'Returns the OBD-II freeze frame snapshot associated with the selected DTC. ' +
+          'Requires authentication.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'scenarioId',
+            in: 'query',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Scenario ID (e.g. "audi-a3-idle")',
+            example: 'audi-a3-idle',
+          },
+          {
+            name: 'dtc',
+            in: 'query',
+            required: false,
+            schema: { type: 'string' },
+            description:
+              'DTC code to filter by (e.g. "P0301"). Omit to get the scenario freeze frame.',
+            example: 'P0301',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Freeze frame for the DTC (or null when none matches)',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    freezeFrame: {
+                      $ref: '#/components/schemas/FreezeFrame',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '401': { description: 'Access token required' },
+          '404': { description: 'Scenario not found' },
+        },
+      },
+    },
     '/api/diagnosis': {
       post: {
         tags: ['Diagnosis'],
@@ -328,6 +376,18 @@ export const openApiSpec = {
             type: 'string',
             enum: ['low', 'medium', 'high', 'critical'],
             example: 'high',
+          },
+        },
+      },
+      FreezeFrame: {
+        type: 'object',
+        nullable: true,
+        properties: {
+          dtcCode: { type: 'string', example: 'P0301' },
+          pidValues: {
+            type: 'object',
+            additionalProperties: { type: 'number' },
+            example: { '0C': 850 },
           },
         },
       },

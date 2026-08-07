@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import type { Scenario } from "../../../src/components/dashboard/types";
 
 // Mutable auth state shared between the mock factory and the tests
@@ -53,6 +53,14 @@ vi.mock("../../../src/components/dashboard/useDiagnosis", () => ({
   useDiagnosis: () => mockUseDiagnosis(),
 }));
 
+// FreezeFramePanel fetches through the real api module — mock only the network call
+vi.mock("../../../src/lib/api", () => ({
+  api: {
+    getFreezeFrame: vi.fn(),
+  },
+}));
+
+import { api } from "../../../src/lib/api";
 import { DashboardPage } from "../../../src/components/dashboard/DashboardPage";
 
 const scenario: Scenario = {
@@ -295,5 +303,44 @@ describe("DashboardPage", () => {
     expect(screen.getByText("01 0C")).toBeDefined();
     expect(screen.getByText("850 RPM")).toBeDefined();
     expect(screen.getAllByText("OK")).toHaveLength(4);
+  });
+
+  it("should fetch the freeze frame for a DTC when its row is selected", async () => {
+    mockAuthStatus.value = "authed";
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario],
+      selectedId: scenario.id,
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    });
+    mockUseDiagnosis.mockReturnValue({
+      loading: false,
+      result: {
+        rawData: "41 0C 5A",
+        parsedValues: { rpm: 850, coolantTemp: 90, speed: 50, intakeTemp: 35 },
+        dtcCodes: [
+          { code: "P0301", description: "Fallo de encendido cilindro 1" },
+        ],
+        diagnosisText: "Revisar bujías.",
+        severity: "high",
+      },
+      runDiagnosis: vi.fn(),
+    });
+    vi.mocked(api.getFreezeFrame).mockResolvedValue({
+      dtcCode: "P0301",
+      pidValues: { "0C": 850 },
+    });
+
+    render(<DashboardPage />);
+
+    fireEvent.click(screen.getByText("P0301"));
+
+    await waitFor(() => {
+      expect(api.getFreezeFrame).toHaveBeenCalledWith(scenario.id, "P0301");
+    });
+    // "0C" is the freeze-frame PID cell — PidsTable renders it as "01 0C"
+    await waitFor(() => {
+      expect(screen.getByText("0C")).toBeDefined();
+    });
   });
 });
