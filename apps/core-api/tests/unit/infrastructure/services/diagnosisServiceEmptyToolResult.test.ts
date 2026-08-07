@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { VehicleType, type SimulationScenario } from '@/infrastructure/simulation/scenario.js'
+import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
@@ -42,6 +43,25 @@ function createMockLogger(): LoggerPort {
   return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } as unknown as LoggerPort
 }
 
+function createMockRepo(): ObdRepository {
+  return {
+    readPid: vi.fn(async () => 0),
+    getSupportedPids: vi.fn(async () => []),
+    getFreezeFrame: vi.fn(async () => null),
+    readDtcCodes: vi.fn(async () => []),
+    clearDtcCodes: vi.fn(async () => undefined),
+    readVin: vi.fn(async () => ''),
+    getVehicleInfo: vi.fn(async () => ({
+      make: '', model: '', year: 0, engineType: '',
+      vin: new Vin('WAUZZZ8V5JA123456'),
+    })),
+    setPower: vi.fn(async () => undefined),
+    getEcuInfo: vi.fn(async () => []),
+  } as unknown as ObdRepository
+}
+
+const mockObdRepos = new Map([['audi-a3-idle', createMockRepo()]])
+
 describe('DiagnosisService with an MCP tool returning empty content', () => {
   let logger: LoggerPort
 
@@ -50,7 +70,7 @@ describe('DiagnosisService with an MCP tool returning empty content', () => {
   })
 
   it('callMcpTool should throw EmptyToolResultError instead of a TypeError', async () => {
-    const service = new DiagnosisService({ scenarios: [scenario], logger })
+    const service = new DiagnosisService({ scenarios: [scenario], obdRepos: mockObdRepos, logger })
 
     await expect(service.callMcpTool('read_pid', 'audi-a3-idle')).rejects.toThrow(
       EmptyToolResultError,
@@ -58,7 +78,7 @@ describe('DiagnosisService with an MCP tool returning empty content', () => {
   })
 
   it('EmptyToolResultError should name the offending tool', async () => {
-    const service = new DiagnosisService({ scenarios: [scenario], logger })
+    const service = new DiagnosisService({ scenarios: [scenario], obdRepos: mockObdRepos, logger })
 
     await expect(service.callMcpTool('read_pid', 'audi-a3-idle')).rejects.toThrow(/read_pid/)
   })
@@ -74,6 +94,7 @@ describe('DiagnosisService with an MCP tool returning empty content', () => {
 
     const service = new DiagnosisService({
       scenarios: [scenario],
+      obdRepos: mockObdRepos,
       llmClient,
       logger,
     })

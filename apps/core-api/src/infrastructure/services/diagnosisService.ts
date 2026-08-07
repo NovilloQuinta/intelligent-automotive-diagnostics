@@ -1,5 +1,3 @@
-import { ObdSimulator } from '@/infrastructure/simulation/simulator.js'
-import { ObdSimulatorRepository } from '@/infrastructure/simulation/simulatorAdapter.js'
 import { ProcessVehicleDiagnosisUseCase } from '@/application/use-cases/ProcessVehicleDiagnosisUseCase.js'
 import {
   withTimeout,
@@ -25,29 +23,46 @@ import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { DiagnosisResult, Severity } from '@/domain/value-objects/diagnosisResult.js'
 import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
-import type { LiveData } from '@/domain/value-objects/liveData.js'
+import { LiveData } from '@/domain/value-objects/liveData.js'
 import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
+import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
-import { VehicleType, type SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
 import type { DiagnosisVectorRepository } from '@/application/ports/DiagnosisVectorRepository.js'
 
 const COGNITIVE_DIAGNOSIS_TIMEOUT_MS = 60_000
 
-/** Escenario sintetico expuesto cuando se opera contra un ELM327 TCP real. */
-const TCP_DIRECT_SCENARIO: SimulationScenario = {
+/** Descriptor de un escenario de vehiculo disponible para diagnostico. */
+export interface ScenarioDescriptor {
+  readonly id: string
+  readonly name: string
+  readonly vehicleType: 'car' | 'motorcycle' | 'unknown'
+  readonly sensorValues: LiveData
+  readonly dtcConfig: DtcCode[]
+  readonly vehicleInfo: VehicleInfo
+  /** Host del emulador/dispositivo OBD (no se expone al cliente). */
+  readonly host: string
+  /** Puerto del emulador/dispositivo OBD (no se expone al cliente). */
+  readonly port: number
+}
+
+/** Escenario sintetico expuesto cuando se opera contra un ELM327 TCP real.
+ * El tipo de vehiculo se descubre al diagnosticar (coche o moto). */
+const TCP_DIRECT_SCENARIO: ScenarioDescriptor = {
   id: 'tcp',
   name: 'ELM327 Direct Connection',
-  vehicleType: VehicleType.Car,
-  sensorValues: { rpm: 0, coolantTemp: 0, speed: 0, intakeTemp: 0 },
+  vehicleType: 'unknown',
+  sensorValues: new LiveData({ rpm: 0, coolantTemp: 0, speed: 0, intakeTemp: 0 }),
   dtcConfig: [],
-  vehicleInfo: {
+  vehicleInfo: new VehicleInfo({
     make: 'unknown',
     model: 'unknown',
     year: 0,
     engineType: 'unknown',
     vin: new Vin(FALLBACK_VIN),
-  },
+  }),
+  host: '',
+  port: 0,
 }
 
 /** Resultado del diagnostico determinista formateado para la API. */
@@ -61,9 +76,11 @@ export interface DiagnoseOutput {
 
 /** Dependencias de {@link DiagnosisService}. */
 export interface DiagnosisServiceOptions {
-  /** Escenarios de simulacion disponibles; vacio en modo TCP directo. */
-  readonly scenarios: SimulationScenario[]
-  /** Repositorio OBD real; presente solo en modo TCP directo. */
+  /** Descriptores de escenarios disponibles (modo docker). */
+  readonly scenarios: ScenarioDescriptor[]
+  /** Mapa scenarioId → repositorio OBD en modo docker (multi-vehiculo). */
+  readonly obdRepos?: Map<string, ObdRepository>
+  /** Repositorio OBD unico en modo TCP directo (single-vehicle). */
   readonly obdRepo?: ObdRepository
   /** Cliente LLM; ausente deshabilita el diagnostico cognitivo. */
   readonly llmClient?: LlmClientPort
@@ -78,7 +95,8 @@ export interface DiagnosisServiceOptions {
 
 /** Servicio de orquestacion de diagnostico: resuelve repositorios, crea casos de uso y delega en MCP. */
 export class DiagnosisService {
-  private readonly scenarios: SimulationScenario[]
+  private readonly scenarios: ScenarioDescriptor[]
+  private readonly obdRepos: Map<string, ObdRepository>
   private readonly obdRepo: ObdRepository | undefined
   private readonly llmClient: LlmClientPort | undefined
   private readonly diagnosisIndex: DiagnosisVectorRepository | undefined
@@ -88,6 +106,7 @@ export class DiagnosisService {
 
   constructor(options: DiagnosisServiceOptions) {
     this.scenarios = options.scenarios
+    this.obdRepos = options.obdRepos ?? new Map()
     this.obdRepo = options.obdRepo
     this.llmClient = options.llmClient
     this.diagnosisIndex = options.diagnosisIndex
@@ -96,25 +115,26 @@ export class DiagnosisService {
     this.toolCallTimeoutMs = options.toolCallTimeoutMs ?? DIAGNOSIS_TIMEOUT_MS
   }
 
-  /** True cuando se opera contra un ELM327 TCP real (modo directo, sin scenarios). */
+  /** True cuando se opera contra un unico ELM327 TCP real (scenarioId opcional). */
   get isDirectConnection(): boolean {
     return this.obdRepo !== undefined
   }
 
-  /** True cuando hay un cliente LLM configurado para diagnostico cognitivo. */
+  /** True cuando el diagnostico cognitivo esta disponible (LLM configurado). */
   get hasCognitiveDiagnosis(): boolean {
     return this.llmClient !== undefined
   }
 
-  /** Escenarios seleccionables: los de simulacion, o el sintetico `tcp` en modo directo. */
-  listScenarios(): SimulationScenario[] {
-    return this.obdRepo ? [TCP_DIRECT_SCENARIO] : this.scenarios
+  /** Escenarios seleccionables: los del emulador docker, o el sintetico `tcp` en modo directo. */
+  listScenarios(): ScenarioDescriptor[] {
+    if (this.obdRepo) return [TCP_DIRECT_SCENARIO]
+    return this.scenarios
   }
 
   /**
    * Ejecuta el diagnostico determinista sobre un escenario.
    *
-   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe en modo simulacion.
+   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
    */
   async diagnose(scenarioId?: string): Promise<DiagnoseOutput> {
     const repository = this.resolveRepository(scenarioId)
@@ -132,9 +152,9 @@ export class DiagnosisService {
   /**
    * Devuelve el freeze frame del DTC seleccionado.
    *
-   * @param scenarioId — Escenario de simulacion; opcional en modo TCP directo.
+   * @param scenarioId — Escenario; opcional en modo TCP directo.
    * @param dtc — Codigo DTC opcional; si se omite, devuelve el del escenario.
-   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe en modo simulacion.
+   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
    */
   async getFreezeFrame(scenarioId?: string, dtc?: string): Promise<FreezeFrame | null> {
     const repository = this.resolveRepository(scenarioId)
@@ -144,8 +164,8 @@ export class DiagnosisService {
   /**
    * Devuelve las ECUs descubiertas en el vehiculo activo.
    *
-   * @param scenarioId — Escenario de simulacion; opcional en modo TCP directo.
-   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe en modo simulacion.
+   * @param scenarioId — Escenario; opcional en modo TCP directo.
+   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
    */
   async getEcuInfo(scenarioId?: string): Promise<EcuInfo[]> {
     const repository = this.resolveRepository(scenarioId)
@@ -156,7 +176,7 @@ export class DiagnosisService {
    * Ejecuta el diagnostico cognitivo con tool calling sobre el servidor MCP.
    *
    * @throws {CognitiveDiagnosisUnavailableError} Si no hay cliente LLM configurado.
-   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe en modo simulacion.
+   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
    * @throws {CognitiveDiagnosisTimeoutError} Si se agota `cognitiveTimeoutMs`.
    * @throws {EmptyToolResultError} Si una tool invocada responde sin contenido.
    */
@@ -204,7 +224,7 @@ export class DiagnosisService {
    * Invoca una tool MCP concreta y devuelve su texto.
    *
    * @throws {ToolNotFoundError} Si la tool no esta registrada.
-   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe en modo simulacion.
+   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
    * @throws {ToolCallTimeoutError} Si se agota el timeout de la llamada.
    * @throws {EmptyToolResultError} Si la tool responde sin contenido.
    */
@@ -248,10 +268,12 @@ export class DiagnosisService {
   }
 
   private resolveRepository(scenarioId?: string): ObdRepository {
+    if (scenarioId) {
+      const repo = this.obdRepos.get(scenarioId)
+      if (repo) return repo
+    }
     if (this.obdRepo) return this.obdRepo
-    const scenario = this.scenarios.find((s) => s.id === scenarioId)
-    if (!scenario) throw new DiagnosisScenarioNotFoundError()
-    return new ObdSimulatorRepository(new ObdSimulator(scenario))
+    throw new DiagnosisScenarioNotFoundError()
   }
 
   private buildDiagnosisText(result: DiagnosisResult): string {

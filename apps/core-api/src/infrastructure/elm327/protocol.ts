@@ -44,6 +44,7 @@ export function stripEcho(raw: string): string {
 export function parseModeResponse(raw: string): number[] {
   const cleaned = stripEcho(raw)
   if (/NO DATA/i.test(cleaned)) throw new Elm327NoDataError(raw)
+  if (/7F\s/i.test(cleaned)) throw new Elm327ParseError(raw)
   const match = cleaned.match(/4[0-9A-F]\s+[0-9A-F]{2}\s+([0-9A-F]{2}(?:\s+[0-9A-F]{2})*)/i)
   if (!match) throw new Elm327ParseError(raw)
   return parseHexBytes(match[1])

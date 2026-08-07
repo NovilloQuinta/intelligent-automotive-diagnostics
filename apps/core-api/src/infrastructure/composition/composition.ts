@@ -12,7 +12,6 @@ import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import { SqliteAuditLogRepository } from '@/infrastructure/persistence/sqlite/auditLogRepository.js'
 import { Logger } from '@/infrastructure/observability/logger.js'
-import { seedScenarios } from '@/infrastructure/simulation/seedScenarios.js'
 import { RegisterUserUseCase } from '@/application/use-cases/RegisterUserUseCase.js'
 import { LoginUserUseCase } from '@/application/use-cases/LoginUserUseCase.js'
 import { RefreshTokenUseCase } from '@/application/use-cases/RefreshTokenUseCase.js'
@@ -20,7 +19,10 @@ import { GetCurrentUserUseCase } from '@/application/use-cases/GetCurrentUserUse
 import { LogoutUserUseCase } from '@/application/use-cases/LogoutUserUseCase.js'
 import { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
-import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
+import {
+  DiagnosisService,
+  type ScenarioDescriptor,
+} from '@/infrastructure/services/diagnosisService.js'
 import type { AppConfig } from '@/infrastructure/configuration/index.js'
 import { initLanceDb } from '@/infrastructure/persistence/vector/lancedb.js'
 import { createLanceVectorStore } from '@/infrastructure/persistence/vector/lanceVectorStore.js'
@@ -42,6 +44,9 @@ import type { VectorRepository } from '@/application/ports/VectorRepository.js'
 import type { PidKnowledgeEntry } from '@/application/dto/knowledge/PidKnowledgeEntry.js'
 import type { DtcKnowledgeEntry } from '@/application/dto/knowledge/DtcKnowledgeEntry.js'
 import type { DiagnosisKnowledgeEntry } from '@/application/dto/knowledge/DiagnosisKnowledgeEntry.js'
+import { LiveData } from '@/domain/value-objects/liveData.js'
+import { Vin } from '@/domain/value-objects/vin.js'
+import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 
 const ACCESS_TOKEN_TTL = '15m'
 const REFRESH_TOKEN_TTL = '7d'
@@ -122,10 +127,67 @@ function createAuthStack(
   }
 }
 
-/** Crea el repositorio OBD del modo configurado (TCP real o simulacion). */
-function createObdRepository(config: AppConfig): ObdRepository | undefined {
-  if (config.OBD_MODE !== 'tcp') return undefined
-  return new Elm327TcpRepository({ host: config.ELM327_HOST, port: config.ELM327_PORT })
+/** Escenarios disponibles en modo Docker emulador. */
+function createDockerScenarios(config: AppConfig): ScenarioDescriptor[] {
+  return [
+    {
+      id: 'toyota',
+      name: 'Toyota (Built-in)',
+      vehicleType: 'car',
+      sensorValues: new LiveData({ rpm: 750, coolantTemp: 55, speed: 0, intakeTemp: 17 }),
+      dtcConfig: [],
+      vehicleInfo: new VehicleInfo({
+        make: 'Toyota',
+        model: 'Auris Hybrid',
+        year: 2016,
+        engineType: '1.8L Hybrid',
+        vin: new Vin('JTDKN3DU60A123456'),
+      }),
+      host: config.ELM327_TOYOTA_HOST,
+      port: config.ELM327_TOYOTA_PORT,
+    },
+    {
+      id: 'audi-a3-tdi',
+      name: 'Audi A3 2.0 TDI',
+      vehicleType: 'car',
+      sensorValues: new LiveData({ rpm: 800, coolantTemp: 90, speed: 0, intakeTemp: 35 }),
+      dtcConfig: [{ code: 'P0301', description: 'Cylinder 1 Misfire' }],
+      vehicleInfo: new VehicleInfo({
+        make: 'Audi',
+        model: 'A3',
+        year: 2018,
+        engineType: '2.0 TDI',
+        vin: new Vin('WAUZZZ8V5JA123456'),
+      }),
+      host: config.ELM327_AUDI_HOST,
+      port: config.ELM327_AUDI_PORT,
+    },
+    {
+      id: 'kawasaki-z900',
+      name: 'Kawasaki Z900',
+      vehicleType: 'motorcycle',
+      sensorValues: new LiveData({ rpm: 1300, coolantTemp: 95, speed: 0, intakeTemp: 28 }),
+      dtcConfig: [],
+      vehicleInfo: new VehicleInfo({
+        make: 'Kawasaki',
+        model: 'Z900',
+        year: 2020,
+        engineType: '948cc Inline-4',
+        vin: new Vin('JKAZR2A1XLA000111'),
+      }),
+      host: config.ELM327_KAWASAKI_HOST,
+      port: config.ELM327_KAWASAKI_PORT,
+    },
+  ]
+}
+
+/** Mapa scenarioId → ObdRepository creado a partir de los descriptores de escenarios. */
+function createObdRepoMap(scenarios: ScenarioDescriptor[]): Map<string, ObdRepository> {
+  const map = new Map<string, ObdRepository>()
+  for (const s of scenarios) {
+    map.set(s.id, new Elm327TcpRepository({ host: s.host, port: s.port }))
+  }
+  return map
 }
 
 /** Indices de conocimiento vectorial cableados en el arranque. */
@@ -187,16 +249,35 @@ export async function buildApp(config: AppConfig): Promise<Application> {
     logoutUser: auth.logoutUseCase,
   })
 
-  const obdRepo = createObdRepository(config)
   const llmClient = createLlmClient(config, logger)
   const knowledgeStack = await createKnowledgeStack(config, logger)
-  const diagnosisService = new DiagnosisService({
-    scenarios: config.OBD_MODE === 'tcp' ? [] : seedScenarios,
-    obdRepo,
-    llmClient,
-    logger,
-    diagnosisIndex: knowledgeStack?.diagnosisIndex,
-  })
+
+  let diagnosisService: DiagnosisService
+
+  if (config.OBD_MODE === 'docker') {
+    const scenarios = createDockerScenarios(config)
+    const obdRepos = createObdRepoMap(scenarios)
+    diagnosisService = new DiagnosisService({
+      scenarios,
+      obdRepos,
+      llmClient,
+      logger,
+      diagnosisIndex: knowledgeStack?.diagnosisIndex,
+    })
+  } else {
+    const obdRepo = new Elm327TcpRepository({
+      host: config.ELM327_HOST,
+      port: config.ELM327_PORT,
+    })
+    diagnosisService = new DiagnosisService({
+      scenarios: [],
+      obdRepo,
+      llmClient,
+      logger,
+      diagnosisIndex: knowledgeStack?.diagnosisIndex,
+    })
+  }
+
   const diagnosisController = new DiagnosisController(diagnosisService, logger)
 
   return createServer({

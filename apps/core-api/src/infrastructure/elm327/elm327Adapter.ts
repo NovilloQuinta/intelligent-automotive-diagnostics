@@ -85,18 +85,28 @@ export class Elm327TcpRepository implements ObdRepository {
   async getFreezeFrame(dtc?: string): Promise<FreezeFrame | null> {
     const raw = await this.client.sendCommand('02 0C')
     if (/NO DATA/i.test(raw)) return null
-    const bytes = parseModeResponse(raw)
-    return new FreezeFrame({
-      dtcCode: dtc ?? UNKNOWN_FREEZE_FRAME_DTC,
-      pidValues: { '0C': this.pidFormulas.apply('01', '0C', bytes) },
-    })
+    try {
+      const bytes = parseModeResponse(raw)
+      return new FreezeFrame({
+        dtcCode: dtc ?? UNKNOWN_FREEZE_FRAME_DTC,
+        pidValues: { '0C': this.pidFormulas.apply('01', '0C', bytes) },
+      })
+    } catch (err) {
+      if (err instanceof Elm327ParseError || /7F\s/i.test(raw)) return null
+      throw err
+    }
   }
 
   async readDtcCodes(): Promise<DtcCode[]> {
     const raw = await this.client.sendCommand('03')
-    return parseDtcResponse(raw).map(
-      ([b1, b2]) => new DtcCode({ code: DtcCode.decodeFromBytes(b1, b2) }),
-    )
+    try {
+      return parseDtcResponse(raw).map(
+        ([b1, b2]) => new DtcCode({ code: DtcCode.decodeFromBytes(b1, b2) }),
+      )
+    } catch (err) {
+      if (err instanceof Elm327ParseError) return []
+      throw err
+    }
   }
 
   async clearDtcCodes(): Promise<void> {

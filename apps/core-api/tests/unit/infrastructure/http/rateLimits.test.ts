@@ -11,6 +11,7 @@ import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
+import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 
 const mockAuditRepo: AuditLogRepository = { create: async () => {} }
 const mockLogger: LoggerPort = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
@@ -58,6 +59,31 @@ const mockScenarios: SimulationScenario[] = [
   },
 ]
 
+function createMockRepo(): ObdRepository {
+  return {
+    readPid: vi.fn(async (_mode: string, pid: string) => {
+      if (pid === '0C') return 750
+      if (pid === '05') return 90
+      if (pid === '0D') return 0
+      if (pid === '0F') return 25
+      return 0
+    }),
+    getSupportedPids: vi.fn(async () => []),
+    getFreezeFrame: vi.fn(async () => null),
+    readDtcCodes: vi.fn(async () => [{ code: 'P0301', description: 'Cylinder 1 Misfire' }]),
+    clearDtcCodes: vi.fn(async () => undefined),
+    readVin: vi.fn(async () => 'WAUZZZ8V5JA123456'),
+    getVehicleInfo: vi.fn(async () => ({
+      make: 'Audi', model: 'A3', year: 2018, engineType: '2.0 TFSI',
+      vin: new Vin('WAUZZZ8V5JA123456'),
+    })),
+    setPower: vi.fn(async () => undefined),
+    getEcuInfo: vi.fn(async () => []),
+  } as unknown as ObdRepository
+}
+
+const mockObdRepos = new Map([['audi-a3-idle', createMockRepo()]])
+
 const originalNodeEnv = process.env.NODE_ENV
 
 interface BootedApp {
@@ -71,6 +97,7 @@ async function bootApp(): Promise<BootedApp> {
     diagnosisController: new DiagnosisController(
       new DiagnosisService({
         scenarios: mockScenarios,
+        obdRepos: mockObdRepos,
         llmClient: mockLlmClient,
         logger: mockLogger,
       }),

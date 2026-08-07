@@ -13,7 +13,7 @@ import type {
 export type Scenario = {
   id: string;
   name: string;
-  vehicleType: "car" | "motorcycle";
+  vehicleType: "car" | "motorcycle" | "unknown";
   sensorValues: {
     rpm: number;
     coolantTemp: number;
