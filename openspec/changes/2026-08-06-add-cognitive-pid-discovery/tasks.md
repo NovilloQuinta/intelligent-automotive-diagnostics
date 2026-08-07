@@ -77,8 +77,8 @@
 
 ## 10. GREEN — Implementar hooks
 
-- [ ] 10.1 Crear `apps/ui/src/components/dashboard/useCapabilities.ts`
-- [ ] 10.2 Crear `apps/ui/src/components/dashboard/useCognitiveDiagnosis.ts`
+- [x] 10.1 Crear `apps/ui/src/components/dashboard/useCapabilities.ts`
+- [x] 10.2 Crear `apps/ui/src/components/dashboard/useCognitiveDiagnosis.ts`
 
 ## 11. RED — Frontend: fusión y estados en `PidsTable`
 

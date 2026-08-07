@@ -55,7 +55,10 @@ describe("useCognitiveDiagnosis", () => {
         },
       ]);
     });
-    expect(api.getCognitiveDiagnosis).toHaveBeenCalledWith("kawa-z900");
+    expect(api.getCognitiveDiagnosis).toHaveBeenCalledWith(
+      "kawa-z900",
+      undefined,
+    );
     expect(result.current.loading).toBe(false);
   });
 
