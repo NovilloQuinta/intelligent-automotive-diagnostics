@@ -1,0 +1,35 @@
+packages:
+  - 'apps/*'
+
+allowBuilds:
+  '@scarf/scarf': false
+  bcrypt: true
+  better-sqlite3: true
+  esbuild: true
+  onnxruntime-node: true
+  png-img: false
+  protobufjs: true
+  sharp: true
+  wd: false
+
+onlyBuiltDependencies:
+  - '@scarf/scarf'
+  - bcrypt
+  - better-sqlite3
+  - esbuild
+
+overrides:
+  protobufjs: '>=7.5.5'
+  handlebars: '>=4.7.7'
+  uglify-js: '>=3.18.0'
+  form-data: '>=2.5.4'
+  sharp: '>=0.35.0'
+  fast-uri: '>=3.1.5'
+  ip-address: '>=10.3.1'
+  brace-expansion: '>=5.0.9'
+  png-img: '>=3.1.0'
+  node-fetch: '>=2.6.7'
+  braces: '>=3.0.3'
+  hono: '>=4.12.34'
+  '@hono/node-server': '>=2.0.5'
+  postcss: '>=8.5.23'
