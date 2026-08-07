@@ -50,7 +50,7 @@
 
 ## 7. RED — Frontend: tipos + `mergePidRows`
 
-- [ ] 7.1 Crear `apps/ui/tests/unit/components/pidCatalog.test.ts`:
+- [x] 7.1 Crear `apps/ui/tests/unit/components/pidCatalog.test.ts`:
   - `mergePidRows(fixedRows, aiRows)` anexa filas IA con códigos que no están en `FIXED_PID_CODES`
   - `mergePidRows` descarta filas IA cuyo código ya está en `FIXED_PID_CODES` (sin duplicar `01 0C`/`01 05`/`01 0D`/`01 0F`)
   - `mergePidRows` deduplica por código entre las propias filas IA (última gana)
