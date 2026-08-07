@@ -18,7 +18,7 @@
 
 ## 3. RED — Escenarios simulados: `pidValues` adicionales
 
-- [ ] 3.1 Añadir/actualizar tests en `tests/unit/infrastructure/simulation/simulator.test.ts`:
+- [x] 3.1 Añadir/actualizar tests en `tests/unit/infrastructure/simulation/simulator.test.ts`:
   - `readPidValue('01', '11')`, `readPidValue('01', '04')`, `readPidValue('01', '42')` devuelven los valores de `pidValues` para `audi-a3-idle` y `kawa-z900`
   - `getSupportedPids()` incluye las 3 claves nuevas cuando el escenario las define
 
