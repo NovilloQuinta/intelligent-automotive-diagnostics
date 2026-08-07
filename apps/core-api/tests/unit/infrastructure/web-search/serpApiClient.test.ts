@@ -18,8 +18,16 @@ describe('createSerpApiClient', () => {
 
     const mockResponse = {
       organic_results: [
-        { title: 'PID 0C — Engine RPM', snippet: 'Standard OBD-II PID for engine RPM.', link: 'https://obd.example.com/pid0c' },
-        { title: 'PID 05 — Coolant Temp', snippet: 'Coolant temperature sensor reading.', link: 'https://obd.example.com/pid05' },
+        {
+          title: 'PID 0C — Engine RPM',
+          snippet: 'Standard OBD-II PID for engine RPM.',
+          link: 'https://obd.example.com/pid0c',
+        },
+        {
+          title: 'PID 05 — Coolant Temp',
+          snippet: 'Coolant temperature sensor reading.',
+          link: 'https://obd.example.com/pid05',
+        },
       ],
     }
     globalThis.fetch = vi.fn().mockResolvedValue({

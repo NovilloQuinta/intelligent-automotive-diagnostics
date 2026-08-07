@@ -27,9 +27,11 @@ describe('web_search tool in createMcpServer', () => {
   it('web_search response contains <untrusted-web-result> delimiters', async () => {
     const mockRepo = {} as never
     const mockWebSearch = {
-      search: vi.fn().mockResolvedValue([
-        { title: 'Test', snippet: 'Snippet text', url: 'https://example.com' },
-      ]),
+      search: vi
+        .fn()
+        .mockResolvedValue([
+          { title: 'Test', snippet: 'Snippet text', url: 'https://example.com' },
+        ]),
     }
 
     const mcp = createMcpServer(mockRepo, undefined, undefined, mockWebSearch)
@@ -44,9 +46,7 @@ describe('web_search tool in createMcpServer', () => {
   it('4th invocation (budget exhausted) returns isError client_error without calling search', async () => {
     const mockRepo = {} as never
     const mockWebSearch = {
-      search: vi.fn().mockResolvedValue([
-        { title: 'T', snippet: 'S', url: 'https://x.com' },
-      ]),
+      search: vi.fn().mockResolvedValue([{ title: 'T', snippet: 'S', url: 'https://x.com' }]),
     }
 
     const mcp = createMcpServer(mockRepo, undefined, undefined, mockWebSearch)

@@ -20,9 +20,7 @@ export const MAX_WEB_SEARCHES_PER_SESSION = 3
  *   empiece a devolver `false`. Por defecto {@link MAX_WEB_SEARCHES_PER_SESSION}.
  * @returns Una instancia independiente; dos presupuestos no comparten estado.
  */
-export function createWebSearchBudget(
-  maxCalls = MAX_WEB_SEARCHES_PER_SESSION,
-): WebSearchBudget {
+export function createWebSearchBudget(maxCalls = MAX_WEB_SEARCHES_PER_SESSION): WebSearchBudget {
   let remaining = maxCalls
 
   return {
