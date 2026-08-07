@@ -10,6 +10,7 @@ import { VehicleType, type SimulationScenario } from '@/infrastructure/simulatio
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmClientPort, ToolCallTrace } from '@/application/ports/LlmClientPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
+import type { DiagnosisVectorRepository } from '@/application/ports/DiagnosisVectorRepository.js'
 
 const mockScenarios: SimulationScenario[] = [
   {
@@ -203,6 +204,31 @@ describe('DiagnosisService', () => {
         DiagnosisScenarioNotFoundError,
       )
       expect(llmClient.sendMessage).not.toHaveBeenCalled()
+    })
+
+    it('should propagate diagnosisIndex to the cognitive use case', async () => {
+      const llmClient = mockLlmClient({
+        sendMessage: vi
+          .fn()
+          .mockResolvedValue({ text: cognitiveText, toolCalls: cognitiveToolCalls }),
+      })
+      const diagnosisIndex: DiagnosisVectorRepository = {
+        search: vi.fn().mockResolvedValue([]),
+        index: vi.fn().mockResolvedValue(undefined),
+      }
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        llmClient,
+        logger: createMockLogger(),
+        diagnosisIndex,
+      })
+
+      await service.cognitiveDiagnosis({
+        scenarioId: 'audi-a3-idle',
+        userQuery: '¿Por qué tiembla el motor al ralentí?',
+      })
+
+      expect(diagnosisIndex.index).toHaveBeenCalledTimes(1)
     })
   })
 

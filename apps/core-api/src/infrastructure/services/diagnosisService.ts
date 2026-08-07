@@ -29,6 +29,7 @@ import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import { VehicleType, type SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
+import type { DiagnosisVectorRepository } from '@/application/ports/DiagnosisVectorRepository.js'
 
 const COGNITIVE_DIAGNOSIS_TIMEOUT_MS = 60_000
 
@@ -65,6 +66,8 @@ export interface DiagnosisServiceOptions {
   readonly obdRepo?: ObdRepository
   /** Cliente LLM; ausente deshabilita el diagnostico cognitivo. */
   readonly llmClient?: LlmClientPort
+  /** Repositorio vectorial RAG; ausente deshabilita la busqueda/indexado de casos. */
+  readonly diagnosisIndex?: DiagnosisVectorRepository
   readonly logger: LoggerPort
   /** Timeout del diagnostico cognitivo en ms. Por defecto 60 s. */
   readonly cognitiveTimeoutMs?: number
@@ -77,6 +80,7 @@ export class DiagnosisService {
   private readonly scenarios: SimulationScenario[]
   private readonly obdRepo: ObdRepository | undefined
   private readonly llmClient: LlmClientPort | undefined
+  private readonly diagnosisIndex: DiagnosisVectorRepository | undefined
   private readonly logger: LoggerPort
   private readonly cognitiveTimeoutMs: number
   private readonly toolCallTimeoutMs: number
@@ -85,6 +89,7 @@ export class DiagnosisService {
     this.scenarios = options.scenarios
     this.obdRepo = options.obdRepo
     this.llmClient = options.llmClient
+    this.diagnosisIndex = options.diagnosisIndex
     this.logger = options.logger
     this.cognitiveTimeoutMs = options.cognitiveTimeoutMs ?? COGNITIVE_DIAGNOSIS_TIMEOUT_MS
     this.toolCallTimeoutMs = options.toolCallTimeoutMs ?? DIAGNOSIS_TIMEOUT_MS
@@ -158,7 +163,13 @@ export class DiagnosisService {
 
     const diagnosis = (async () => {
       const vehicleContext = await repository.getVehicleInfo()
-      const useCase = new ExecuteCognitiveDiagnosisUseCase(llmClient, tools, handler)
+      const useCase = new ExecuteCognitiveDiagnosisUseCase({
+        llmClient,
+        tools,
+        handler,
+        logger: this.logger,
+        diagnosisIndex: this.diagnosisIndex,
+      })
       return useCase.execute({ userQuery, vehicleContext })
     })()
 

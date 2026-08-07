@@ -26,9 +26,9 @@ Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de siste
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
 - **Flujo de ramas**: `develop` es la rama de integración; toda `feat/*`/`fix/*` sale de `develop` y se mergea ahí. `main` solo para releases. No mergear a `main` sin petición de release.
-- **En curso**: `add-freeze-frame-screen` en `feat/freeze-frame-screen` — implementado punta a punta: `ObdSimulator.getFreezeFrame`, endpoint `GET /api/freeze-frame`, UI `FreezeFramePanel` + `DtcPanel` seleccionable. Pendiente: OK para commitear y merge a `develop`. `fix-security-and-mcp-findings` (14 hallazgos GGA) en `fix/diagnosis-service-typed-errors` — tareas 1-5 y 6.1 completadas; GGA revisa el fichero completo en pre-commit (`PROVIDER="opencode:deepseek/deepseek-v4-flash"` en `.gga`). Pendiente: 6.5 (OK commitear) y merge.
-- **Siguiente**: ADR-007 #2 (confianza + validacion OBD + 7 tools MCP) y #3 (inyeccion RAG en el caso de uso), mas 4 cambios propuestos sin empezar: `add-cognitive-pid-discovery`, `add-diagnosis-session-report-screen`, `add-ecu-info-screen`, `add-vehicle-autodetect-flow`.
-- **Tests + CI**: core-api 556 pasando (47 files); UI 196 + 1 skipped (28 files). CI verde — lint, format, test, build (gate raiz: core-api). El lint de UI (`apps/ui`) esta roto por la deuda `brace-expansion` (preexistente, no lo detecta el gate raiz).
+- **En curso**: `add-rag-cognitive-retrieval` en `feat/rag-cognitive-retrieval` — TG1-TG6 completados (569 tests, lint+build verde). Pendiente: OK para commitear y merge a `develop`. `fix-security-and-mcp-findings` (14 hallazgos GGA) en `fix/diagnosis-service-typed-errors` — tareas 1-5 y 6.1 completadas; GGA revisa el fichero completo en pre-commit. Pendiente: 6.5 (OK commitear) y merge.
+- **Siguiente**: ADR-007 #3 (confianza + validacion OBD + 7 tools MCP) y #4 (inyeccion RAG en el caso de uso), mas 4 cambios propuestos sin empezar: `add-cognitive-pid-discovery`, `add-diagnosis-session-report-screen`, `add-ecu-info-screen`, `add-vehicle-autodetect-flow`.
+- **Tests + CI**: core-api 569 pasando (49 files); UI 196 + 1 skipped (28 files). CI verde — lint, format, test, build (gate raiz: core-api).
 
 ## REGLAS DE SESION
 
