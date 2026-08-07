@@ -1,4 +1,4 @@
-import type { TokenPair } from '@/application/dto/TokenPair.js'
+import type { TokenPair } from '@/application/dto/auth/TokenPair.js'
 
 /** Contrato para el servicio de autenticacion (JWT + bcrypt). */
 export interface AuthServicePort {

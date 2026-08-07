@@ -1,4 +1,4 @@
-import type { CreateAuditLogInput } from '@/application/dto/CreateAuditLogInput.js'
+import type { CreateAuditLogInput } from '@/application/dto/audit/CreateAuditLogInput.js'
 
 /** Contrato para persistir registros de auditoria HTTP. */
 export interface AuditLogRepository {

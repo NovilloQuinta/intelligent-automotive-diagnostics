@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { randomUUID } from 'node:crypto'
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
-import type { TokenPair } from '@/application/dto/TokenPair.js'
+import type { TokenPair } from '@/application/dto/auth/TokenPair.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
 import { hashToken, REFRESH_TOKEN_DURATION_MS } from '@/application/shared/hashToken.js'
 

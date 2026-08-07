@@ -1,7 +1,7 @@
 import type { z } from 'zod'
-import type { LlmMessageInput, LlmConversationItem } from '@/application/dto/LlmMessageInput.js'
-import type { LlmSingleResponse } from '@/application/dto/LlmSingleResponse.js'
-import type { McpToolDefinition } from '@/application/dto/McpToolDefinition.js'
+import type { LlmMessageInput, LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
+import type { LlmSingleResponse } from '@/application/dto/llm/LlmSingleResponse.js'
+import type { McpToolDefinition } from '@/application/dto/llm/McpToolDefinition.js'
 import type { LlmSingleMessageSender } from '@/application/use-cases/ExecuteLlmToolCalling.js'
 import { wrapSdkError } from '@/infrastructure/llm/sdkErrorUtils.js'
 

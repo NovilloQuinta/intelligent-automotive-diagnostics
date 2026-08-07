@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { Bool, Float32, Int32, Utf8 } from 'apache-arrow'
+import type { Schema } from 'apache-arrow'
 
 const { mockConnect, mockTableNames, mockCreateEmptyTable, mockOpenTable } = vi.hoisted(() => ({
   mockConnect: vi.fn(),
@@ -11,7 +13,7 @@ vi.mock('@lancedb/lancedb', () => ({
   connect: mockConnect,
 }))
 
-import { initLanceDb, ensureTable } from '@/infrastructure/persistence/vector/lancedb.js'
+import { initLanceDb, ensureVectorTable } from '@/infrastructure/persistence/vector/lancedb.js'
 
 describe('initLanceDb', () => {
   beforeEach(() => {
@@ -45,7 +47,7 @@ describe('initLanceDb', () => {
   })
 })
 
-describe('ensureTable', () => {
+describe('ensureVectorTable', () => {
   const mockDb = {
     tableNames: mockTableNames,
     createEmptyTable: mockCreateEmptyTable,
@@ -56,52 +58,55 @@ describe('ensureTable', () => {
     vi.clearAllMocks()
   })
 
-  it('should create a table with string and float32 columns', async () => {
+  it('coloca la columna vector primero y mapea los metadatos a clases Arrow', async () => {
     mockTableNames.mockResolvedValue([])
     mockCreateEmptyTable.mockResolvedValue({ name: 'test_table' })
 
-    const result = await ensureTable(mockDb, 'test_table', [
-      { name: 'id', type: 'string' as const },
-      { name: 'vector', type: 'float32' as const },
-    ])
+    await ensureVectorTable(mockDb, 'test_table', {
+      dimensions: 384,
+      columns: [
+        { name: 'name', type: 'string' },
+        { name: 'score', type: 'float32' },
+        { name: 'count', type: 'int32' },
+        { name: 'active', type: 'boolean' },
+      ],
+    })
 
-    expect(mockCreateEmptyTable).toHaveBeenCalledWith('test_table', expect.any(Object))
-    expect(result).toBeDefined()
+    // Se afirma el esquema real, no `expect.any(Object)`: esa asercion laxa dejo pasar
+    // que `string` no era un nombre de tipo valido para LanceDB.
+    const [tableName, schema] = mockCreateEmptyTable.mock.calls[0] as [string, Schema]
+    expect(tableName).toBe('test_table')
+    expect(schema.fields.map((f) => f.name)).toEqual(['vector', 'name', 'score', 'count', 'active'])
+    expect(schema.fields.slice(1).map((f) => f.type.constructor)).toEqual([
+      Utf8,
+      Float32,
+      Int32,
+      Bool,
+    ])
   })
 
-  it('should not error when table already exists (idempotent)', async () => {
+  it('reabre la tabla existente sin recrearla (idempotencia)', async () => {
     mockTableNames.mockResolvedValue(['test_table'])
     mockOpenTable.mockResolvedValue({ name: 'test_table' })
 
-    const result = await ensureTable(mockDb, 'test_table', [
-      { name: 'id', type: 'string' as const },
-    ])
+    const result = await ensureVectorTable(mockDb, 'test_table', {
+      dimensions: 384,
+      columns: [{ name: 'id', type: 'string' }],
+    })
 
     expect(mockCreateEmptyTable).not.toHaveBeenCalled()
     expect(mockOpenTable).toHaveBeenCalledWith('test_table')
     expect(result).toBeDefined()
   })
 
-  it('should throw when column type is not supported', async () => {
+  it('rechaza un tipo de columna no soportado', async () => {
     mockTableNames.mockResolvedValue([])
 
     await expect(
-      ensureTable(mockDb, 'test_table', [{ name: 'id', type: 'unsupported_type' as never }]),
+      ensureVectorTable(mockDb, 'test_table', {
+        dimensions: 384,
+        columns: [{ name: 'id', type: 'unsupported_type' as never }],
+      }),
     ).rejects.toThrow()
-  })
-
-  it('should support all valid column types (string, float32, int32, boolean)', async () => {
-    mockTableNames.mockResolvedValue([])
-    mockCreateEmptyTable.mockResolvedValue({ name: 'full_table' })
-
-    const result = await ensureTable(mockDb, 'full_table', [
-      { name: 'name', type: 'string' as const },
-      { name: 'score', type: 'float32' as const },
-      { name: 'count', type: 'int32' as const },
-      { name: 'active', type: 'boolean' as const },
-    ])
-
-    expect(result).toBeDefined()
-    expect(mockCreateEmptyTable).toHaveBeenCalledTimes(1)
   })
 })
