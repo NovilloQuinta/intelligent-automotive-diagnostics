@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
-
-// RED phase: these imports will fail because serpApiClient.ts + WebSearchProviderError don't exist yet
+import { createSerpApiClient } from '@/infrastructure/web-search/serpApiClient.js'
+import { WebSearchProviderError } from '@/infrastructure/web-search/WebSearchProviderError.js'
 
 describe('createSerpApiClient', () => {
   let originalFetch: typeof globalThis.fetch
@@ -14,10 +14,6 @@ describe('createSerpApiClient', () => {
   })
 
   it('maps a valid SerpAPI organic_results response to WebSearchResult[]', async () => {
-    // This import will fail — module doesn't exist yet
-    const { createSerpApiClient } = await import(
-      '@/infrastructure/web-search/serpApiClient.js'
-    )
     const client = createSerpApiClient({ apiKey: 'test-key' })
 
     const mockResponse = {
@@ -41,9 +37,6 @@ describe('createSerpApiClient', () => {
   })
 
   it('throws WebSearchProviderError on non-OK HTTP response', async () => {
-    const { createSerpApiClient } = await import(
-      '@/infrastructure/web-search/serpApiClient.js'
-    )
     const client = createSerpApiClient({ apiKey: 'test-key' })
 
     globalThis.fetch = vi.fn().mockResolvedValue({
@@ -51,13 +44,10 @@ describe('createSerpApiClient', () => {
       status: 429,
     } as Response)
 
-    await expect(client.search('query')).rejects.toThrow('WebSearchProviderError')
+    await expect(client.search('query')).rejects.toThrow(WebSearchProviderError)
   })
 
   it('discards malformed organic_results entries without invalidating valid ones', async () => {
-    const { createSerpApiClient } = await import(
-      '@/infrastructure/web-search/serpApiClient.js'
-    )
     const client = createSerpApiClient({ apiKey: 'test-key' })
 
     const mockResponse = {
@@ -80,9 +70,6 @@ describe('createSerpApiClient', () => {
   })
 
   it('throws WebSearchProviderError when SerpAPI returns HTTP 200 with error field', async () => {
-    const { createSerpApiClient } = await import(
-      '@/infrastructure/web-search/serpApiClient.js'
-    )
     const client = createSerpApiClient({ apiKey: 'test-key' })
 
     globalThis.fetch = vi.fn().mockResolvedValue({
@@ -90,6 +77,6 @@ describe('createSerpApiClient', () => {
       json: async () => ({ error: 'Invalid API key' }),
     } as Response)
 
-    await expect(client.search('query')).rejects.toThrow('WebSearchProviderError')
+    await expect(client.search('query')).rejects.toThrow(WebSearchProviderError)
   })
 })
