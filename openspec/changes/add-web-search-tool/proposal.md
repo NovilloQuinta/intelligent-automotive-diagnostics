@@ -11,8 +11,8 @@ Este cambio es el bloque **4 de 4** del plan RAG. Depende de:
 ### 1. Puerto `WebSearchPort` + adaptador concreto
 
 - Nuevo puerto `application/ports/WebSearchPort.ts`: `search(query: string): Promise<WebSearchResult[]>`, con `WebSearchResult = { title: string; snippet: string; url: string }`. El caso de uso/tool nunca conoce el proveedor.
-- Nuevo adaptador `infrastructure/web-search/braveSearchClient.ts` sobre la API REST de Brave Search (HTTP `fetch` nativo, sin SDK nuevo — coherente con "sin coste, sin dependencia extra" del resto del proyecto). Solo usa el endpoint de resultados con snippet: **nunca hace scraping de la página completa**, reduce la superficie de inyección de prompt a lo que el proveedor ya resume.
-- Se elige Brave Search API por tener plan gratuito con API key simple (sin OAuth, sin SDK); la elección del proveedor concreto queda aislada en un único fichero de infraestructura — cambiarlo no toca el puerto ni la tool.
+- Nuevo adaptador `infrastructure/web-search/serpApiClient.ts` sobre la API REST de SerpAPI (HTTP `fetch` nativo, sin SDK nuevo — coherente con "sin coste, sin dependencia extra" del resto del proyecto). Solo usa los snippets de `organic_results`: **nunca hace scraping de la página completa**, reduce la superficie de inyección de prompt a lo que el proveedor ya resume.
+- Se elige SerpAPI por tener plan gratuito (250 búsquedas/mes) con API key simple, sin OAuth ni SDK. Brave Search era la elección inicial de esta propuesta y se descartó por ser de pago; la elección del proveedor queda aislada en un único fichero de infraestructura — cambiarlo no toca el puerto ni la tool, como demuestra este propio cambio de proveedor.
 
 ### 2. Configuración: API key opcional, tool inexistente si falta
 
@@ -46,7 +46,7 @@ Es un requisito de seguridad de este cambio, no un detalle de implementación:
 ## Impact
 
 - **Nuevo**: `application/ports/WebSearchPort.ts`, `application/dto/web-search/WebSearchResult.ts`
-- **Nuevo**: `infrastructure/web-search/braveSearchClient.ts`
+- **Nuevo**: `infrastructure/web-search/serpApiClient.ts`
 - **Nuevo**: `infrastructure/mcp/webSearchBudget.ts` (contador de presupuesto por sesión)
 - **Modificado**: `infrastructure/configuration/index.ts` (`WEB_SEARCH_API_KEY` opcional)
 - **Modificado**: `infrastructure/composition/composition.ts` (`createWebSearchPort(config)`, se pasa a `DiagnosisService`)

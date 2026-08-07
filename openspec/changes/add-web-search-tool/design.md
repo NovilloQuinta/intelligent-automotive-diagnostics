@@ -15,7 +15,7 @@ Estado de partida: no existe ningún adaptador HTTP saliente en el proyecto salv
 - Contenido web tratado como no confiable en todo el pipeline: prompt, tool output, e indexado posterior.
 
 **Non-Goals:**
-- No se decide en este cambio qué proveedor usar en producción más allá de Brave Search como elección por defecto — cambiarlo es sustituir un fichero de infraestructura.
+- No se decide en este cambio qué proveedor usar en producción más allá de SerpAPI como elección por defecto — cambiarlo es sustituir un fichero de infraestructura.
 - No se implementa caché de búsquedas repetidas — cada llamada es una petición HTTP nueva; si el coste lo justifica, se añade con datos reales delante.
 - No se hace scraping de páginas completas — solo se usan los snippets que devuelve la API de búsqueda.
 - No se implementa un filtro de contenido malicioso más allá de truncado + delimitadores explícitos — un detector de prompt injection basado en heurísticas o en otro LLM es una posible mejora futura, no un requisito de este TFM.
@@ -36,7 +36,7 @@ export interface WebSearchPort {
   search(query: string): Promise<readonly WebSearchResult[]>
 }
 ```
-Sin parámetros de idioma, región o número de resultados en el puerto — esas son decisiones del adaptador (Brave Search se configura con valores fijos razonables: español, top 3). Si en el futuro se necesita variar esos parámetros por caso de uso, se añaden al puerto entonces; hoy serían parámetros sin ningún llamador que los use.
+Sin parámetros de idioma, región o número de resultados en el puerto — esas son decisiones del adaptador (SerpAPI se configura con valores fijos razonables: `engine=google`, top 3). Si en el futuro se necesita variar esos parámetros por caso de uso, se añaden al puerto entonces; hoy serían parámetros sin ningún llamador que los use.
 
 ### 2. Ausencia sobre fallo: mismo patrón que el resto de `composition.ts`
 
@@ -77,24 +77,57 @@ Mitigación de inyección de prompt en dos capas, ninguna de las cuales pretende
 
 Se documenta como **riesgo residual explícito** en la tabla de abajo: ningún LLM actual es inmune a inyección de prompt al 100%; estas dos capas reducen la probabilidad y el radio de impacto (el sistema de confianza en cascada de `add-knowledge-confidence-validation` es la última línea de defensa — nada de lo aprendido de la web llega a `validated: true` sin una lectura OBD real).
 
-### 6. Adaptador Brave Search: `fetch` nativo, sin SDK
+### 6. Adaptador SerpAPI: `fetch` nativo, sin SDK
+
+Se descartó Brave Search (elección inicial de esta propuesta) por ser de pago. SerpAPI tiene plan
+gratuito, y el cambio de proveedor toca **un solo fichero de infraestructura**: ni el puerto
+`WebSearchPort`, ni la tool, ni ningún llamador se enteran. Es justamente la prueba de que la
+Decisión 1 (puerto de forma mínima, sin filtros de proveedor) estaba bien planteada.
 
 ```ts
-export function createBraveSearchClient(config: { apiKey: string }): WebSearchPort {
+export function createSerpApiClient(config: { apiKey: string }): WebSearchPort {
   return {
     async search(query: string): Promise<readonly WebSearchResult[]> {
-      const res = await fetch(
-        `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${MAX_WEB_SEARCH_RESULTS}`,
-        { headers: { 'X-Subscription-Token': config.apiKey, Accept: 'application/json' } },
-      )
+      const url = new URL('https://serpapi.com/search.json')
+      url.searchParams.set('q', query)
+      url.searchParams.set('engine', 'google')
+      url.searchParams.set('num', String(MAX_WEB_SEARCH_RESULTS))
+      url.searchParams.set('api_key', config.apiKey)
+
+      const res = await fetch(url, { headers: { Accept: 'application/json' } })
       if (!res.ok) throw new WebSearchProviderError(res.status)
       const body = await res.json()
-      return parseBraveSearchResponse(body)
+      return parseSerpApiResponse(body)
     },
   }
 }
 ```
-`parseBraveSearchResponse` valida la forma de la respuesta con Zod (coherente con el resto del proyecto: nunca se confía en la forma de una respuesta HTTP externa sin validar) y descarta silenciosamente resultados que no cumplan el esquema mínimo, en vez de fallar toda la búsqueda por un resultado malformado.
+
+`parseSerpApiResponse` valida la forma de la respuesta con Zod (coherente con el resto del proyecto:
+nunca se confía en la forma de una respuesta HTTP externa sin validar) y descarta silenciosamente
+los elementos de `organic_results` que no cumplan el esquema mínimo (`title` + `link`), en vez de
+fallar toda la búsqueda por un resultado malformado. Mapea `link` → `WebSearchResult.url`.
+
+**Dos diferencias con Brave que cambian el código, no solo la URL:**
+
+1. **La API key viaja en la query string**, no en una cabecera. Por tanto **la URL completa nunca
+   se puede loguear** — ni en `logger.info`, ni en mensajes de `WebSearchProviderError`, ni en un
+   volcado de error. Solo se loguea la query y el conteo de resultados.
+2. **SerpAPI devuelve HTTP 200 con `{"error": "..."}` en el cuerpo** cuando se agota la cuota o la
+   key es inválida. Un `res.ok` a secas no basta: hay que comprobar el campo `error` del cuerpo
+   antes de parsear `organic_results`, y lanzar `WebSearchProviderError` también en ese caso.
+
+### 6b. Cuota: plan gratuito de 250 búsquedas/mes
+
+Restricción real del entorno, no hipotética. Consecuencias vinculantes:
+
+- **Todo el TDD va con `fetch` mockeado**: las secciones 1-7 no gastan ni una petición.
+- La verificación end-to-end (sección 8) se limita a **una única búsqueda real**, con una query
+  fija y documentada. No se hacen barridos ni pruebas exploratorias contra la API.
+- `MAX_WEB_SEARCHES_PER_SESSION = 3` significa que **un solo diagnóstico cognitivo puede gastar 3
+  peticiones**. Con 250/mes, eso son ~83 diagnósticos con búsqueda al máximo. Suficiente para el
+  TFM, pero conviene no dejar la tool activa en pruebas repetidas: basta con no definir
+  `WEB_SEARCH_API_KEY` para que la tool desaparezca.
 
 ## Risks / Trade-offs
 
@@ -112,4 +145,4 @@ Cambio aditivo, sin datos que migrar. `WEB_SEARCH_API_KEY` no configurada en nin
 
 ## Open Questions
 
-Ninguna. La elección de proveedor (Brave Search) es una decisión de esta sesión, reversible sin tocar el puerto ni ningún llamador.
+Ninguna. La elección de proveedor (SerpAPI, tras descartar Brave Search por ser de pago) es una decisión de esta sesión, reversible sin tocar el puerto ni ningún llamador.
