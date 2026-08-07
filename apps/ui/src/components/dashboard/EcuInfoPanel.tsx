@@ -49,7 +49,7 @@ function ErrorState({ message }: { message: string }) {
   );
 }
 
-function EcuTable({ ecus }: { ecus: EcuInfo[] }) {
+export function EcuTable({ ecus }: { ecus: EcuInfo[] }) {
   return (
     <Table>
       <TableHeader>

@@ -101,6 +101,11 @@ export class DiagnosisService {
     return this.obdRepo !== undefined
   }
 
+  /** True cuando hay un cliente LLM configurado para diagnostico cognitivo. */
+  get hasCognitiveDiagnosis(): boolean {
+    return this.llmClient !== undefined
+  }
+
   /** Escenarios seleccionables: los de simulacion, o el sintetico `tcp` en modo directo. */
   listScenarios(): SimulationScenario[] {
     return this.obdRepo ? [TCP_DIRECT_SCENARIO] : this.scenarios

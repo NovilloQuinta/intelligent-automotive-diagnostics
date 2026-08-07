@@ -12,6 +12,7 @@ import { FreezeFramePanel } from "./FreezeFramePanel";
 import { EcuInfoPanel } from "./EcuInfoPanel";
 import { DiagnosisPanel } from "./DiagnosisPanel";
 import { PidsTable } from "./PidsTable";
+import { SessionReportPanel } from "./SessionReportPanel";
 
 /** Main OBD-II dashboard page: telemetry gauges, vehicle selection, DTC panel, and AI diagnosis. */
 export function DashboardPage() {
@@ -25,6 +26,7 @@ export function DashboardPage() {
   const { loading, result, runDiagnosis } = useDiagnosis(selectedId);
   const { ecus, loading: ecusLoading, error: ecusError } = useEcuInfo(selectedId);
   const [selectedDtc, setSelectedDtc] = useState<string | null>(null);
+  const [showReport, setShowReport] = useState(false);
 
   useEffect(() => {
     setSelectedDtc(null);
@@ -56,6 +58,7 @@ export function DashboardPage() {
         onSelect={setSelectedId}
         loading={loading}
         onLogout={() => auth.logout()}
+        onReportClick={() => setShowReport((v) => !v)}
       />
       {scenariosError && (
         <div className="border-b border-destructive/30 bg-destructive/10 px-6 py-2 text-sm text-destructive">
@@ -101,6 +104,35 @@ export function DashboardPage() {
           </section>
         </div>
       </main>
+      {showReport && selectedId && (
+        <section className="border-t border-white/5 bg-black/40 px-4 py-6 md:px-6">
+          {/*
+           * KISS: useSessionReport re-fetches getEcuInfo/getFreezeFrame even
+           * though the lateral panels already loaded them. Sharing their state
+           * would couple the dashboard grid with the report panel, adding
+           * complexity. The double fetch is harmless (the calls are cached by
+           * the browser's HTTP layer for a few seconds) and keeps each
+           * component self-contained.
+           */}
+          <div className="mx-auto max-w-5xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-bold uppercase tracking-wider text-foreground/90">
+                Informe de Sesión de Diagnóstico
+              </h2>
+              <button
+                onClick={() => setShowReport(false)}
+                className="text-xs text-muted-foreground transition hover:text-foreground"
+              >
+                Cerrar informe ✕
+              </button>
+            </div>
+            <SessionReportPanel
+              scenarioId={selectedId}
+              vehicleInfo={selectedScenario?.vehicleInfo}
+            />
+          </div>
+        </section>
+      )}
       <footer className="relative z-10 border-t border-white/5 bg-black/40 px-6 py-2">
         <div className="mono flex flex-wrap items-center justify-between gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
           <span>Intelligent Automotive Diagnostics</span>

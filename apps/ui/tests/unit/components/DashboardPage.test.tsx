@@ -55,6 +55,21 @@ vi.mock("../../../src/components/dashboard/useDiagnosis", () => ({
 vi.mock("../../../src/components/dashboard/useEcuInfo", () => ({
   useEcuInfo: () => ({ ecus: [], loading: false, error: null }),
 }));
+vi.mock("../../../src/components/dashboard/useSessionReport", () => ({
+  useSessionReport: () => ({
+    capabilities: { cognitiveDiagnosis: true },
+    deterministic: null,
+    deterministicLoading: false,
+    deterministicError: null,
+    ecus: null,
+    ecusLoading: false,
+    freezeFrame: null,
+    freezeFrameLoading: false,
+    cognitive: null,
+    cognitiveLoading: false,
+    cognitiveError: null,
+  }),
+}));
 
 // FreezeFramePanel fetches through the real api module — mock only the network call
 vi.mock("../../../src/lib/api", () => ({
@@ -346,5 +361,50 @@ describe("DashboardPage", () => {
     await waitFor(() => {
       expect(screen.getByText("0C")).toBeDefined();
     });
+  });
+
+  it("should show the session report panel when the Informe button is clicked", () => {
+    mockAuthStatus.value = "authed";
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario],
+      selectedId: scenario.id,
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    });
+
+    render(<DashboardPage />);
+
+    const informeBtn = screen.getByTitle("Generar informe de la sesión");
+    fireEvent.click(informeBtn);
+
+    expect(
+      screen.getByText("Informe de Sesión de Diagnóstico"),
+    ).toBeDefined();
+    expect(screen.getByText("Diagnóstico Determinista")).toBeDefined();
+    expect(screen.getByText("Diagnóstico Cognitivo")).toBeDefined();
+  });
+
+  it("should hide the report panel when Cerrar informe is clicked", () => {
+    mockAuthStatus.value = "authed";
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario],
+      selectedId: scenario.id,
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    });
+
+    render(<DashboardPage />);
+
+    // Open report
+    fireEvent.click(screen.getByTitle("Generar informe de la sesión"));
+    expect(
+      screen.getByText("Informe de Sesión de Diagnóstico"),
+    ).toBeDefined();
+
+    // Close report
+    fireEvent.click(screen.getByText("Cerrar informe ✕"));
+    expect(
+      screen.queryByText("Informe de Sesión de Diagnóstico"),
+    ).toBeNull();
   });
 });

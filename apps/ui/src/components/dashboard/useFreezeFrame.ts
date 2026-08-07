@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/errors";
 import type { FreezeFrame } from "./types";
 
 /**
@@ -32,9 +33,7 @@ export function useFreezeFrame(scenarioId: string, dtc: string | null) {
       })
       .catch((e: unknown) => {
         if (cancelled) return;
-        setError(
-          e instanceof Error ? e.message : "Fallo al cargar el freeze frame",
-        );
+        setError(extractErrorMessage(e, "Fallo al cargar el freeze frame"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

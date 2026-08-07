@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/errors";
 import type { EcuInfo } from "./types";
 
 export function useEcuInfo(selectedId: string | null) {
@@ -26,7 +27,7 @@ export function useEcuInfo(selectedId: string | null) {
       })
       .catch((e: unknown) => {
         if (cancelled) return;
-        setError(e instanceof Error ? e.message : "Fallo al cargar las ECUs");
+        setError(extractErrorMessage(e, "Fallo al cargar las ECUs"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

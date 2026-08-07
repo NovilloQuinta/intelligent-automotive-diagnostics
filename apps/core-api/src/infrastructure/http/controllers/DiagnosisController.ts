@@ -84,6 +84,11 @@ export class DiagnosisController {
     res.status(200).json({ scenarios: this.service.listScenarios() })
   }
 
+  /** GET /api/mcp/capabilities — informa de las capacidades disponibles del servicio. */
+  capabilities = (_req: Request, res: Response): void => {
+    res.status(200).json({ cognitiveDiagnosis: this.service.hasCognitiveDiagnosis })
+  }
+
   /** POST /api/diagnosis — diagnostico determinista. 400 body invalido, 404 escenario inexistente. */
   diagnose = async (req: Request, res: Response): Promise<void> => {
     const schema = this.selectSchema(DiagnosisBodySchema, DiagnosisBodyTcpSchema)
