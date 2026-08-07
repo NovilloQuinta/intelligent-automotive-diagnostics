@@ -22,6 +22,26 @@ import { AuthController } from '@/infrastructure/http/controllers/AuthController
 import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 import type { AppConfig } from '@/infrastructure/configuration/index.js'
+import { initLanceDb } from '@/infrastructure/persistence/vector/lancedb.js'
+import { createLanceVectorStore } from '@/infrastructure/persistence/vector/lanceVectorStore.js'
+import { createEmbedding } from '@/infrastructure/persistence/vector/embedding.js'
+import {
+  PIDS_TABLE_CONFIG,
+  DTCS_TABLE_CONFIG,
+  DIAGNOSES_TABLE_CONFIG,
+} from '@/infrastructure/persistence/vector/vectorTableConfigs.js'
+import { createKnowledgeIndex } from '@/application/knowledge/createKnowledgeIndex.js'
+import { toPidMetadata, toPidEntry } from '@/application/knowledge/pidKnowledgeMapper.js'
+import { toDtcMetadata, toDtcEntry } from '@/application/knowledge/dtcKnowledgeMapper.js'
+import {
+  toDiagnosisMetadata,
+  toDiagnosisEntry,
+} from '@/application/knowledge/diagnosisKnowledgeMapper.js'
+import type { EmbeddingGenerator } from '@/application/ports/EmbeddingGenerator.js'
+import type { VectorRepository } from '@/application/ports/VectorRepository.js'
+import type { PidKnowledgeEntry } from '@/application/dto/knowledge/PidKnowledgeEntry.js'
+import type { DtcKnowledgeEntry } from '@/application/dto/knowledge/DtcKnowledgeEntry.js'
+import type { DiagnosisKnowledgeEntry } from '@/application/dto/knowledge/DiagnosisKnowledgeEntry.js'
 
 const ACCESS_TOKEN_TTL = '15m'
 const REFRESH_TOKEN_TTL = '7d'
@@ -108,8 +128,54 @@ function createObdRepository(config: AppConfig): ObdRepository | undefined {
   return new Elm327TcpRepository({ host: config.ELM327_HOST, port: config.ELM327_PORT })
 }
 
+/** Indices de conocimiento vectorial cableados en el arranque. */
+export interface KnowledgeStack {
+  readonly pidsIndex: VectorRepository<PidKnowledgeEntry>
+  readonly dtcsIndex: VectorRepository<DtcKnowledgeEntry>
+  readonly diagnosisIndex: VectorRepository<DiagnosisKnowledgeEntry>
+}
+
+/** Inicializa la base vectorial y los tres indices de conocimiento. */
+export async function createKnowledgeStack(
+  config: AppConfig,
+  logger: LoggerPort,
+): Promise<KnowledgeStack | undefined> {
+  try {
+    const { db } = await initLanceDb(config.LANCEDB_PATH)
+    const embed: EmbeddingGenerator = createEmbedding
+    const [pidsStore, dtcsStore, diagnosesStore] = await Promise.all([
+      createLanceVectorStore(db, PIDS_TABLE_CONFIG),
+      createLanceVectorStore(db, DTCS_TABLE_CONFIG),
+      createLanceVectorStore(db, DIAGNOSES_TABLE_CONFIG),
+    ])
+    return {
+      pidsIndex: createKnowledgeIndex({
+        store: pidsStore,
+        embed,
+        toMetadata: toPidMetadata,
+        fromMetadata: toPidEntry,
+      }),
+      dtcsIndex: createKnowledgeIndex({
+        store: dtcsStore,
+        embed,
+        toMetadata: toDtcMetadata,
+        fromMetadata: toDtcEntry,
+      }),
+      diagnosisIndex: createKnowledgeIndex({
+        store: diagnosesStore,
+        embed,
+        toMetadata: toDiagnosisMetadata,
+        fromMetadata: toDiagnosisEntry,
+      }),
+    }
+  } catch (err) {
+    logger.warn('RAG knowledge stack unavailable, continuing without it', { err: String(err) })
+    return undefined
+  }
+}
+
 /** Composition Root: cablea todas las dependencias y devuelve la app Express configurada. */
-export function buildApp(config: AppConfig): Application {
+export async function buildApp(config: AppConfig): Promise<Application> {
   const { db, auditRepo, userRepo, tokenStore } = createPersistenceRepositories(config)
   const logger = new Logger(config.NODE_ENV, db)
   const auth = createAuthStack(config, { userRepo, tokenStore }, logger)
@@ -123,11 +189,13 @@ export function buildApp(config: AppConfig): Application {
 
   const obdRepo = createObdRepository(config)
   const llmClient = createLlmClient(config, logger)
+  const knowledgeStack = await createKnowledgeStack(config, logger)
   const diagnosisService = new DiagnosisService({
     scenarios: config.OBD_MODE === 'tcp' ? [] : seedScenarios,
     obdRepo,
     llmClient,
     logger,
+    diagnosisIndex: knowledgeStack?.diagnosisIndex,
   })
   const diagnosisController = new DiagnosisController(diagnosisService, logger)
 
