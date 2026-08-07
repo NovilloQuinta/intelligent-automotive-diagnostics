@@ -102,7 +102,7 @@
 
 ## 14. GREEN — Implementar wiring en `DashboardPage`
 
-- [ ] 14.1 Modificar `apps/ui/src/components/dashboard/DashboardPage.tsx`: integrar `useCapabilities()` + `useCognitiveDiagnosis(selectedId)`; `handleDiagnose` que llama `runDiagnosis()` y, si procede, dispara `cognitive.trigger()` sin `await`; pasar `aiRows`/`aiLoading` a `PidsTable`
+- [x] 14.1 Modificar `apps/ui/src/components/dashboard/DashboardPage.tsx`: integrar `useCapabilities()` + `useCognitiveDiagnosis(selectedId)`; `handleDiagnose` que llama `runDiagnosis()` y, si procede, dispara `cognitive.trigger()` sin `await`; pasar `aiRows`/`aiLoading` a `PidsTable`
 
 ## 15. REFACTOR + Verificación
 

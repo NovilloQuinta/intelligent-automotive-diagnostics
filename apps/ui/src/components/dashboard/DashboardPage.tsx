@@ -6,6 +6,8 @@ import { useVehicleAutoDetect } from "./useVehicleAutoDetect";
 import { VehicleAutoDetectWizard } from "./VehicleAutoDetectWizard";
 import { useLiveTelemetry } from "./useLiveTelemetry";
 import { useDiagnosis } from "./useDiagnosis";
+import { useCapabilities } from "./useCapabilities";
+import { useCognitiveDiagnosis } from "./useCognitiveDiagnosis";
 import { useEcuInfo } from "./useEcuInfo";
 import { TopBar } from "./TopBar";
 import { TelemetrySection } from "./TelemetrySection";
@@ -26,6 +28,8 @@ export function DashboardPage() {
   const selectedScenario = scenarios.find((s) => s.id === selectedId) ?? null;
   const { live, streamOk } = useLiveTelemetry(selectedScenario);
   const { loading, result, runDiagnosis } = useDiagnosis(selectedId);
+  const { cognitiveDiagnosis } = useCapabilities();
+  const cognitive = useCognitiveDiagnosis(selectedId);
   const {
     ecus,
     loading: ecusLoading,
@@ -38,6 +42,17 @@ export function DashboardPage() {
   useEffect(() => {
     setSelectedDtc(null);
   }, [selectedId]);
+
+  /**
+   * El diagnóstico cognitivo se dispara tras el determinista y sin `await`: la
+   * respuesta LLM puede tardar hasta 60 s y no debe retrasar la pintura de
+   * severidad, DTCs ni de los 4 PIDs fijos.
+   */
+  const handleDiagnose = useCallback(async () => {
+    cognitive.reset();
+    await runDiagnosis();
+    if (cognitiveDiagnosis) void cognitive.trigger();
+  }, [runDiagnosis, cognitiveDiagnosis, cognitive.reset, cognitive.trigger]);
 
   /** Confirmar el vehículo identificado es lo único que abre el menú de diagnóstico. */
   const handleVehicleConfirmed = useCallback(
@@ -106,7 +121,7 @@ export function DashboardPage() {
               streamOk={streamOk}
               canDiagnose={!!selectedId}
               telemetryStatus={telemetryStatus}
-              onDiagnose={runDiagnosis}
+              onDiagnose={handleDiagnose}
             />
             <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:gap-6">
               <DtcPanel
@@ -132,6 +147,8 @@ export function DashboardPage() {
               <PidsTable
                 parsedValues={result?.parsedValues ?? null}
                 empty={!result && !loading}
+                aiRows={cognitive.pidRows}
+                aiLoading={cognitive.loading}
               />
             </section>
           </div>
