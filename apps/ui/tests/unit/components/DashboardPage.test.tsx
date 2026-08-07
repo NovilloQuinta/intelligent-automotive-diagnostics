@@ -334,7 +334,9 @@ describe("DashboardPage", () => {
     expect(screen.queryByText("Diagnóstico IA")).toBeNull();
     expect(screen.queryByText("PIDs Leídos")).toBeNull();
     // La cabecera se mantiene: el wizard sustituye al menú de diagnóstico, no a la app
-    expect(screen.getByText("OBD-II · AI Assisted Workshop Tool")).toBeDefined();
+    expect(
+      screen.getByText("OBD-II · AI Assisted Workshop Tool"),
+    ).toBeDefined();
   });
 
   it("should enter the diagnosis menu when the wizard confirms the vehicle", () => {
@@ -362,7 +364,11 @@ describe("DashboardPage", () => {
   it("should reopen the wizard in detecting when another vehicle is picked in VehicleSelector", () => {
     mockAuthStatus.value = "authed";
     const detect = vi.fn();
-    const other: Scenario = { ...scenario, id: "kawa-z900", name: "Kawasaki Z900" };
+    const other: Scenario = {
+      ...scenario,
+      id: "kawa-z900",
+      name: "Kawasaki Z900",
+    };
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario, other],
       selectedId: scenario.id,
@@ -497,9 +503,7 @@ describe("DashboardPage", () => {
     const informeBtn = screen.getByTitle("Generar informe de la sesión");
     fireEvent.click(informeBtn);
 
-    expect(
-      screen.getByText("Informe de Sesión de Diagnóstico"),
-    ).toBeDefined();
+    expect(screen.getByText("Informe de Sesión de Diagnóstico")).toBeDefined();
     expect(screen.getByText("Diagnóstico Determinista")).toBeDefined();
     expect(screen.getByText("Diagnóstico Cognitivo")).toBeDefined();
   });
@@ -517,15 +521,11 @@ describe("DashboardPage", () => {
 
     // Open report
     fireEvent.click(screen.getByTitle("Generar informe de la sesión"));
-    expect(
-      screen.getByText("Informe de Sesión de Diagnóstico"),
-    ).toBeDefined();
+    expect(screen.getByText("Informe de Sesión de Diagnóstico")).toBeDefined();
 
     // Close report
     fireEvent.click(screen.getByText("Cerrar informe ✕"));
-    expect(
-      screen.queryByText("Informe de Sesión de Diagnóstico"),
-    ).toBeNull();
+    expect(screen.queryByText("Informe de Sesión de Diagnóstico")).toBeNull();
   });
 
   it("should trigger the cognitive diagnosis after runDiagnosis when the capability is on", async () => {

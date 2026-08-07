@@ -20,6 +20,19 @@ function toCatalogKey(args: Record<string, unknown>): string | null {
   }
 }
 
+/**
+ * Interpreta el resultado de la tool como valor fisico.
+ *
+ * `Number('')` vale 0, asi que la cadena vacia se descarta antes de convertir:
+ * una lectura ausente no es una lectura de cero.
+ */
+function toReading(result: string): number | null {
+  const trimmed = result.trim()
+  if (trimmed === '') return null
+  const value = Number(trimmed)
+  return Number.isFinite(value) ? value : null
+}
+
 /** Convierte una traza de `read_pid` en observacion, o `null` si no es enriquecible. */
 function toObservation(trace: ToolCallTrace): PidObservation | null {
   const code = toCatalogKey(trace.args)
@@ -28,8 +41,8 @@ function toObservation(trace: ToolCallTrace): PidObservation | null {
   const def = PID_OBSERVATION_CATALOG.get(code)
   if (!def) return null
 
-  const value = Number(trace.result)
-  if (!Number.isFinite(value) || trace.result.trim() === '') return null
+  const value = toReading(trace.result)
+  if (value === null) return null
 
   return {
     code,

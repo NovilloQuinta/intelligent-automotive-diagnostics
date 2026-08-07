@@ -57,36 +57,34 @@ export function buildPidRows(
   parsedValues: DiagnosisResponse["parsedValues"],
 ): PidRow[] {
   const { rpm, coolantTemp, speed, intakeTemp } = parsedValues;
-  return [
+  const rows = [
     {
       code: "01 0C",
       description: "Régimen del motor",
       value: `${rpm} RPM`,
       status: rpm > GAUGE.RPM_DANGER ? "review" : "ok",
-      source: "fixed",
     },
     {
       code: "01 05",
       description: "Temperatura del refrigerante",
       value: `${coolantTemp}°C`,
       status: coolantTemp > GAUGE.COOLANT_ALARM ? "review" : "ok",
-      source: "fixed",
     },
     {
       code: "01 0D",
       description: "Velocidad del vehículo",
       value: `${speed} km/h`,
       status: "ok",
-      source: "fixed",
     },
     {
       code: "01 0F",
       description: "Temperatura del aire de admisión",
       value: `${intakeTemp}°C`,
       status: intakeTemp > GAUGE.INTAKE_WARN ? "review" : "ok",
-      source: "fixed",
     },
-  ];
+  ] satisfies Omit<PidRow, "source">[];
+
+  return rows.map((row) => ({ ...row, source: "fixed" }));
 }
 
 /** Maps a backend PID observation to a table row tagged as AI-discovered. */

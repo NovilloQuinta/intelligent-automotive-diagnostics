@@ -43,7 +43,11 @@ describe('derivePidObservations', () => {
   })
 
   it('should ignore read_pid calls with args that are not valid PID codes', () => {
-    const trace: ToolCallTrace = { tool: 'read_pid', args: { mode: 'zz', pid: '0C' }, result: '850' }
+    const trace: ToolCallTrace = {
+      tool: 'read_pid',
+      args: { mode: 'zz', pid: '0C' },
+      result: '850',
+    }
 
     expect(derivePidObservations([trace])).toEqual([])
   })
