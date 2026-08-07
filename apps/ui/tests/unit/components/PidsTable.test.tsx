@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { PidsTable } from "../../../src/components/dashboard/PidsTable";
+import type { PidRow } from "../../../src/components/dashboard/pidCatalog";
 
 const NORMAL_VALUES = { rpm: 850, coolantTemp: 90, speed: 50, intakeTemp: 35 };
+
+function aiRow(code: string, description: string, value: string): PidRow {
+  return { code, description, value, status: "ok", source: "ai" };
+}
 
 describe("PidsTable", () => {
   it("should render the empty prompt and a dash count when empty", () => {
@@ -115,5 +120,92 @@ describe("PidsTable", () => {
 
     expect(screen.getAllByText("OK")).toHaveLength(4);
     expect(screen.queryByText("Revisar")).toBeNull();
+  });
+
+  it("should list the AI rows after the 4 fixed ones with an AI origin badge", () => {
+    render(
+      <PidsTable
+        parsedValues={NORMAL_VALUES}
+        empty={false}
+        aiRows={[
+          aiRow("01 11", "Posición del acelerador", "14 %"),
+          aiRow("01 42", "Voltaje del módulo de control", "14.2 V"),
+        ]}
+        aiLoading={false}
+      />,
+    );
+
+    expect(screen.getByText("6 registrados")).toBeDefined();
+    expect(screen.getByText("01 11")).toBeDefined();
+    expect(screen.getByText("01 42")).toBeDefined();
+    expect(screen.getAllByText("IA")).toHaveLength(2);
+
+    const codes = screen
+      .getAllByTestId("pid-row")
+      .map((row) => row.getAttribute("data-code"));
+    expect(codes).toEqual([
+      "01 0C",
+      "01 05",
+      "01 0D",
+      "01 0F",
+      "01 11",
+      "01 42",
+    ]);
+  });
+
+  it("should not duplicate a row when the AI reads an already fixed PID", () => {
+    render(
+      <PidsTable
+        parsedValues={NORMAL_VALUES}
+        empty={false}
+        aiRows={[aiRow("01 0C", "Régimen del motor", "999 rpm")]}
+        aiLoading={false}
+      />,
+    );
+
+    expect(screen.getByText("4 registrados")).toBeDefined();
+    expect(screen.getAllByText("01 0C")).toHaveLength(1);
+    expect(screen.getByText("850 RPM")).toBeDefined();
+    expect(screen.queryByText("IA")).toBeNull();
+  });
+
+  it("should show a secondary loading indicator without hiding the fixed rows", () => {
+    render(
+      <PidsTable
+        parsedValues={NORMAL_VALUES}
+        empty={false}
+        aiRows={null}
+        aiLoading={true}
+      />,
+    );
+
+    expect(screen.getByText("Buscando PIDs adicionales…")).toBeDefined();
+    expect(screen.getByText("01 0C")).toBeDefined();
+    expect(screen.getAllByTestId("pid-row")).toHaveLength(4);
+  });
+
+  it("should render neither the loading row nor AI rows when the capability is off", () => {
+    const { rerender } = render(
+      <PidsTable
+        parsedValues={NORMAL_VALUES}
+        empty={false}
+        aiRows={null}
+        aiLoading={false}
+      />,
+    );
+    expect(screen.queryByText("Buscando PIDs adicionales…")).toBeNull();
+    expect(screen.getAllByTestId("pid-row")).toHaveLength(4);
+
+    rerender(
+      <PidsTable
+        parsedValues={NORMAL_VALUES}
+        empty={false}
+        aiRows={[]}
+        aiLoading={false}
+      />,
+    );
+    expect(screen.queryByText("Buscando PIDs adicionales…")).toBeNull();
+    expect(screen.queryByText("IA")).toBeNull();
+    expect(screen.getAllByTestId("pid-row")).toHaveLength(4);
   });
 });

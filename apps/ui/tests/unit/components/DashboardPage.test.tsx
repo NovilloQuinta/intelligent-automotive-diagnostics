@@ -10,6 +10,8 @@ const {
   mockUseLiveTelemetry,
   mockUseDiagnosis,
   mockUseVehicleAutoDetect,
+  mockUseCapabilities,
+  mockUseCognitiveDiagnosis,
 } = vi.hoisted(() => ({
   mockAuthStatus: { value: "anonymous" as "loading" | "authed" | "anonymous" },
   mockLogout: vi.fn(),
@@ -17,6 +19,8 @@ const {
   mockUseLiveTelemetry: vi.fn(),
   mockUseDiagnosis: vi.fn(),
   mockUseVehicleAutoDetect: vi.fn(),
+  mockUseCapabilities: vi.fn(),
+  mockUseCognitiveDiagnosis: vi.fn(),
 }));
 
 // Must mock before any imports that touch @tanstack/react-router
@@ -56,6 +60,12 @@ vi.mock("../../../src/components/dashboard/useDiagnosis", () => ({
 }));
 vi.mock("../../../src/components/dashboard/useVehicleAutoDetect", () => ({
   useVehicleAutoDetect: () => mockUseVehicleAutoDetect(),
+}));
+vi.mock("../../../src/components/dashboard/useCapabilities", () => ({
+  useCapabilities: () => mockUseCapabilities(),
+}));
+vi.mock("../../../src/components/dashboard/useCognitiveDiagnosis", () => ({
+  useCognitiveDiagnosis: () => mockUseCognitiveDiagnosis(),
 }));
 vi.mock("../../../src/components/dashboard/useEcuInfo", () => ({
   useEcuInfo: () => ({ ecus: [], loading: false, error: null }),
@@ -147,6 +157,13 @@ describe("DashboardPage", () => {
       loading: false,
       result: null,
       runDiagnosis: vi.fn(),
+    });
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: false });
+    mockUseCognitiveDiagnosis.mockReturnValue({
+      pidRows: null,
+      loading: false,
+      trigger: vi.fn(),
+      reset: vi.fn(),
     });
   });
 
@@ -317,7 +334,9 @@ describe("DashboardPage", () => {
     expect(screen.queryByText("Diagnóstico IA")).toBeNull();
     expect(screen.queryByText("PIDs Leídos")).toBeNull();
     // La cabecera se mantiene: el wizard sustituye al menú de diagnóstico, no a la app
-    expect(screen.getByText("OBD-II · AI Assisted Workshop Tool")).toBeDefined();
+    expect(
+      screen.getByText("OBD-II · AI Assisted Workshop Tool"),
+    ).toBeDefined();
   });
 
   it("should enter the diagnosis menu when the wizard confirms the vehicle", () => {
@@ -345,7 +364,11 @@ describe("DashboardPage", () => {
   it("should reopen the wizard in detecting when another vehicle is picked in VehicleSelector", () => {
     mockAuthStatus.value = "authed";
     const detect = vi.fn();
-    const other: Scenario = { ...scenario, id: "kawa-z900", name: "Kawasaki Z900" };
+    const other: Scenario = {
+      ...scenario,
+      id: "kawa-z900",
+      name: "Kawasaki Z900",
+    };
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario, other],
       selectedId: scenario.id,
@@ -480,9 +503,7 @@ describe("DashboardPage", () => {
     const informeBtn = screen.getByTitle("Generar informe de la sesión");
     fireEvent.click(informeBtn);
 
-    expect(
-      screen.getByText("Informe de Sesión de Diagnóstico"),
-    ).toBeDefined();
+    expect(screen.getByText("Informe de Sesión de Diagnóstico")).toBeDefined();
     expect(screen.getByText("Diagnóstico Determinista")).toBeDefined();
     expect(screen.getByText("Diagnóstico Cognitivo")).toBeDefined();
   });
@@ -500,14 +521,157 @@ describe("DashboardPage", () => {
 
     // Open report
     fireEvent.click(screen.getByTitle("Generar informe de la sesión"));
-    expect(
-      screen.getByText("Informe de Sesión de Diagnóstico"),
-    ).toBeDefined();
+    expect(screen.getByText("Informe de Sesión de Diagnóstico")).toBeDefined();
 
     // Close report
     fireEvent.click(screen.getByText("Cerrar informe ✕"));
-    expect(
-      screen.queryByText("Informe de Sesión de Diagnóstico"),
-    ).toBeNull();
+    expect(screen.queryByText("Informe de Sesión de Diagnóstico")).toBeNull();
+  });
+
+  it("should trigger the cognitive diagnosis after runDiagnosis when the capability is on", async () => {
+    mockAuthStatus.value = "authed";
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario],
+      selectedId: scenario.id,
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    });
+    const runDiagnosis = vi.fn().mockResolvedValue(undefined);
+    const trigger = vi.fn();
+    const reset = vi.fn();
+    mockUseDiagnosis.mockReturnValue({
+      loading: false,
+      result: null,
+      runDiagnosis,
+    });
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true });
+    mockUseCognitiveDiagnosis.mockReturnValue({
+      pidRows: null,
+      loading: false,
+      trigger,
+      reset,
+    });
+
+    render(<DashboardPage />);
+    fireEvent.click(screen.getByText("Iniciar diagnóstico"));
+
+    await waitFor(() => {
+      expect(trigger).toHaveBeenCalledTimes(1);
+    });
+    expect(runDiagnosis).toHaveBeenCalledTimes(1);
+    // reset limpia las filas de la sesión anterior antes del nuevo trigger
+    expect(reset).toHaveBeenCalledTimes(1);
+    expect(reset.mock.invocationCallOrder[0]).toBeLessThan(
+      trigger.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("should not trigger the cognitive diagnosis when the capability is off", async () => {
+    mockAuthStatus.value = "authed";
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario],
+      selectedId: scenario.id,
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    });
+    const runDiagnosis = vi.fn().mockResolvedValue(undefined);
+    const trigger = vi.fn();
+    mockUseDiagnosis.mockReturnValue({
+      loading: false,
+      result: null,
+      runDiagnosis,
+    });
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: false });
+    mockUseCognitiveDiagnosis.mockReturnValue({
+      pidRows: null,
+      loading: false,
+      trigger,
+      reset: vi.fn(),
+    });
+
+    render(<DashboardPage />);
+    fireEvent.click(screen.getByText("Iniciar diagnóstico"));
+
+    await waitFor(() => {
+      expect(runDiagnosis).toHaveBeenCalledTimes(1);
+    });
+    expect(trigger).not.toHaveBeenCalled();
+  });
+
+  it("should paint the deterministic result while the cognitive call is still loading", () => {
+    mockAuthStatus.value = "authed";
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario],
+      selectedId: scenario.id,
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    });
+    mockUseDiagnosis.mockReturnValue({
+      loading: false,
+      result: {
+        rawData: "41 0C 5A",
+        parsedValues: { rpm: 850, coolantTemp: 90, speed: 0, intakeTemp: 35 },
+        dtcCodes: [{ code: "P0301", description: "Cylinder 1 Misfire" }],
+        diagnosisText: "[HIGH] Fallo de encendido",
+        severity: "high",
+      },
+      runDiagnosis: vi.fn(),
+    });
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true });
+    mockUseCognitiveDiagnosis.mockReturnValue({
+      pidRows: null,
+      loading: true,
+      trigger: vi.fn(),
+      reset: vi.fn(),
+    });
+
+    render(<DashboardPage />);
+
+    // Los 4 PIDs fijos y el resto del diagnóstico están visibles pese al loading cognitivo
+    expect(screen.getAllByTestId("pid-row")).toHaveLength(4);
+    expect(screen.getByText("P0301")).toBeDefined();
+    expect(screen.getByText("Buscando PIDs adicionales…")).toBeDefined();
+  });
+
+  it("should append the AI rows to the PIDs table once they resolve", () => {
+    mockAuthStatus.value = "authed";
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario],
+      selectedId: scenario.id,
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    });
+    mockUseDiagnosis.mockReturnValue({
+      loading: false,
+      result: {
+        rawData: "41 0C 5A",
+        parsedValues: { rpm: 850, coolantTemp: 90, speed: 0, intakeTemp: 35 },
+        dtcCodes: [],
+        diagnosisText: "[LOW] Sin fallos",
+        severity: "low",
+      },
+      runDiagnosis: vi.fn(),
+    });
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true });
+    mockUseCognitiveDiagnosis.mockReturnValue({
+      pidRows: [
+        {
+          code: "01 42",
+          description: "Voltaje del módulo de control",
+          value: "10.9 V",
+          status: "review",
+          source: "ai",
+        },
+      ],
+      loading: false,
+      trigger: vi.fn(),
+      reset: vi.fn(),
+    });
+
+    render(<DashboardPage />);
+
+    expect(screen.getAllByTestId("pid-row")).toHaveLength(5);
+    expect(screen.getByText("01 42")).toBeDefined();
+    expect(screen.getByText("IA")).toBeDefined();
   });
 });

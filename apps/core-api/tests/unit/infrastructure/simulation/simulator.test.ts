@@ -4,6 +4,7 @@ import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
+import { seedScenarios } from '@/infrastructure/simulation/seedScenarios.js'
 import type { LiveData } from '@/domain/value-objects/liveData.js'
 
 const audiIdleSensorValues: LiveData = {
@@ -194,5 +195,37 @@ describe('ObdSimulator', () => {
     const simulator = new ObdSimulator(audiIdleScenario)
 
     expect(simulator.getEcus()).toEqual([])
+  })
+})
+
+describe('ObdSimulator with seed scenarios pidValues', () => {
+  function seedScenario(id: string): SimulationScenario {
+    const scenario = seedScenarios.find((s) => s.id === id)
+    if (!scenario) throw new Error(`Seed scenario ${id} not found`)
+    return scenario
+  }
+
+  const expectations: [string, Record<string, number>][] = [
+    ['audi-a3-idle', { '01 11': 14, '01 04': 18, '01 42': 14.2 }],
+    ['kawa-z900', { '01 11': 52, '01 04': 58, '01 42': 10.9 }],
+  ]
+
+  it.each(expectations)('should read the extra pidValues of %s', (id, values) => {
+    const simulator = new ObdSimulator(seedScenario(id))
+
+    for (const [key, expected] of Object.entries(values)) {
+      const [mode, pid] = key.split(' ')
+      expect(simulator.readPidValue(mode, pid)).toBe(expected)
+    }
+  })
+
+  it.each(expectations)('should list the extra pidValues of %s as supported', (id, values) => {
+    const simulator = new ObdSimulator(seedScenario(id))
+
+    const supported = simulator.getSupportedPids()
+
+    for (const key of Object.keys(values)) {
+      expect(supported).toContain(key)
+    }
   })
 })

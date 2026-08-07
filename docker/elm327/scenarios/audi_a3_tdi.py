@@ -39,8 +39,8 @@ ObdMessage = {
         "Request": "^0104" + ELM_FOOTER,
         "Descr": "Calculated Engine Load",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("41 04 40"),
-        # 25.1 %  (A*100/255)
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("41 04 2E"),
+        # 18.0 %  (A*100/255)
     },
     "COOLANT_TEMP": {
         "Request": "^0105" + ELM_FOOTER,
@@ -88,8 +88,8 @@ ObdMessage = {
         "Request": "^0111" + ELM_FOOTER,
         "Descr": "Throttle Position (diesel — intake flap)",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("41 11 00"),
-        # 0 % at idle (diesel intake flap closed, EGR handles air)
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("41 11 24"),
+        # 14.1 %  (A*100/255) — apertura minima de la mariposa al ralenti
     },
     "OBD_COMPLIANCE": {
         "Request": "^011C" + ELM_FOOTER,
@@ -167,8 +167,8 @@ ObdMessage = {
         "Request": "^0142" + ELM_FOOTER,
         "Descr": "Control Module Voltage",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("41 42 37 14"),
-        # 14.1 V  ((A*256+B)/1000)
+        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("41 42 37 78"),
+        # 14.2 V  ((A*256+B)/1000) — alternador cargando
     },
     "AMBIANT_AIR_TEMP": {
         "Request": "^0146" + ELM_FOOTER,

@@ -1,15 +1,28 @@
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
+import type { PidObservation } from "@/lib/api";
 import type { DiagnosisResponse } from "./types";
 import { COLORS, GAUGE } from "./types";
 
 export type PidStatus = "ok" | "review";
+
+/** Origin of a PID row: the 4 fixed readings of the diagnosis, or a PID discovered by the AI. */
+export type PidSource = "fixed" | "ai";
 
 export type PidRow = {
   code: string;
   description: string;
   value: string;
   status: PidStatus;
+  source: PidSource;
 };
+
+/** Codes always rendered from `DiagnosisResponse.parsedValues` — AI rows never duplicate them. */
+export const FIXED_PID_CODES: ReadonlySet<string> = new Set([
+  "01 0C",
+  "01 05",
+  "01 0D",
+  "01 0F",
+]);
 
 export type PidStatusMeta = {
   label: string;
@@ -44,7 +57,7 @@ export function buildPidRows(
   parsedValues: DiagnosisResponse["parsedValues"],
 ): PidRow[] {
   const { rpm, coolantTemp, speed, intakeTemp } = parsedValues;
-  return [
+  const rows = [
     {
       code: "01 0C",
       description: "Régimen del motor",
@@ -69,5 +82,37 @@ export function buildPidRows(
       value: `${intakeTemp}°C`,
       status: intakeTemp > GAUGE.INTAKE_WARN ? "review" : "ok",
     },
-  ];
+  ] satisfies Omit<PidRow, "source">[];
+
+  return rows.map((row) => ({ ...row, source: "fixed" }));
+}
+
+/** Maps a backend PID observation to a table row tagged as AI-discovered. */
+export function pidObservationToRow(obs: PidObservation): PidRow {
+  return {
+    code: obs.code,
+    description: obs.name,
+    value: obs.unit ? `${obs.value} ${obs.unit}` : `${obs.value}`,
+    status: obs.status,
+    source: "ai",
+  };
+}
+
+/**
+ * Appends the AI-discovered rows after the fixed ones, dropping any code already
+ * rendered as a fixed PID and deduplicating the AI rows by code (last read wins).
+ */
+export function mergePidRows(
+  fixedRows: PidRow[],
+  aiRows: PidRow[] | null,
+): PidRow[] {
+  if (!aiRows || aiRows.length === 0) return fixedRows;
+
+  const byCode = new Map<string, PidRow>();
+  for (const row of aiRows) {
+    if (FIXED_PID_CODES.has(row.code)) continue;
+    byCode.set(row.code, row);
+  }
+
+  return [...fixedRows, ...byCode.values()];
 }

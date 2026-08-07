@@ -3,6 +3,12 @@ import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js
 import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { LiveData } from '@/domain/value-objects/liveData.js'
+import {
+  MODE_CURRENT_DATA,
+  PID_CONTROL_MODULE_VOLTAGE,
+  PID_ENGINE_LOAD,
+  PID_THROTTLE_POSITION,
+} from '@/domain/pids.js'
 
 const audiIdleData = new LiveData({ rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 })
 const kawaData = new LiveData({ rpm: 4500, coolantTemp: 105, speed: 0, intakeTemp: 28 })
@@ -28,6 +34,24 @@ function createEcu(
   })
 }
 
+const THROTTLE_KEY = `${MODE_CURRENT_DATA} ${PID_THROTTLE_POSITION}`
+const ENGINE_LOAD_KEY = `${MODE_CURRENT_DATA} ${PID_ENGINE_LOAD}`
+const CONTROL_MODULE_VOLTAGE_KEY = `${MODE_CURRENT_DATA} ${PID_CONTROL_MODULE_VOLTAGE}`
+
+/** Lecturas extra del Audi al ralenti: acelerador suelto, carga baja y bateria sana. */
+const audiPidValues: Record<string, number> = {
+  [THROTTLE_KEY]: 14,
+  [ENGINE_LOAD_KEY]: 18,
+  [CONTROL_MODULE_VOLTAGE_KEY]: 14.2,
+}
+
+/** Lecturas extra de la Kawasaki: acelerado y con voltaje de modulo bajo (fallo de carga). */
+const kawaPidValues: Record<string, number> = {
+  [THROTTLE_KEY]: 52,
+  [ENGINE_LOAD_KEY]: 58,
+  [CONTROL_MODULE_VOLTAGE_KEY]: 10.9,
+}
+
 const ECM = createEcu(1, 'Engine Control Module', 'ECM', '7E0', '7E8')
 const TCM = createEcu(2, 'Transmission Control Module', 'TCM', '7E1', '7E9')
 const ABS = createEcu(3, 'ABS Control Module', 'ABS', '760', '768')
@@ -43,6 +67,7 @@ export const seedScenarios: SimulationScenario[] = [
     vehicleType: VehicleType.Car,
     sensorValues: audiIdleData,
     dtcConfig: [{ code: 'P0301', description: 'Cylinder 1 Misfire' }],
+    pidValues: audiPidValues,
     ecus: [ECM, TCM, ABS, BCM, SRS],
     vehicleInfo: {
       make: 'Audi',
@@ -58,6 +83,7 @@ export const seedScenarios: SimulationScenario[] = [
     vehicleType: VehicleType.Motorcycle,
     sensorValues: kawaData,
     dtcConfig: [],
+    pidValues: kawaPidValues,
     ecus: [ECM, ABS, IPC],
     vehicleInfo: {
       make: 'Kawasaki',

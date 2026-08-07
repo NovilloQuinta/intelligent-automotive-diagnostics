@@ -43,8 +43,8 @@ ObdMessage = {
         "Request": "^0104" + ELM_FOOTER,
         "Descr": "Calculated Engine Load",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("41 04 23"),
-        # 13.7 %  (A*100/255)
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("41 04 94"),
+        # 58.0 %  (A*100/255)
     },
     "COOLANT_TEMP": {
         "Request": "^0105" + ELM_FOOTER,
@@ -85,8 +85,8 @@ ObdMessage = {
         "Request": "^0111" + ELM_FOOTER,
         "Descr": "Throttle Position",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("41 11 0D"),
-        # 5.1 %  (A*100/255) — slight opening to maintain idle
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("41 11 85"),
+        # 52.2 %  (A*100/255) — acelerando
     },
     "OBD_COMPLIANCE": {
         "Request": "^011C" + ELM_FOOTER,
@@ -145,8 +145,8 @@ ObdMessage = {
         "Request": "^0142" + ELM_FOOTER,
         "Descr": "Control Module Voltage",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("41 42 35 2C"),
-        # 13.6 V  ((A*256+B)/1000) — charging at idle
+        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("41 42 2A 94"),
+        # 10.9 V  ((A*256+B)/1000) — fallo de carga: bateria/alternador
     },
     "AMBIANT_AIR_TEMP": {
         "Request": "^0146" + ELM_FOOTER,
