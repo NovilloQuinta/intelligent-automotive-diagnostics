@@ -105,7 +105,8 @@ Si NO puedes determinar el agente/skill con confianza >= 0.9, responde con:
 | Palabras clave en el mensaje | Agente | Skills |
 |---|---|---|
 | crea, diseña, propón, plan, arquitectura, change, openspec, spec, tasks, diseño, propuesta | `architect` | `openspec-propose`, `openspec-explore` |
-| implementa, codifica, escribe, programa, build, arregla, fix, feat, bug, desarrolla, código | `writer` | `tdd-workflow`, `typescript-best-practices`, `clean-architecture` |
+| implementa, codifica, escribe, programa, build, arregla, fix, feat, bug, desarrolla, código (backend) | `writer` | `tdd-workflow`, `typescript-best-practices`, `clean-architecture` |
+| implementa UI, pantalla, componente, hook React, routes, frontend, React, TanStack, componente shadcn | `ui` | `react-best-practices`, `tdd-workflow`, `typescript-best-practices` |
 | revisa, review, code review, DRY, KISS, code smell, TSDoc, documenta | `reviewer` | `typescript-best-practices`, `tsdoc-jsdoc-documentation`, `clean-architecture` |
 | test, coverage, lint, format, audit, calidad, quality gate, verifica, coverage, umbral | `quality` | `coverage-strategy` |
 | seguridad, OWASP, CORS, helmet, JWT, rate-limit, token, secret, vulnerabilidad, auth | `security` | (ninguna — autónomo) |
