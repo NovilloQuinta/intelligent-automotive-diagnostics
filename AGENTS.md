@@ -26,11 +26,10 @@ Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de siste
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
 - **Flujo de ramas**: `develop` es la rama de integración; toda `feat.*`/`fix.*` sale de `develop` y se mergea ahí.
-- **En curso**: `add-diagnosis-session-report-screen` — commit + push + archive completados, pendiente merge a `develop`.
-- **Recién mergeado**: `add-rag-cognitive-retrieval` (wiring RAG), `add-ecu-info-screen` (EcuInfoPanel), `add-freeze-frame-screen` (FreezeFramePanel), `fix-security-and-mcp-findings` (14 hallazgos OWASP), `add-knowledge-confidence-validation` (RAG 3a).
-- **Recién archivado**: `add-diagnosis-session-report-screen`, `add-knowledge-confidence-validation` → archive; 20 main specs sincronizados en `openspec/specs/`.
-- **Siguiente**: `add-vehicle-autodetect-flow`, `add-knowledge-mcp-tools` (RAG 3b), `add-web-search-tool` (RAG 4), `add-cognitive-pid-discovery`.
-- **Tests + CI**: core-api 591 (51 files); UI 230 + 1 skipped (32 files). Build + lint core verdes. Deuda `brace-expansion` (lint UI) sin resolver.
+- **Recién mergeado**: `add-web-search-tool` (RAG 4, SerpAPI), `add-cognitive-pid-discovery` (PID observations + UI enriquecido).
+- **Recién archivado**: `add-web-search-tool`, `add-cognitive-pid-discovery` → archive.
+- **Siguiente**: `add-vehicle-autodetect-flow`, `add-knowledge-mcp-tools` (RAG 3b).
+- **Tests + CI**: core-api 591+ (51 files); UI 230+ (32 files). Build + lint core verdes. Deuda `brace-expansion` (lint UI) sin resolver.
 
 ## REGLAS DE SESION
 
