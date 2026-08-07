@@ -61,4 +61,4 @@
 - [x] 6.3 `gga run` (o el hook de pre-commit configurado) en verde
 - [x] 6.4 Actualizar `SESION ACTUAL` en `AGENTS.md`
 - [x] 6.5 Guardar resumen y decisiones no obvias en Engram
-- [ ] 6.6 **Preguntar antes de commitear/pushear** (regla 7) — mostrar resumen de cambios y esperar OK humano
+- [x] 6.6 **Preguntar antes de commitear/pushear** (regla 7) — mostrar resumen de cambios y esperar OK humano

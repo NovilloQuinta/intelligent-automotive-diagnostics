@@ -26,7 +26,7 @@ Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de siste
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
 - **Flujo de ramas**: `develop` es la rama de integración; toda `feat.*`/`fix.*` sale de `develop` y se mergea ahí.
-- **En curso**: `add-knowledge-confidence-validation` (RAG 3a) — implementado en `feat/knowledge-confidence-validation`, sin commitear. Esquema `confidence`/`source`/`validated`, `confidenceScale.ts`, puerto `readPidRaw` y los dos casos de uso de validación OBD.
+- **Recién cerrado**: `add-knowledge-confidence-validation` (RAG 3a) — commiteado y pusheado en `feat/knowledge-confidence-validation`, archivado y spec sincronizado. Sin mergear a `develop`.
 - **Recién mergeado**: `add-rag-cognitive-retrieval` (wiring RAG), `add-ecu-info-screen` (EcuInfoPanel), `add-freeze-frame-screen` (FreezeFramePanel), `fix-security-and-mcp-findings` (14 hallazgos OWASP).
 - **Siguiente**: `add-knowledge-mcp-tools` (RAG 3b, ya desbloqueado), `add-web-search-tool` (RAG 4), `add-diagnosis-session-report-screen`, `add-vehicle-autodetect-flow`, `add-cognitive-pid-discovery`.
 - **Tests + CI**: core-api 627 (57 files); UI 204 + 1 skipped (30 files). Build + lint + `gga run` verdes. Deuda `brace-expansion` sin resolver.
