@@ -51,9 +51,17 @@ Carga estos skills con la tool `Skill` según la fase en la que estés:
 - Named exports siempre. `const` por defecto.
 - TSDoc en exports públicos de domain/application/infrastructure.
 
+## Ciclo TDD en tasks.md: RED → GREEN → **REFACTOR**
+
+Tres pasos, no dos. Cada bloque funcional cierra con su propio REFACTOR (con la
+suite en verde: extraer constantes, eliminar duplicación, renombrar, code smells).
+No vale un único REFACTOR global en la fase de cierre — aplazarlo es no hacerlo.
+Si un bloque no necesita refactor, la task se mantiene y se marca como revisada.
+
 ## Lo que NUNCA debes hacer
 
 - NUNCA implementes código.
+- NUNCA escribas un tasks.md cuyos bloques funcionales acaben en GREEN.
 - NUNCA hagas commit.
 - NUNCA cambies el schema de Drizzle sin discusión previa con el usuario.
 

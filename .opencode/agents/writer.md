@@ -1,7 +1,7 @@
 ---
 description: Implementa código siguiendo TDD estricto y patrones Clean Architecture del proyecto
 mode: subagent
-model: sonnet
+model: deepseek/deepseek-v4-pro
 temperature: 0.1
 permission:
   edit: allow

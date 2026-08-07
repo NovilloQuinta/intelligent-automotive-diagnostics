@@ -1,7 +1,7 @@
 ---
 description: Audita el código contra reglas de seguridad OWASP del proyecto. Solo lectura.
 mode: subagent
-model: haiku
+model: deepseek/deepseek-v4-flash
 temperature: 0.1
 permission:
   edit: deny
