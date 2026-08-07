@@ -74,6 +74,21 @@ export type EcuInfo = {
   discoveredAt?: string;
 };
 
+/**
+ * Identified vehicle as returned by GET /api/vehicle-info. The decoded fields
+ * are null when the VIN is not decodable (noisy ELM327 read, placeholder VIN).
+ */
+export type VehicleInfoResponse = {
+  vin: string;
+  make: string;
+  model: string;
+  year: number;
+  engineType: string;
+  manufacturer: string | null;
+  region: { country: string; region: string } | null;
+  modelYearDecoded: number | null;
+};
+
 // ---------------------------------------------------------------------------
 // Auth types
 // ---------------------------------------------------------------------------

@@ -74,6 +74,28 @@ export interface DiagnoseOutput {
   readonly severity: Severity
 }
 
+/** Identificacion del vehiculo activo, con los campos derivados del VO {@link Vin}. */
+export interface VehicleInfoOutput {
+  readonly vin: string
+  readonly make: string
+  readonly model: string
+  readonly year: number
+  readonly engineType: string
+  /** Fabricante deducido del WMI; `null` si el VIN no es decodificable. */
+  readonly manufacturer: string | null
+  /** Pais/region deducidos del WMI; `null` si el VIN no es decodificable. */
+  readonly region: { country: string; region: string } | null
+  /** Anio de modelo deducido de la posicion 10; `null` si el VIN no es decodificable. */
+  readonly modelYearDecoded: number | null
+}
+
+/** Campos decodificados vacios: VIN ausente, con ruido o {@link FALLBACK_VIN}. */
+const UNDECODED_VIN = {
+  manufacturer: null,
+  region: null,
+  modelYearDecoded: null,
+} as const
+
 /** Dependencias de {@link DiagnosisService}. */
 export interface DiagnosisServiceOptions {
   /** Descriptores de escenarios disponibles (modo docker). */
@@ -170,6 +192,54 @@ export class DiagnosisService {
   async getEcuInfo(scenarioId?: string): Promise<EcuInfo[]> {
     const repository = this.resolveRepository(scenarioId)
     return repository.getEcuInfo()
+  }
+
+  /**
+   * Identifica el vehiculo activo: datos del vehiculo mas los campos derivados del VIN.
+   *
+   * @param scenarioId — Escenario; opcional en modo TCP directo.
+   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
+   */
+  async getVehicleInfo(scenarioId?: string): Promise<VehicleInfoOutput> {
+    const repository = this.resolveRepository(scenarioId)
+    const info = await repository.getVehicleInfo()
+    const vin = String(info.vin)
+    return {
+      vin,
+      make: info.make,
+      model: info.model,
+      year: info.year,
+      engineType: info.engineType,
+      ...this.decodeVin(vin),
+    }
+  }
+
+  /**
+   * Deriva fabricante/region/anio del VIN reutilizando los getters del VO {@link Vin}.
+   *
+   * Un VIN ilegible no debe cortar la identificacion: el ELM327 puede devolver
+   * ruido y los escenarios de demo usan {@link FALLBACK_VIN}. En ambos casos los
+   * campos derivados van a `null` en vez de propagar `VinDecodeError`.
+   */
+  private decodeVin(raw: string): {
+    manufacturer: string | null
+    region: { country: string; region: string } | null
+    modelYearDecoded: number | null
+  } {
+    // FALLBACK_VIN es sintacticamente valido (17 'X'), asi que el VO le asignaria
+    // un anio de modelo real por la posicion 10. Es un placeholder, no un vehiculo:
+    // se descarta antes de decodificar.
+    if (raw === FALLBACK_VIN) return UNDECODED_VIN
+    try {
+      const vin = new Vin(raw)
+      return {
+        manufacturer: vin.manufacturer,
+        region: vin.wmiRegion,
+        modelYearDecoded: vin.modelYear,
+      }
+    } catch {
+      return UNDECODED_VIN
+    }
   }
 
   /**

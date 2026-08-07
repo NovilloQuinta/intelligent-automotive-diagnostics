@@ -237,6 +237,59 @@ export const openApiSpec = {
         },
       },
     },
+    '/api/vehicle-info': {
+      get: {
+        tags: ['Diagnosis'],
+        summary: 'Identify the active vehicle',
+        description:
+          'Reads the VIN and vehicle data of the selected scenario (or of the directly ' +
+          'connected ELM327) and decorates them with the fields decoded from the VIN ' +
+          '(manufacturer, region, model year). Requires authentication.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'scenarioId',
+            in: 'query',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Scenario ID (e.g. "audi-a3-idle"). Optional in direct TCP mode.',
+            example: 'audi-a3-idle',
+          },
+        ],
+        responses: {
+          '200': {
+            description:
+              'Identified vehicle. Decoded fields are null when the VIN is not decodable.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    vin: { type: 'string', example: 'WAUZZZ8V5JA123456' },
+                    make: { type: 'string', example: 'Audi' },
+                    model: { type: 'string', example: 'A3' },
+                    year: { type: 'integer', example: 2018 },
+                    engineType: { type: 'string', example: '2.0 TFSI' },
+                    manufacturer: { type: 'string', nullable: true, example: 'Audi' },
+                    region: {
+                      type: 'object',
+                      nullable: true,
+                      properties: {
+                        country: { type: 'string', example: 'Germany' },
+                        region: { type: 'string', example: 'Europe' },
+                      },
+                    },
+                    modelYearDecoded: { type: 'integer', nullable: true, example: 2018 },
+                  },
+                },
+              },
+            },
+          },
+          '401': { description: 'Access token required' },
+          '404': { description: 'Scenario not found' },
+        },
+      },
+    },
     '/api/ecu-info': {
       get: {
         tags: ['Diagnosis'],

@@ -74,7 +74,10 @@ function createMockRepo(): ObdRepository {
     clearDtcCodes: vi.fn(async () => undefined),
     readVin: vi.fn(async () => 'WAUZZZ8V5JA123456'),
     getVehicleInfo: vi.fn(async () => ({
-      make: 'Audi', model: 'A3', year: 2018, engineType: '2.0 TFSI',
+      make: 'Audi',
+      model: 'A3',
+      year: 2018,
+      engineType: '2.0 TFSI',
       vin: new Vin('WAUZZZ8V5JA123456'),
     })),
     setPower: vi.fn(async () => undefined),

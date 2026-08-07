@@ -72,6 +72,13 @@ const EcuInfoQueryTcpSchema = z.object({
   scenarioId: optionalScenarioId,
 })
 
+const VehicleInfoQuerySchema = z.object({
+  scenarioId: requiredScenarioId,
+})
+const VehicleInfoQueryTcpSchema = z.object({
+  scenarioId: optionalScenarioId,
+})
+
 /** Controlador HTTP para los endpoints de diagnostico OBD. */
 export class DiagnosisController {
   constructor(
@@ -193,6 +200,24 @@ export class DiagnosisController {
     } catch (err) {
       if (this.respondIfCommonError(err, res)) return
       this.respondUnexpected(err, res, 'ECU info fetch failed')
+    }
+  }
+
+  /** GET /api/vehicle-info — VIN y datos del vehiculo. 400 query invalida, 404 escenario inexistente. */
+  vehicleInfo = async (req: Request, res: Response): Promise<void> => {
+    const schema = this.selectSchema(VehicleInfoQuerySchema, VehicleInfoQueryTcpSchema)
+    const parsed = schema.safeParse(req.query)
+    if (!parsed.success) {
+      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
+      return
+    }
+
+    try {
+      const result = await this.service.getVehicleInfo(parsed.data.scenarioId)
+      res.status(200).json(result)
+    } catch (err) {
+      if (this.respondIfCommonError(err, res)) return
+      this.respondUnexpected(err, res, 'Vehicle info fetch failed')
     }
   }
 

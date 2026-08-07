@@ -52,10 +52,7 @@ const mockScenarios: SimulationScenario[] = [
   },
 ]
 
-function createMockRepo(
-  rpm: number,
-  coolantTemp: number,
-): ObdRepository {
+function createMockRepo(rpm: number, coolantTemp: number): ObdRepository {
   return {
     readPid: vi.fn(async (_mode: string, pid: string) => {
       if (pid === '0C') return rpm
@@ -94,7 +91,11 @@ let httpServer: Server
 beforeAll(async () => {
   const app = createServer({
     diagnosisController: new DiagnosisController(
-      new DiagnosisService({ scenarios: mockScenarios, obdRepos: mockObdRepos, logger: mockLogger }),
+      new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: mockObdRepos,
+        logger: mockLogger,
+      }),
       mockLogger,
     ),
     allowedOrigins: 'http://localhost:3000',

@@ -52,7 +52,10 @@ function createMockRepo(): ObdRepository {
     clearDtcCodes: vi.fn(async () => undefined),
     readVin: vi.fn(async () => ''),
     getVehicleInfo: vi.fn(async () => ({
-      make: '', model: '', year: 0, engineType: '',
+      make: '',
+      model: '',
+      year: 0,
+      engineType: '',
       vin: new Vin('WAUZZZ8V5JA123456'),
     })),
     setPower: vi.fn(async () => undefined),
