@@ -1,6 +1,6 @@
-import type { LlmMessageInput } from '@/application/dto/LlmMessageInput.js'
-import type { LlmResponse } from '@/application/dto/LlmResponse.js'
-import type { LlmSingleResponse } from '@/application/dto/LlmSingleResponse.js'
+import type { LlmMessageInput } from '@/application/dto/llm/LlmMessageInput.js'
+import type { LlmResponse } from '@/application/dto/llm/LlmResponse.js'
+import type { LlmSingleResponse } from '@/application/dto/llm/LlmSingleResponse.js'
 import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
 
 /** Puerto para cliente LLM con soporte de tool calling. */

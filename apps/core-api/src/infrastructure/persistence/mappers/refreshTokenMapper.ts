@@ -1,5 +1,5 @@
 import type * as schema from '../sqlite/schema.js'
-import type { RefreshTokenRecord } from '@/application/dto/RefreshTokenRecord.js'
+import type { RefreshTokenRecord } from '@/application/dto/auth/RefreshTokenRecord.js'
 
 type RefreshTokenRow = typeof schema.refreshTokens.$inferSelect
 

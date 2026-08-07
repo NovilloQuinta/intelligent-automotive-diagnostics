@@ -2,10 +2,10 @@ import { Severity } from '@/domain/value-objects/diagnosisResult.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import { parseCognitiveDiagnosis } from '@/application/llm/extractLlmDiagnosis.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
-import type { McpToolDefinition } from '@/application/dto/McpToolDefinition.js'
+import type { McpToolDefinition } from '@/application/dto/llm/McpToolDefinition.js'
 import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
-import type { ExecuteCognitiveDiagnosisInput } from '@/application/dto/ExecuteCognitiveDiagnosisInput.js'
-import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/ExecuteCognitiveDiagnosisOutput.js'
+import type { ExecuteCognitiveDiagnosisInput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisInput.js'
+import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
 
 /** Prompt del sistema: pide explorar tools OBD-II, razonar causa raíz y devolver bloque JSON al final. */
 const COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT = [

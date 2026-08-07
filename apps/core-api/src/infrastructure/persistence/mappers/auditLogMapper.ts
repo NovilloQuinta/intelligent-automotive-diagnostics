@@ -1,4 +1,4 @@
-import type { CreateAuditLogInput } from '@/application/dto/CreateAuditLogInput.js'
+import type { CreateAuditLogInput } from '@/application/dto/audit/CreateAuditLogInput.js'
 
 /** Convierte un CreateAuditLogInput a valores para INSERT en BD. */
 export function toAuditValues(input: CreateAuditLogInput) {

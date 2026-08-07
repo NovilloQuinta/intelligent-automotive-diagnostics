@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { toFormulaEntries } from '@/application/shared/formulaEntries.js'
-import type { PidFormulaSource } from '@/application/dto/PidFormulaSource.js'
+import type { PidFormulaSource } from '@/application/dto/diagnosis/PidFormulaSource.js'
 
 describe('toFormulaEntries', () => {
   it('should return empty array for empty input', () => {

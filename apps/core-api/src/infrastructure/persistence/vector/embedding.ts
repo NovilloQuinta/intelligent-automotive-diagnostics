@@ -37,5 +37,9 @@ export async function createEmbedding(text: string): Promise<number[]> {
     normalize: true,
   })
 
-  return output.tolist()
+  // El tensor conserva la dimension de lote: su forma es [1, 384]. `tolist()` la mantiene,
+  // asi que hay que quedarse con la primera fila o se devuelve un array de longitud 1.
+  const [vector] = output.tolist() as number[][]
+
+  return vector
 }
