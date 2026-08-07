@@ -58,8 +58,8 @@
 
 ## 8. GREEN — Implementar tipos + `mergePidRows`
 
-- [ ] 8.1 Modificar `apps/ui/src/lib/api.ts`: exportar `type PidObservation = { code: string; name: string; unit?: string; value: number; status: "ok" | "review" }`; extender `CognitiveOutput` con `pidObservations: PidObservation[]`
-- [ ] 8.2 Modificar `apps/ui/src/components/dashboard/pidCatalog.ts`:
+- [x] 8.1 Modificar `apps/ui/src/lib/api.ts`: exportar `type PidObservation = { code: string; name: string; unit?: string; value: number; status: "ok" | "review" }`; extender `CognitiveOutput` con `pidObservations: PidObservation[]`
+- [x] 8.2 Modificar `apps/ui/src/components/dashboard/pidCatalog.ts`:
   - Añadir `source: "fixed" | "ai"` a `PidRow` (default `"fixed"` en `buildPidRows`)
   - Exportar `FIXED_PID_CODES: ReadonlySet<string>`
   - Exportar `pidObservationToRow(obs: PidObservation): PidRow` (mapea `unit`/`value` a la cadena `value` ya formateada, `source: "ai"`)

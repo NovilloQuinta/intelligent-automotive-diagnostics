@@ -227,12 +227,22 @@ export async function assertOk(
 type ScenariosResponse = { scenarios: Scenario[] };
 
 /** Cognitive diagnosis output. */
+/** PID reading enriched by the backend from the AI's `read_pid` tool calls. */
+export type PidObservation = {
+  code: string;
+  name: string;
+  unit?: string;
+  value: number;
+  status: "ok" | "review";
+};
+
 export type CognitiveOutput = {
   diagnosis: string;
   severity: string;
   confidence: number;
   recommendations: string[];
   toolCalls: { tool: string; args: Record<string, unknown>; result: string }[];
+  pidObservations: PidObservation[];
 };
 
 /** Register response from backend. */
