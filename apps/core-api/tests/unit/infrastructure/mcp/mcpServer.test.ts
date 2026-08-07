@@ -23,9 +23,9 @@ function mockObdRepo(overrides: Partial<ObdRepository> = {}): ObdRepository {
       engineType: '2.0 TFSI',
       vin: new Vin('WAUZZZ8V5JA123456'),
     }),
-      setPower: vi.fn().mockResolvedValue(undefined),
-      getEcuInfo: vi.fn().mockResolvedValue([]),
-      ...overrides,
+    setPower: vi.fn().mockResolvedValue(undefined),
+    getEcuInfo: vi.fn().mockResolvedValue([]),
+    ...overrides,
   }
 }
 

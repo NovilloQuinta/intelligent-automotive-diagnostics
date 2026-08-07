@@ -615,6 +615,86 @@ describe("api", () => {
   });
 
   // -----------------------------------------------------------------------
+  // getEcuInfo
+  // -----------------------------------------------------------------------
+
+  describe("getEcuInfo", () => {
+    it("GETs /api/ecu-info with scenarioId and returns the ECU list", async () => {
+      setStoredTokens();
+      const ecus = [
+        {
+          id: 1,
+          vehicleId: 1,
+          name: "Engine Control Module",
+          requestAddr: "7E0",
+          responseAddr: "7E8",
+          type: "engine",
+          protocol: "ISO 15765-4",
+        },
+      ];
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ecus }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getEcuInfo("audi-a3-idle");
+
+      expect(result).toEqual(ecus);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/ecu-info?scenarioId=audi-a3-idle");
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+
+    it("returns an empty list when the vehicle reports no ECUs", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ ecus: [] }),
+        }),
+      );
+
+      const result = await api.getEcuInfo("audi-a3-idle");
+
+      expect(result).toEqual([]);
+    });
+
+    it("encodes the scenarioId in the query string", async () => {
+      setStoredTokens();
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ecus: [] }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      await api.getEcuInfo("audi a3/idle&x");
+
+      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(url).toBe("/api/ecu-info?scenarioId=audi%20a3%2Fidle%26x");
+    });
+
+    it("throws the generic message on a 500, never the raw server error", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: "CAN bus exploded" }),
+        }),
+      );
+
+      await expect(api.getEcuInfo("audi-a3-idle")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // getCapabilities
   // -----------------------------------------------------------------------
 

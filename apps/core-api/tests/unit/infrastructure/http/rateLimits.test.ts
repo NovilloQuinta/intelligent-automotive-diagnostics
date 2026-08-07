@@ -194,6 +194,23 @@ describe('HTTP server rate limits', () => {
     }
   })
 
+  it('should allow 20 GET /api/ecu-info requests and return 429 on the 21st', async () => {
+    const { baseUrl, close } = await bootApp()
+    try {
+      const url = `${baseUrl}/api/ecu-info?scenarioId=audi-a3-idle`
+
+      for (let i = 0; i < 20; i += 1) {
+        const res = await fetch(url)
+        expect(res.status).toBe(200)
+      }
+
+      const res = await fetch(url)
+      expect(res.status).toBe(429)
+    } finally {
+      await close()
+    }
+  })
+
   it('should return the rate limit error body and ratelimit headers when a 429 is triggered', async () => {
     const { baseUrl, close } = await bootApp()
     try {

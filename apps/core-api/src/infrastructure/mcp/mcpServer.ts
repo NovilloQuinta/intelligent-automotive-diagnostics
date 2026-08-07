@@ -142,10 +142,7 @@ function handleGetEcuInfo(repo: ObdRepository): ToolHandler {
     if (ecus.length === 0) return text('No ECUs discovered.')
     return text(
       ecus
-        .map(
-          (e) =>
-            `${e.name} (${e.type}, ${e.requestAddr}→${e.responseAddr}) — ${e.protocol}`,
-        )
+        .map((e) => `${e.name} (${e.type}, ${e.requestAddr}→${e.responseAddr}) — ${e.protocol}`)
         .join('\n'),
     )
   }

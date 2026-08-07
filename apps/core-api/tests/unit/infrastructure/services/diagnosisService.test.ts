@@ -298,9 +298,7 @@ describe('DiagnosisService', () => {
     it('should throw DiagnosisScenarioNotFoundError for unknown scenario', async () => {
       const service = new DiagnosisService({ scenarios: mockScenarios, logger: createMockLogger() })
 
-      await expect(service.getEcuInfo('no-existe')).rejects.toThrow(
-        DiagnosisScenarioNotFoundError,
-      )
+      await expect(service.getEcuInfo('no-existe')).rejects.toThrow(DiagnosisScenarioNotFoundError)
     })
   })
 
