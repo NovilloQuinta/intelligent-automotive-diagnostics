@@ -78,7 +78,7 @@ describe('Indices de conocimiento — integracion real', () => {
       model: 'A3',
       confidence: 0.3,
       source: KnowledgeSource.Web,
-      obdValidated: false,
+      validated: false,
     })
 
     const results = await index.search(texto)
@@ -91,7 +91,7 @@ describe('Indices de conocimiento — integracion real', () => {
       model: 'A3',
       confidence: expect.closeTo(0.3, 5),
       source: KnowledgeSource.Web,
-      obdValidated: false,
+      validated: false,
     })
     expect(results[0].distance).toBeGreaterThanOrEqual(0)
     expect(await connection.db.tableNames()).toContain('pids_index')
@@ -108,6 +108,7 @@ describe('Indices de conocimiento — integracion real', () => {
       model: 'Clio',
       confidence: 0.8,
       source: KnowledgeSource.Mechanic,
+      validated: false,
     })
 
     const results = await index.search(texto)
@@ -115,6 +116,7 @@ describe('Indices de conocimiento — integracion real', () => {
     expect(results).toHaveLength(1)
     expect(results[0].entry.id).toBe('dtc-P1234')
     expect(results[0].entry.source).toBe(KnowledgeSource.Mechanic)
+    expect(results[0].entry.validated).toBe(false)
     expect(await connection.db.tableNames()).toContain('dtcs_index')
   })
 
@@ -131,6 +133,8 @@ describe('Indices de conocimiento — integracion real', () => {
       model: 'Leon',
       symptoms: ['ralenti inestable', 'testigo encendido'],
       pidsInvolved: ['010C', '0105'],
+      confidence: 0.5,
+      source: KnowledgeSource.PreviousDiagnosis,
     })
 
     const results = await index.search(texto)
@@ -138,6 +142,8 @@ describe('Indices de conocimiento — integracion real', () => {
     expect(results).toHaveLength(1)
     expect(results[0].entry.symptoms).toEqual(['ralenti inestable', 'testigo encendido'])
     expect(results[0].entry.pidsInvolved).toEqual(['010C', '0105'])
+    expect(results[0].entry.confidence).toBeCloseTo(0.5, 5)
+    expect(results[0].entry.source).toBe(KnowledgeSource.PreviousDiagnosis)
     expect(await connection.db.tableNames()).toContain('diagnoses_index')
   })
 
@@ -152,6 +158,7 @@ describe('Indices de conocimiento — integracion real', () => {
       model: 'A3',
       confidence: 0.5,
       source: KnowledgeSource.Web,
+      validated: false,
     })
 
     const soloRenault = await index.search(texto, { filter: { manufacturer: 'Renault' } })

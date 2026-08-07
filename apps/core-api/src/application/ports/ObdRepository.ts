@@ -12,6 +12,19 @@ export interface ObdRepository {
    */
   readPid(mode: string, pid: string): Promise<number>
 
+  /** Lee un PID devolviendo sus bytes de datos **sin aplicar ninguna formula**.
+   *
+   * Existe para validar un PID recien descubierto, cuya formula no esta en el catalogo interno
+   * del adaptador: la formula la aplica el llamador con el VO `Formula` del PID descubierto.
+   *
+   * @param mode — Modo OBD (01, 22, ...)
+   * @param pid — Código del PID (0C, F40C, ...)
+   * @param dataBytes — Nº de bytes de datos esperados en la respuesta
+   * @returns Bytes de datos crudos de la respuesta
+   * @throws {PidRawReadNotSupportedError} Si el adaptador no puede entregar bytes crudos de ese PID
+   */
+  readPidRaw(mode: string, pid: string, dataBytes: number): Promise<number[]>
+
   /** Service 01 PID 00/20/40/60 — Devuelve los PIDs soportados como bitmask. */
   getSupportedPids(): Promise<string[]>
 

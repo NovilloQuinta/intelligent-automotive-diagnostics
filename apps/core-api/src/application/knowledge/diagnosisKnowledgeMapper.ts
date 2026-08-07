@@ -1,5 +1,6 @@
 import type { MetadataValue } from '@/application/dto/vector/VectorRecord.js'
 import type { DiagnosisKnowledgeEntry } from '@/application/dto/knowledge/DiagnosisKnowledgeEntry.js'
+import type { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
 
 /** Los metadatos solo admiten escalares, asi que las listas se serializan aqui. */
 function serializeList(values: readonly string[]): string {
@@ -29,6 +30,8 @@ export function toDiagnosisMetadata(entry: DiagnosisKnowledgeEntry): Record<stri
     model: entry.model,
     symptoms: serializeList(entry.symptoms),
     pidsInvolved: serializeList(entry.pidsInvolved),
+    confidence: entry.confidence,
+    source: entry.source,
   }
 }
 
@@ -43,5 +46,7 @@ export function toDiagnosisEntry(
     model: metadata.model as string,
     symptoms: deserializeList(metadata.symptoms),
     pidsInvolved: deserializeList(metadata.pidsInvolved),
+    confidence: metadata.confidence as number,
+    source: metadata.source as KnowledgeSource,
   }
 }

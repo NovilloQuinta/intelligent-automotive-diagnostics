@@ -19,7 +19,7 @@ export const PIDS_TABLE_CONFIG: LanceVectorStoreConfig = {
     { name: 'model', type: 'string' },
     { name: 'confidence', type: 'float32' },
     { name: 'source', type: 'string' },
-    { name: 'obdValidated', type: 'boolean' },
+    { name: 'validated', type: 'boolean' },
   ],
 }
 
@@ -34,6 +34,7 @@ export const DTCS_TABLE_CONFIG: LanceVectorStoreConfig = {
     { name: 'model', type: 'string' },
     { name: 'confidence', type: 'float32' },
     { name: 'source', type: 'string' },
+    { name: 'validated', type: 'boolean' },
   ],
 }
 
@@ -48,5 +49,7 @@ export const DIAGNOSES_TABLE_CONFIG: LanceVectorStoreConfig = {
     { name: 'model', type: 'string' },
     { name: 'symptoms', type: 'string' },
     { name: 'pidsInvolved', type: 'string' },
+    { name: 'confidence', type: 'float32' },
+    { name: 'source', type: 'string' },
   ],
 }

@@ -26,11 +26,10 @@ Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de siste
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
 - **Flujo de ramas**: `develop` es la rama de integración; toda `feat.*`/`fix.*` sale de `develop` y se mergea ahí.
-- **En curso**: `add-cognitive-pid-discovery` — discovery agent + tool MCP `discover_pids` + indexado en `pids_index`.
+- **En curso**: `add-knowledge-confidence-validation` (RAG 3a) — implementado en `feat/knowledge-confidence-validation`, sin commitear. Esquema `confidence`/`source`/`validated`, `confidenceScale.ts`, puerto `readPidRaw` y los dos casos de uso de validación OBD.
 - **Recién mergeado**: `add-rag-cognitive-retrieval` (wiring RAG), `add-ecu-info-screen` (EcuInfoPanel), `add-freeze-frame-screen` (FreezeFramePanel), `fix-security-and-mcp-findings` (14 hallazgos OWASP).
-- **Recién archivado**: 4 cambios implementados → archive; 19 main specs sincronizados en `openspec/specs/`.
-- **Siguiente**: `add-diagnosis-session-report-screen`, `add-vehicle-autodetect-flow`, `add-knowledge-confidence-validation` (RAG 3a), `add-knowledge-mcp-tools` (RAG 3b), `add-web-search-tool` (RAG 4).
-- **Tests + CI**: core-api 573 (49 files); UI 204 + 1 skipped (30 files). Build + lint verdes. Deuda `brace-expansion` sin resolver.
+- **Siguiente**: `add-knowledge-mcp-tools` (RAG 3b, ya desbloqueado), `add-web-search-tool` (RAG 4), `add-diagnosis-session-report-screen`, `add-vehicle-autodetect-flow`, `add-cognitive-pid-discovery`.
+- **Tests + CI**: core-api 627 (57 files); UI 204 + 1 skipped (30 files). Build + lint + `gga run` verdes. Deuda `brace-expansion` sin resolver.
 
 ## REGLAS DE SESION
 

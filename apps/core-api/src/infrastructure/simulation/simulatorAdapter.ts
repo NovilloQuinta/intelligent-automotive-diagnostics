@@ -13,6 +13,14 @@ export class ObdSimulatorRepository implements ObdRepository {
     return this.simulator.readPidValue(mode, pid)
   }
 
+  /**
+   * El escenario define la codificacion de cada sensor que modela, asi que `dataBytes` no
+   * interviene: no hay una trama real que recortar.
+   */
+  async readPidRaw(mode: string, pid: string, _dataBytes: number): Promise<number[]> {
+    return this.simulator.readPidRawBytes(mode, pid)
+  }
+
   async getSupportedPids(): Promise<string[]> {
     return this.simulator.getSupportedPids()
   }
