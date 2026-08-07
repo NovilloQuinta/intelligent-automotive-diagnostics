@@ -94,7 +94,7 @@
 
 ## 13. RED — Frontend: disparo automático no bloqueante en `DashboardPage`
 
-- [ ] 13.1 Actualizar `apps/ui/tests/unit/components/DashboardPage.test.tsx` (mockeando `useCapabilities`/`useCognitiveDiagnosis` igual que se mockean hoy `useScenarios`/`useDiagnosis`):
+- [x] 13.1 Actualizar `apps/ui/tests/unit/components/DashboardPage.test.tsx` (mockeando `useCapabilities`/`useCognitiveDiagnosis` igual que se mockean hoy `useScenarios`/`useDiagnosis`):
   - Tras completar `runDiagnosis()` con `capabilities.cognitiveDiagnosis: true` → se invoca `cognitive.trigger()`
   - Con `capabilities.cognitiveDiagnosis: false` → `cognitive.trigger()` no se invoca
   - `cognitive.trigger()` no bloquea la pintura del resto del dashboard (severidad/DTCs/4 PIDs fijos visibles aunque `cognitive.loading` sea `true`)
