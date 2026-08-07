@@ -25,7 +25,7 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
-- **Ultimo paso**: Ambos cambios mergeados a `main` y archivados en OpenSpec. (1) `fix-clean-architecture-deviations` (archivado en `openspec/changes/archive/2026-08-06-fix-clean-architecture-deviations/`): `DiagnosisService` extraido a `src/infrastructure/services/diagnosisService.ts` (errores tipados: `DiagnosisScenarioNotFoundError`, `CognitiveDiagnosisUnavailableError`, `ToolNotFoundError`, `ToolCallTimeoutError`, `CognitiveDiagnosisTimeoutError`); `DiagnosisController` recibe el servicio por constructor; `LoggerPort` inyectado en `ExecuteLlmToolCalling` (sin `console.error`); composicion centralizada en `composition.ts`. (2) `refactor-elm327-persistent-session` (archivado en `openspec/changes/archive/2026-08-06-refactor-elm327-persistent-session/`): sesión TCP persistente con cola FIFO, auto-reconexión con backoff exponencial y cierre graceful; circuit breaker eliminado; `ProcessVehicleDiagnosisUseCase` ejecuta lecturas secuencialmente. Delta spec `elm327-tcp-repository` sincronizado a `openspec/specs/elm327-tcp-repository/spec.md`.
+- **Ultimo paso**: Creado agente `@ui` (frontend React) — `.opencode/agents/ui.md` + wrapper `.claude/agents/ui.md`; registrado en matriz de enrutamiento del orquestador y tabla de agentes de AGENTS.md. Rol: `@ui` implementa frontend (apps/ui/) con `react-best-practices` + TDD; `@writer` sigue siendo backend (core-api). Pipeline definido por el usuario: orquestador → ui → writer → review → quality. Pendiente: implementar pantallas de los cambios OpenSpec `add-ecu-info-screen`, `add-freeze-frame-screen`, `add-diagnosis-session-report-screen` (y opcionalmente `add-vehicle-autodetect-flow`, `add-cognitive-pid-discovery`).
 - **Tests**: 499 pasando, 0 fallos, 41 test files
 - **CI**: verde — lint, format, test, build
 
@@ -50,7 +50,8 @@ Invoca con `@nombre` o via Task tool. Definidos en `.opencode/agents/`.
 | Agente | Modelo | Rol |
 |---|---|---|
 | `@orchestrator` | sonnet | Enruta tareas al sub-agente y skill correctos. Salida JSON estructurada. |
-| `@writer` | sonnet | Implementa codigo con TDD + Clean Architecture + Zod |
+| `@writer` | sonnet | Implementa codigo (backend/core-api) con TDD + Clean Architecture + Zod |
+| `@ui` | sonnet | Implementa pantallas/componentes React en apps/ui/ con TDD + react-best-practices |
 | `@architect` | sonnet | Disena specs OpenSpec, propone cambios, mantiene coherencia entre artifacts |
 | `@reviewer` | haiku | Revisa TypeScript, TSDoc, Clean Architecture, DRY, KISS, code smells (read-only) |
 | `@quality` | haiku | Ejecuta lint + test + coverage + audit y reporta |
