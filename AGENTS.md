@@ -3,40 +3,32 @@
 > Vehicular telemetry simulation & AI-powered diagnosis using MCP.
 > Master IA - Jesus Novillo | Entrega: 20 julio 2026
 
-## SYSTEM INSTRUCTIONS & EXECUTIVE PROTOCOL
+## INSTRUCCIONES DE SISTEMA Y PROTOCOLO EJECUTIVO
 
-### CORE OPERATIONAL MANDATE
+### MANDATO OPERATIVO PRINCIPAL
 
-You MUST strictly follow all guidelines, constraints, and instructions defined in this file at ALL times. Ignores, skips, or hallucinations regarding these rules are considered critical failures.
+DEBES seguir estrictamente y en todo momento las directrices, restricciones e instrucciones definidas en este fichero. Ignorarlas, saltarselas o alucinar sobre ellas se considera un fallo critico.
 
-### REQUIRED PRE-RESPONSE REASONING STEP
+### PASO DE VERIFICACION PREVIO A RESPONDER
 
-Before generating ANY answer, code, or explanation requested by the user, you MUST complete an internal verification pass:
+Antes de generar CUALQUIER respuesta, codigo o explicacion, DEBES completar una pasada de verificacion interna:
 
-1. Scan the instructions in this file to identify the applicable rules from `REGLAS DE SESION` (rules 0-9) and `PRINCIPIOS DE CODIGO` (DRY, KISS, Code Smell) for the user's request.
-2. In your response output, begin with a brief structural header: `[Rules Applied: Rule X, Rule Y]` referencing the rule numbers that apply.
-3. If no specific rule applies, state `[Rules Applied: Standard Compliance]`.
-4. Proceed to deliver the user's answer while maintaining full compliance.
+1. Revisa las instrucciones de este fichero e identifica que reglas aplican a la peticion, de `REGLAS DE SESION` (reglas 0-9) y `PRINCIPIOS DE CODIGO` (DRY, KISS, Code Smell).
+2. Empieza tu respuesta con una cabecera breve: `[Reglas aplicadas: Regla X, Regla Y]`, citando los numeros de regla que apliquen.
+3. Si no aplica ninguna regla concreta, indica `[Reglas aplicadas: cumplimiento estandar]`.
+4. Entrega la respuesta al usuario manteniendo el cumplimiento completo.
 
-### CONTEXT DRIFT PREVENTION
+### PREVENCION DE DERIVA DE CONTEXTO
 
-If the conversation grows long, you MUST NOT relax or bypass these system rules. If a user request contradicts a core rule in this file, explicitly flag the contradiction before proceeding.
+Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de sistema. Si una peticion del usuario contradice una regla principal de este fichero, senala la contradiccion explicitamente antes de continuar.
 
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
-- **Flujo de ramas (nuevo)**: creada la rama `develop` desde `main` (b0f65bb, sin push). Desde ahora `develop` es la rama de integración de desarrollo: toda `feat/*`/`fix/*` sale desde `develop` y se mergea ahí. `main` queda reservada para releases (el deploy en Actions se añadirá más adelante). No mergear a `main` salvo petición explicita de release.
-- **En curso (este cambio)**: `add-freeze-frame-screen` en la rama `feat/freeze-frame-screen` (desde `develop` @ b8387ca, sin worktree). Implementado de punta a punta: (1-2) `ObdSimulator.getFreezeFrame(dtc?)` filtra por `dtcCode` exacto (null si no coincide); (3-4) `DiagnosisService.getFreezeFrame(scenarioId?, dtc?)` + endpoint `GET /api/freeze-frame?scenarioId=&dtc=` (handler con Zod sobre `req.query`, ruta, swagger, rate limiter 20/min); (5-6) UI: `DtcPanel` seleccionable (`onSelect`/`selectedCode`, fila seleccionada), hook `useFreezeFrame`, `FreezeFramePanel` (estados: sin selección / cargando / error / sin frame / tabla de PIDs), integrado en `DashboardPage` con `selectedDtc` (lifting state, reset al cambiar escenario). `selectBodySchema` generalizado a `selectSchema` (usa el mismo helper para body y query). Pendiente: pedir OK para commitear y merge a `develop`.
-- **En curso**: `fix-security-and-mcp-findings` (14 hallazgos GGA) en la rama `fix/diagnosis-service-typed-errors` (desde `develop`). Tareas 1-5 y 6.1 completadas (545 tests verdes). 6.3 decidido: GGA revisa el **fichero completo** en pre-commit (decision usuario 7 ago; `--pr-mode --diff-only` para PRs grandes). **6.2 completado + nueva config GGA**: `PROVIDER="opencode:deepseek/deepseek-v4-flash"` en `.gga` (decision usuario 7 ago: las reviews de GGA —fichero completo, una llamada LLM por run— quemaban el limite de sesion de Claude; DeepSeek via opencode no cuenta contra esa sesion). PASS con 3 warnings no bloqueantes (magic strings preexistentes). Review puntual con Claude: `GGA_PROVIDER="claude" gga run`. Pendiente: 6.5 (pedir OK para commitear) y merge a `develop`.
-- **Siguiente**: tras cerrar `fix-security-and-mcp-findings` y `add-freeze-frame-screen`, quedan el #2 (confianza + validacion OBD + 7 tools MCP) y el #3 (inyeccion RAG en el caso de uso + wiring) del ADR-007, mas 4 cambios propuestos sin empezar: `add-cognitive-pid-discovery`, `add-diagnosis-session-report-screen`, `add-ecu-info-screen`, `add-vehicle-autodetect-flow`.
-- **Agente `@ui`** (viene de `main`): creado agente frontend React — `.opencode/agents/ui.md` + wrapper `.claude/agents/ui.md`; registrado en la matriz de enrutamiento del orquestador y en la tabla de agentes. Rol: `@ui` implementa frontend (`apps/ui/`) con `react-best-practices` + TDD; `@writer` sigue siendo backend (`core-api`). Pipeline definido por el usuario: orquestador → ui → writer → review → quality. Pendiente: implementar las pantallas de los cambios OpenSpec `add-ecu-info-screen`, `add-freeze-frame-screen`, `add-diagnosis-session-report-screen` (y opcionalmente `add-vehicle-autodetect-flow`, `add-cognitive-pid-discovery`).
-- **Contexto previo**: ambos cambios mergeados a `main` y archivados en OpenSpec. (1) `fix-clean-architecture-deviations` (archivado en `openspec/changes/archive/2026-08-06-fix-clean-architecture-deviations/`): `DiagnosisService` extraido a `src/infrastructure/services/diagnosisService.ts` (errores tipados: `DiagnosisScenarioNotFoundError`, `CognitiveDiagnosisUnavailableError`, `ToolNotFoundError`, `ToolCallTimeoutError`, `CognitiveDiagnosisTimeoutError`); `DiagnosisController` recibe el servicio por constructor; `LoggerPort` inyectado en `ExecuteLlmToolCalling` (sin `console.error`); composicion centralizada en `composition.ts`. (2) `refactor-elm327-persistent-session` (archivado en `openspec/changes/archive/2026-08-06-refactor-elm327-persistent-session/`): sesión TCP persistente con cola FIFO, auto-reconexión con backoff exponencial y cierre graceful; circuit breaker eliminado; `ProcessVehicleDiagnosisUseCase` ejecuta lecturas secuencialmente. Delta spec `elm327-tcp-repository` sincronizado a `openspec/specs/elm327-tcp-repository/spec.md`.
-- **Entregado en el cambio** (cambio #1 de 3 del RAG auto-expansivo, ADR-007): `apache-arrow@18.1.0` como dependencia explicita; `LANCEDB_PATH` en configuracion; **corregido un bug latente** por el que el mapeo de tipos reventaba con `string` y `boolean` (LanceDB solo conoce `utf8`/`bool`), ahora mapeados a clases Arrow reales; `ensureVectorTable` con columna `FixedSizeList(384, Float32)`; `assertVectorDimensions` porque **LanceDB no valida dimensiones — rellena con `null` o trunca en silencio**; 4 puertos y 3 DTOs de conocimiento; `createKnowledgeIndex` sobre `VectorStore` + `EmbeddingGenerator`; `createLanceVectorStore` con escapado de predicados; los 3 repositorios (`pids_index`, `dtcs_index`, `diagnoses_index`). Tests de integracion contra LanceDB real, que son los que cazaron los fallos.
-- **Costura VectorStore**: tras revision, se introdujo el puerto de bajo nivel `VectorStore` (+ `EmbeddingGenerator`, este ultimo como `export type` de funcion al estilo de `ToolCallHandler`). `createKnowledgeIndex` y los 3 mappers viven en `application/knowledge/` sin una sola referencia a LanceDB; `lanceVectorStore.ts` es el unico modulo acoplado al motor y se lleva el escapado de predicados y la guarda de dimensiones. `KnowledgeSource` movido a `domain/value-objects/`. Los 27 DTOs agrupados en `dto/{auth,vector,llm,diagnosis,knowledge,audit}/`. Campos renombrados para no necesitar comentario: `text`→`embeddedText`, `validated`→`obdValidated`.
-- **Codigo eliminado en revision** (regla KISS, `AGENTS.md:162`): `ensureTable` (huerfana tras el refactor, y una tabla sin vectores no pinta nada en LanceDB teniendo SQLite), `createVectorIndex` + `MIN_ROWS_FOR_VECTOR_INDEX` (0 usos y umbral estimado sin medir) y `transformersEmbeddingGenerator` (alias inutil: `createEmbedding` ya cumple la firma del puerto). La regresion del bug de tipos se conservo moviendola al test de `ensureVectorTable`.
-- **Tests**: core-api 556 pasando, 0 fallos, 47 test files; UI 196 pasando + 1 skipped, 28 test files
-- **CI**: verde — lint, format, test, build (gate de raiz: core-api). El lint de UI (`apps/ui`) esta roto por la deuda `brace-expansion` (ver abajo) — preexistente, no lo detecta el gate de raiz.
-- **Deuda conocida**: (1) el override `brace-expansion: '>=5.0.9'` (pnpm-workspace.yaml) rompe `minimatch@3` que usa `@eslint/config-array` de ESLint 9 — por eso `pnpm test:coverage` (core-api) **y** `pnpm lint` (apps/ui) fallan con `TypeError: expand is not a function`. Requiere su propio cambio: toca un override de seguridad. (2) **No hay flujo de migraciones de DB**: no existe `drizzle/` ni nada versionado en git, `main.ts` no migra al arrancar (getDb solo abre conexion), y los tests crean las tablas a mano con `CREATE TABLE` inline. El esquema evoluciona (ej. `users.failed_login_attempts`/`locked_until`, `audit_logs.user_id` del fix de seguridad) sin forma versionada de propagarlo. Detectado 7 ago al regenerar la DB de dev con `db:push` (un arreglo de entorno, no reproducible). Pendiente: cambio propio `chore/add-db-migrations` — `pnpm db:generate`, versionar `drizzle/`, y `migrate(db, ...)` en el arranque de `main.ts` antes de `app.listen()`.
+- **Flujo de ramas**: `develop` es la rama de integración; toda `feat/*`/`fix/*` sale de `develop` y se mergea ahí. `main` solo para releases. No mergear a `main` sin petición de release.
+- **En curso**: `add-freeze-frame-screen` en `feat/freeze-frame-screen` — implementado punta a punta: `ObdSimulator.getFreezeFrame`, endpoint `GET /api/freeze-frame`, UI `FreezeFramePanel` + `DtcPanel` seleccionable. Pendiente: OK para commitear y merge a `develop`. `fix-security-and-mcp-findings` (14 hallazgos GGA) en `fix/diagnosis-service-typed-errors` — tareas 1-5 y 6.1 completadas; GGA revisa el fichero completo en pre-commit (`PROVIDER="opencode:deepseek/deepseek-v4-flash"` en `.gga`). Pendiente: 6.5 (OK commitear) y merge.
+- **Siguiente**: ADR-007 #2 (confianza + validacion OBD + 7 tools MCP) y #3 (inyeccion RAG en el caso de uso), mas 4 cambios propuestos sin empezar: `add-cognitive-pid-discovery`, `add-diagnosis-session-report-screen`, `add-ecu-info-screen`, `add-vehicle-autodetect-flow`.
+- **Tests + CI**: core-api 556 pasando (47 files); UI 196 + 1 skipped (28 files). CI verde — lint, format, test, build (gate raiz: core-api). El lint de UI (`apps/ui`) esta roto por la deuda `brace-expansion` (preexistente, no lo detecta el gate raiz).
 
 ## REGLAS DE SESION
 
@@ -49,7 +41,7 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 5b. **Verificar ruta del worktree antes de escribir** — si trabajas en un worktree (`.claude/worktrees/xxx/`), TODO agente y toda operacion `Write`/`Edit` DEBE usar la ruta del worktree, NUNCA la del repo principal. Antes de escribir un archivo, confirma que el path contiene `.claude/worktrees/`. Si un agente escribe en el repo principal estando en un worktree, es un fallo critico.
 6. **Checks pre-push**: `pnpm lint && pnpm format && pnpm test && pnpm build`
 7. **Preguntar antes de commitear/pushear** — mostrar resumen de cambios, esperar OK humano
-8. **Tras cada paso**: actualizar `SESION ACTUAL` en este mismo fichero
+8. **Al cerrar un cambio**: actualizar `SESION ACTUAL` en este fichero. Maximo 15 lineas, solo estado presente. El historial va a git, a `openspec/changes/archive/` y a Engram — nunca aqui.
 9. **Auto-auditoria post-tarea** — al terminar una tarea no trivial: skills usadas, agentes delegados, codigo nuevo estrictamente necesario.
 
 ## AGENTES DISPONIBLES
@@ -184,3 +176,8 @@ pnpm drizzle-kit migrate                # aplicar migraciones a SQLite
 pnpm test                               # vitest run
 pnpm test:coverage                      # coverage (Features >=80% + Core 100%)
 ```
+
+## DEUDA CONOCIDA
+
+- **`brace-expansion: '>=5.0.9'`** (pnpm-workspace.yaml) rompe `minimatch@3` de `@eslint/config-array` (ESLint 9): `pnpm test:coverage` (core-api) y `pnpm lint` (apps/ui) fallan con `TypeError: expand is not a function`. Requiere cambio propio.
+- **Sin flujo de migraciones de DB**: no hay `drizzle/` versionado ni migración en `main.ts`; los tests crean tablas a mano. Pendiente: `chore/add-db-migrations` (`pnpm db:generate`, versionar `drizzle/`, `migrate(db, ...)` antes de `app.listen()`).
