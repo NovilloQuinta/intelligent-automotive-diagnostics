@@ -67,8 +67,8 @@
 
 ## 9. RED — Frontend: hooks `useCapabilities` + `useCognitiveDiagnosis`
 
-- [ ] 9.1 Crear `apps/ui/tests/unit/components/useCapabilities.test.ts`: llama a `api.getCapabilities()` al montar, expone `{ cognitiveDiagnosis }`, por defecto `false` mientras resuelve
-- [ ] 9.2 Crear `apps/ui/tests/unit/components/useCognitiveDiagnosis.test.ts`:
+- [x] 9.1 Crear `apps/ui/tests/unit/components/useCapabilities.test.ts`: llama a `api.getCapabilities()` al montar, expone `{ cognitiveDiagnosis }`, por defecto `false` mientras resuelve
+- [x] 9.2 Crear `apps/ui/tests/unit/components/useCognitiveDiagnosis.test.ts`:
   - `trigger()` llama a `api.getCognitiveDiagnosis(selectedId)`, `loading` pasa a `true` durante la llamada
   - Al resolver, `pidRows` contiene las filas mapeadas de `pidObservations` (`source: "ai"`)
   - Si `api.getCognitiveDiagnosis` lanza, `pidRows` queda `null`/vacío sin propagar el error (no rompe el test ni requiere `toast`)
