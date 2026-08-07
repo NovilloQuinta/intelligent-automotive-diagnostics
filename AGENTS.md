@@ -28,7 +28,7 @@ Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de siste
 - **Flujo de ramas**: `develop` es la rama de integración; toda `feat/*`/`fix/*` sale de `develop` y se mergea ahí.
 - **En curso**: `add-rag-cognitive-retrieval` en `feat/rag-cognitive-retrieval` — wiring RAG en `composition.ts` + `ExecuteCognitiveDiagnosisUseCase`.
 - **Recién mergeado**: `add-ecu-info-screen` — `ObdRepository.getEcuInfo()`, simulador + ELM327, tool MCP `get_ecu_info` (7ª tool), endpoint `GET /api/ecu-info`, UI `EcuInfoPanel` + hook `useEcuInfo` integrado en `DashboardPage`.
-- **Siguiente**: ampliar ECUs del simulador, `add-cognitive-pid-discovery`, `add-diagnosis-session-report-screen`, `add-vehicle-autodetect-flow`.
+- **Siguiente**: `add-cognitive-pid-discovery`, `add-diagnosis-session-report-screen`, `add-vehicle-autodetect-flow`.
 - **Tests + CI**: core-api 573 (49 files); UI 204 + 1 skipped (30 files). Build + lint verdes. Deuda `brace-expansion` sin resolver.
 
 ## REGLAS DE SESION
