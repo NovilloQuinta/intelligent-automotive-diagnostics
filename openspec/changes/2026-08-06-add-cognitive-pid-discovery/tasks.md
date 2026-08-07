@@ -24,7 +24,10 @@
 
 ## 4. GREEN — Extender `seedScenarios.ts`
 
-- [ ] 4.1 Modificar `src/infrastructure/simulation/seedScenarios.ts`: añadir `pidValues` a `audi-a3-idle` y `kawa-z900` con las claves `${MODE_CURRENT_DATA} ${PID_THROTTLE_POSITION}` etc. (importadas de `domain/pids.ts`, sin strings mágicos) y los valores de la tabla de `design.md`
+- [x] 4.1 Modificar `src/infrastructure/simulation/seedScenarios.ts`: añadir `pidValues` a `audi-a3-idle` y `kawa-z900` con las claves `${MODE_CURRENT_DATA} ${PID_THROTTLE_POSITION}` etc. (importadas de `domain/pids.ts`, sin strings mágicos) y los valores de la tabla de `design.md`
+
+- [x] 4.3 Añadir/ajustar los 3 PIDs (`01 11`, `01 04`, `01 42`) en `docker/elm327/scenarios/audi_a3_tdi.py` y `docker/elm327/scenarios/kawasaki_z900.py` con los valores de la tabla de `design.md` (en runtime los PIDs los sirven los emuladores ELM327, no `seedScenarios`)
+- [x] 4.4 Verificar con `pnpm tsx scripts/scan-pids.ts` (con `docker compose up -d`) que ambos emuladores responden a los 3 PIDs
 
 ## 5. RED — Aplicación: enriquecimiento de `toolCalls` → `pidObservations`
 
