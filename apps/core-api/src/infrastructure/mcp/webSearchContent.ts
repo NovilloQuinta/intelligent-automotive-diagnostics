@@ -2,6 +2,7 @@ const MAX_SNIPPET_LENGTH = 500
 const DELIMITER_OPEN = '<untrusted-web-result>'
 const DELIMITER_CLOSE = '</untrusted-web-result>'
 
+// eslint-disable-next-line no-control-regex
 const CONTROL_CHARS_REGEX = /[\x00-\x09\x0B-\x1F]/g
 
 function truncate(text: string, maxLength: number): string {

@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { createWebSearchBudget, MAX_WEB_SEARCHES_PER_SESSION } from '@/infrastructure/mcp/webSearchBudget.js'
+import {
+  createWebSearchBudget,
+  MAX_WEB_SEARCHES_PER_SESSION,
+} from '@/infrastructure/mcp/webSearchBudget.js'
 
 describe('createWebSearchBudget', () => {
   it('tryConsume() returns true first 3 times, false from 4th onward', () => {

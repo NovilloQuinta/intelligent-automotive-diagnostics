@@ -1,16 +1,9 @@
-import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import type { WebSearchResult } from '@/application/dto/web-search/WebSearchResult.js'
-import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 
 describe('web_search integration (mocked)', () => {
-  let fetchSpy: ReturnType<typeof vi.fn>
-
-  beforeAll(() => {
-    fetchSpy = vi.fn()
-  })
-
   it('should have web_search tool available when webSearch is configured', () => {
     const webSearch: WebSearchPort = {
       search: async () => [],

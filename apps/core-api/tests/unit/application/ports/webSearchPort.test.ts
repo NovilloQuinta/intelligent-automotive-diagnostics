@@ -2,9 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import type { WebSearchResult } from '@/application/dto/web-search/WebSearchResult.js'
 
-function createFakeWebSearchPort(
-  results: readonly WebSearchResult[] = [],
-): WebSearchPort {
+function createFakeWebSearchPort(results: readonly WebSearchResult[] = []): WebSearchPort {
   return {
     async search(_query: string): Promise<readonly WebSearchResult[]> {
       return results
