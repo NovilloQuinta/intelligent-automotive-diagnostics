@@ -90,7 +90,7 @@
 
 ## 12. GREEN — Implementar fusión en `PidsTable`
 
-- [ ] 12.1 Modificar `apps/ui/src/components/dashboard/PidsTable.tsx`: props `aiRows: PidRow[] | null`, `aiLoading: boolean`; usar `mergePidRows`; badge/indicador visual para `source === "ai"`; fila de carga discreta mientras `aiLoading`
+- [x] 12.1 Modificar `apps/ui/src/components/dashboard/PidsTable.tsx`: props `aiRows: PidRow[] | null`, `aiLoading: boolean`; usar `mergePidRows`; badge/indicador visual para `source === "ai"`; fila de carga discreta mientras `aiLoading`
 
 ## 13. RED — Frontend: disparo automático no bloqueante en `DashboardPage`
 
