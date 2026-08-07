@@ -74,7 +74,7 @@ La revision señalo que, aunque la capa de aplicacion estaba limpia, la logica r
 - [x] 8.3 539 tests verdes en 46 ficheros (baseline 499 + 40 nuevos), cero regresiones
 - [x] 8.4 Actualizar SESION ACTUAL en `AGENTS.md`
 - [x] 8.5 Guardar resumen en Engram
-- [ ] 8.6 **Preguntar antes de commitear** (regla 7)
+- [x] 8.6 **Preguntar antes de commitear** (regla 7)
 
 ## Hallazgos fuera de alcance
 
