@@ -28,7 +28,7 @@ import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
 import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
-import type { DiagnosisVectorRepository } from '@/application/ports/DiagnosisVectorRepository.js'
+import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 
 const COGNITIVE_DIAGNOSIS_TIMEOUT_MS = 60_000
 
@@ -106,8 +106,8 @@ export interface DiagnosisServiceOptions {
   readonly obdRepo?: ObdRepository
   /** Cliente LLM; ausente deshabilita el diagnostico cognitivo. */
   readonly llmClient?: LlmClientPort
-  /** Repositorio vectorial RAG; ausente deshabilita la busqueda/indexado de casos. */
-  readonly diagnosisIndex?: DiagnosisVectorRepository
+  /** Stack de conocimiento vectorial RAG; ausente deshabilita busqueda/indexado. */
+  readonly knowledgeStack?: KnowledgeStack
   readonly logger: LoggerPort
   /** Timeout del diagnostico cognitivo en ms. Por defecto 60 s. */
   readonly cognitiveTimeoutMs?: number
@@ -121,7 +121,7 @@ export class DiagnosisService {
   private readonly obdRepos: Map<string, ObdRepository>
   private readonly obdRepo: ObdRepository | undefined
   private readonly llmClient: LlmClientPort | undefined
-  private readonly diagnosisIndex: DiagnosisVectorRepository | undefined
+  private readonly knowledgeStack: KnowledgeStack | undefined
   private readonly logger: LoggerPort
   private readonly cognitiveTimeoutMs: number
   private readonly toolCallTimeoutMs: number
@@ -131,7 +131,7 @@ export class DiagnosisService {
     this.obdRepos = options.obdRepos ?? new Map()
     this.obdRepo = options.obdRepo
     this.llmClient = options.llmClient
-    this.diagnosisIndex = options.diagnosisIndex
+    this.knowledgeStack = options.knowledgeStack
     this.logger = options.logger
     this.cognitiveTimeoutMs = options.cognitiveTimeoutMs ?? COGNITIVE_DIAGNOSIS_TIMEOUT_MS
     this.toolCallTimeoutMs = options.toolCallTimeoutMs ?? DIAGNOSIS_TIMEOUT_MS
@@ -261,7 +261,7 @@ export class DiagnosisService {
     }
     const llmClient = this.llmClient
     const repository = this.resolveRepository(scenarioId)
-    const mcp = createMcpServer(repository)
+    const mcp = createMcpServer(repository, undefined, this.knowledgeStack)
     const tools = mcp.listTools()
     const handler: ToolCallHandler = async (name, args) => {
       const result = await mcp.callTool(name, args)
@@ -275,7 +275,7 @@ export class DiagnosisService {
         tools,
         handler,
         logger: this.logger,
-        diagnosisIndex: this.diagnosisIndex,
+        diagnosisIndex: this.knowledgeStack?.diagnosisIndex,
       })
       return useCase.execute({ userQuery, vehicleContext })
     })()
@@ -304,7 +304,7 @@ export class DiagnosisService {
     args?: Record<string, unknown>,
   ): Promise<string> {
     const repository = this.resolveRepository(scenarioId)
-    const mcp = createMcpServer(repository)
+    const mcp = createMcpServer(repository, undefined, this.knowledgeStack)
     let result: ToolCallResult
     try {
       result = await withTimeout(

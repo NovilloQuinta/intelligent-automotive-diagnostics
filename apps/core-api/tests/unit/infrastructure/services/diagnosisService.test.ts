@@ -11,6 +11,9 @@ import { VehicleType, type SimulationScenario } from '@/infrastructure/simulatio
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmClientPort, ToolCallTrace } from '@/application/ports/LlmClientPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
+import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
+import type { PidVectorRepository } from '@/application/ports/PidVectorRepository.js'
+import type { DtcVectorRepository } from '@/application/ports/DtcVectorRepository.js'
 import type { DiagnosisVectorRepository } from '@/application/ports/DiagnosisVectorRepository.js'
 
 const mockScenarios: SimulationScenario[] = [
@@ -66,6 +69,7 @@ function createMockObdRepo(sensorOverrides?: {
       if (pid === '05') return sensorOverrides?.coolantTemp ?? 90
       return 90
     }),
+    readPidRaw: vi.fn(async () => [0x00, 0x00]),
     getSupportedPids: vi.fn(async () => ['01 0C']),
     getFreezeFrame: vi.fn(async () => null),
     readDtcCodes: vi.fn(async () => [{ code: 'P0301', description: '' }]),
@@ -245,7 +249,7 @@ describe('DiagnosisService', () => {
       expect(llmClient.sendMessage).not.toHaveBeenCalled()
     })
 
-    it('should propagate diagnosisIndex to the cognitive use case', async () => {
+    it('should propagate knowledgeStack to the cognitive use case', async () => {
       const llmClient = mockLlmClient({
         sendMessage: vi
           .fn()
@@ -255,12 +259,15 @@ describe('DiagnosisService', () => {
         search: vi.fn().mockResolvedValue([]),
         index: vi.fn().mockResolvedValue(undefined),
       }
+      const pidsIndex = { index: vi.fn(), search: vi.fn() } as unknown as PidVectorRepository
+      const dtcsIndex = { index: vi.fn(), search: vi.fn() } as unknown as DtcVectorRepository
+      const knowledgeStack: KnowledgeStack = { pidsIndex, dtcsIndex, diagnosisIndex }
       const service = new DiagnosisService({
         scenarios: mockScenarios,
         obdRepos: createMockObdRepos(),
         llmClient,
         logger: createMockLogger(),
-        diagnosisIndex,
+        knowledgeStack,
       })
 
       await service.cognitiveDiagnosis({
@@ -529,6 +536,32 @@ describe('DiagnosisService', () => {
       await expect(service.callMcpTool('bogus_tool', 'audi-a3-idle')).rejects.toThrow(
         'Tool not found: bogus_tool',
       )
+    })
+
+    it('should call a knowledge MCP tool when knowledgeStack is present', async () => {
+      const diagnosisIndex: DiagnosisVectorRepository = {
+        search: vi.fn().mockResolvedValue([]),
+        index: vi.fn().mockResolvedValue(undefined),
+      }
+      const pidsIndex: PidVectorRepository = {
+        index: vi.fn(),
+        search: vi.fn().mockResolvedValue([]),
+      } as unknown as PidVectorRepository
+      const dtcsIndex = { index: vi.fn(), search: vi.fn() } as unknown as DtcVectorRepository
+      const knowledgeStack: KnowledgeStack = { pidsIndex, dtcsIndex, diagnosisIndex }
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        logger: createMockLogger(),
+        knowledgeStack,
+      })
+
+      const result = await service.callMcpTool('search_similar_pids', 'audi-a3-idle', {
+        query: 'battery',
+      })
+
+      expect(pidsIndex.search).toHaveBeenCalledWith('battery', expect.anything())
+      expect(result).toContain('No PIDs')
     })
   })
 })
