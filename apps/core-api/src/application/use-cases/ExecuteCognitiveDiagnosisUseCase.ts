@@ -10,6 +10,8 @@ import type { DiagnosisVectorRepository } from '@/application/ports/DiagnosisVec
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { VectorSearchResult } from '@/application/dto/vector/VectorSearchResult.js'
 import type { DiagnosisKnowledgeEntry } from '@/application/dto/knowledge/DiagnosisKnowledgeEntry.js'
+import { initialConfidenceFor } from '@/application/knowledge/confidenceScale.js'
+import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
 import type { ToolCallTrace } from '@/application/dto/llm/ToolCallTrace.js'
 import { DEFAULT_SEARCH_LIMIT } from '@/application/knowledge/createKnowledgeIndex.js'
 import crypto from 'node:crypto'
@@ -83,6 +85,8 @@ function toDiagnosisEntry(
     model: vehicleContext?.model ?? UNKNOWN_VALUE,
     symptoms: userQuery?.trim() ? [userQuery.trim()] : [],
     pidsInvolved: toUniquePids(toolCalls),
+    confidence: initialConfidenceFor(KnowledgeSource.PreviousDiagnosis),
+    source: KnowledgeSource.PreviousDiagnosis,
   }
 }
 

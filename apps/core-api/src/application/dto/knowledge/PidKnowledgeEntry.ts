@@ -9,5 +9,6 @@ export interface PidKnowledgeEntry {
   /** Entre 0 y 1. */
   readonly confidence: number
   readonly source: KnowledgeSource
-  readonly obdValidated: boolean
+  /** Confirmado leyendo el PID en un vehiculo real y comprobando que el valor cae en rango. */
+  readonly validated: boolean
 }

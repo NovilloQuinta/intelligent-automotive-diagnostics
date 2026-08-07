@@ -274,4 +274,38 @@ describe('Elm327TcpRepository', () => {
     expect(ecus[0].type).toBe('ECM')
     expect(ecus[0].protocol).toBe('ISO 15765-4 (CAN 11/500)')
   })
+
+  describe('readPidRaw', () => {
+    // 22 F4 0C no esta en ALL_SEED_PIDS: es justo el caso que motiva el metodo, un PID
+    // descubierto cuya formula no conoce el catalogo interno del adaptador.
+    it('devuelve los bytes crudos de un PID Mode 22 fuera del catalogo semilla', async () => {
+      const repo = makeRepo()
+
+      const promise = repo.readPidRaw('22', 'F40C', 2)
+      expectSent('22 F4 0C')
+      respond('22 F4 0C\r62 F4 0C 0C 80 \r\r>')
+
+      await expect(promise).resolves.toEqual([0x0c, 0x80])
+    })
+
+    it('acota la respuesta Mode 22 a los dataBytes pedidos', async () => {
+      const repo = makeRepo()
+
+      const promise = repo.readPidRaw('22', 'F40C', 1)
+      respond('22 F4 0C\r62 F4 0C 0C 80 \r\r>')
+
+      await expect(promise).resolves.toEqual([0x0c])
+    })
+
+    it('devuelve los bytes de datos sin aplicar la formula en Mode 01', async () => {
+      const repo = makeRepo()
+
+      // readPid('01','0C') daria 800; readPidRaw devuelve los bytes tal cual.
+      const promise = repo.readPidRaw('01', '0C', 2)
+      expectSent('01 0C')
+      respond(RESPONSES['01 0C'])
+
+      await expect(promise).resolves.toEqual([0x0c, 0x80])
+    })
+  })
 })

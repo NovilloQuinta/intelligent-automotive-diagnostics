@@ -28,6 +28,9 @@ export type { Elm327TcpConfig } from './tcpTransport.js'
 
 const UNKNOWN_FREEZE_FRAME_DTC = 'UNKNOWN'
 
+/** Modo 22 (UDS ReadDataByIdentifier): su respuesta se parsea distinto a la de los modos SAE. */
+const MODE_UDS = '22'
+
 /**
  * Adaptador OBD-II sobre TCP a dispositivo ELM327 (Docker, puerto 35000).
  *
@@ -56,12 +59,21 @@ export class Elm327TcpRepository implements ObdRepository {
     await this.client.close()
   }
 
-  async readPid(mode: string, pid: string): Promise<number> {
+  /** Envia el PID y extrae sus bytes de datos, sin resolver ninguna formula. */
+  private async fetchPidBytes(mode: string, pid: string, dataBytes: number): Promise<number[]> {
     const raw = await this.client.sendCommand(formatCommand(mode, pid))
+    return mode === MODE_UDS ? parseMode22Response(raw, dataBytes) : parseModeResponse(raw)
+  }
+
+  async readPid(mode: string, pid: string): Promise<number> {
     const entry = this.pidFormulas.get(mode, pid)
-    const bytes =
-      mode === '22' ? parseMode22Response(raw, entry?.dataBytes ?? 0) : parseModeResponse(raw)
+    const bytes = await this.fetchPidBytes(mode, pid, entry?.dataBytes ?? 0)
     return this.pidFormulas.apply(mode, pid, bytes)
+  }
+
+  async readPidRaw(mode: string, pid: string, dataBytes: number): Promise<number[]> {
+    const bytes = await this.fetchPidBytes(mode, pid, dataBytes)
+    return dataBytes > 0 ? bytes.slice(0, dataBytes) : bytes
   }
 
   async getSupportedPids(): Promise<string[]> {
