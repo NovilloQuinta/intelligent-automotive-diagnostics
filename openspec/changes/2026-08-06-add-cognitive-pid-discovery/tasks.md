@@ -42,10 +42,10 @@
 
 ## 6. GREEN — Implementar enricher + DTO + cableado en el use case
 
-- [ ] 6.1 Crear `src/application/dto/PidObservation.ts` con TSDoc
-- [ ] 6.2 Crear `src/application/services/pidObservationEnricher.ts`: `derivePidObservations(toolCalls: readonly ToolCallTrace[]): PidObservation[]`
-- [ ] 6.3 Modificar `src/application/dto/ExecuteCognitiveDiagnosisOutput.ts`: añadir `pidObservations: readonly PidObservation[]`
-- [ ] 6.4 Modificar `src/application/use-cases/ExecuteCognitiveDiagnosisUseCase.ts`: tras obtener `{ text, toolCalls }`, llamar a `derivePidObservations(toolCalls)` e incluirlo en el output
+- [x] 6.1 Crear `src/application/dto/PidObservation.ts` con TSDoc
+- [x] 6.2 Crear `src/application/services/pidObservationEnricher.ts`: `derivePidObservations(toolCalls: readonly ToolCallTrace[]): PidObservation[]`
+- [x] 6.3 Modificar `src/application/dto/ExecuteCognitiveDiagnosisOutput.ts`: añadir `pidObservations: readonly PidObservation[]`
+- [x] 6.4 Modificar `src/application/use-cases/ExecuteCognitiveDiagnosisUseCase.ts`: tras obtener `{ text, toolCalls }`, llamar a `derivePidObservations(toolCalls)` e incluirlo en el output
 - [x] 6.5 Actualizar `tests/unit/usecases/cognitive/executeCognitiveDiagnosis.test.ts`: el output incluye `pidObservations` derivado de los `toolCalls` mockeados
 
 ## 7. RED — Frontend: tipos + `mergePidRows`

@@ -14,6 +14,7 @@ import { initialConfidenceFor } from '@/application/knowledge/confidenceScale.js
 import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
 import type { ToolCallTrace } from '@/application/dto/llm/ToolCallTrace.js'
 import { DEFAULT_SEARCH_LIMIT } from '@/application/knowledge/createKnowledgeIndex.js'
+import { derivePidObservations } from '@/application/services/pidObservationEnricher.js'
 import crypto from 'node:crypto'
 
 /** Prompt del sistema: pide explorar tools OBD-II, razonar causa raíz y devolver bloque JSON al final. */
@@ -141,6 +142,7 @@ export class ExecuteCognitiveDiagnosisUseCase {
       confidence: parsed.confidence,
       recommendations: parsed.recommendations,
       toolCalls,
+      pidObservations: derivePidObservations(toolCalls),
     }
   }
 
