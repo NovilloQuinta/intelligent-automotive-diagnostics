@@ -4,6 +4,7 @@ import crypto from 'node:crypto'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
+import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import type { McpToolDefinition } from '@/application/dto/llm/McpToolDefinition.js'
 import {
   Elm327ConnectionError,
@@ -19,6 +20,13 @@ import { ValidateDiscoveredDtcUseCase } from '@/application/use-cases/ValidateDi
 import type { PidKnowledgeEntry } from '@/application/dto/knowledge/PidKnowledgeEntry.js'
 import type { DtcKnowledgeEntry } from '@/application/dto/knowledge/DtcKnowledgeEntry.js'
 import type { DiagnosisKnowledgeEntry } from '@/application/dto/knowledge/DiagnosisKnowledgeEntry.js'
+import { wrapUntrustedResult } from '@/infrastructure/mcp/webSearchContent.js'
+import {
+  createWebSearchBudget,
+  MAX_WEB_SEARCHES_PER_SESSION,
+  type WebSearchBudget,
+} from '@/infrastructure/mcp/webSearchBudget.js'
+import { WebSearchProviderError } from '@/infrastructure/web-search/WebSearchProviderError.js'
 
 /** Resultado de invocar una tool MCP (siempre contenido de tipo texto). */
 export interface ToolCallResult {
@@ -90,6 +98,7 @@ function categorizeError(err: unknown): ToolErrorCategory {
   if (err instanceof Elm327ConnectionError) return 'external_error'
   if (err instanceof Elm327NoDataError) return 'client_error'
   if (err instanceof Elm327ParseError) return 'server_error'
+  if (err instanceof WebSearchProviderError) return 'external_error'
   return 'server_error'
 }
 
@@ -501,11 +510,45 @@ function registerKnowledgeTools(
   )
 }
 
+/**
+ * Registra la tool MCP `web_search` si hay un puerto de búsqueda configurado.
+ *
+ * El presupuesto de llamadas vive dentro de `createMcpServer` porque el servidor
+ * MCP se crea uno nuevo por cada petición HTTP (`cognitiveDiagnosis()`/`callMcpTool()`).
+ * Un contador creado aquí es automáticamente "por sesión de diagnóstico" sin
+ * necesidad de estado compartido ni Redis.
+ */
+function registerWebSearchTool(
+  register: ToolRegistrar,
+  webSearch: WebSearchPort,
+  budget: WebSearchBudget,
+): void {
+  register(
+    'web_search',
+    'Search the internet for unknown PIDs, DTCs, or diagnostic information not found in the vector database.',
+    { query: z.string() },
+    withErrorHandling(async (args) => {
+      if (!budget.tryConsume()) {
+        return errorText(
+          `[client_error] Web search budget exhausted for this session (max ${MAX_WEB_SEARCHES_PER_SESSION} searches per diagnosis)`,
+        )
+      }
+      const results = await webSearch.search(args.query as string)
+      if (results.length === 0) return text('No web results found.')
+      const formatted = results
+        .map((r) => `Title: ${r.title}\nURL: ${r.url}\n${wrapUntrustedResult(r.snippet)}`)
+        .join('\n\n')
+      return text(formatted)
+    }),
+  )
+}
+
 /** Crea un servidor MCP con tools de diagnostico OBD-II y, opcionalmente, de conocimiento RAG. */
 export function createMcpServer(
   repo: ObdRepository,
   vehicleRepo?: VehicleRepository,
   knowledgeStack?: KnowledgeStack,
+  webSearch?: WebSearchPort,
 ): DiagnosticsMcpServer {
   const server = new McpServer({
     name: MCP_SERVER_NAME,
@@ -539,6 +582,10 @@ export function createMcpServer(
 
   if (knowledgeStack) {
     registerKnowledgeTools(registerTool, knowledgeStack, repo)
+  }
+
+  if (webSearch) {
+    registerWebSearchTool(registerTool, webSearch, createWebSearchBudget())
   }
 
   return {
