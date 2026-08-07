@@ -1,4 +1,5 @@
 import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
+import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 
@@ -31,6 +32,9 @@ export interface ObdRepository {
 
   /** Información estática del vehículo conectado (marca, modelo, año, tipo motor). */
   getVehicleInfo(): Promise<VehicleInfo>
+
+  /** Devuelve las ECUs descubiertas en el bus CAN/OBD del vehiculo conectado. */
+  getEcuInfo(): Promise<EcuInfo[]>
 
   /** Activa/desactiva la alimentación del adaptador OBD. */
   setPower(on: boolean): Promise<void>

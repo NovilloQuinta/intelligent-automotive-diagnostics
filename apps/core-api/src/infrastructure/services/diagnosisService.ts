@@ -19,6 +19,7 @@ import {
   CognitiveDiagnosisTimeoutError,
 } from '@/infrastructure/services/errors.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
+import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
@@ -133,6 +134,17 @@ export class DiagnosisService {
   async getFreezeFrame(scenarioId?: string, dtc?: string): Promise<FreezeFrame | null> {
     const repository = this.resolveRepository(scenarioId)
     return repository.getFreezeFrame(dtc)
+  }
+
+  /**
+   * Devuelve las ECUs descubiertas en el vehiculo activo.
+   *
+   * @param scenarioId — Escenario de simulacion; opcional en modo TCP directo.
+   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe en modo simulacion.
+   */
+  async getEcuInfo(scenarioId?: string): Promise<EcuInfo[]> {
+    const repository = this.resolveRepository(scenarioId)
+    return repository.getEcuInfo()
   }
 
   /**

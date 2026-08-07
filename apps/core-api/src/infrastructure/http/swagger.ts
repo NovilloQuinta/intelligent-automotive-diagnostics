@@ -209,6 +209,46 @@ export const openApiSpec = {
         },
       },
     },
+    '/api/ecu-info': {
+      get: {
+        tags: ['Diagnosis'],
+        summary: 'List discovered ECUs',
+        description:
+          'Returns the electronic control units discovered on the vehicle CAN/OBD bus ' +
+          'for the selected scenario. Requires authentication.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'scenarioId',
+            in: 'query',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Scenario ID (e.g. "audi-a3-idle")',
+            example: 'audi-a3-idle',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'ECUs discovered for the scenario (empty array when none)',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    ecus: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/EcuInfo' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '401': { description: 'Access token required' },
+          '404': { description: 'Scenario not found' },
+        },
+      },
+    },
     '/api/diagnosis': {
       post: {
         tags: ['Diagnosis'],
@@ -389,6 +429,19 @@ export const openApiSpec = {
             additionalProperties: { type: 'number' },
             example: { '0C': 850 },
           },
+        },
+      },
+      EcuInfo: {
+        type: 'object',
+        properties: {
+          id: { type: 'number', example: 1 },
+          vehicleId: { type: 'number', example: 1 },
+          name: { type: 'string', example: 'Engine Control Module' },
+          requestAddr: { type: 'string', example: '7E0' },
+          responseAddr: { type: 'string', example: '7E8' },
+          type: { type: 'string', example: 'engine' },
+          protocol: { type: 'string', example: 'ISO 15765-4' },
+          discoveredAt: { type: 'string', format: 'date-time' },
         },
       },
     },

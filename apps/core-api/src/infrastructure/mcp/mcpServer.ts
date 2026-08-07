@@ -136,6 +136,18 @@ function handleGetVehicleInfo(repo: ObdRepository): ToolHandler {
   }
 }
 
+function handleGetEcuInfo(repo: ObdRepository): ToolHandler {
+  return async () => {
+    const ecus = await repo.getEcuInfo()
+    if (ecus.length === 0) return text('No ECUs discovered.')
+    return text(
+      ecus
+        .map((e) => `${e.name} (${e.type}, ${e.requestAddr}→${e.responseAddr}) — ${e.protocol}`)
+        .join('\n'),
+    )
+  }
+}
+
 function handleGetAvailablePids(vehicleRepo: VehicleRepository | undefined): ToolHandler {
   return async ({ vehicleId }) => {
     // Sin repositorio o sin resultados no hay fallo: es una respuesta vacia
@@ -190,6 +202,12 @@ function registerDiagnosticTools(
     'List known PIDs for a vehicle.',
     { vehicleId: z.number().optional() },
     withErrorHandling(handleGetAvailablePids(vehicleRepo)),
+  )
+  register(
+    'get_ecu_info',
+    'List discovered ECUs (names, CAN addresses, protocol).',
+    {},
+    withErrorHandling(handleGetEcuInfo(repo)),
   )
 }
 

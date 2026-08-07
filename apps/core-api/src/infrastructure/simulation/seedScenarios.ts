@@ -1,10 +1,21 @@
 import { VehicleType } from '@/infrastructure/simulation/scenario.js'
 import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
+import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { LiveData } from '@/domain/value-objects/liveData.js'
 
 const audiIdleData = new LiveData({ rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 })
 const kawaData = new LiveData({ rpm: 4500, coolantTemp: 105, speed: 0, intakeTemp: 28 })
+
+const ENGINE_ECU = new EcuInfo({
+  id: 0,
+  vehicleId: 0,
+  name: 'Engine Control Unit',
+  requestAddr: '7E0',
+  responseAddr: '7E8',
+  type: 'ECM',
+  protocol: 'ISO 15765-4 (CAN 11/500)',
+})
 
 /** Escenarios de simulacion de ejemplo para desarrollo y tests. */
 export const seedScenarios: SimulationScenario[] = [
@@ -14,6 +25,7 @@ export const seedScenarios: SimulationScenario[] = [
     vehicleType: VehicleType.Car,
     sensorValues: audiIdleData,
     dtcConfig: [{ code: 'P0301', description: 'Cylinder 1 Misfire' }],
+    ecus: [ENGINE_ECU],
     vehicleInfo: {
       make: 'Audi',
       model: 'A3',
@@ -28,6 +40,7 @@ export const seedScenarios: SimulationScenario[] = [
     vehicleType: VehicleType.Motorcycle,
     sensorValues: kawaData,
     dtcConfig: [],
+    ecus: [ENGINE_ECU],
     vehicleInfo: {
       make: 'Kawasaki',
       model: 'Z900',

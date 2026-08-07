@@ -2,6 +2,7 @@ import type {
   AuthTokens,
   AuthUser,
   DiagnosisResponse,
+  EcuInfo,
   FreezeFrame,
   LoginInput,
   RegisterInput,
@@ -342,6 +343,14 @@ export const api = {
     await assertOk(res, GENERIC_ERROR_MESSAGE);
     const data = (await res.json()) as { freezeFrame: FreezeFrame | null };
     return data.freezeFrame;
+  },
+
+  /** GET /api/ecu-info — returns the ECUs discovered for the vehicle. */
+  async getEcuInfo(scenarioId: string): Promise<EcuInfo[]> {
+    const res = await apiFetch(`/api/ecu-info?scenarioId=${encodeURIComponent(scenarioId)}`);
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+    const data = (await res.json()) as { ecus: EcuInfo[] };
+    return data.ecus;
   },
 
   /** POST /api/mcp/cognitive-diagnosis — AI-powered cognitive analysis. */

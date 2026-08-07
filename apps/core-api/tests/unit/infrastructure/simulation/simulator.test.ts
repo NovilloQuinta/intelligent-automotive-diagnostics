@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { ObdSimulator } from '@/infrastructure/simulation/simulator.js'
+import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
@@ -168,5 +169,30 @@ describe('ObdSimulator', () => {
     const simulator = new ObdSimulator(scenarioWithFreeze)
 
     expect(simulator.getFreezeFrame('P0420')).toBeNull()
+  })
+
+  it('getEcus should return ECUs from scenario when defined', () => {
+    const ecu = new EcuInfo({
+      id: 0,
+      vehicleId: 0,
+      name: 'Engine Control Unit',
+      requestAddr: '7E0',
+      responseAddr: '7E8',
+      type: 'ECM',
+      protocol: 'ISO 15765-4 (CAN 11/500)',
+    })
+    const scenarioWithEcus: SimulationScenario = {
+      ...audiIdleScenario,
+      ecus: [ecu],
+    }
+    const simulator = new ObdSimulator(scenarioWithEcus)
+
+    expect(simulator.getEcus()).toEqual([ecu])
+  })
+
+  it('getEcus should return empty array when scenario has no ecus', () => {
+    const simulator = new ObdSimulator(audiIdleScenario)
+
+    expect(simulator.getEcus()).toEqual([])
   })
 })

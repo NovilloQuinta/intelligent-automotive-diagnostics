@@ -6,6 +6,7 @@ import {
   Elm327NoDataError,
   Elm327ParseError,
 } from '@/infrastructure/elm327/elm327Adapter.js'
+import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 
 vi.mock('node:net', () => {
   const createConnection = vi.fn(() => {
@@ -258,5 +259,19 @@ describe('Elm327TcpRepository', () => {
       message: expect.stringContaining('Connection closed'),
     })
     expect(createConnection).toHaveBeenCalledTimes(1)
+  })
+
+  it('getEcuInfo should return synthetic Engine Control Unit with OBD-II addresses', async () => {
+    const repo = makeRepo()
+
+    const ecus = await repo.getEcuInfo()
+
+    expect(ecus).toHaveLength(1)
+    expect(ecus[0]).toBeInstanceOf(EcuInfo)
+    expect(ecus[0].name).toBe('Engine Control Unit')
+    expect(ecus[0].requestAddr).toBe('7E0')
+    expect(ecus[0].responseAddr).toBe('7E8')
+    expect(ecus[0].type).toBe('ECM')
+    expect(ecus[0].protocol).toBe('ISO 15765-4 (CAN 11/500)')
   })
 })

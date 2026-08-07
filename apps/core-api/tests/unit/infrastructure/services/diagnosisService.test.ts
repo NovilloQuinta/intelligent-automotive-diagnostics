@@ -4,6 +4,7 @@ import {
   DiagnosisScenarioNotFoundError,
   CognitiveDiagnosisUnavailableError,
 } from '@/infrastructure/services/errors.js'
+import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import { VehicleType, type SimulationScenario } from '@/infrastructure/simulation/scenario.js'
@@ -70,6 +71,7 @@ function createMockObdRepo(): ObdRepository {
       vin: new Vin('WAUZZZ8V5JA123456'),
     })),
     setPower: vi.fn(async () => undefined),
+    getEcuInfo: vi.fn(async () => []),
   }
 }
 
@@ -184,7 +186,7 @@ describe('DiagnosisService', () => {
       expect(result.toolCalls).toEqual(cognitiveToolCalls)
       expect(llmClient.sendMessage).toHaveBeenCalledTimes(1)
       const input = (llmClient.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
-      expect(input.tools).toHaveLength(6)
+      expect(input.tools).toHaveLength(7)
       expect(input.userMessage).toContain('Audi A3')
     })
 
@@ -263,6 +265,66 @@ describe('DiagnosisService', () => {
       await expect(service.getFreezeFrame('no-existe', 'P0301')).rejects.toThrow(
         DiagnosisScenarioNotFoundError,
       )
+    })
+  })
+
+  describe('getEcuInfo', () => {
+    it('should return structured EcuInfo[] from a scenario', async () => {
+      const service = new DiagnosisService({
+        scenarios: [
+          {
+            ...mockScenarios[0],
+            ecus: [
+              new EcuInfo({
+                id: 0,
+                vehicleId: 0,
+                name: 'Engine Control Unit',
+                requestAddr: '7E0',
+                responseAddr: '7E8',
+                type: 'ECM',
+                protocol: 'ISO 15765-4 (CAN 11/500)',
+              }),
+            ],
+          },
+        ],
+        logger: createMockLogger(),
+      })
+
+      const result = await service.getEcuInfo('audi-a3-idle')
+
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe('Engine Control Unit')
+      expect(result[0].requestAddr).toBe('7E0')
+    })
+
+    it('should return ECUs from obdRepo in TCP mode without scenarioId', async () => {
+      const ecu = new EcuInfo({
+        id: 0,
+        vehicleId: 0,
+        name: 'Engine Control Unit',
+        requestAddr: '7E0',
+        responseAddr: '7E8',
+        type: 'ECM',
+        protocol: 'ISO 15765-4 (CAN 11/500)',
+      })
+      const obdRepo = createMockObdRepo()
+      vi.mocked(obdRepo.getEcuInfo as ReturnType<typeof vi.fn>).mockResolvedValue([ecu])
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepo,
+        logger: createMockLogger(),
+      })
+
+      const result = await service.getEcuInfo()
+
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe('Engine Control Unit')
+    })
+
+    it('should throw DiagnosisScenarioNotFoundError for unknown scenario', async () => {
+      const service = new DiagnosisService({ scenarios: mockScenarios, logger: createMockLogger() })
+
+      await expect(service.getEcuInfo('no-existe')).rejects.toThrow(DiagnosisScenarioNotFoundError)
     })
   })
 
