@@ -3,8 +3,8 @@ packages:
 
 allowBuilds:
   '@scarf/scarf': false
-  bcrypt: set this to true or false
-  better-sqlite3: set this to true or false
+  bcrypt: true
+  better-sqlite3: true
   esbuild: true
   onnxruntime-node: true
   png-img: false
