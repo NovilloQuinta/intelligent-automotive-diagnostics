@@ -8,6 +8,7 @@ import type {
   LoginInput,
   RegisterInput,
   Scenario,
+  VehicleInfoResponse,
 } from "@/components/dashboard/types";
 
 // ---------------------------------------------------------------------------
@@ -348,10 +349,21 @@ export const api = {
 
   /** GET /api/ecu-info — returns the ECUs discovered for the vehicle. */
   async getEcuInfo(scenarioId: string): Promise<EcuInfo[]> {
-    const res = await apiFetch(`/api/ecu-info?scenarioId=${encodeURIComponent(scenarioId)}`);
+    const res = await apiFetch(
+      `/api/ecu-info?scenarioId=${encodeURIComponent(scenarioId)}`,
+    );
     await assertOk(res, GENERIC_ERROR_MESSAGE);
     const data = (await res.json()) as { ecus: EcuInfo[] };
     return data.ecus;
+  },
+
+  /** GET /api/vehicle-info — identifies the vehicle by reading and decoding its VIN. */
+  async getVehicleInfo(scenarioId: string): Promise<VehicleInfoResponse> {
+    const res = await apiFetch(
+      `/api/vehicle-info?scenarioId=${encodeURIComponent(scenarioId)}`,
+    );
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+    return (await res.json()) as VehicleInfoResponse;
   },
 
   /** POST /api/mcp/cognitive-diagnosis — AI-powered cognitive analysis. */

@@ -9,12 +9,14 @@ const {
   mockUseScenarios,
   mockUseLiveTelemetry,
   mockUseDiagnosis,
+  mockUseVehicleAutoDetect,
 } = vi.hoisted(() => ({
   mockAuthStatus: { value: "anonymous" as "loading" | "authed" | "anonymous" },
   mockLogout: vi.fn(),
   mockUseScenarios: vi.fn(),
   mockUseLiveTelemetry: vi.fn(),
   mockUseDiagnosis: vi.fn(),
+  mockUseVehicleAutoDetect: vi.fn(),
 }));
 
 // Must mock before any imports that touch @tanstack/react-router
@@ -51,6 +53,9 @@ vi.mock("../../../src/components/dashboard/useLiveTelemetry", () => ({
 }));
 vi.mock("../../../src/components/dashboard/useDiagnosis", () => ({
   useDiagnosis: () => mockUseDiagnosis(),
+}));
+vi.mock("../../../src/components/dashboard/useVehicleAutoDetect", () => ({
+  useVehicleAutoDetect: () => mockUseVehicleAutoDetect(),
 }));
 vi.mock("../../../src/components/dashboard/useEcuInfo", () => ({
   useEcuInfo: () => ({ ecus: [], loading: false, error: null }),
@@ -97,9 +102,36 @@ const scenario: Scenario = {
   },
 };
 
+const identifiedVehicle = {
+  vin: "WAUZZZ8V5FA123456",
+  make: "Audi",
+  model: "A3",
+  year: 2015,
+  engineType: "1.6 TDI",
+  manufacturer: "Audi",
+  region: { country: "Germany", region: "Europe" },
+  modelYearDecoded: 2015,
+};
+
+/** Estado por defecto del wizard: vehículo ya identificado y confirmado. */
+function wizardState(overrides: Record<string, unknown> = {}) {
+  return {
+    step: "done",
+    scenarioId: scenario.id,
+    vehicle: identifiedVehicle,
+    error: null,
+    detect: vi.fn(),
+    retry: vi.fn(),
+    confirm: vi.fn(),
+    restart: vi.fn(),
+    ...overrides,
+  };
+}
+
 describe("DashboardPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseVehicleAutoDetect.mockReturnValue(wizardState());
     // Stub the animation driver so the gauges never fire frames (deterministic)
     vi.stubGlobal("requestAnimationFrame", vi.fn());
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
@@ -266,16 +298,87 @@ describe("DashboardPage", () => {
     expect(screen.queryByText("Live")).toBeNull();
   });
 
-  it("should show the Sin vehículo status and a disabled diagnose button without a selection", () => {
+  it("should render the identification wizard instead of the diagnosis menu without a confirmed vehicle", () => {
     mockAuthStatus.value = "authed";
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario],
+      selectedId: "",
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    });
+    mockUseVehicleAutoDetect.mockReturnValue(
+      wizardState({ step: "selecting", scenarioId: "", vehicle: null }),
+    );
 
     render(<DashboardPage />);
 
-    expect(screen.getByText("Sin vehículo")).toBeDefined();
-    const btn = screen.getByRole("button", {
-      name: "Iniciar diagnóstico",
-    }) as HTMLButtonElement;
-    expect(btn.disabled).toBe(true);
+    expect(screen.getByText("Identificación del vehículo")).toBeDefined();
+    expect(screen.queryByText("Telemetría en vivo")).toBeNull();
+    expect(screen.queryByText("Diagnóstico IA")).toBeNull();
+    expect(screen.queryByText("PIDs Leídos")).toBeNull();
+    // La cabecera se mantiene: el wizard sustituye al menú de diagnóstico, no a la app
+    expect(screen.getByText("OBD-II · AI Assisted Workshop Tool")).toBeDefined();
+  });
+
+  it("should enter the diagnosis menu when the wizard confirms the vehicle", () => {
+    mockAuthStatus.value = "authed";
+    const setSelectedId = vi.fn();
+    const confirm = vi.fn();
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario],
+      selectedId: "",
+      setSelectedId,
+      scenariosError: null,
+    });
+    mockUseVehicleAutoDetect.mockReturnValue(
+      wizardState({ step: "confirming", confirm }),
+    );
+
+    render(<DashboardPage />);
+
+    fireEvent.click(screen.getByText("Entrar a diagnóstico"));
+
+    expect(setSelectedId).toHaveBeenCalledWith(scenario.id);
+    expect(confirm).toHaveBeenCalledTimes(1);
+  });
+
+  it("should reopen the wizard in detecting when another vehicle is picked in VehicleSelector", () => {
+    mockAuthStatus.value = "authed";
+    const detect = vi.fn();
+    const other: Scenario = { ...scenario, id: "kawa-z900", name: "Kawasaki Z900" };
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario, other],
+      selectedId: scenario.id,
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    });
+    mockUseVehicleAutoDetect.mockReturnValue(wizardState({ detect }));
+
+    render(<DashboardPage />);
+
+    // Abre el dropdown del TopBar y elige el otro vehículo
+    fireEvent.click(screen.getByText("Audi A3 1.6 TDI"));
+    fireEvent.click(screen.getByText("Kawasaki Z900"));
+
+    expect(detect).toHaveBeenCalledWith("kawa-z900");
+  });
+
+  it("should show the wizard scanning step while a new vehicle is being identified", () => {
+    mockAuthStatus.value = "authed";
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario],
+      selectedId: scenario.id,
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    });
+    mockUseVehicleAutoDetect.mockReturnValue(
+      wizardState({ step: "detecting", vehicle: null }),
+    );
+
+    render(<DashboardPage />);
+
+    expect(screen.getByText("Detectando vehículo…")).toBeDefined();
+    expect(screen.queryByText("Telemetría en vivo")).toBeNull();
   });
 
   it("should render the diagnosis result (DTCs, text, severity) once available", () => {

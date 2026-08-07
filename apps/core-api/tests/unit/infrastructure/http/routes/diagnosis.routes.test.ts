@@ -109,6 +109,7 @@ type ServiceStub = Pick<
   | 'callMcpTool'
   | 'getFreezeFrame'
   | 'getEcuInfo'
+  | 'getVehicleInfo'
 >
 
 /** Stub de DiagnosisService: el controlador solo consume su superficie publica. */
@@ -122,6 +123,16 @@ function createServiceStub(overrides: Partial<ServiceStub> = {}): DiagnosisServi
     callMcpTool: vi.fn(async () => '750'),
     getFreezeFrame: vi.fn(async () => null),
     getEcuInfo: vi.fn(async () => []),
+    getVehicleInfo: vi.fn(async () => ({
+      vin: 'WAUZZZ8V5JA123456',
+      make: 'Audi',
+      model: 'A3',
+      year: 2018,
+      engineType: '2.0 TFSI',
+      manufacturer: 'Audi',
+      region: { country: 'Germany', region: 'Europe' },
+      modelYearDecoded: 2018,
+    })),
     ...overrides,
   } as unknown as DiagnosisService
 }
@@ -383,6 +394,91 @@ describe('diagnosisRoutes', () => {
       expect(res.status).toBe(200)
       expect(res.body.ecus).toHaveLength(1)
       expect(service.getEcuInfo).toHaveBeenCalledWith(undefined)
+    })
+  })
+
+  describe('GET /api/vehicle-info', () => {
+    const sampleVehicleInfo = {
+      vin: 'WAUZZZ8V5JA123456',
+      make: 'Audi',
+      model: 'A3',
+      year: 2018,
+      engineType: '2.0 TFSI',
+      manufacturer: 'Audi',
+      region: { country: 'Germany', region: 'Europe' },
+      modelYearDecoded: 2018,
+    }
+
+    it('should return the vehicle info for a valid scenarioId', async () => {
+      const service = createServiceStub({
+        getVehicleInfo: vi.fn(async () => sampleVehicleInfo),
+      })
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/vehicle-info').query({ scenarioId: 'audi-a3-idle' })
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual(sampleVehicleInfo)
+      expect(service.getVehicleInfo).toHaveBeenCalledWith('audi-a3-idle')
+    })
+
+    it('should return 404 when scenario does not exist', async () => {
+      const service = createServiceStub({
+        getVehicleInfo: vi.fn(async () => {
+          throw new DiagnosisScenarioNotFoundError()
+        }),
+      })
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/vehicle-info').query({ scenarioId: 'no-existe' })
+
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe('Scenario not found')
+    })
+
+    it('should return 400 when scenarioId is missing in simulation mode', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/vehicle-info')
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid request body')
+      expect(service.getVehicleInfo).not.toHaveBeenCalled()
+    })
+
+    it('should return 200 without scenarioId in TCP mode', async () => {
+      const tcpVehicleInfo = {
+        ...sampleVehicleInfo,
+        vin: 'XXXXXXXXXXXXXXXXX',
+        make: 'unknown',
+        model: 'unknown',
+        year: 0,
+        engineType: 'unknown',
+        manufacturer: null,
+        region: null,
+        modelYearDecoded: null,
+      }
+      const service = createServiceStub({
+        isDirectConnection: true,
+        getVehicleInfo: vi.fn(async () => tcpVehicleInfo),
+      })
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/vehicle-info')
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual(tcpVehicleInfo)
+      expect(service.getVehicleInfo).toHaveBeenCalledWith(undefined)
+    })
+
+    it('should return 500 when the service fails unexpectedly', async () => {
+      const service = createServiceStub({
+        getVehicleInfo: vi.fn(async () => {
+          throw new Error('bus error')
+        }),
+      })
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/vehicle-info').query({ scenarioId: 'audi-a3-idle' })
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Internal server error')
     })
   })
 

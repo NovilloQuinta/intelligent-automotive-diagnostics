@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { useScenarios } from "../../../src/components/dashboard/useScenarios";
 
 // Mock the api module
@@ -16,7 +16,9 @@ describe("useScenarios", () => {
     vi.clearAllMocks();
   });
 
-  it("fetches and selects first scenario on mount", async () => {
+  // El vehículo activo ya no se auto-selecciona: lo fija el wizard de
+  // identificación (VehicleAutoDetectWizard) tras leer y decodificar el VIN.
+  it("fetches scenarios on mount without selecting any of them", async () => {
     const mockScenarios = [
       { id: "audi-a3-idle", name: "Audi A3", vehicleType: "car" as const, sensorValues: { rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 }, dtcConfig: [], vehicleInfo: { make: "Audi", model: "A3", year: 2018, engineType: "2.0 TFSI", vin: "WAU..." } },
       { id: "kawa-z900", name: "Kawasaki Z900", vehicleType: "motorcycle" as const, sensorValues: { rpm: 4500, coolantTemp: 105, speed: 0, intakeTemp: 28 }, dtcConfig: [], vehicleInfo: { make: "Kawasaki", model: "Z900", year: 2020, engineType: "948cc", vin: "JKA..." } },
@@ -28,8 +30,18 @@ describe("useScenarios", () => {
     await waitFor(() => {
       expect(result.current.scenarios).toEqual(mockScenarios);
     });
-    expect(result.current.selectedId).toBe("audi-a3-idle");
+    expect(result.current.selectedId).toBe("");
     expect(result.current.scenariosError).toBeNull();
+  });
+
+  it("keeps the selection made by the caller", async () => {
+    vi.mocked(api.getScenarios).mockResolvedValueOnce([]);
+
+    const { result } = renderHook(() => useScenarios());
+
+    await waitFor(() => expect(result.current.scenarios).toEqual([]));
+    act(() => result.current.setSelectedId("kawa-z900"));
+    expect(result.current.selectedId).toBe("kawa-z900");
   });
 
   it("sets error on API failure", async () => {

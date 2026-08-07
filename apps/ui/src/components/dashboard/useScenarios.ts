@@ -16,8 +16,9 @@ export function useScenarios() {
       .getScenarios()
       .then((data) => {
         if (!mounted) return;
+        // Sin auto-selección: el vehículo activo lo fija el wizard de
+        // identificación cuando el usuario confirma el VIN leído.
         setScenarios(data);
-        if (data.length && !selectedId) setSelectedId(data[0].id);
       })
       .catch((e: unknown) => {
         if (!mounted) return;

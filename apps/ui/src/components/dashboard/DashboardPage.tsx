@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Navigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { useScenarios } from "./useScenarios";
+import { useVehicleAutoDetect } from "./useVehicleAutoDetect";
+import { VehicleAutoDetectWizard } from "./VehicleAutoDetectWizard";
 import { useLiveTelemetry } from "./useLiveTelemetry";
 import { useDiagnosis } from "./useDiagnosis";
 import { useEcuInfo } from "./useEcuInfo";
@@ -24,13 +26,27 @@ export function DashboardPage() {
   const selectedScenario = scenarios.find((s) => s.id === selectedId) ?? null;
   const { live, streamOk } = useLiveTelemetry(selectedScenario);
   const { loading, result, runDiagnosis } = useDiagnosis(selectedId);
-  const { ecus, loading: ecusLoading, error: ecusError } = useEcuInfo(selectedId);
+  const {
+    ecus,
+    loading: ecusLoading,
+    error: ecusError,
+  } = useEcuInfo(selectedId);
   const [selectedDtc, setSelectedDtc] = useState<string | null>(null);
   const [showReport, setShowReport] = useState(false);
+  const wizard = useVehicleAutoDetect();
 
   useEffect(() => {
     setSelectedDtc(null);
   }, [selectedId]);
+
+  /** Confirmar el vehículo identificado es lo único que abre el menú de diagnóstico. */
+  const handleVehicleConfirmed = useCallback(
+    (scenarioId: string) => {
+      setSelectedId(scenarioId);
+      wizard.confirm();
+    },
+    [setSelectedId, wizard.confirm],
+  );
 
   if (auth.status === "anonymous") {
     return <Navigate to="/login" replace />;
@@ -42,20 +58,22 @@ export function DashboardPage() {
   const intake = live?.intakeTemp ?? result?.parsedValues.intakeTemp ?? null;
   const rawSummary = live?.rawData ?? result?.rawData ?? null;
 
+  // El menú de diagnóstico solo se monta con un vehículo ya identificado y
+  // confirmado en el wizard: no hay atajo a la telemetría sin leer el VIN.
+  const vehicleReady = wizard.step === "done";
+
   const telemetryStatus = loading
     ? "Diagnosticando…"
     : streamOk
       ? "Streaming ECU · 2 Hz"
-      : selectedId
-        ? "Conectando…"
-        : "Sin vehículo";
+      : "Conectando…";
 
   return (
     <div className="relative z-10 flex min-h-screen flex-col">
       <TopBar
         scenarios={scenarios}
         selectedId={selectedId}
-        onSelect={setSelectedId}
+        onSelect={wizard.detect}
         loading={loading}
         onLogout={() => auth.logout()}
         onReportClick={() => setShowReport((v) => !v)}
@@ -65,46 +83,61 @@ export function DashboardPage() {
           {scenariosError}
         </div>
       )}
-      <main className="flex-1 p-4 md:p-6">
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-6">
-          <TelemetrySection
-            values={{ rpm, coolant, speed, intake }}
-            rawSummary={rawSummary}
-            loading={loading}
-            streamOk={streamOk}
-            canDiagnose={!!selectedId}
-            telemetryStatus={telemetryStatus}
-            onDiagnose={runDiagnosis}
-          />
-          <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:gap-6">
-            <DtcPanel
-              codes={result?.dtcCodes ?? null}
-              severity={result?.severity ?? null}
-              empty={!result && !loading}
-              selectedCode={selectedDtc}
-              onSelect={setSelectedDtc}
-            />
-            <FreezeFramePanel scenarioId={selectedId} dtc={selectedDtc} />
-            <EcuInfoPanel
-              ecus={ecus}
-              loading={ecusLoading}
-              error={ecusError}
-              selectedId={selectedId}
-            />
-            <DiagnosisPanel
-              text={result?.diagnosisText ?? null}
-              severity={result?.severity ?? null}
-              empty={!result && !loading}
+      {!vehicleReady && (
+        <VehicleAutoDetectWizard
+          scenarios={scenarios}
+          step={wizard.step}
+          scenarioId={wizard.scenarioId}
+          vehicle={wizard.vehicle}
+          error={wizard.error}
+          onSelect={wizard.detect}
+          onRetry={wizard.retry}
+          onBack={wizard.restart}
+          onConfirm={handleVehicleConfirmed}
+        />
+      )}
+      {vehicleReady && (
+        <main className="flex-1 p-4 md:p-6">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-6">
+            <TelemetrySection
+              values={{ rpm, coolant, speed, intake }}
+              rawSummary={rawSummary}
               loading={loading}
+              streamOk={streamOk}
+              canDiagnose={!!selectedId}
+              telemetryStatus={telemetryStatus}
+              onDiagnose={runDiagnosis}
             />
-            <PidsTable
-              parsedValues={result?.parsedValues ?? null}
-              empty={!result && !loading}
-            />
-          </section>
-        </div>
-      </main>
-      {showReport && selectedId && (
+            <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:gap-6">
+              <DtcPanel
+                codes={result?.dtcCodes ?? null}
+                severity={result?.severity ?? null}
+                empty={!result && !loading}
+                selectedCode={selectedDtc}
+                onSelect={setSelectedDtc}
+              />
+              <FreezeFramePanel scenarioId={selectedId} dtc={selectedDtc} />
+              <EcuInfoPanel
+                ecus={ecus}
+                loading={ecusLoading}
+                error={ecusError}
+                selectedId={selectedId}
+              />
+              <DiagnosisPanel
+                text={result?.diagnosisText ?? null}
+                severity={result?.severity ?? null}
+                empty={!result && !loading}
+                loading={loading}
+              />
+              <PidsTable
+                parsedValues={result?.parsedValues ?? null}
+                empty={!result && !loading}
+              />
+            </section>
+          </div>
+        </main>
+      )}
+      {vehicleReady && showReport && selectedId && (
         <section className="border-t border-white/5 bg-black/40 px-4 py-6 md:px-6">
           {/*
            * KISS: useSessionReport re-fetches getEcuInfo/getFreezeFrame even

@@ -695,6 +695,71 @@ describe("api", () => {
   });
 
   // -----------------------------------------------------------------------
+  // getVehicleInfo
+  // -----------------------------------------------------------------------
+
+  describe("getVehicleInfo", () => {
+    const vehicle = {
+      vin: "WAUZZZ8V5JA123456",
+      make: "Audi",
+      model: "A3",
+      year: 2018,
+      engineType: "2.0 TFSI",
+      manufacturer: "Audi",
+      region: { country: "Germany", region: "Europe" },
+      modelYearDecoded: 2018,
+    };
+
+    it("GETs /api/vehicle-info with the scenarioId and returns the vehicle", async () => {
+      setStoredTokens();
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => vehicle,
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getVehicleInfo("audi-a3-idle");
+
+      expect(result).toEqual(vehicle);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/vehicle-info?scenarioId=audi-a3-idle");
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+
+    it("encodes the scenarioId in the query string", async () => {
+      setStoredTokens();
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => vehicle,
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      await api.getVehicleInfo("audi a3/idle&x");
+
+      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(url).toBe("/api/vehicle-info?scenarioId=audi%20a3%2Fidle%26x");
+    });
+
+    it("throws the curated message when the scenario does not exist", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          json: async () => ({ error: "Scenario not found" }),
+        }),
+      );
+
+      await expect(api.getVehicleInfo("no-existe")).rejects.toThrow(
+        "Scenario not found",
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // getCapabilities
   // -----------------------------------------------------------------------
 

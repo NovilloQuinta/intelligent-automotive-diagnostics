@@ -73,6 +73,11 @@ function DropdownOption({
 type Props = {
   scenarios: Scenario[];
   value: string;
+  /**
+   * Reabre el wizard de identificación para el vehículo elegido. No cambia el
+   * escenario activo por sí solo: todo cambio de vehículo pasa antes por la
+   * lectura del VIN, igual que la entrada inicial al menú de diagnóstico.
+   */
   onChange: (id: string) => void;
   disabled: boolean;
 };
