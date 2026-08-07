@@ -106,7 +106,7 @@
 
 ## 15. REFACTOR + Verificación
 
-- [ ] 15.1 Ejecutar `pnpm lint && pnpm format && pnpm test && pnpm build` — todo verde
-- [ ] 15.2 Revisar Clean Architecture: `domain/pidObservationCatalog.ts` sin imports de capas superiores; `application/services/pidObservationEnricher.ts` sin imports de `infrastructure/`; `ExecuteLlmToolCalling`/`ToolCallTrace` sin cambios
-- [ ] 15.3 Revisar DRY/KISS: sin duplicación de umbrales entre el catálogo nuevo y `GAUGE.*` (ámbitos distintos, documentado en Decisión 4 de `design.md`); claves de catálogo construidas vía `PidCode`, no strings mágicos repetidos
+- [x] 15.1 Ejecutar `pnpm lint && pnpm format && pnpm test && pnpm build` — todo verde
+- [x] 15.2 Revisar Clean Architecture: `domain/pidObservationCatalog.ts` sin imports de capas superiores; `application/services/pidObservationEnricher.ts` sin imports de `infrastructure/`; `ExecuteLlmToolCalling`/`ToolCallTrace` sin cambios
+- [x] 15.3 Revisar DRY/KISS: sin duplicación de umbrales entre el catálogo nuevo y `GAUGE.*` (ámbitos distintos, documentado en Decisión 4 de `design.md`); claves de catálogo construidas vía `PidCode`, no strings mágicos repetidos
 - [ ] 15.4 Actualizar `SESION ACTUAL` en `AGENTS.md`

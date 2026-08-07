@@ -41,10 +41,7 @@ function AiOriginBadge() {
 function AiLoadingRow() {
   return (
     <TableRow className="border-white/5 hover:bg-transparent">
-      <TableCell
-        colSpan={4}
-        className="text-xs italic text-muted-foreground"
-      >
+      <TableCell colSpan={4} className="text-xs italic text-muted-foreground">
         <span className="inline-flex items-center gap-2">
           <Loader2 className="h-3 w-3 animate-spin" />
           Buscando PIDs adicionales…
