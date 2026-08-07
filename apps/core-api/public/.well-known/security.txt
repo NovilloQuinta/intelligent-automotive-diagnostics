@@ -1,0 +1,5 @@
+Contact: mailto:security@intelligent-automotive-diagnostics.dev
+Expires: 2027-08-05T00:00:00Z
+Preferred-Languages: es, en
+Canonical: https://intelligent-automotive-diagnostics.dev/.well-known/security.txt
+Policy: https://intelligent-automotive-diagnostics.dev/docs/security

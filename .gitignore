@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Docker
+.dockerignore
+
+# IDE
+.vs/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests
+coverage/
+.vite/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Temp
+.tmp/
+
+# SQLite
+data/
+*.db
+.claude/settings.local.json
+
+# Agent worktrees (nested git repos — never track)
+.claude/worktrees/
+apps/ui/.output/
+apps/ui/.vinxi/
+apps/ui/.tanstack/
+apps/ui/routeTree.gen.ts
+.playwright-mcp/
+apps/ui/test-results/

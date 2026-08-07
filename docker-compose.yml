@@ -1,0 +1,55 @@
+services:
+  elm327-audi:
+    build:
+      context: .
+      dockerfile: docker/elm327/Dockerfile
+    environment:
+      - SCENARIO_SCRIPT=run_audi.py
+    ports:
+      - "35000:35000"
+    restart: unless-stopped
+
+  elm327-kawasaki:
+    build:
+      context: .
+      dockerfile: docker/elm327/Dockerfile
+    environment:
+      - SCENARIO_SCRIPT=run_kawasaki.py
+    ports:
+      - "35001:35001"
+    restart: unless-stopped
+
+  elm327-toyota:
+    build:
+      context: .
+      dockerfile: docker/elm327/Dockerfile
+    environment:
+      - SCENARIO_SCRIPT=run_toyota.py
+    ports:
+      - "35002:35002"
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/core-api/Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+      - OBD_MODE=${OBD_MODE:-docker}
+      - ELM327_AUDI_HOST=elm327-audi
+      - ELM327_AUDI_PORT=35000
+      - ELM327_KAWASAKI_HOST=elm327-kawasaki
+      - ELM327_KAWASAKI_PORT=35001
+      - ELM327_TOYOTA_HOST=elm327-toyota
+      - ELM327_TOYOTA_PORT=35002
+    volumes:
+      - api-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  api-data:
