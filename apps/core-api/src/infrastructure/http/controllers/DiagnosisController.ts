@@ -65,6 +65,13 @@ const FreezeFrameQueryTcpSchema = z.object({
   dtc: z.string().optional(),
 })
 
+const EcuInfoQuerySchema = z.object({
+  scenarioId: requiredScenarioId,
+})
+const EcuInfoQueryTcpSchema = z.object({
+  scenarioId: optionalScenarioId,
+})
+
 /** Controlador HTTP para los endpoints de diagnostico OBD. */
 export class DiagnosisController {
   constructor(
@@ -163,6 +170,24 @@ export class DiagnosisController {
     } catch (err) {
       if (this.respondIfCommonError(err, res)) return
       this.respondUnexpected(err, res, 'Freeze frame fetch failed')
+    }
+  }
+
+  /** GET /api/ecu-info — ECUs descubiertas en el vehiculo. 400 query invalida, 404 escenario inexistente. */
+  ecuInfo = async (req: Request, res: Response): Promise<void> => {
+    const schema = this.selectSchema(EcuInfoQuerySchema, EcuInfoQueryTcpSchema)
+    const parsed = schema.safeParse(req.query)
+    if (!parsed.success) {
+      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
+      return
+    }
+
+    try {
+      const result = await this.service.getEcuInfo(parsed.data.scenarioId)
+      res.status(200).json({ ecus: result })
+    } catch (err) {
+      if (this.respondIfCommonError(err, res)) return
+      this.respondUnexpected(err, res, 'ECU info fetch failed')
     }
   }
 

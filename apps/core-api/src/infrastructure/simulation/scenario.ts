@@ -1,5 +1,6 @@
 import type { LiveData } from '@/domain/value-objects/liveData.js'
 import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
+import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 
@@ -24,4 +25,6 @@ export interface SimulationScenario {
   readonly pidValues?: Record<string, number>
   /** Datos de freeze frame simulados (opcional). */
   readonly freezeFrame?: FreezeFrame
+  /** Unidades de control descubiertas en el bus CAN (opcional). */
+  readonly ecus?: EcuInfo[]
 }

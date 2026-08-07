@@ -52,11 +52,15 @@ vi.mock("../../../src/components/dashboard/useLiveTelemetry", () => ({
 vi.mock("../../../src/components/dashboard/useDiagnosis", () => ({
   useDiagnosis: () => mockUseDiagnosis(),
 }));
+vi.mock("../../../src/components/dashboard/useEcuInfo", () => ({
+  useEcuInfo: () => ({ ecus: [], loading: false, error: null }),
+}));
 
 // FreezeFramePanel fetches through the real api module — mock only the network call
 vi.mock("../../../src/lib/api", () => ({
   api: {
     getFreezeFrame: vi.fn(),
+    getEcuInfo: vi.fn(),
   },
 }));
 

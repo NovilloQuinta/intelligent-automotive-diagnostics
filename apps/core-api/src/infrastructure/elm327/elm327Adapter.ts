@@ -1,5 +1,6 @@
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import { DtcCode } from '@/domain/value-objects/dtcCode.js'
+import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
@@ -119,5 +120,19 @@ export class Elm327TcpRepository implements ObdRepository {
 
   async setPower(_on: boolean): Promise<void> {
     // No-op: el adaptador no controla la alimentación del hardware
+  }
+
+  async getEcuInfo(): Promise<EcuInfo[]> {
+    return [
+      new EcuInfo({
+        id: 0,
+        vehicleId: 0,
+        name: 'Engine Control Unit',
+        requestAddr: '7E0',
+        responseAddr: '7E8',
+        type: 'ECM',
+        protocol: 'ISO 15765-4 (CAN 11/500)',
+      }),
+    ]
   }
 }

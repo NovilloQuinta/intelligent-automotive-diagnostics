@@ -4,6 +4,7 @@ import express from 'express'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
 import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
+import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import {
   ToolCallTimeoutError,
   EmptyToolResultError,
@@ -106,6 +107,7 @@ type ServiceStub = Pick<
   | 'cognitiveDiagnosis'
   | 'callMcpTool'
   | 'getFreezeFrame'
+  | 'getEcuInfo'
 >
 
 /** Stub de DiagnosisService: el controlador solo consume su superficie publica. */
@@ -117,6 +119,7 @@ function createServiceStub(overrides: Partial<ServiceStub> = {}): DiagnosisServi
     cognitiveDiagnosis: vi.fn(async () => cognitiveOutput),
     callMcpTool: vi.fn(async () => '750'),
     getFreezeFrame: vi.fn(async () => null),
+    getEcuInfo: vi.fn(async () => []),
     ...overrides,
   } as unknown as DiagnosisService
 }
@@ -295,6 +298,67 @@ describe('diagnosisRoutes', () => {
         mode: '01',
         pid: '0C',
       })
+    })
+  })
+
+  describe('GET /api/ecu-info', () => {
+    const sampleEcu = new EcuInfo({
+      id: 0,
+      vehicleId: 0,
+      name: 'Engine Control Unit',
+      requestAddr: '7E0',
+      responseAddr: '7E8',
+      type: 'ECM',
+      protocol: 'ISO 15765-4 (CAN 11/500)',
+    })
+
+    it('should return ecus for a valid scenarioId', async () => {
+      const service = createServiceStub({
+        getEcuInfo: vi.fn(async () => [sampleEcu]),
+      })
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/ecu-info').query({ scenarioId: 'audi-a3-idle' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.ecus).toHaveLength(1)
+      expect(res.body.ecus[0].name).toBe('Engine Control Unit')
+      expect(service.getEcuInfo).toHaveBeenCalledWith('audi-a3-idle')
+    })
+
+    it('should return 404 when scenario does not exist', async () => {
+      const service = createServiceStub({
+        getEcuInfo: vi.fn(async () => {
+          throw new DiagnosisScenarioNotFoundError()
+        }),
+      })
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/ecu-info').query({ scenarioId: 'no-existe' })
+
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe('Scenario not found')
+    })
+
+    it('should return 400 when scenarioId is missing in simulation mode', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/ecu-info')
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid request body')
+      expect(service.getEcuInfo).not.toHaveBeenCalled()
+    })
+
+    it('should return 200 without scenarioId in TCP mode', async () => {
+      const service = createServiceStub({
+        isDirectConnection: true,
+        getEcuInfo: vi.fn(async () => [sampleEcu]),
+      })
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/ecu-info')
+
+      expect(res.status).toBe(200)
+      expect(res.body.ecus).toHaveLength(1)
+      expect(service.getEcuInfo).toHaveBeenCalledWith(undefined)
     })
   })
 

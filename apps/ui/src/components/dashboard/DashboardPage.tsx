@@ -4,10 +4,12 @@ import { useAuth } from "@/lib/auth-context";
 import { useScenarios } from "./useScenarios";
 import { useLiveTelemetry } from "./useLiveTelemetry";
 import { useDiagnosis } from "./useDiagnosis";
+import { useEcuInfo } from "./useEcuInfo";
 import { TopBar } from "./TopBar";
 import { TelemetrySection } from "./TelemetrySection";
 import { DtcPanel } from "./DtcPanel";
 import { FreezeFramePanel } from "./FreezeFramePanel";
+import { EcuInfoPanel } from "./EcuInfoPanel";
 import { DiagnosisPanel } from "./DiagnosisPanel";
 import { PidsTable } from "./PidsTable";
 
@@ -21,6 +23,7 @@ export function DashboardPage() {
   const selectedScenario = scenarios.find((s) => s.id === selectedId) ?? null;
   const { live, streamOk } = useLiveTelemetry(selectedScenario);
   const { loading, result, runDiagnosis } = useDiagnosis(selectedId);
+  const { ecus, loading: ecusLoading, error: ecusError } = useEcuInfo(selectedId);
   const [selectedDtc, setSelectedDtc] = useState<string | null>(null);
 
   useEffect(() => {
@@ -70,7 +73,7 @@ export function DashboardPage() {
             telemetryStatus={telemetryStatus}
             onDiagnose={runDiagnosis}
           />
-          <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:gap-6">
+          <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:gap-6">
             <DtcPanel
               codes={result?.dtcCodes ?? null}
               severity={result?.severity ?? null}
@@ -79,6 +82,12 @@ export function DashboardPage() {
               onSelect={setSelectedDtc}
             />
             <FreezeFramePanel scenarioId={selectedId} dtc={selectedDtc} />
+            <EcuInfoPanel
+              ecus={ecus}
+              loading={ecusLoading}
+              error={ecusError}
+              selectedId={selectedId}
+            />
             <DiagnosisPanel
               text={result?.diagnosisText ?? null}
               severity={result?.severity ?? null}

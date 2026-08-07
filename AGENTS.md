@@ -25,10 +25,11 @@ Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de siste
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
-- **Flujo de ramas**: `develop` es la rama de integración; toda `feat/*`/`fix/*` sale de `develop` y se mergea ahí. `main` solo para releases. No mergear a `main` sin petición de release.
-- **En curso**: `add-freeze-frame-screen` en `feat/freeze-frame-screen` — implementado punta a punta: `ObdSimulator.getFreezeFrame`, endpoint `GET /api/freeze-frame`, UI `FreezeFramePanel` + `DtcPanel` seleccionable. Pendiente: OK para commitear y merge a `develop`. `fix-security-and-mcp-findings` (14 hallazgos GGA) en `fix/diagnosis-service-typed-errors` — tareas 1-5 y 6.1 completadas; GGA revisa el fichero completo en pre-commit (`PROVIDER="opencode:deepseek/deepseek-v4-flash"` en `.gga`). Pendiente: 6.5 (OK commitear) y merge.
-- **Siguiente**: ADR-007 #2 (confianza + validacion OBD + 7 tools MCP) y #3 (inyeccion RAG en el caso de uso), mas 4 cambios propuestos sin empezar: `add-cognitive-pid-discovery`, `add-diagnosis-session-report-screen`, `add-ecu-info-screen`, `add-vehicle-autodetect-flow`.
-- **Tests + CI**: core-api 556 pasando (47 files); UI 196 + 1 skipped (28 files). CI verde — lint, format, test, build (gate raiz: core-api). El lint de UI (`apps/ui`) esta roto por la deuda `brace-expansion` (preexistente, no lo detecta el gate raiz).
+- **Flujo de ramas**: `develop` es la rama de integración; toda `feat/*`/`fix/*` sale de `develop` y se mergea ahí.
+- **En curso**: `add-ecu-info-screen` en `feat/ecu-info-screen` (worktree) — implementado punta a punta: `ObdRepository.getEcuInfo()`, simulador + ELM327, tool MCP `get_ecu_info` (7ª tool), endpoint `GET /api/ecu-info`, UI `EcuInfoPanel` + hook `useEcuInfo` integrado en `DashboardPage`. Pendiente: OK para commitear y merge a `develop`.
+- **Paralelo**: `add-rag-cognitive-retrieval` en `feat/rag-cognitive-retrieval` — wiring RAG en `composition.ts` + `ExecuteCognitiveDiagnosisUseCase`.
+- **Siguiente**: `add-cognitive-pid-discovery`, `add-diagnosis-session-report-screen`, `add-vehicle-autodetect-flow` (3 pantallas restantes).
+- **Tests + CI**: core-api 573 (49 files); UI 204 + 1 skipped (30 files). Build + lint verdes. Deuda `brace-expansion` sin resolver.
 
 ## REGLAS DE SESION
 

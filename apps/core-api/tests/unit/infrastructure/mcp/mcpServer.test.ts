@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
+import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import { Vin } from '@/domain/value-objects/vin.js'
@@ -22,8 +23,9 @@ function mockObdRepo(overrides: Partial<ObdRepository> = {}): ObdRepository {
       engineType: '2.0 TFSI',
       vin: new Vin('WAUZZZ8V5JA123456'),
     }),
-    setPower: vi.fn().mockResolvedValue(undefined),
-    ...overrides,
+      setPower: vi.fn().mockResolvedValue(undefined),
+      getEcuInfo: vi.fn().mockResolvedValue([]),
+      ...overrides,
   }
 }
 
@@ -163,13 +165,58 @@ describe('McpServer', () => {
     })
   })
 
+  describe('get_ecu_info tool', () => {
+    it('should return narrative text with ECU name, addresses and protocol', async () => {
+      const ecu = new EcuInfo({
+        id: 0,
+        vehicleId: 0,
+        name: 'Engine Control Unit',
+        requestAddr: '7E0',
+        responseAddr: '7E8',
+        type: 'ECM',
+        protocol: 'ISO 15765-4 (CAN 11/500)',
+      })
+      const repo = mockObdRepo({ getEcuInfo: vi.fn().mockResolvedValue([ecu]) })
+      const mcp = createMcpServer(repo, mockVehicleRepo())
+
+      const result = await mcp.callTool('get_ecu_info', {})
+
+      expect(repo.getEcuInfo).toHaveBeenCalledOnce()
+      expect(result.content[0].text).toContain('Engine Control Unit')
+      expect(result.content[0].text).toContain('7E0')
+      expect(result.content[0].text).toContain('7E8')
+      expect(result.content[0].text).toContain('ECM')
+    })
+
+    it('should return "No ECUs discovered" when empty', async () => {
+      const repo = mockObdRepo({ getEcuInfo: vi.fn().mockResolvedValue([]) })
+      const mcp = createMcpServer(repo, mockVehicleRepo())
+
+      const result = await mcp.callTool('get_ecu_info', {})
+
+      expect(result.content[0].text).toBe('No ECUs discovered.')
+    })
+
+    it('should mark no-params schema correctly', () => {
+      const mcp = createMcpServer(mockObdRepo(), mockVehicleRepo())
+
+      const tool = mcp.listTools().find((t) => t.name === 'get_ecu_info')
+
+      expect(tool?.schema).toEqual({
+        type: 'object',
+        properties: {},
+        required: [],
+      })
+    })
+  })
+
   describe('listTools', () => {
-    it('should return 6 definitions with name, description and schema', () => {
+    it('should return 7 definitions with name, description and schema', () => {
       const mcp = createMcpServer(mockObdRepo(), mockVehicleRepo())
 
       const tools = mcp.listTools()
 
-      expect(tools).toHaveLength(6)
+      expect(tools).toHaveLength(7)
       for (const tool of tools) {
         expect(tool.name).toBeTruthy()
         expect(tool.description).toBeTruthy()
@@ -189,6 +236,7 @@ describe('McpServer', () => {
         'read_vin',
         'get_vehicle_info',
         'get_available_pids',
+        'get_ecu_info',
       ])
     })
 

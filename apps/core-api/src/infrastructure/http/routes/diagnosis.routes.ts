@@ -8,6 +8,7 @@ export function createDiagnosisRoutes(controller: DiagnosisController): Router {
   router.get('/scenarios', controller.listScenarios)
   router.post('/diagnosis', controller.diagnose)
   router.get('/freeze-frame', controller.freezeFrame)
+  router.get('/ecu-info', controller.ecuInfo)
   router.post('/mcp/tools/:toolName', controller.mcpTool)
   router.post('/mcp/cognitive-diagnosis', controller.cognitiveDiagnosis)
 

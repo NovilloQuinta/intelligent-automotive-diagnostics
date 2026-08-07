@@ -1,5 +1,6 @@
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import { DtcCode } from '@/domain/value-objects/dtcCode.js'
+import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import type { ObdSimulator } from './simulator.js'
@@ -34,6 +35,10 @@ export class ObdSimulatorRepository implements ObdRepository {
 
   async getVehicleInfo(): Promise<VehicleInfo> {
     return this.simulator.getVehicleInfo()
+  }
+
+  async getEcuInfo(): Promise<EcuInfo[]> {
+    return this.simulator.getEcus()
   }
 
   async setPower(_on: boolean): Promise<void> {

@@ -62,6 +62,18 @@ export type FreezeFrame = {
   pidValues: Record<string, number>;
 };
 
+/** ECU info as returned by GET /api/ecu-info. */
+export type EcuInfo = {
+  id: number;
+  vehicleId: number;
+  name: string;
+  requestAddr: string;
+  responseAddr: string;
+  type: string;
+  protocol: string;
+  discoveredAt?: string;
+};
+
 // ---------------------------------------------------------------------------
 // Auth types
 // ---------------------------------------------------------------------------

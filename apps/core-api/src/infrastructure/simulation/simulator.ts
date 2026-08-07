@@ -1,4 +1,5 @@
 import type { SimulationScenario } from './scenario.js'
+import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import {
@@ -108,5 +109,10 @@ export class ObdSimulator {
   /** Cambia el escenario de simulación activo. */
   setScenario(scenario: SimulationScenario): void {
     this.scenario = scenario
+  }
+
+  /** Devuelve las ECUs del escenario activo (vacio si no estan definidas). */
+  getEcus(): EcuInfo[] {
+    return this.scenario.ecus ?? []
   }
 }
