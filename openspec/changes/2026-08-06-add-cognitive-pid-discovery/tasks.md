@@ -82,7 +82,7 @@
 
 ## 11. RED — Frontend: fusión y estados en `PidsTable`
 
-- [ ] 11.1 Actualizar `apps/ui/tests/unit/components/PidsTable.test.tsx`:
+- [x] 11.1 Actualizar `apps/ui/tests/unit/components/PidsTable.test.tsx`:
   - Con `aiRows` no nulos y códigos nuevos → se listan tras los 4 fijos, con marca visual de origen IA
   - Con `aiRows` que incluyen un código ya fijo (p. ej. `01 0C`) → no se duplica la fila
   - Con `aiLoading: true` y `aiRows: null` → indicador de carga secundario visible, sin bloquear el resto de la tabla
