@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/errors";
 import type { DiagnosisResponse } from "./types";
 import { severityMeta } from "./severityMeta";
 
@@ -20,8 +21,7 @@ export function useDiagnosis(selectedId: string) {
         description: `Severidad: ${severityMeta(data.severity).label}`,
       });
     } catch (e: unknown) {
-      const msg =
-        e instanceof Error ? e.message : "Fallo al ejecutar el diagnóstico";
+      const msg = extractErrorMessage(e, "Fallo al ejecutar el diagnóstico");
       toast.error("Error de diagnóstico", { description: msg });
     } finally {
       setLoading(false);

@@ -1,3 +1,4 @@
+import { ApiHttpError } from "@/lib/api-errors";
 import type {
   AuthTokens,
   AuthUser,
@@ -197,7 +198,7 @@ export async function assertOk(
 ): Promise<void> {
   if (res.ok) return;
   if (res.status >= 500) {
-    throw new Error(GENERIC_ERROR_MESSAGE);
+    throw new ApiHttpError(GENERIC_ERROR_MESSAGE, res.status);
   }
   const body = (await res.json().catch(() => ({}))) as {
     error?: unknown;
@@ -214,7 +215,7 @@ export async function assertOk(
         : typeof body.error === "string"
           ? body.error
           : fallbackMsg;
-  throw new Error(msg);
+  throw new ApiHttpError(msg, res.status);
 }
 
 // ---------------------------------------------------------------------------

@@ -328,6 +328,25 @@ describe('DiagnosisService', () => {
     })
   })
 
+  describe('hasCognitiveDiagnosis', () => {
+    it('should return true when the service receives an llmClient', () => {
+      const llmClient = mockLlmClient()
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        llmClient,
+        logger: createMockLogger(),
+      })
+
+      expect(service.hasCognitiveDiagnosis).toBe(true)
+    })
+
+    it('should return false when llmClient is undefined', () => {
+      const service = new DiagnosisService({ scenarios: mockScenarios, logger: createMockLogger() })
+
+      expect(service.hasCognitiveDiagnosis).toBe(false)
+    })
+  })
+
   describe('callMcpTool', () => {
     it('should call the MCP tool and return its text result', async () => {
       const service = new DiagnosisService({ scenarios: mockScenarios, logger: createMockLogger() })

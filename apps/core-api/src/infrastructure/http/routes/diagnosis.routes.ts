@@ -6,6 +6,7 @@ export function createDiagnosisRoutes(controller: DiagnosisController): Router {
   const router = Router()
 
   router.get('/scenarios', controller.listScenarios)
+  router.get('/mcp/capabilities', controller.capabilities)
   router.post('/diagnosis', controller.diagnose)
   router.get('/freeze-frame', controller.freezeFrame)
   router.get('/ecu-info', controller.ecuInfo)

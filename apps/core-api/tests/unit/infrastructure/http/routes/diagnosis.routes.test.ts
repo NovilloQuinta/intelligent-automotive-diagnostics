@@ -102,6 +102,7 @@ const cognitiveOutput = {
 type ServiceStub = Pick<
   DiagnosisService,
   | 'isDirectConnection'
+  | 'hasCognitiveDiagnosis'
   | 'listScenarios'
   | 'diagnose'
   | 'cognitiveDiagnosis'
@@ -114,6 +115,7 @@ type ServiceStub = Pick<
 function createServiceStub(overrides: Partial<ServiceStub> = {}): DiagnosisService {
   return {
     isDirectConnection: false,
+    hasCognitiveDiagnosis: false,
     listScenarios: vi.fn(() => mockScenarios),
     diagnose: vi.fn(async () => diagnoseOutput),
     cognitiveDiagnosis: vi.fn(async () => cognitiveOutput),
@@ -298,6 +300,28 @@ describe('diagnosisRoutes', () => {
         mode: '01',
         pid: '0C',
       })
+    })
+  })
+
+  describe('GET /api/mcp/capabilities', () => {
+    it('should return cognitiveDiagnosis true when the service has llmClient', async () => {
+      const service = createServiceStub({ hasCognitiveDiagnosis: true })
+      const { app } = createApp(service)
+
+      const res = await request(app).get('/api/mcp/capabilities')
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({ cognitiveDiagnosis: true })
+    })
+
+    it('should return cognitiveDiagnosis false when the service has no llmClient', async () => {
+      const service = createServiceStub({ hasCognitiveDiagnosis: false })
+      const { app } = createApp(service)
+
+      const res = await request(app).get('/api/mcp/capabilities')
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({ cognitiveDiagnosis: false })
     })
   })
 

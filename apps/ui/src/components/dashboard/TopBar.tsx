@@ -1,4 +1,4 @@
-import { LogOut, ScanLine } from "lucide-react";
+import { FileText, LogOut, ScanLine } from "lucide-react";
 import { useClock } from "./useClock";
 import { VehicleSelector } from "./VehicleSelector";
 import { COLORS } from "./types";
@@ -48,6 +48,7 @@ type Props = {
   onSelect: (id: string) => void;
   loading: boolean;
   onLogout: () => void;
+  onReportClick?: () => void;
 };
 
 /** Application header with branding, connection status indicator, live clock, and vehicle selector. */
@@ -57,6 +58,7 @@ export function TopBar({
   onSelect,
   loading,
   onLogout,
+  onReportClick,
 }: Props) {
   const now = useClock();
   const timeStr = now
@@ -84,6 +86,17 @@ export function TopBar({
           onChange={onSelect}
           disabled={loading || scenarios.length === 0}
         />
+        {onReportClick && (
+          <button
+            onClick={onReportClick}
+            disabled={!selectedId}
+            className="flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary transition hover:border-primary/60 hover:bg-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Generar informe de la sesión"
+          >
+            <FileText className="h-3.5 w-3.5" />
+            Informe
+          </button>
+        )}
         <button
           onClick={onLogout}
           className="flex items-center gap-1.5 rounded-md border border-white/10 bg-black/40 px-2.5 py-1.5 text-xs text-muted-foreground transition hover:border-destructive/40 hover:text-destructive"

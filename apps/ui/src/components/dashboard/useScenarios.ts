@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { extractErrorMessage } from "@/lib/errors";
 import type { Scenario } from "./types";
 
 /** Fetches available vehicle scenarios from the real backend via the authenticated API. */
@@ -20,7 +21,7 @@ export function useScenarios() {
       })
       .catch((e: unknown) => {
         if (!mounted) return;
-        const msg = e instanceof Error ? e.message : "Error de red";
+        const msg = extractErrorMessage(e, "Error de red");
         setError(msg);
         toast.error(msg);
       });

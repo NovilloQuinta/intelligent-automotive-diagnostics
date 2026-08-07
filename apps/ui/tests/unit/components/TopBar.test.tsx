@@ -86,4 +86,45 @@ describe("TopBar", () => {
 
     expect(screen.getByText("--:--:--")).toBeDefined();
   });
+
+  it("should render the Informe button when onReportClick is provided", () => {
+    const onReportClick = vi.fn();
+    render(<TopBar {...baseProps} onReportClick={onReportClick} />);
+
+    const btn = screen.getByTitle("Generar informe de la sesión");
+    expect(btn).toBeDefined();
+    expect(btn.textContent).toContain("Informe");
+  });
+
+  it("should disable the Informe button when no vehicle is selected", () => {
+    const onReportClick = vi.fn();
+    render(
+      <TopBar
+        {...baseProps}
+        selectedId=""
+        onReportClick={onReportClick}
+      />,
+    );
+
+    const btn = screen.getByTitle(
+      "Generar informe de la sesión",
+    ) as HTMLButtonElement;
+    expect(btn.disabled).toBe(true);
+  });
+
+  it("should call onReportClick when the Informe button is clicked", () => {
+    const onReportClick = vi.fn();
+    render(<TopBar {...baseProps} onReportClick={onReportClick} />);
+
+    fireEvent.click(screen.getByTitle("Generar informe de la sesión"));
+    expect(onReportClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("should not render the Informe button when onReportClick is not provided", () => {
+    render(<TopBar {...baseProps} />);
+
+    expect(
+      screen.queryByTitle("Generar informe de la sesión"),
+    ).toBeNull();
+  });
 });

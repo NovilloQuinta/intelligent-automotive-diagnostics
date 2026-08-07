@@ -161,6 +161,34 @@ export const openApiSpec = {
         },
       },
     },
+    '/api/mcp/capabilities': {
+      get: {
+        tags: ['Diagnosis'],
+        summary: 'Report diagnostic capabilities',
+        description:
+          'Returns whether cognitive (LLM-based) diagnosis is available. Requires authentication.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Capabilities object',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    cognitiveDiagnosis: {
+                      type: 'boolean',
+                      description: 'Whether cognitive diagnosis is available',
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '401': { description: 'Access token required' },
+        },
+      },
+    },
     '/api/freeze-frame': {
       get: {
         tags: ['Diagnosis'],

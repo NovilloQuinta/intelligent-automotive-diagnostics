@@ -48,7 +48,7 @@ function ErrorState({ message }: { message: string }) {
   );
 }
 
-function FrameTable({ pidValues }: { pidValues: Record<string, number> }) {
+export function FrameTable({ pidValues }: { pidValues: Record<string, number> }) {
   return (
     <Table>
       <TableHeader>
