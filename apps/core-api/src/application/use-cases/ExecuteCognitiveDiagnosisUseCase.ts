@@ -15,6 +15,7 @@ import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
 import type { ToolCallTrace } from '@/application/dto/llm/ToolCallTrace.js'
 import { DEFAULT_SEARCH_LIMIT } from '@/application/knowledge/createKnowledgeIndex.js'
 import { derivePidObservations } from '@/application/services/pidObservationEnricher.js'
+import { READ_PID_TOOL } from '@/application/shared/mcpToolNames.js'
 import crypto from 'node:crypto'
 
 /** Prompt del sistema: pide explorar tools OBD-II, razonar causa raíz y devolver bloque JSON al final. */
@@ -63,7 +64,6 @@ function buildSimilarCasesSection(
   return `Casos similares previos:\n${lines.join('\n')}`
 }
 
-const READ_PID_TOOL = 'read_pid'
 const UNKNOWN_VALUE = 'unknown'
 
 /** Extrae los PID unicos leidos durante el diagnostico a partir de las trazas de tool calls. */
