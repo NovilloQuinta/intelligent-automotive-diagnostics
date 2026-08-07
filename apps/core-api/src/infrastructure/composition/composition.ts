@@ -40,10 +40,7 @@ import {
   toDiagnosisEntry,
 } from '@/application/knowledge/diagnosisKnowledgeMapper.js'
 import type { EmbeddingGenerator } from '@/application/ports/EmbeddingGenerator.js'
-import type { VectorRepository } from '@/application/ports/VectorRepository.js'
-import type { PidKnowledgeEntry } from '@/application/dto/knowledge/PidKnowledgeEntry.js'
-import type { DtcKnowledgeEntry } from '@/application/dto/knowledge/DtcKnowledgeEntry.js'
-import type { DiagnosisKnowledgeEntry } from '@/application/dto/knowledge/DiagnosisKnowledgeEntry.js'
+import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import { LiveData } from '@/domain/value-objects/liveData.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
@@ -190,13 +187,6 @@ function createObdRepoMap(scenarios: ScenarioDescriptor[]): Map<string, ObdRepos
   return map
 }
 
-/** Indices de conocimiento vectorial cableados en el arranque. */
-export interface KnowledgeStack {
-  readonly pidsIndex: VectorRepository<PidKnowledgeEntry>
-  readonly dtcsIndex: VectorRepository<DtcKnowledgeEntry>
-  readonly diagnosisIndex: VectorRepository<DiagnosisKnowledgeEntry>
-}
-
 /** Inicializa la base vectorial y los tres indices de conocimiento. */
 export async function createKnowledgeStack(
   config: AppConfig,
@@ -262,7 +252,7 @@ export async function buildApp(config: AppConfig): Promise<Application> {
       obdRepos,
       llmClient,
       logger,
-      diagnosisIndex: knowledgeStack?.diagnosisIndex,
+      knowledgeStack,
     })
   } else {
     const obdRepo = new Elm327TcpRepository({
@@ -274,7 +264,7 @@ export async function buildApp(config: AppConfig): Promise<Application> {
       obdRepo,
       llmClient,
       logger,
-      diagnosisIndex: knowledgeStack?.diagnosisIndex,
+      knowledgeStack,
     })
   }
 

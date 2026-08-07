@@ -11,6 +11,9 @@ import { VehicleType, type SimulationScenario } from '@/infrastructure/simulatio
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmClientPort, ToolCallTrace } from '@/application/ports/LlmClientPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
+import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
+import type { PidVectorRepository } from '@/application/ports/PidVectorRepository.js'
+import type { DtcVectorRepository } from '@/application/ports/DtcVectorRepository.js'
 import type { DiagnosisVectorRepository } from '@/application/ports/DiagnosisVectorRepository.js'
 
 const mockScenarios: SimulationScenario[] = [
@@ -66,6 +69,7 @@ function createMockObdRepo(sensorOverrides?: {
       if (pid === '05') return sensorOverrides?.coolantTemp ?? 90
       return 90
     }),
+    readPidRaw: vi.fn(async () => [0x00, 0x00]),
     getSupportedPids: vi.fn(async () => ['01 0C']),
     getFreezeFrame: vi.fn(async () => null),
     readDtcCodes: vi.fn(async () => [{ code: 'P0301', description: '' }]),
@@ -86,14 +90,8 @@ function createMockObdRepo(sensorOverrides?: {
 /** Crea un mapa de scenarioId → ObdRepository para los mockScenarios con valores realistas. */
 function createMockObdRepos(): Map<string, ObdRepository> {
   return new Map([
-    [
-      'audi-a3-idle',
-      createMockObdRepo({ rpm: 750, coolantTemp: 90 }),
-    ],
-    [
-      'kawa-z900',
-      createMockObdRepo({ rpm: 4500, coolantTemp: 105 }),
-    ],
+    ['audi-a3-idle', createMockObdRepo({ rpm: 750, coolantTemp: 90 })],
+    ['kawa-z900', createMockObdRepo({ rpm: 4500, coolantTemp: 105 })],
   ])
 }
 
@@ -115,7 +113,11 @@ const cognitiveToolCalls: ToolCallTrace[] = [
 describe('DiagnosisService', () => {
   describe('listScenarios', () => {
     it('should return the constructor scenarios in simulation mode', () => {
-      const service = new DiagnosisService({ scenarios: mockScenarios, obdRepos: createMockObdRepos(), logger: createMockLogger() })
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        logger: createMockLogger(),
+      })
 
       const list = service.listScenarios()
 
@@ -125,7 +127,8 @@ describe('DiagnosisService', () => {
 
     it('should return the synthetic tcp scenario in TCP mode', () => {
       const service = new DiagnosisService({
-        scenarios: mockScenarios, obdRepos: createMockObdRepos(),
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
         obdRepo: createMockObdRepo(),
         logger: createMockLogger(),
       })
@@ -140,7 +143,8 @@ describe('DiagnosisService', () => {
   describe('diagnose', () => {
     it('should run a full diagnosis for an existing simulation scenario', async () => {
       const service = new DiagnosisService({
-        scenarios: mockScenarios, obdRepos: createMockObdRepos(),
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
         obdRepos: createMockObdRepos(),
         logger: createMockLogger(),
       })
@@ -157,7 +161,11 @@ describe('DiagnosisService', () => {
     })
 
     it('should throw DiagnosisScenarioNotFoundError for an unknown scenario', async () => {
-      const service = new DiagnosisService({ scenarios: mockScenarios, obdRepos: createMockObdRepos(), logger: createMockLogger() })
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        logger: createMockLogger(),
+      })
 
       await expect(service.diagnose('nonexistent')).rejects.toThrow(DiagnosisScenarioNotFoundError)
     })
@@ -165,7 +173,8 @@ describe('DiagnosisService', () => {
     it('should use the injected obdRepo directly in TCP mode', async () => {
       const obdRepo = createMockObdRepo()
       const service = new DiagnosisService({
-        scenarios: mockScenarios, obdRepos: createMockObdRepos(),
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
         obdRepo,
         logger: createMockLogger(),
       })
@@ -181,7 +190,11 @@ describe('DiagnosisService', () => {
 
   describe('cognitiveDiagnosis', () => {
     it('should throw CognitiveDiagnosisUnavailableError without an llmClient', async () => {
-      const service = new DiagnosisService({ scenarios: mockScenarios, obdRepos: createMockObdRepos(), logger: createMockLogger() })
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        logger: createMockLogger(),
+      })
 
       await expect(service.cognitiveDiagnosis({ scenarioId: 'audi-a3-idle' })).rejects.toThrow(
         CognitiveDiagnosisUnavailableError,
@@ -195,7 +208,8 @@ describe('DiagnosisService', () => {
           .mockResolvedValue({ text: cognitiveText, toolCalls: cognitiveToolCalls }),
       })
       const service = new DiagnosisService({
-        scenarios: mockScenarios, obdRepos: createMockObdRepos(),
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
         llmClient,
         logger: createMockLogger(),
       })
@@ -223,7 +237,8 @@ describe('DiagnosisService', () => {
           .mockResolvedValue({ text: cognitiveText, toolCalls: cognitiveToolCalls }),
       })
       const service = new DiagnosisService({
-        scenarios: mockScenarios, obdRepos: createMockObdRepos(),
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
         llmClient,
         logger: createMockLogger(),
       })
@@ -234,7 +249,7 @@ describe('DiagnosisService', () => {
       expect(llmClient.sendMessage).not.toHaveBeenCalled()
     })
 
-    it('should propagate diagnosisIndex to the cognitive use case', async () => {
+    it('should propagate knowledgeStack to the cognitive use case', async () => {
       const llmClient = mockLlmClient({
         sendMessage: vi
           .fn()
@@ -244,11 +259,15 @@ describe('DiagnosisService', () => {
         search: vi.fn().mockResolvedValue([]),
         index: vi.fn().mockResolvedValue(undefined),
       }
+      const pidsIndex = { index: vi.fn(), search: vi.fn() } as unknown as PidVectorRepository
+      const dtcsIndex = { index: vi.fn(), search: vi.fn() } as unknown as DtcVectorRepository
+      const knowledgeStack: KnowledgeStack = { pidsIndex, dtcsIndex, diagnosisIndex }
       const service = new DiagnosisService({
-        scenarios: mockScenarios, obdRepos: createMockObdRepos(),
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
         llmClient,
         logger: createMockLogger(),
-        diagnosisIndex,
+        knowledgeStack,
       })
 
       await service.cognitiveDiagnosis({
@@ -266,7 +285,8 @@ describe('DiagnosisService', () => {
       const obdRepo = createMockObdRepo()
       vi.mocked(obdRepo.getFreezeFrame).mockResolvedValue(frame)
       const service = new DiagnosisService({
-        scenarios: mockScenarios, obdRepos: createMockObdRepos(),
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
         obdRepo,
         logger: createMockLogger(),
       })
@@ -278,7 +298,11 @@ describe('DiagnosisService', () => {
     })
 
     it('should resolve the scenario repository and delegate in simulation mode', async () => {
-      const service = new DiagnosisService({ scenarios: mockScenarios, obdRepos: createMockObdRepos(), logger: createMockLogger() })
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        logger: createMockLogger(),
+      })
 
       const result = await service.getFreezeFrame('audi-a3-idle', 'P0301')
 
@@ -286,7 +310,11 @@ describe('DiagnosisService', () => {
     })
 
     it('should throw DiagnosisScenarioNotFoundError for an unknown scenario', async () => {
-      const service = new DiagnosisService({ scenarios: mockScenarios, obdRepos: createMockObdRepos(), logger: createMockLogger() })
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        logger: createMockLogger(),
+      })
 
       await expect(service.getFreezeFrame('no-existe', 'P0301')).rejects.toThrow(
         DiagnosisScenarioNotFoundError,
@@ -331,7 +359,8 @@ describe('DiagnosisService', () => {
       const obdRepo = createMockObdRepo()
       vi.mocked(obdRepo.getEcuInfo as ReturnType<typeof vi.fn>).mockResolvedValue([ecu])
       const service = new DiagnosisService({
-        scenarios: mockScenarios, obdRepos: createMockObdRepos(),
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
         obdRepo,
         logger: createMockLogger(),
       })
@@ -343,7 +372,11 @@ describe('DiagnosisService', () => {
     })
 
     it('should throw DiagnosisScenarioNotFoundError for unknown scenario', async () => {
-      const service = new DiagnosisService({ scenarios: mockScenarios, obdRepos: createMockObdRepos(), logger: createMockLogger() })
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        logger: createMockLogger(),
+      })
 
       await expect(service.getEcuInfo('no-existe')).rejects.toThrow(DiagnosisScenarioNotFoundError)
     })
@@ -353,7 +386,8 @@ describe('DiagnosisService', () => {
     it('should return true when the service receives an llmClient', () => {
       const llmClient = mockLlmClient()
       const service = new DiagnosisService({
-        scenarios: mockScenarios, obdRepos: createMockObdRepos(),
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
         llmClient,
         logger: createMockLogger(),
       })
@@ -362,7 +396,11 @@ describe('DiagnosisService', () => {
     })
 
     it('should return false when llmClient is undefined', () => {
-      const service = new DiagnosisService({ scenarios: mockScenarios, obdRepos: createMockObdRepos(), logger: createMockLogger() })
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        logger: createMockLogger(),
+      })
 
       expect(service.hasCognitiveDiagnosis).toBe(false)
     })
@@ -370,7 +408,11 @@ describe('DiagnosisService', () => {
 
   describe('callMcpTool', () => {
     it('should call the MCP tool and return its text result', async () => {
-      const service = new DiagnosisService({ scenarios: mockScenarios, obdRepos: createMockObdRepos(), logger: createMockLogger() })
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        logger: createMockLogger(),
+      })
 
       const result = await service.callMcpTool('read_pid', 'audi-a3-idle', {
         mode: '01',
@@ -381,11 +423,41 @@ describe('DiagnosisService', () => {
     })
 
     it('should throw when the tool does not exist', async () => {
-      const service = new DiagnosisService({ scenarios: mockScenarios, obdRepos: createMockObdRepos(), logger: createMockLogger() })
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        logger: createMockLogger(),
+      })
 
       await expect(service.callMcpTool('bogus_tool', 'audi-a3-idle')).rejects.toThrow(
         'Tool not found: bogus_tool',
       )
+    })
+
+    it('should call a knowledge MCP tool when knowledgeStack is present', async () => {
+      const diagnosisIndex: DiagnosisVectorRepository = {
+        search: vi.fn().mockResolvedValue([]),
+        index: vi.fn().mockResolvedValue(undefined),
+      }
+      const pidsIndex: PidVectorRepository = {
+        index: vi.fn(),
+        search: vi.fn().mockResolvedValue([]),
+      } as unknown as PidVectorRepository
+      const dtcsIndex = { index: vi.fn(), search: vi.fn() } as unknown as DtcVectorRepository
+      const knowledgeStack: KnowledgeStack = { pidsIndex, dtcsIndex, diagnosisIndex }
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        logger: createMockLogger(),
+        knowledgeStack,
+      })
+
+      const result = await service.callMcpTool('search_similar_pids', 'audi-a3-idle', {
+        query: 'battery',
+      })
+
+      expect(pidsIndex.search).toHaveBeenCalledWith('battery', expect.anything())
+      expect(result).toContain('No PIDs')
     })
   })
 })
