@@ -31,7 +31,7 @@
 
 ## 5. RED — Aplicación: enriquecimiento de `toolCalls` → `pidObservations`
 
-- [ ] 5.1 Crear `tests/unit/application/services/pidObservationEnricher.test.ts` con casos:
+- [x] 5.1 Crear `tests/unit/application/services/pidObservationEnricher.test.ts` con casos:
   - `read_pid` con `args {mode:'01', pid:'0C'}` y `result:'850'` conocido en catálogo → `PidObservation` con `status` correcto
   - Tool distinta de `read_pid` (p. ej. `get_dtc_codes`) → ignorada, no genera observación
   - `read_pid` con código fuera de catálogo → ignorada silenciosamente (sin throw)
@@ -46,7 +46,7 @@
 - [ ] 6.2 Crear `src/application/services/pidObservationEnricher.ts`: `derivePidObservations(toolCalls: readonly ToolCallTrace[]): PidObservation[]`
 - [ ] 6.3 Modificar `src/application/dto/ExecuteCognitiveDiagnosisOutput.ts`: añadir `pidObservations: readonly PidObservation[]`
 - [ ] 6.4 Modificar `src/application/use-cases/ExecuteCognitiveDiagnosisUseCase.ts`: tras obtener `{ text, toolCalls }`, llamar a `derivePidObservations(toolCalls)` e incluirlo en el output
-- [ ] 6.5 Actualizar `tests/unit/usecases/cognitive/executeCognitiveDiagnosis.test.ts`: el output incluye `pidObservations` derivado de los `toolCalls` mockeados
+- [x] 6.5 Actualizar `tests/unit/usecases/cognitive/executeCognitiveDiagnosis.test.ts`: el output incluye `pidObservations` derivado de los `toolCalls` mockeados
 
 ## 7. RED — Frontend: tipos + `mergePidRows`
 
