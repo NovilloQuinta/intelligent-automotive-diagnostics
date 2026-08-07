@@ -539,4 +539,39 @@ describe('executeCognitiveDiagnosis', () => {
 
     vi.restoreAllMocks()
   })
+
+  it('should expose pidObservations derived from the read_pid tool calls', async () => {
+    const toolCalls: ToolCallTrace[] = [
+      { tool: 'read_pid', args: { mode: '01', pid: '0C' }, result: '850' },
+      { tool: 'read_pid', args: { mode: '01', pid: '42' }, result: '10.9' },
+      { tool: 'get_dtc_codes', args: {}, result: 'P0301' },
+    ]
+    const llmClient = mockLlmClient({
+      sendMessage: vi.fn().mockResolvedValue(cognitiveResponse('Narrativa', toolCalls)),
+    })
+
+    const result = await makeUseCase(llmClient).execute({ userQuery: 'test', vehicleContext })
+
+    expect(result.pidObservations).toEqual([
+      { code: '01 0C', name: 'Régimen del motor', unit: 'rpm', value: 850, status: 'ok' },
+      {
+        code: '01 42',
+        name: 'Voltaje del módulo de control',
+        unit: 'V',
+        value: 10.9,
+        status: 'review',
+      },
+    ])
+    expect(result.toolCalls).toEqual(toolCalls)
+  })
+
+  it('should expose an empty pidObservations list when no PID was read', async () => {
+    const llmClient = mockLlmClient({
+      sendMessage: vi.fn().mockResolvedValue(cognitiveResponse('Narrativa')),
+    })
+
+    const result = await makeUseCase(llmClient).execute({ userQuery: 'test', vehicleContext })
+
+    expect(result.pidObservations).toEqual([])
+  })
 })
