@@ -7,15 +7,33 @@ import { LiveData } from '@/domain/value-objects/liveData.js'
 const audiIdleData = new LiveData({ rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 })
 const kawaData = new LiveData({ rpm: 4500, coolantTemp: 105, speed: 0, intakeTemp: 28 })
 
-const ENGINE_ECU = new EcuInfo({
-  id: 0,
-  vehicleId: 0,
-  name: 'Engine Control Unit',
-  requestAddr: '7E0',
-  responseAddr: '7E8',
-  type: 'ECM',
-  protocol: 'ISO 15765-4 (CAN 11/500)',
-})
+const CAN_PROTOCOL = 'ISO 15765-4 (CAN 11/500)'
+const UNASSIGNED_VEHICLE_ID = 0
+
+function createEcu(
+  id: number,
+  name: string,
+  type: string,
+  requestAddr: string,
+  responseAddr: string,
+): EcuInfo {
+  return new EcuInfo({
+    id,
+    vehicleId: UNASSIGNED_VEHICLE_ID,
+    name,
+    requestAddr,
+    responseAddr,
+    type,
+    protocol: CAN_PROTOCOL,
+  })
+}
+
+const ECM = createEcu(1, 'Engine Control Module', 'ECM', '7E0', '7E8')
+const TCM = createEcu(2, 'Transmission Control Module', 'TCM', '7E1', '7E9')
+const ABS = createEcu(3, 'ABS Control Module', 'ABS', '760', '768')
+const BCM = createEcu(4, 'Body Control Module', 'BCM', '7C0', '7C8')
+const SRS = createEcu(5, 'Airbag Control Module', 'SRS', '7D2', '7DA')
+const IPC = createEcu(6, 'Instrument Panel Cluster', 'IPC', '720', '728')
 
 /** Escenarios de simulacion de ejemplo para desarrollo y tests. */
 export const seedScenarios: SimulationScenario[] = [
@@ -25,7 +43,7 @@ export const seedScenarios: SimulationScenario[] = [
     vehicleType: VehicleType.Car,
     sensorValues: audiIdleData,
     dtcConfig: [{ code: 'P0301', description: 'Cylinder 1 Misfire' }],
-    ecus: [ENGINE_ECU],
+    ecus: [ECM, TCM, ABS, BCM, SRS],
     vehicleInfo: {
       make: 'Audi',
       model: 'A3',
@@ -40,7 +58,7 @@ export const seedScenarios: SimulationScenario[] = [
     vehicleType: VehicleType.Motorcycle,
     sensorValues: kawaData,
     dtcConfig: [],
-    ecus: [ENGINE_ECU],
+    ecus: [ECM, ABS, IPC],
     vehicleInfo: {
       make: 'Kawasaki',
       model: 'Z900',
