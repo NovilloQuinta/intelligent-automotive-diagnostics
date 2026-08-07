@@ -1,3 +1,5 @@
+# LanceDB Infra
+
 ## Purpose
 
 Infraestructura base para el catalogo auto-expansivo de la Fase 4: conexion a base de datos vectorial LanceDB embebida (sin servidor, zero infraestructura) y generacion de embeddings locales multilingues con transformers.js (sin API key, sin coste). Los tipos de columna se mapean a clases Arrow reales, y las tablas exponen una columna vectorial `FixedSizeList` para busqueda por similitud. Sirve como capa de persistencia vectorial para la busqueda semantica de PIDs, DTCs y memoria de diagnosticos.

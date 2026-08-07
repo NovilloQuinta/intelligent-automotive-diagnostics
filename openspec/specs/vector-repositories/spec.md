@@ -1,3 +1,5 @@
+# Vector Repositories
+
 ## Purpose
 
 Puertos, indices de conocimiento y adaptador para indexar y buscar por similitud semantica el conocimiento auto-expansivo del ADR-007: definiciones de PIDs propietarios, codigos DTC especificos de fabricante y casos de diagnostico resueltos. El motor vectorial queda confinado tras el puerto `VectorStore`, de modo que cambiarlo no toque ni la capa de aplicacion ni la logica de orquestacion.
