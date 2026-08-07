@@ -1,6 +1,6 @@
 ## Purpose
 
-Infraestructura base para el catalogo auto-expansivo de la Fase 4: conexion a base de datos vectorial LanceDB embebida (sin servidor, zero infraestructura) y generacion de embeddings locales multilingues con transformers.js (sin API key, sin coste). Sirve como capa de persistencia vectorial para los cambios posteriores de busqueda semantica de PIDs, DTCs y memoria de diagnosticos.
+Infraestructura base para el catalogo auto-expansivo de la Fase 4: conexion a base de datos vectorial LanceDB embebida (sin servidor, zero infraestructura) y generacion de embeddings locales multilingues con transformers.js (sin API key, sin coste). Los tipos de columna se mapean a clases Arrow reales, y las tablas exponen una columna vectorial `FixedSizeList` para busqueda por similitud. Sirve como capa de persistencia vectorial para la busqueda semantica de PIDs, DTCs y memoria de diagnosticos.
 
 ## Requirements
 
@@ -18,28 +18,62 @@ El sistema SHALL implementar una factory function `initLanceDb(dbPath?)` en `inf
 
 ---
 
-### Requirement: Creacion de tablas con validacion Zod
-El sistema SHALL proporcionar una funcion `ensureTable(db, name, columns)` que cree una tabla con el esquema dado si no existe, o la abra si ya existe (idempotente). Las columnas se validan con Zod.
+### Requirement: Creacion de tablas vectoriales con validacion Zod
+El sistema SHALL proporcionar una funcion `ensureVectorTable(db, name, { dimensions, columns })` que cree una tabla con una columna `vector` de tipo `FixedSizeList(dimensions, Field('item', Float32, true))` ademas de las columnas de metadatos indicadas. Las opciones se validan con Zod y los tipos de columna SHALL mapearse a clases de `apache-arrow` reales, no a nombres de tipo en texto plano. La funcion SHALL ser idempotente.
 
-#### Scenario: Tabla nueva con tipos validos
-- **WHEN** se invoca `ensureTable(db, 'test', [{ name: 'id', type: 'string' }, { name: 'score', type: 'float32' }])`
-- **AND** la tabla `test` no existe en la base de datos
-- **THEN** se crea una tabla vacia con las columnas especificadas
-- **AND** la funcion devuelve la referencia a la tabla creada
+El motivo del mapeo explicito: LanceDB resuelve los nombres de tipo en texto contra un diccionario interno que solo conoce `utf8` y `bool`. Pasar `'string'` o `'boolean'` provocaba `Unrecognized type name in schema`.
 
-#### Scenario: Tabla existente (idempotencia)
-- **WHEN** se invoca `ensureTable(db, 'test', columns)`
-- **AND** la tabla `test` ya existe
-- **THEN** la funcion abre la tabla existente sin intentar crearla de nuevo
-- **AND** no se lanza error
+#### Scenario: Tabla vectorial nueva
+- **WHEN** se invoca `ensureVectorTable(db, 'pids_index', { dimensions: 384, columns: [{ name: 'embeddedText', type: 'string' }] })`
+- **AND** la tabla no existe
+- **THEN** se crea con una columna `vector` de tipo `FixedSizeList` de tamano 384 y elementos `Float32`
+- **AND** se crea la columna `embeddedText` de tipo `Utf8`
+
+#### Scenario: Los cuatro tipos soportados crean tabla contra LanceDB real
+- **GIVEN** una base de datos LanceDB embebida en un directorio temporal
+- **WHEN** se invoca `ensureVectorTable` con columnas de tipo `string`, `float32`, `int32` y `boolean`
+- **THEN** la tabla se crea sin error
+- **AND** el esquema resultante expone los tipos Arrow `Utf8`, `Float32`, `Int32` y `Bool` respectivamente
+- **AND** la verificacion se realiza contra una instancia real de LanceDB, no contra un mock
 
 #### Scenario: Tipo de columna no soportado
-- **WHEN** se invoca `ensureTable` con una columna de tipo `'unsupported_type'`
+- **WHEN** se invoca `ensureVectorTable` con una columna de tipo `'unsupported_type'`
 - **THEN** Zod lanza un error de validacion indicando que el tipo no esta en el enum de tipos soportados
 
-#### Scenario: Tipos soportados
-- **WHEN** se usan columnas de tipo `string`, `float32`, `int32` y `boolean`
-- **THEN** la validacion Zod pasa y la tabla se crea correctamente
+#### Scenario: Idempotencia de la tabla vectorial
+- **WHEN** se invoca `ensureVectorTable` sobre una tabla que ya existe
+- **THEN** se abre la existente sin recrearla ni lanzar error
+
+#### Scenario: Insercion y recuperacion por similitud
+- **GIVEN** una tabla vectorial de 384 dimensiones creada contra LanceDB real
+- **WHEN** se insertan varias filas con sus vectores y metadatos
+- **AND** se busca con un vector de consulta limitando a 3 resultados
+- **THEN** se devuelven como maximo 3 filas
+- **AND** vienen ordenadas por distancia ascendente, con la mas parecida primero
+
+---
+
+### Requirement: Validacion explicita de dimensiones
+El sistema SHALL proporcionar `assertVectorDimensions(vector, dimensions)`, que lance un error cuando la longitud del vector no coincida con la de la columna.
+
+La comprobacion es necesaria porque LanceDB 0.31 no valida la dimension: rellena con `null` un vector corto y trunca uno largo, en ambos casos en silencio. Un vector con `null` produce similitudes basura.
+
+#### Scenario: Dimension incorrecta
+- **WHEN** se intenta insertar un vector cuya longitud no coincide con `dimensions`
+- **THEN** se lanza un error que indica la dimension esperada y la recibida
+
+---
+
+### Requirement: Sin indice vectorial
+El sistema NO SHALL crear indice alguno sobre la columna vectorial. LanceDB resuelve por busqueda exacta, correcta y de sobra rapida para el corpus previsto.
+
+Un indice IVF-PQ se anadira cuando exista volumen real que lo justifique, eligiendo entonces el umbral de entrenamiento con datos medidos en lugar de estimados.
+
+#### Scenario: Busqueda sin indice
+- **GIVEN** una tabla vectorial recien creada
+- **WHEN** se insertan entradas y se busca por similitud
+- **THEN** se devuelven los resultados correctos ordenados por distancia
+- **AND** no ha hecho falta construir ningun indice
 
 ---
 
@@ -49,6 +83,7 @@ El sistema SHALL proporcionar una funcion `createEmbedding(text)` en `infrastruc
 #### Scenario: Vector de 384 dimensiones
 - **WHEN** se invoca `createEmbedding('Engine Oil Pressure')`
 - **THEN** la funcion devuelve un `number[]` de exactamente 384 elementos
+- **AND** se toma la primera fila del tensor, porque este conserva la dimension de lote
 
 #### Scenario: Normalizacion L2 delegada al pipeline
 - **WHEN** se genera un embedding
