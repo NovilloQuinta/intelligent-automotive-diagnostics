@@ -1,10 +1,10 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "sonnet",
-  "small_model": "haiku",
+  "model": "deepseek/deepseek-v4-pro",
+  "small_model": "deepseek/deepseek-v4-flash",
   "agent": {
     "explore": {
-      "model": "haiku"
+      "model": "deepseek/deepseek-v4-flash"
     }
   }
 }
