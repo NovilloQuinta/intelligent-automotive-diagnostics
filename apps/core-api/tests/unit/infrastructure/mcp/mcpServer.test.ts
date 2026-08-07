@@ -5,6 +5,7 @@ import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
+import { ToolNotFoundError } from '@/infrastructure/mcp/errors.js'
 
 function mockObdRepo(overrides: Partial<ObdRepository> = {}): ObdRepository {
   return {
@@ -216,11 +217,65 @@ describe('McpServer', () => {
     })
   })
 
+  describe('isError propagation', () => {
+    it('an empty result is not an error: no PIDs is a legitimate answer', async () => {
+      const mcp = createMcpServer(mockObdRepo(), undefined)
+
+      const result = await mcp.callTool('get_available_pids', { vehicleId: 1 })
+
+      expect(result.isError).toBeFalsy()
+      expect(result.content[0].text).toContain('No PIDs')
+    })
+
+    it('a throwing handler should also be reported as isError', async () => {
+      const repo = mockObdRepo({
+        readDtcCodes: vi.fn().mockRejectedValue(new Error('bus off')),
+      })
+      const mcp = createMcpServer(repo, mockVehicleRepo())
+
+      const result = await mcp.callTool('get_dtc_codes', {})
+
+      expect(result.isError).toBe(true)
+      expect(result.content[0].text).toContain('bus off')
+    })
+  })
+
+  describe('JSON Schema built with public Zod API', () => {
+    it('should map string, number, boolean and optional without reading _def', () => {
+      const mcp = createMcpServer(mockObdRepo(), mockVehicleRepo())
+      const byName = Object.fromEntries(mcp.listTools().map((t) => [t.name, t.schema]))
+
+      expect(byName.read_pid).toMatchObject({
+        type: 'object',
+        properties: { mode: { type: 'string' }, pid: { type: 'string' } },
+        required: ['mode', 'pid'],
+      })
+      expect(byName.get_available_pids).toMatchObject({
+        properties: { vehicleId: { type: 'number' } },
+        required: [],
+      })
+      expect(byName.get_freeze_frame).toMatchObject({
+        properties: { dtc: { type: 'string' } },
+        required: [],
+      })
+    })
+  })
+
   describe('Edge cases', () => {
-    it('should throw when calling unknown tool', () => {
+    it('should reject with a typed ToolNotFoundError when calling unknown tool', async () => {
       const mcp = createMcpServer(mockObdRepo(), mockVehicleRepo())
 
-      expect(() => mcp.callTool('nonexistent_tool', {})).toThrow('Tool not found')
+      // Rechaza, no lanza en sincrono: la firma promete una Promise y un throw
+      // sincrono se escaparia de un llamante que use `.catch()`.
+      await expect(mcp.callTool('nonexistent_tool', {})).rejects.toThrow(ToolNotFoundError)
+    })
+
+    it('ToolNotFoundError should carry the tool name as a field, not only in the message', async () => {
+      const mcp = createMcpServer(mockObdRepo(), mockVehicleRepo())
+
+      await expect(mcp.callTool('nonexistent_tool', {})).rejects.toMatchObject({
+        toolName: 'nonexistent_tool',
+      })
     })
 
     it('get_dtc_codes should return message when no DTCs present', async () => {

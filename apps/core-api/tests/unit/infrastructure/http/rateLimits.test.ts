@@ -69,7 +69,11 @@ interface BootedApp {
 async function bootApp(): Promise<BootedApp> {
   const app = createServer({
     diagnosisController: new DiagnosisController(
-      new DiagnosisService(mockScenarios, undefined, mockLlmClient, mockLogger),
+      new DiagnosisService({
+        scenarios: mockScenarios,
+        llmClient: mockLlmClient,
+        logger: mockLogger,
+      }),
       mockLogger,
     ),
     allowedOrigins: 'http://localhost:3000',

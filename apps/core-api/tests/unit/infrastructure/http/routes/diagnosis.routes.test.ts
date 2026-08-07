@@ -3,14 +3,17 @@ import request from 'supertest'
 import express from 'express'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
 import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
+import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 import {
-  DiagnosisService,
+  ToolCallTimeoutError,
+  EmptyToolResultError,
+  ToolNotFoundError,
+} from '@/infrastructure/mcp/errors.js'
+import {
   DiagnosisScenarioNotFoundError,
   CognitiveDiagnosisUnavailableError,
   CognitiveDiagnosisTimeoutError,
-  ToolNotFoundError,
-  ToolCallTimeoutError,
-} from '@/infrastructure/services/diagnosisService.js'
+} from '@/infrastructure/services/errors.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
@@ -253,6 +256,21 @@ describe('diagnosisRoutes', () => {
 
       expect(res.status).toBe(404)
       expect(res.body.error).toBe('Tool not found: bogus_tool')
+    })
+
+    it('should return 502 when the tool responds with no content', async () => {
+      const service = createServiceStub({
+        callMcpTool: vi.fn(async () => {
+          throw new EmptyToolResultError('read_pid')
+        }),
+      })
+      const { app } = createApp(service)
+      const res = await request(app)
+        .post('/api/mcp/tools/read_pid')
+        .send({ scenarioId: 'audi-a3-idle' })
+
+      expect(res.status).toBe(502)
+      expect(res.body.error).toBe('Tool returned no content: read_pid')
     })
 
     it('should return 504 when the tool call times out', async () => {

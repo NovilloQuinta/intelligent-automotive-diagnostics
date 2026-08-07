@@ -5,6 +5,19 @@
 export const DIAGNOSIS_TIMEOUT_MS = 10_000
 
 /**
+ * Error con el que rechaza {@link withTimeout} al agotarse el plazo.
+ *
+ * Existe para que quien lo captura discrimine por tipo y no comparando el
+ * mensaje, que es texto para humanos y no un contrato.
+ */
+export class TimeoutError extends Error {
+  constructor(message: string) {
+    super(message)
+    this.name = 'TimeoutError'
+  }
+}
+
+/**
  * Envuelve una promesa con un timeout total. Limpia el timer de la rama
  * perdedora para evitar {@link https://nodejs.org/api/process.html#event-unhandledrejection|unhandledRejection}.
  *
@@ -12,7 +25,7 @@ export const DIAGNOSIS_TIMEOUT_MS = 10_000
  * @param timeoutMs - Tiempo maximo en milisegundos antes de rechazar.
  * @param errorMessage - Mensaje del Error lanzado si se supera el timeout.
  * @returns Promesa que resuelve con el valor de `promise` o rechaza al superar `timeoutMs`.
- * @throws Error con `errorMessage` si `promise` no resuelve antes de `timeoutMs`.
+ * @throws {TimeoutError} Con `errorMessage` si `promise` no resuelve antes de `timeoutMs`.
  */
 export function withTimeout<T>(
   promise: Promise<T>,
@@ -22,7 +35,7 @@ export function withTimeout<T>(
   let timer: ReturnType<typeof setTimeout> | undefined
 
   const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
+    timer = setTimeout(() => reject(new TimeoutError(errorMessage)), timeoutMs)
   })
 
   return Promise.race([promise, timeout]).finally(() => {

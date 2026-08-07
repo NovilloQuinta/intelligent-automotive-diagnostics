@@ -19,7 +19,7 @@ export interface OpenAiClientConfig {
   readonly model: string
   readonly maxIterations?: number
   readonly timeoutMs?: number
-  readonly logger?: LoggerPort
+  readonly logger: LoggerPort
 }
 
 const openAiClientConfigSchema = z.object({
@@ -143,10 +143,8 @@ const createThinAdapter = createLlmAdapter<
 
 /** Crea un cliente LLM provider-agnostic via API compatible con OpenAI. */
 export function createOpenAiClient(config: OpenAiClientConfig): LlmClientPort {
-  const parsed = openAiClientConfigSchema.parse(config)
-  return composeLlmClient(
-    createThinAdapter(config).sendSingleMessage,
-    parsed.maxIterations,
-    config.logger ?? console,
-  )
+  // Una sola validacion: `createThinAdapter` vuelve a parsear internamente con
+  // el mismo schema, asi que aqui solo se necesita `maxIterations`.
+  const { maxIterations } = openAiClientConfigSchema.parse(config)
+  return composeLlmClient(createThinAdapter(config).sendSingleMessage, maxIterations, config.logger)
 }

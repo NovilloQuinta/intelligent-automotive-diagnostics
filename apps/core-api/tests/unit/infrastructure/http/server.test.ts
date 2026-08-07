@@ -57,7 +57,7 @@ let httpServer: Server
 beforeAll(async () => {
   const app = createServer({
     diagnosisController: new DiagnosisController(
-      new DiagnosisService(mockScenarios, undefined, undefined, mockLogger),
+      new DiagnosisService({ scenarios: mockScenarios, logger: mockLogger }),
       mockLogger,
     ),
     allowedOrigins: 'http://localhost:3000',
@@ -258,7 +258,7 @@ describe('HTTP server', () => {
     beforeAll(async () => {
       const app = createServer({
         diagnosisController: new DiagnosisController(
-          new DiagnosisService([], mockObdRepo, undefined, mockLogger),
+          new DiagnosisService({ scenarios: [], obdRepo: mockObdRepo, logger: mockLogger }),
           mockLogger,
         ),
         allowedOrigins: 'http://localhost:3000',

@@ -1,12 +1,23 @@
 import { ObdSimulator } from '@/infrastructure/simulation/simulator.js'
 import { ObdSimulatorRepository } from '@/infrastructure/simulation/simulatorAdapter.js'
+import { ProcessVehicleDiagnosisUseCase } from '@/application/use-cases/ProcessVehicleDiagnosisUseCase.js'
 import {
-  ProcessVehicleDiagnosisUseCase,
-  DIAGNOSIS_TIMEOUT_MS,
   withTimeout,
-} from '@/application/use-cases/ProcessVehicleDiagnosisUseCase.js'
+  TimeoutError,
+  DIAGNOSIS_TIMEOUT_MS,
+} from '@/application/shared/withTimeout.js'
 import { ExecuteCognitiveDiagnosisUseCase } from '@/application/use-cases/ExecuteCognitiveDiagnosisUseCase.js'
 import { createMcpServer, type ToolCallResult } from '@/infrastructure/mcp/mcpServer.js'
+import {
+  ToolNotFoundError,
+  ToolCallTimeoutError,
+  EmptyToolResultError,
+} from '@/infrastructure/mcp/errors.js'
+import {
+  DiagnosisScenarioNotFoundError,
+  CognitiveDiagnosisUnavailableError,
+  CognitiveDiagnosisTimeoutError,
+} from '@/infrastructure/services/errors.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
@@ -19,46 +30,6 @@ import { VehicleType, type SimulationScenario } from '@/infrastructure/simulatio
 import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
 
 const COGNITIVE_DIAGNOSIS_TIMEOUT_MS = 60_000
-
-/** Error lanzado cuando el escenario de diagnostico no existe. */
-export class DiagnosisScenarioNotFoundError extends Error {
-  constructor(message: string = 'Scenario not found') {
-    super(message)
-    this.name = 'DiagnosisScenarioNotFoundError'
-  }
-}
-
-/** Error lanzado cuando el diagnostico cognitivo no esta disponible (sin LLM configurado). */
-export class CognitiveDiagnosisUnavailableError extends Error {
-  constructor(message: string = 'Cognitive diagnosis is not available') {
-    super(message)
-    this.name = 'CognitiveDiagnosisUnavailableError'
-  }
-}
-
-/** Error lanzado cuando una tool MCP solicitada no existe en el servidor. */
-export class ToolNotFoundError extends Error {
-  constructor(readonly toolName: string) {
-    super(`Tool not found: ${toolName}`)
-    this.name = 'ToolNotFoundError'
-  }
-}
-
-/** Error lanzado cuando una llamada a tool MCP excede el timeout. */
-export class ToolCallTimeoutError extends Error {
-  constructor(message: string = 'Tool call timed out') {
-    super(message)
-    this.name = 'ToolCallTimeoutError'
-  }
-}
-
-/** Error lanzado cuando el diagnostico cognitivo excede el timeout. */
-export class CognitiveDiagnosisTimeoutError extends Error {
-  constructor(message: string = 'Cognitive diagnosis timed out') {
-    super(message)
-    this.name = 'CognitiveDiagnosisTimeoutError'
-  }
-}
 
 /** Escenario sintetico expuesto cuando se opera contra un ELM327 TCP real. */
 const TCP_DIRECT_SCENARIO: SimulationScenario = {
@@ -85,25 +56,54 @@ export interface DiagnoseOutput {
   readonly severity: Severity
 }
 
+/** Dependencias de {@link DiagnosisService}. */
+export interface DiagnosisServiceOptions {
+  /** Escenarios de simulacion disponibles; vacio en modo TCP directo. */
+  readonly scenarios: SimulationScenario[]
+  /** Repositorio OBD real; presente solo en modo TCP directo. */
+  readonly obdRepo?: ObdRepository
+  /** Cliente LLM; ausente deshabilita el diagnostico cognitivo. */
+  readonly llmClient?: LlmClientPort
+  readonly logger: LoggerPort
+  /** Timeout del diagnostico cognitivo en ms. Por defecto 60 s. */
+  readonly cognitiveTimeoutMs?: number
+  /** Timeout de una llamada a tool MCP en ms. Por defecto 10 s. */
+  readonly toolCallTimeoutMs?: number
+}
+
 /** Servicio de orquestacion de diagnostico: resuelve repositorios, crea casos de uso y delega en MCP. */
 export class DiagnosisService {
-  constructor(
-    private readonly scenarios: SimulationScenario[],
-    private readonly obdRepo: ObdRepository | undefined,
-    private readonly llmClient: LlmClientPort | undefined,
-    private readonly logger: LoggerPort,
-    private readonly cognitiveTimeoutMs: number = COGNITIVE_DIAGNOSIS_TIMEOUT_MS,
-  ) {}
+  private readonly scenarios: SimulationScenario[]
+  private readonly obdRepo: ObdRepository | undefined
+  private readonly llmClient: LlmClientPort | undefined
+  private readonly logger: LoggerPort
+  private readonly cognitiveTimeoutMs: number
+  private readonly toolCallTimeoutMs: number
+
+  constructor(options: DiagnosisServiceOptions) {
+    this.scenarios = options.scenarios
+    this.obdRepo = options.obdRepo
+    this.llmClient = options.llmClient
+    this.logger = options.logger
+    this.cognitiveTimeoutMs = options.cognitiveTimeoutMs ?? COGNITIVE_DIAGNOSIS_TIMEOUT_MS
+    this.toolCallTimeoutMs = options.toolCallTimeoutMs ?? DIAGNOSIS_TIMEOUT_MS
+  }
 
   /** True cuando se opera contra un ELM327 TCP real (modo directo, sin scenarios). */
   get isDirectConnection(): boolean {
     return this.obdRepo !== undefined
   }
 
+  /** Escenarios seleccionables: los de simulacion, o el sintetico `tcp` en modo directo. */
   listScenarios(): SimulationScenario[] {
     return this.obdRepo ? [TCP_DIRECT_SCENARIO] : this.scenarios
   }
 
+  /**
+   * Ejecuta el diagnostico determinista sobre un escenario.
+   *
+   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe en modo simulacion.
+   */
   async diagnose(scenarioId?: string): Promise<DiagnoseOutput> {
     const repository = this.resolveRepository(scenarioId)
     const useCase = new ProcessVehicleDiagnosisUseCase(repository)
@@ -117,6 +117,14 @@ export class DiagnosisService {
     }
   }
 
+  /**
+   * Ejecuta el diagnostico cognitivo con tool calling sobre el servidor MCP.
+   *
+   * @throws {CognitiveDiagnosisUnavailableError} Si no hay cliente LLM configurado.
+   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe en modo simulacion.
+   * @throws {CognitiveDiagnosisTimeoutError} Si se agota `cognitiveTimeoutMs`.
+   * @throws {EmptyToolResultError} Si una tool invocada responde sin contenido.
+   */
   async cognitiveDiagnosis(input: {
     scenarioId?: string
     userQuery?: string
@@ -132,7 +140,7 @@ export class DiagnosisService {
     const tools = mcp.listTools()
     const handler: ToolCallHandler = async (name, args) => {
       const result = await mcp.callTool(name, args)
-      return result.content[0].text
+      return this.firstText(result, name)
     }
 
     const diagnosis = (async () => {
@@ -144,13 +152,21 @@ export class DiagnosisService {
     try {
       return await withTimeout(diagnosis, this.cognitiveTimeoutMs, 'Cognitive diagnosis timed out')
     } catch (err) {
-      if (err instanceof Error && err.message === 'Cognitive diagnosis timed out') {
+      if (err instanceof TimeoutError) {
         throw new CognitiveDiagnosisTimeoutError()
       }
       throw err
     }
   }
 
+  /**
+   * Invoca una tool MCP concreta y devuelve su texto.
+   *
+   * @throws {ToolNotFoundError} Si la tool no esta registrada.
+   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe en modo simulacion.
+   * @throws {ToolCallTimeoutError} Si se agota el timeout de la llamada.
+   * @throws {EmptyToolResultError} Si la tool responde sin contenido.
+   */
   async callMcpTool(
     toolName: string,
     scenarioId?: string,
@@ -162,19 +178,32 @@ export class DiagnosisService {
     try {
       result = await withTimeout(
         mcp.callTool(toolName, args ?? {}),
-        DIAGNOSIS_TIMEOUT_MS,
+        this.toolCallTimeoutMs,
         'Tool call timed out',
       )
     } catch (err) {
-      if (err instanceof Error && err.message.startsWith('Tool not found')) {
-        throw new ToolNotFoundError(toolName)
+      if (err instanceof ToolNotFoundError) {
+        throw err
       }
-      if (err instanceof Error && err.message === 'Tool call timed out') {
+      if (err instanceof TimeoutError) {
         throw new ToolCallTimeoutError()
       }
       throw err
     }
-    return result.content[0].text
+    return this.firstText(result, toolName)
+  }
+
+  /**
+   * Extrae el texto del primer bloque de contenido de una tool MCP.
+   *
+   * El SDK tipa `content` como array, asi que un array vacio es estructuralmente
+   * valido: sin esta comprobacion el acceso directo revienta con un `TypeError`
+   * que no dice que tool fallo.
+   */
+  private firstText(result: ToolCallResult, toolName: string): string {
+    const first = result.content[0]
+    if (!first) throw new EmptyToolResultError(toolName)
+    return first.text
   }
 
   private resolveRepository(scenarioId?: string): ObdRepository {

@@ -1,52 +1,52 @@
 ## 0. Preparación
 
-- [ ] 0.1 Rama `fix/security-and-mcp-findings` desde `main`
-- [ ] 0.2 Baseline verde: `pnpm lint && pnpm format && pnpm test && pnpm build`
-- [ ] 0.3 Releer el informe completo: `gga run` (proveedor ya en `claude`)
+- [x] 0.1 Rama `fix/diagnosis-service-typed-errors` desde `develop` (no `main`: `develop` es ahora la rama de integracion)
+- [x] 0.2 Baseline verde: 531 tests
+- [x] 0.3 Informe releido
 
 ## 1. Bloqueo de login esquivable (TDD) — SEGURIDAD
 
 - **Archivo**: `apps/core-api/src/infrastructure/persistence/sqlite/userRepository.ts`
 
-- [ ] 1.1 RED: test que lanza N `incrementFailedLogin` en paralelo y espera que el contador suba N. Hoy sube 1
-- [ ] 1.2 GREEN: incremento atómico con `sql\`failed_login_attempts + 1\`` o transacción
-- [ ] 1.3 Test de integración: 5 intentos fallidos en paralelo dejan la cuenta bloqueada
+- [x] 1.1 RED: 5 `incrementFailedLogin` en paralelo dejaban el contador en 1
+- [x] 1.2 GREEN: UPDATE atomico con `sql` — contador y bloqueo en una sola sentencia
+- [x] 1.3 Test: 5 intentos en paralelo dejan `lockedUntil` no nulo
 
 ## 2. `isError` no llega al SDK MCP (TDD)
 
 - **Archivo**: `apps/core-api/src/infrastructure/mcp/mcpServer.ts`
 
-- [ ] 2.1 RED: test que verifica que un handler con `isError: true` propaga el flag al SDK
-- [ ] 2.2 GREEN: `registerTool` reenvía `isError` además de `content`
-- [ ] 2.3 Unificar `withErrorHandling` con la misma convención — hoy hay dos y ninguna llega
+- [x] 2.1 RED: un handler que lanza no marcaba `isError`
+- [x] 2.2 GREEN: `registerTool` reenvia `isError` ademas de `content`
+- [x] 2.3 `withErrorHandling` usa `errorText`: una sola convencion
 
 ## 3. Payload del JWT validado con Zod (TDD) — SEGURIDAD
 
 - **Archivo**: `apps/core-api/src/infrastructure/services/authService.ts`
 
-- [ ] 3.1 RED: token firmado con secreto válido pero `sub` de tipo string debe ser rechazado
-- [ ] 3.2 GREEN: schema Zod para el payload, eliminando `as unknown as { sub: number }`
+- [x] 3.1 RED: token firmado con `sub` string y token sin `sub`
+- [x] 3.2 GREEN: `jwtPayloadSchema` + `InvalidTokenPayloadError`, sin `as unknown as`
 
 ## 4. JSON Schema sin internos de Zod (TDD)
 
 - **Archivo**: `apps/core-api/src/infrastructure/mcp/mcpServer.ts`
 
-- [ ] 4.1 RED: test sobre los tipos que se usan hoy (string, number, boolean, optional)
-- [ ] 4.2 GREEN: construirlo con API pública en vez de `schema._def.typeName`
+- [x] 4.1 Test de los 4 casos (string, number, boolean, optional) como red de seguridad
+- [x] 4.2 GREEN: `instanceof` + `unwrap()`, API publica de Zod
 
 ## 5. Calidad
 
-- [ ] 5.1 Errores tipados en vez de comparar strings: `diagnosisService.ts:169` usa `ToolNotFoundError`, que ya existe; `ExecuteLlmToolCalling.ts:16` devuelve un objeto discriminado
-- [ ] 5.2 Constructores con >4 parámetros → objeto de opciones (`diagnosisService.ts:90`, `createLlmAdapter.ts:37`)
-- [ ] 5.3 Quitar `config.logger ?? console` de `anthropicClient.ts:138` y `openAiClient.ts:150` — reintroduce `console` como default de producción
-- [ ] 5.4 Dejar de escribir el email en crudo en los logs (`LoginUserUseCase.ts:23`, `RegisterUserUseCase.ts:48`)
-- [ ] 5.5 Comprobar `result.content[0]` antes de leer `.text` (`diagnosisService.ts:135, 177`)
-- [ ] 5.6 `ExecuteLlmToolCalling.ts:21-29`: el parámetro requerido `logger` va detrás de uno con default, así que `DEFAULT_MAX_ITERATIONS` es inalcanzable. Reordenar
+- [x] 5.1 `ToolNotFoundError` tipada desde `mcp/errors.ts`; `ExecuteLlmToolCalling` devuelve `ToolExecutionResult` discriminado
+- [x] 5.2 `DiagnosisServiceOptions` y `AuthControllerUseCases`. `createLlmAdapter` ya usaba objeto de opciones — hallazgo obsoleto
+- [x] 5.3 `logger` obligatorio en la config de ambos clientes; fuera `?? console`
+- [x] 5.4 Fuera el email de `auth.login_failed` y `auth.register`
+- [x] 5.5 Comprobar `result.content[0]` antes de leer `.text` (`diagnosisService.ts:135, 177`) — helper `firstText()` + `EmptyToolResultError`
+- [x] 5.6 `logger` antes de `maxIterations`: `DEFAULT_MAX_ITERATIONS` vuelve a ser alcanzable
 
 ## 6. Cierre
 
-- [ ] 6.1 `pnpm lint && pnpm format && pnpm test && pnpm build`
-- [ ] 6.2 `gga run` en verde, ya sin `--no-verify`
-- [ ] 6.3 Decidir si GGA debe revisar el fichero completo o solo el diff
-- [ ] 6.4 Actualizar SESION ACTUAL en `AGENTS.md` y guardar en Engram
+- [x] 6.1 lint, format, test (545) y build en verde
+- [x] 6.2 `gga run` en verde. **Nueva config (decisión usuario 7 ago)**: `PROVIDER="opencode:deepseek/deepseek-v4-flash"` en `.gga` — GGA revisa fichero completo en cada run (una llamada LLM por fichero) y quemaba el limite de sesion de Claude; DeepSeek via opencode no cuenta contra esa sesion, que queda solo para desarrollo. PASS con 3 warnings no bloqueantes (magic strings `'15m'`/`'7d'` y `'obd-diagnostics'`/`'0.2.0'` — deuda preexistente, no del diff). Review puntual con Claude: `GGA_PROVIDER="claude" gga run`
+- [x] 6.3 GGA revisa el **fichero completo** (mantener `gga run` en pre-commit). Decision del usuario 7 ago: mas contexto = menos falsos positivos y caza codigo preexistente latente. `--pr-mode --diff-only` queda como opcion para revisiones de PR grandes
+- [x] 6.4 SESION ACTUAL actualizado en `AGENTS.md` y guardado en Engram
 - [ ] 6.5 Preguntar antes de commitear (regla 7)

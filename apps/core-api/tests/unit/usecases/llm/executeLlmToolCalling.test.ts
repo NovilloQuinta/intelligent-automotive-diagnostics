@@ -49,7 +49,7 @@ describe('ExecuteLlmToolCalling', () => {
       .mockResolvedValue(textSingleResponse('Diagnostico completo.'))
     const handler: ToolCallHandler = vi.fn()
     const mockLogger = createMockLogger()
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
 
     const result = await useCase.execute(
       {
@@ -80,7 +80,7 @@ describe('ExecuteLlmToolCalling', () => {
 
     const mockHandler = vi.fn<ToolCallHandler>().mockResolvedValue('RPM value: 800')
     const mockLogger = createMockLogger()
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
 
     const result = await useCase.execute(
       {
@@ -126,7 +126,7 @@ describe('ExecuteLlmToolCalling', () => {
       .mockResolvedValueOnce('DTCs: P0101, P0302')
       .mockResolvedValueOnce('VIN: WAUZZZ8X')
     const mockLogger = createMockLogger()
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
 
     const result = await useCase.execute(
       {
@@ -162,7 +162,7 @@ describe('ExecuteLlmToolCalling', () => {
 
     const mockHandler = vi.fn<ToolCallHandler>().mockRejectedValue(new Error('OBD timeout'))
     const mockLogger = createMockLogger()
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
 
     const result = await useCase.execute(
       {
@@ -193,7 +193,7 @@ describe('ExecuteLlmToolCalling', () => {
       .mockResolvedValueOnce(textSingleResponse('Intentare con otra herramienta.'))
 
     const mockLogger = createMockLogger()
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
 
     const result = await useCase.execute(
       {
@@ -223,7 +223,7 @@ describe('ExecuteLlmToolCalling', () => {
     }
     const mockHandler = vi.fn<ToolCallHandler>().mockResolvedValue('RPM: 800')
     const mockLogger = createMockLogger()
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
 
     await expect(
       useCase.execute(
@@ -253,7 +253,7 @@ describe('ExecuteLlmToolCalling', () => {
     }
     const mockHandler = vi.fn<ToolCallHandler>().mockResolvedValue('RPM: 800')
     const mockLogger = createMockLogger()
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 3, mockLogger)
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 3)
 
     await expect(
       useCase.execute(

@@ -20,7 +20,8 @@ export class LoginUserUseCase {
 
     const user = await this.userRepo.findByEmail(parsed.email)
     if (!user) {
-      this.logger?.info('auth.login_failed', { email: parsed.email, reason: 'user_not_found' })
+      // Sin el email: es PII y los logs de auth se conservan y se agregan.
+      this.logger?.info('auth.login_failed', { reason: 'user_not_found' })
       throw new InvalidCredentialsError()
     }
 
@@ -39,7 +40,6 @@ export class LoginUserUseCase {
       throw new InvalidCredentialsError()
     }
 
-    // Login exitoso: resetear contador de fallos
     await this.userRepo.resetFailedLogins(user.id)
 
     const tokens = this.authService.generateTokens(user.id)

@@ -81,13 +81,13 @@ function createTestApp(
   const refreshUseCase = new RefreshTokenUseCase(authService)
   const getCurrentUserUseCase = new GetCurrentUserUseCase(userRepo)
   const logoutUseCase = new LogoutUserUseCase(tokenStore)
-  const controller = new AuthController(
-    registerUseCase,
-    loginUseCase,
-    refreshUseCase,
-    getCurrentUserUseCase,
-    logoutUseCase,
-  )
+  const controller = new AuthController({
+    registerUser: registerUseCase,
+    loginUser: loginUseCase,
+    refreshToken: refreshUseCase,
+    getCurrentUser: getCurrentUserUseCase,
+    logoutUser: logoutUseCase,
+  })
 
   const app = express()
   app.use(express.json())
@@ -174,6 +174,26 @@ describe('authRoutes', () => {
         .send({ email: 'juan@mail.com', password: 'wrong' })
 
       expect(res.status).toBe(401)
+    })
+
+    it('should return 423 when the account is locked out', async () => {
+      const lockedUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+      const { app } = createTestApp({
+        userRepo: {
+          findByEmail: vi.fn().mockResolvedValue({
+            id: 1,
+            passwordHash: '$2b$12$hashed',
+            lockedUntil,
+          }),
+        },
+      })
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'juan@mail.com', password: 'whatever' })
+
+      // Sin rama propia, AccountLockedError caia en el 500 generico: el bloqueo
+      // por intentos fallidos se reportaba como error del servidor.
+      expect(res.status).toBe(423)
     })
 
     it('should return 401 when email is not found', async () => {

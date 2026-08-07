@@ -13,7 +13,7 @@ export function composeLlmClient(
   maxIterations: number | undefined,
   logger: LoggerPort,
 ): LlmClientPort {
-  const useCase = new ExecuteLlmToolCalling(sendSingleMessage, maxIterations, logger)
+  const useCase = new ExecuteLlmToolCalling(sendSingleMessage, logger, maxIterations)
 
   return {
     sendMessage(input: LlmMessageInput, handler: ToolCallHandler): Promise<LlmResponse> {

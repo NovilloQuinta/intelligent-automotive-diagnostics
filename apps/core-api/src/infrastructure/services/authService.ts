@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
+import { z } from 'zod'
 import { randomUUID } from 'node:crypto'
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { TokenPair } from '@/application/dto/auth/TokenPair.js'
@@ -16,6 +17,60 @@ interface AuthServiceConfig {
 }
 
 const BCRYPT_ROUNDS = 12
+
+/**
+ * Payload minimo esperado en un JWT emitido por este servicio.
+ *
+ * Se valida en vez de castearse porque un token es una frontera no confiable:
+ * la firma garantiza que nadie lo ha manipulado, no que su contenido tenga la
+ * forma esperada. Un `sub` de tipo string colado con `as unknown as` acababa
+ * en `generateTokens(userId: number)` sin que nadie se enterara.
+ */
+const jwtPayloadSchema = z.object({ sub: z.number().int().positive() })
+
+/** Error lanzado cuando el refresh token presentado no consta en el almacen. */
+export class RefreshTokenNotFoundError extends Error {
+  constructor(message: string = 'Refresh token not found') {
+    super(message)
+    this.name = 'RefreshTokenNotFoundError'
+  }
+}
+
+/** Error lanzado cuando el refresh token ya fue revocado (posible reuso). */
+export class RefreshTokenRevokedError extends Error {
+  constructor(message: string = 'Refresh token revoked') {
+    super(message)
+    this.name = 'RefreshTokenRevokedError'
+  }
+}
+
+/** Error lanzado cuando el refresh token ha caducado. */
+export class RefreshTokenExpiredError extends Error {
+  constructor(message: string = 'Refresh token expired') {
+    super(message)
+    this.name = 'RefreshTokenExpiredError'
+  }
+}
+
+/** Error lanzado cuando el payload de un JWT valido no tiene la forma esperada. */
+export class InvalidTokenPayloadError extends Error {
+  constructor(message: string = 'Invalid token payload') {
+    super(message)
+    this.name = 'InvalidTokenPayloadError'
+  }
+}
+
+/**
+ * Verifica la firma del token y valida su payload.
+ *
+ * @throws {InvalidTokenPayloadError} Si la firma es valida pero el payload no lo es.
+ */
+function verifyAndParse(token: string, secret: string): { sub: number } {
+  const decoded = jwt.verify(token, secret)
+  const parsed = jwtPayloadSchema.safeParse(decoded)
+  if (!parsed.success) throw new InvalidTokenPayloadError()
+  return parsed.data
+}
 
 function calculateExpiryDate(): string {
   return new Date(Date.now() + REFRESH_TOKEN_DURATION_MS).toISOString()
@@ -50,25 +105,22 @@ export function createAuthService(config: AuthServiceConfig): AuthServicePort {
   }
 
   function verifyAccessToken(token: string): number {
-    const decoded = jwt.verify(token, accessTokenSecret) as unknown as { sub: number }
-    return decoded.sub
+    return verifyAndParse(token, accessTokenSecret).sub
   }
 
   async function refreshAccessToken(refreshTokenStr: string): Promise<TokenPair> {
-    const decoded = jwt.verify(refreshTokenStr, refreshTokenSecret) as unknown as {
-      sub: number
-    }
+    const decoded = verifyAndParse(refreshTokenStr, refreshTokenSecret)
     const tokenHash = hashToken(refreshTokenStr)
 
     const record = await tokenStore.findRefreshToken(tokenHash)
     if (!record) {
-      throw new Error('Refresh token not found')
+      throw new RefreshTokenNotFoundError()
     }
     if (record.revokedAt !== null) {
-      throw new Error('Refresh token revoked')
+      throw new RefreshTokenRevokedError()
     }
     if (new Date(record.expiresAt) < new Date()) {
-      throw new Error('Refresh token expired')
+      throw new RefreshTokenExpiredError()
     }
 
     await tokenStore.revokeRefreshToken(tokenHash)

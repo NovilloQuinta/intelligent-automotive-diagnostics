@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 import jwt from 'jsonwebtoken'
-import { createAuthService } from '@/infrastructure/services/authService.js'
+import {
+  createAuthService,
+  InvalidTokenPayloadError,
+} from '@/infrastructure/services/authService.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
 
 describe('authService', () => {
@@ -190,6 +193,25 @@ describe('authService', () => {
 
     it('should throw on a malformed refresh token JWT', async () => {
       await expect(service.refreshAccessToken('not-a-valid-jwt')).rejects.toThrow()
+    })
+  })
+  describe('JWT payload validation', () => {
+    it('should reject a correctly signed token whose sub is a string', () => {
+      const forged = jwt.sign({ sub: '1', jti: 'x' }, 'access-secret-test', { expiresIn: '15m' })
+
+      expect(() => service.verifyAccessToken(forged)).toThrow(InvalidTokenPayloadError)
+    })
+
+    it('should reject a correctly signed token with no sub at all', () => {
+      const forged = jwt.sign({ jti: 'x' }, 'access-secret-test', { expiresIn: '15m' })
+
+      expect(() => service.verifyAccessToken(forged)).toThrow(InvalidTokenPayloadError)
+    })
+
+    it('should still accept a well-formed token', () => {
+      const { accessToken } = service.generateTokens(42)
+
+      expect(service.verifyAccessToken(accessToken)).toBe(42)
     })
   })
 })

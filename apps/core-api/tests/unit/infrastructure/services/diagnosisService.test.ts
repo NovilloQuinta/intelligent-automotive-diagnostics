@@ -1,9 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
+import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 import {
-  DiagnosisService,
   DiagnosisScenarioNotFoundError,
   CognitiveDiagnosisUnavailableError,
-} from '@/infrastructure/services/diagnosisService.js'
+} from '@/infrastructure/services/errors.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { VehicleType, type SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
@@ -89,7 +89,7 @@ const cognitiveToolCalls: ToolCallTrace[] = [
 describe('DiagnosisService', () => {
   describe('listScenarios', () => {
     it('should return the constructor scenarios in simulation mode', () => {
-      const service = new DiagnosisService(mockScenarios, undefined, undefined, createMockLogger())
+      const service = new DiagnosisService({ scenarios: mockScenarios, logger: createMockLogger() })
 
       const list = service.listScenarios()
 
@@ -98,12 +98,11 @@ describe('DiagnosisService', () => {
     })
 
     it('should return the synthetic tcp scenario in TCP mode', () => {
-      const service = new DiagnosisService(
-        mockScenarios,
-        createMockObdRepo(),
-        undefined,
-        createMockLogger(),
-      )
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepo: createMockObdRepo(),
+        logger: createMockLogger(),
+      })
 
       const list = service.listScenarios()
 
@@ -114,7 +113,7 @@ describe('DiagnosisService', () => {
 
   describe('diagnose', () => {
     it('should run a full diagnosis for an existing simulation scenario', async () => {
-      const service = new DiagnosisService(mockScenarios, undefined, undefined, createMockLogger())
+      const service = new DiagnosisService({ scenarios: mockScenarios, logger: createMockLogger() })
 
       const result = await service.diagnose('audi-a3-idle')
 
@@ -128,14 +127,18 @@ describe('DiagnosisService', () => {
     })
 
     it('should throw DiagnosisScenarioNotFoundError for an unknown scenario', async () => {
-      const service = new DiagnosisService(mockScenarios, undefined, undefined, createMockLogger())
+      const service = new DiagnosisService({ scenarios: mockScenarios, logger: createMockLogger() })
 
       await expect(service.diagnose('nonexistent')).rejects.toThrow(DiagnosisScenarioNotFoundError)
     })
 
     it('should use the injected obdRepo directly in TCP mode', async () => {
       const obdRepo = createMockObdRepo()
-      const service = new DiagnosisService(mockScenarios, obdRepo, undefined, createMockLogger())
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepo,
+        logger: createMockLogger(),
+      })
 
       const result = await service.diagnose()
 
@@ -148,7 +151,7 @@ describe('DiagnosisService', () => {
 
   describe('cognitiveDiagnosis', () => {
     it('should throw CognitiveDiagnosisUnavailableError without an llmClient', async () => {
-      const service = new DiagnosisService(mockScenarios, undefined, undefined, createMockLogger())
+      const service = new DiagnosisService({ scenarios: mockScenarios, logger: createMockLogger() })
 
       await expect(service.cognitiveDiagnosis({ scenarioId: 'audi-a3-idle' })).rejects.toThrow(
         CognitiveDiagnosisUnavailableError,
@@ -161,7 +164,11 @@ describe('DiagnosisService', () => {
           .fn()
           .mockResolvedValue({ text: cognitiveText, toolCalls: cognitiveToolCalls }),
       })
-      const service = new DiagnosisService(mockScenarios, undefined, llmClient, createMockLogger())
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        llmClient,
+        logger: createMockLogger(),
+      })
 
       const result = await service.cognitiveDiagnosis({
         scenarioId: 'audi-a3-idle',
@@ -185,7 +192,11 @@ describe('DiagnosisService', () => {
           .fn()
           .mockResolvedValue({ text: cognitiveText, toolCalls: cognitiveToolCalls }),
       })
-      const service = new DiagnosisService(mockScenarios, undefined, llmClient, createMockLogger())
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        llmClient,
+        logger: createMockLogger(),
+      })
 
       await expect(service.cognitiveDiagnosis({ scenarioId: 'no-existe' })).rejects.toThrow(
         DiagnosisScenarioNotFoundError,
@@ -196,7 +207,7 @@ describe('DiagnosisService', () => {
 
   describe('callMcpTool', () => {
     it('should call the MCP tool and return its text result', async () => {
-      const service = new DiagnosisService(mockScenarios, undefined, undefined, createMockLogger())
+      const service = new DiagnosisService({ scenarios: mockScenarios, logger: createMockLogger() })
 
       const result = await service.callMcpTool('read_pid', 'audi-a3-idle', {
         mode: '01',
@@ -207,7 +218,7 @@ describe('DiagnosisService', () => {
     })
 
     it('should throw when the tool does not exist', async () => {
-      const service = new DiagnosisService(mockScenarios, undefined, undefined, createMockLogger())
+      const service = new DiagnosisService({ scenarios: mockScenarios, logger: createMockLogger() })
 
       await expect(service.callMcpTool('bogus_tool', 'audi-a3-idle')).rejects.toThrow(
         'Tool not found: bogus_tool',

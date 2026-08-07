@@ -65,17 +65,17 @@ describe('Auth integration', () => {
       tokenStore,
     })
 
-    const authController = new AuthController(
-      new RegisterUserUseCase(userRepo, authService, tokenStore),
-      new LoginUserUseCase(userRepo, authService, tokenStore),
-      new RefreshTokenUseCase(authService),
-      new GetCurrentUserUseCase(userRepo),
-      new LogoutUserUseCase(tokenStore),
-    )
+    const authController = new AuthController({
+      registerUser: new RegisterUserUseCase(userRepo, authService, tokenStore),
+      loginUser: new LoginUserUseCase(userRepo, authService, tokenStore),
+      refreshToken: new RefreshTokenUseCase(authService),
+      getCurrentUser: new GetCurrentUserUseCase(userRepo),
+      logoutUser: new LogoutUserUseCase(tokenStore),
+    })
 
     app = createServer({
       diagnosisController: new DiagnosisController(
-        new DiagnosisService([], undefined, undefined, mockLogger),
+        new DiagnosisService({ scenarios: [], logger: mockLogger }),
         mockLogger,
       ),
       rateLimit: { windowMinutes: 60, maxRequests: 1000 },

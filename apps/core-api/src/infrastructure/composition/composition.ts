@@ -23,20 +23,29 @@ import { DiagnosisController } from '@/infrastructure/http/controllers/Diagnosis
 import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 import type { AppConfig } from '@/infrastructure/configuration/index.js'
 
+const ACCESS_TOKEN_TTL = '15m'
+const REFRESH_TOKEN_TTL = '7d'
+
 /** Crea el cliente LLM segun el proveedor configurado, o undefined si no hay provider. */
 function createLlmClient(config: AppConfig, logger: LoggerPort): LlmClientPort | undefined {
+  /** Falla con un mensaje de configuracion, no con un ZodError de "string too small". */
+  function requireConfig(value: string | undefined, name: string): string {
+    if (!value) throw new Error(`Missing required configuration: ${name}`)
+    return value
+  }
+
   if (config.LLM_PROVIDER === 'anthropic') {
     return createAnthropicClient({
-      apiKey: config.ANTHROPIC_API_KEY ?? '',
+      apiKey: requireConfig(config.ANTHROPIC_API_KEY, 'ANTHROPIC_API_KEY'),
       model: config.LLM_MODEL,
       logger,
     })
   }
   if (config.LLM_PROVIDER === 'openai') {
     return createOpenAiClient({
-      apiKey: config.LLM_API_KEY ?? '',
-      baseURL: config.LLM_BASE_URL ?? '',
-      model: config.LLM_MODEL ?? '',
+      apiKey: requireConfig(config.LLM_API_KEY, 'LLM_API_KEY'),
+      baseURL: requireConfig(config.LLM_BASE_URL, 'LLM_BASE_URL'),
+      model: requireConfig(config.LLM_MODEL, 'LLM_MODEL'),
       logger,
     })
   }
@@ -79,8 +88,8 @@ function createAuthStack(
   const authService = createAuthService({
     accessTokenSecret: config.ACCESS_TOKEN_SECRET,
     refreshTokenSecret: config.REFRESH_TOKEN_SECRET,
-    accessTokenExpiresIn: '15m',
-    refreshTokenExpiresIn: '7d',
+    accessTokenExpiresIn: ACCESS_TOKEN_TTL,
+    refreshTokenExpiresIn: REFRESH_TOKEN_TTL,
     tokenStore: repos.tokenStore,
   })
   return {
@@ -104,22 +113,22 @@ export function buildApp(config: AppConfig): Application {
   const { db, auditRepo, userRepo, tokenStore } = createPersistenceRepositories(config)
   const logger = new Logger(config.NODE_ENV, db)
   const auth = createAuthStack(config, { userRepo, tokenStore }, logger)
-  const authController = new AuthController(
-    auth.registerUseCase,
-    auth.loginUseCase,
-    auth.refreshUseCase,
-    auth.getCurrentUserUseCase,
-    auth.logoutUseCase,
-  )
+  const authController = new AuthController({
+    registerUser: auth.registerUseCase,
+    loginUser: auth.loginUseCase,
+    refreshToken: auth.refreshUseCase,
+    getCurrentUser: auth.getCurrentUserUseCase,
+    logoutUser: auth.logoutUseCase,
+  })
 
   const obdRepo = createObdRepository(config)
   const llmClient = createLlmClient(config, logger)
-  const diagnosisService = new DiagnosisService(
-    config.OBD_MODE === 'tcp' ? [] : seedScenarios,
+  const diagnosisService = new DiagnosisService({
+    scenarios: config.OBD_MODE === 'tcp' ? [] : seedScenarios,
     obdRepo,
     llmClient,
     logger,
-  )
+  })
   const diagnosisController = new DiagnosisController(diagnosisService, logger)
 
   return createServer({

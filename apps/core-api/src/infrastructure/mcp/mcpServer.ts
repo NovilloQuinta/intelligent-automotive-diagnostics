@@ -8,6 +8,7 @@ import {
   Elm327NoDataError,
   Elm327ParseError,
 } from '@/infrastructure/elm327/errors.js'
+import { ToolNotFoundError } from '@/infrastructure/mcp/errors.js'
 
 /** Resultado de invocar una tool MCP (siempre contenido de tipo texto). */
 export interface ToolCallResult {
@@ -15,49 +16,52 @@ export interface ToolCallResult {
   isError?: boolean
 }
 
-/** Tool handler: firma de una función que procesa una tool MCP. */
+/** Tool handler: firma de una funcion que procesa una tool MCP. */
 export type ToolHandler = (args: Record<string, unknown>) => Promise<ToolCallResult>
 
-/** Servidor MCP con tools de diagnóstico OBD-II, expuesto para uso in-process. */
+/** Servidor MCP con tools de diagnostico OBD-II, expuesto para uso in-process. */
 export interface DiagnosticsMcpServer {
   readonly server: McpServer
   callTool(name: string, args: Record<string, unknown>): Promise<ToolCallResult>
   listTools(): McpToolDefinition[]
 }
 
-/** Categoría de error MCP según best practices: permite al LLM decidir si reintentar. */
+/** Categoria de error MCP segun best practices: permite al LLM decidir si reintentar. */
 type ToolErrorCategory = 'client_error' | 'server_error' | 'external_error'
+
+const MCP_SERVER_NAME = 'obd-diagnostics'
+const MCP_SERVER_VERSION = '0.2.0'
 
 /** Crea un bloque de texto para el contenido de una tool MCP. */
 function text(content: string): ToolCallResult {
   return { content: [{ type: 'text' as const, text: content }] }
 }
 
-/** Convierte un ZodTypeAny a su tipo JSON Schema primitivo (string/number/boolean). */
+/**
+ * Convierte un ZodTypeAny a su tipo JSON Schema primitivo (string/number/boolean).
+ *
+ * Usa `instanceof` y `unwrap()`, ambos API publica. La version anterior leia
+ * `schema._def.typeName`, un interno de Zod cuya forma cambio entre versiones
+ * mayores: al romperse devolvia `undefined` y cada propiedad degradaba a `{}`
+ * en silencio, sin que el compilador ni los tests avisaran.
+ */
 function zodPrimitiveType(schema: z.ZodTypeAny): string | undefined {
-  const inner =
-    schema._def.typeName === 'ZodOptional'
-      ? (schema as z.ZodOptional<z.ZodTypeAny>)._def.innerType
-      : schema
-  switch (inner._def.typeName) {
-    case 'ZodString':
-      return 'string'
-    case 'ZodNumber':
-      return 'number'
-    case 'ZodBoolean':
-      return 'boolean'
-    default:
-      return undefined
-  }
+  const inner = schema instanceof z.ZodOptional ? schema.unwrap() : schema
+  if (inner instanceof z.ZodString) return 'string'
+  if (inner instanceof z.ZodNumber) return 'number'
+  if (inner instanceof z.ZodBoolean) return 'boolean'
+  return undefined
 }
 
 /** Convierte un ZodRawShape a JSON Schema de objeto (subconjunto mínimo: primitivos + opcional). */
 function shapeToJsonSchema(shape: Record<string, z.ZodTypeAny>): Record<string, unknown> {
+  /** Tipo no representable en el subconjunto soportado: se deja sin restringir. */
+  const UNCONSTRAINED = {}
   const properties: Record<string, unknown> = {}
   const required: string[] = []
   for (const [key, field] of Object.entries(shape)) {
     const type = zodPrimitiveType(field)
-    properties[key] = type ? { type } : {}
+    properties[key] = type ? { type } : UNCONSTRAINED
     if (!field.isOptional()) required.push(key)
   }
   return { type: 'object', properties, required }
@@ -71,6 +75,7 @@ type ToolRegistrar = (
   handler: ToolHandler,
 ) => void
 
+/** Clasifica un error de tool para que el LLM pueda decidir si merece la pena reintentar. */
 function categorizeError(err: unknown): ToolErrorCategory {
   if (err instanceof Elm327ConnectionError) return 'external_error'
   if (err instanceof Elm327NoDataError) return 'client_error'
@@ -85,11 +90,12 @@ function withErrorHandling(handler: ToolHandler): ToolHandler {
       return await handler(args)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error'
-      return text(`[${categorizeError(err)}] ${message}`)
+      return errorText(`[${categorizeError(err)}] ${message}`)
     }
   }
 }
 
+/** Envuelve un mensaje de error como resultado de tool marcado con `isError`. */
 function errorText(message: string): ToolCallResult {
   return { ...text(message), isError: true }
 }
@@ -132,9 +138,11 @@ function handleGetVehicleInfo(repo: ObdRepository): ToolHandler {
 
 function handleGetAvailablePids(vehicleRepo: VehicleRepository | undefined): ToolHandler {
   return async ({ vehicleId }) => {
-    if (!vehicleRepo) return errorText('No PIDs available for this vehicle.')
+    // Sin repositorio o sin resultados no hay fallo: es una respuesta vacia
+    // legitima, igual que en `get_dtc_codes`. Solo las excepciones son isError.
+    if (!vehicleRepo) return text('No PIDs available for this vehicle.')
     const pids = vehicleId != null ? await vehicleRepo.findPidsByVehicle(vehicleId as number) : []
-    if (pids.length === 0) return errorText('No PIDs available for this vehicle.')
+    if (pids.length === 0) return text('No PIDs available for this vehicle.')
     return text(
       pids
         .map(
@@ -146,7 +154,7 @@ function handleGetAvailablePids(vehicleRepo: VehicleRepository | undefined): Too
   }
 }
 
-/** Registra las 6 tools de diagnóstico OBD-II sobre el repositorio inyectado. */
+/** Registra las tools de diagnostico OBD-II sobre el repositorio inyectado. */
 function registerDiagnosticTools(
   register: ToolRegistrar,
   repo: ObdRepository,
@@ -185,14 +193,14 @@ function registerDiagnosticTools(
   )
 }
 
-/** Crea un servidor MCP con tools de diagnóstico OBD-II. */
+/** Crea un servidor MCP con tools de diagnostico OBD-II. */
 export function createMcpServer(
   repo: ObdRepository,
   vehicleRepo?: VehicleRepository,
 ): DiagnosticsMcpServer {
   const server = new McpServer({
-    name: 'obd-diagnostics',
-    version: '0.2.0',
+    name: MCP_SERVER_NAME,
+    version: MCP_SERVER_VERSION,
   })
 
   const handlers: Record<string, ToolHandler> = {}
@@ -209,7 +217,12 @@ export function createMcpServer(
     toolDefinitions.push({ name, description, schema: shapeToJsonSchema(shape) })
     server.tool(name, description, shape, async (args) => {
       const result = await handler(args)
-      return { content: result.content.map((c) => ({ type: 'text' as const, text: c.text })) }
+      // `isError` viaja junto al contenido: sin el, un cliente MCP externo lee
+      // los fallos como exitos.
+      return {
+        content: result.content.map((c) => ({ type: 'text' as const, text: c.text })),
+        isError: result.isError ?? false,
+      }
     })
   }
 
@@ -217,9 +230,11 @@ export function createMcpServer(
 
   return {
     server,
-    callTool: (name, args) => {
+    // `async` a proposito: la firma promete una Promise, y un throw sincrono
+    // se escaparia de cualquier llamante que use `.catch()` sin try/catch.
+    callTool: async (name, args) => {
       const handler = handlers[name]
-      if (!handler) throw new Error(`Tool not found: ${name}`)
+      if (!handler) throw new ToolNotFoundError(name)
       return handler(args)
     },
     listTools: () => toolDefinitions,

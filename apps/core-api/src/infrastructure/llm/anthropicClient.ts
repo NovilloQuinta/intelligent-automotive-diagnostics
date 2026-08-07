@@ -19,7 +19,7 @@ export interface AnthropicClientConfig {
   readonly model?: string
   readonly maxIterations?: number
   readonly timeoutMs?: number
-  readonly logger?: LoggerPort
+  readonly logger: LoggerPort
 }
 
 function extractText(content: Anthropic.Messages.ContentBlock[]): string {
@@ -66,7 +66,7 @@ type AnthropicParsedConfig = z.infer<typeof anthropicClientConfigSchema>
 function buildAnthropicMessages(
   conversationHistory: readonly LlmConversationItem[] | undefined,
   userMessage: string,
-  _systemPrompt: string,
+  systemPrompt: string,
 ): Anthropic.Messages.MessageParam[] {
   return buildMessages<Anthropic.Messages.MessageParam>(
     {
@@ -85,7 +85,7 @@ function buildAnthropicMessages(
     },
     conversationHistory,
     userMessage,
-    _systemPrompt,
+    systemPrompt,
   )
 }
 
@@ -131,10 +131,8 @@ const createThinAdapter = createLlmAdapter<
 
 /** Crea un cliente LLM que se comunica con la API de Anthropic Claude. */
 export function createAnthropicClient(config: AnthropicClientConfig): LlmClientPort {
-  const parsed = anthropicClientConfigSchema.parse(config)
-  return composeLlmClient(
-    createThinAdapter(config).sendSingleMessage,
-    parsed.maxIterations,
-    config.logger ?? console,
-  )
+  // Una sola validacion: `createThinAdapter` vuelve a parsear internamente con
+  // el mismo schema, asi que aqui solo se necesita `maxIterations`.
+  const { maxIterations } = anthropicClientConfigSchema.parse(config)
+  return composeLlmClient(createThinAdapter(config).sendSingleMessage, maxIterations, config.logger)
 }

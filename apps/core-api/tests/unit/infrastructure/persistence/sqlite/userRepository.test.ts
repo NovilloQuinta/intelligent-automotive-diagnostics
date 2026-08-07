@@ -148,4 +148,36 @@ describe('SqliteUserRepository', () => {
       expect(user!.email.value).toBe('byid@example.com')
     })
   })
+  describe('incrementFailedLogin concurrency', () => {
+    it('should count every concurrent attempt, not just the last write', async () => {
+      const user = await repo.create({
+        username: 'raceuser',
+        email: new Email('race@example.com'),
+        passwordHash: '$2b$12$hashedpasswordvaluehere',
+        userType: 'individual',
+      })
+
+      // Leer-modificar-escribir en dos sentencias permite que N intentos
+      // simultaneos lean el mismo contador y escriban todos el mismo +1,
+      // esquivando el bloqueo a los 5 intentos.
+      await Promise.all(Array.from({ length: 5 }, () => repo.incrementFailedLogin(user.id)))
+
+      const after = await repo.findById(user.id)
+      expect(after?.failedLoginAttempts).toBe(5)
+    })
+
+    it('should lock the account once the threshold is reached concurrently', async () => {
+      const user = await repo.create({
+        username: 'lockuser',
+        email: new Email('lock@example.com'),
+        passwordHash: '$2b$12$hashedpasswordvaluehere',
+        userType: 'individual',
+      })
+
+      await Promise.all(Array.from({ length: 5 }, () => repo.incrementFailedLogin(user.id)))
+
+      const after = await repo.findById(user.id)
+      expect(after?.lockedUntil).not.toBeNull()
+    })
+  })
 })
