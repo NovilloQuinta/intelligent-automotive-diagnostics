@@ -228,6 +228,14 @@ type ScenariosResponse = { scenarios: Scenario[] };
 
 /** Cognitive diagnosis output. */
 /** PID reading enriched by the backend from the AI's `read_pid` tool calls. */
+/** Respuesta de `GET /api/live-data`: `null` en un campo = ese PID falló. */
+export type LiveDataResponse = {
+  rpm: number | null;
+  coolantTemp: number | null;
+  speed: number | null;
+  intakeTemp: number | null;
+};
+
 export type PidObservation = {
   code: string;
   name: string;
@@ -363,6 +371,19 @@ export const api = {
     await assertOk(res, GENERIC_ERROR_MESSAGE);
     const data = (await res.json()) as { freezeFrame: FreezeFrame | null };
     return data.freezeFrame;
+  },
+
+  /**
+   * GET /api/live-data — reads the four dashboard PIDs from the vehicle.
+   *
+   * A `null` field means that single PID failed; the others keep their value.
+   */
+  async getLiveData(scenarioId: string): Promise<LiveDataResponse> {
+    const res = await apiFetch(
+      `/api/live-data?scenarioId=${encodeURIComponent(scenarioId)}`,
+    );
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+    return (await res.json()) as LiveDataResponse;
   },
 
   /** GET /api/ecu-info — returns the ECUs discovered for the vehicle. */

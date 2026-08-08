@@ -632,6 +632,44 @@ describe("api", () => {
   });
 
   // -----------------------------------------------------------------------
+  // getLiveData
+  // -----------------------------------------------------------------------
+
+  describe("getLiveData", () => {
+    it("GETs /api/live-data con el token, que es lo que faltaba", async () => {
+      setStoredTokens();
+      const live = { rpm: 770, coolantTemp: 90, speed: 0, intakeTemp: 35 };
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => live,
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getLiveData("audi-a3-tdi");
+
+      expect(result).toEqual(live);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/live-data?scenarioId=audi-a3-tdi");
+      // El endpoint exige autenticacion: sin esta cabecera responde 401 y los
+      // gauges no muestran ni un valor.
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+
+    it("propaga los null de cada PID sin convertirlos", async () => {
+      setStoredTokens();
+      const live = { rpm: null, coolantTemp: 90, speed: null, intakeTemp: 35 };
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({ ok: true, json: async () => live }),
+      );
+
+      await expect(api.getLiveData("audi-a3-tdi")).resolves.toEqual(live);
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // getEcuInfo
   // -----------------------------------------------------------------------
 

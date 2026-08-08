@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 import type { TelemetrySnapshot } from "./types";
 
 /**
@@ -24,18 +25,11 @@ export const LIVE_TELEMETRY_INTERVAL_MS = 1000;
 export function useLiveTelemetry(selectedId: string) {
   const { data, isError, isLoading } = useQuery({
     queryKey: ["live-telemetry", selectedId],
-    queryFn: async () => {
-      const res = await fetch(
-        `/api/live-data?scenarioId=${encodeURIComponent(selectedId)}`,
-      );
-      if (!res.ok) throw new Error("live-data fetch failed");
-      return res.json() as Promise<{
-        rpm: number | null;
-        coolantTemp: number | null;
-        speed: number | null;
-        intakeTemp: number | null;
-      }>;
-    },
+    // Via `api`, no `fetch` directo: el endpoint exige token y `apiFetch` es
+    // quien pone la cabecera Authorization y renueva el access token cuando
+    // caduca. Con `fetch` a pelo cada lectura respondia 401 y los gauges no
+    // llegaban a mostrar un solo valor.
+    queryFn: () => api.getLiveData(selectedId),
     enabled: selectedId.length > 0,
     refetchInterval: LIVE_TELEMETRY_INTERVAL_MS,
   });
