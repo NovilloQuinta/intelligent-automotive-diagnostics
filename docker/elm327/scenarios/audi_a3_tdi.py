@@ -228,6 +228,19 @@ ObdMessage = {
     },
 
     # ==================================================================
+    # Mode 09 — Vehicle Information
+    # ==================================================================
+    "VIN": {
+        "Request": "^0902" + ELM_FOOTER,
+        "Descr": "Vehicle Identification Number (VIN)",
+        "Header": ECU_ADDR_E,
+        "Response": HD(ECU_R_ADDR_E) + SZ("14") + DT(
+            "49 02 01 57 41 55 5A 5A 5A 38 56 35 4A 41 31 32 33 34 35 36"
+        ),
+        # WAUZZZ8V5JA123456 — Audi A3 2.0 TDI 2018
+    },
+
+    # ==================================================================
     # Mode 03 — Diagnostic Trouble Codes (emission related, SAE J2012)
     # P0301 = 03 01, P0401 = 04 01, P2002 = 20 02
     # ==================================================================
@@ -239,14 +252,14 @@ ObdMessage = {
     },
 
     # ==================================================================
-    # Mode 02 — Freeze frame data (values at the moment P0301 fired)
+    # Mode 02 — Freeze frame data (valores en el momento del DTC)
     # ==================================================================
-    "FF_RPM": {
-        "Request": "^020C" + ELM_FOOTER,
-        "Descr": "Freeze frame RPM (moment of P0301)",
+    "FF_LOAD": {
+        "Request": "^0204" + ELM_FOOTER,
+        "Descr": "Freeze frame engine load",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("42 0C 0C 80"),
-        # 800 RPM — surged from idle when misfire occurred
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 04 2E"),
+        # 18 %  (A*100/255) — carga al ralentí
     },
     "FF_COOLANT_TEMP": {
         "Request": "^0205" + ELM_FOOTER,
@@ -255,12 +268,26 @@ ObdMessage = {
         "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 05 82"),
         # 90 degC  (A-40)
     },
+    "FF_RPM": {
+        "Request": "^020C" + ELM_FOOTER,
+        "Descr": "Freeze frame RPM",
+        "Header": ECU_ADDR_E,
+        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("42 0C 0C 80"),
+        # 800 RPM
+    },
     "FF_SPEED": {
         "Request": "^020D" + ELM_FOOTER,
         "Descr": "Freeze frame vehicle speed",
         "Header": ECU_ADDR_E,
         "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 0D 00"),
-        # 0 km/h — misfire at standstill
+        # 0 km/h
+    },
+    "FF_THROTTLE": {
+        "Request": "^0211" + ELM_FOOTER,
+        "Descr": "Freeze frame throttle position",
+        "Header": ECU_ADDR_E,
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 11 24"),
+        # 14.1 %  (A*100/255)
     },
 
     # ==================================================================

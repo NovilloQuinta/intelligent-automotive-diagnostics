@@ -88,6 +88,8 @@ export interface VehicleInfoOutput {
   readonly region: { country: string; region: string } | null
   /** Anio de modelo deducido de la posicion 10; `null` si el VIN no es decodificable. */
   readonly modelYearDecoded: number | null
+  /** Estado de la lectura del VIN. */
+  readonly vinStatus: 'read' | 'unsupported' | 'unreadable'
 }
 
 /** Campos decodificados vacios: VIN ausente, con ruido o {@link FALLBACK_VIN}. */
@@ -96,6 +98,14 @@ const UNDECODED_VIN = {
   region: null,
   modelYearDecoded: null,
 } as const
+
+/** Telemetria en vivo con degradacion por PID: un valor `null` indica lectura fallida. */
+export interface TelemetryOutput {
+  rpm: number | null
+  coolantTemp: number | null
+  speed: number | null
+  intakeTemp: number | null
+}
 
 /** Dependencias de {@link DiagnosisService}. */
 export interface DiagnosisServiceOptions {
@@ -189,6 +199,43 @@ export class DiagnosisService {
   }
 
   /**
+   * Lee los 4 PIDs del dashboard en tiempo real con degradacion por PID.
+   *
+   * Un PID que falla (NO DATA/parse error) llega a `null`; el resto con valor.
+   * La cadencia la controla el cliente (1 Hz via `refetchInterval`).
+   *
+   * @param scenarioId — Escenario; opcional en modo TCP directo.
+   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
+   */
+  async getLiveData(scenarioId?: string): Promise<TelemetryOutput> {
+    const repository = this.resolveRepository(scenarioId)
+    const pids = ['05', '0C', '0D', '0F'] as const
+    const result: TelemetryOutput = { rpm: null, coolantTemp: null, speed: null, intakeTemp: null }
+    for (const pid of pids) {
+      try {
+        const value = await repository.readPid('01', pid)
+        switch (pid) {
+          case '05':
+            result.coolantTemp = value
+            break
+          case '0C':
+            result.rpm = value
+            break
+          case '0D':
+            result.speed = value
+            break
+          case '0F':
+            result.intakeTemp = value
+            break
+        }
+      } catch {
+        // degradacion por PID: uno que falla no tumba el resto
+      }
+    }
+    return result
+  }
+
+  /**
    * Devuelve las ECUs descubiertas en el vehiculo activo.
    *
    * @param scenarioId — Escenario; opcional en modo TCP directo.
@@ -200,7 +247,12 @@ export class DiagnosisService {
   }
 
   /**
-   * Identifica el vehiculo activo: datos del vehiculo mas los campos derivados del VIN.
+   * Identifica el vehiculo activo: VIN del ECU + metadatos del descriptor.
+   *
+   * En modo Docker, fusiona el VIN leido del emulador con `make`/`model`/`year`/`engineType`
+   * del {@link ScenarioDescriptor}. El VIN siempre es el del vehículo real, nunca el del catálogo.
+   * En modo TCP directo (sin descriptor) se mantiene el comportamiento actual: los metadatos
+   * se deducen exclusivamente del VIN.
    *
    * @param scenarioId — Escenario; opcional en modo TCP directo.
    * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
@@ -209,12 +261,19 @@ export class DiagnosisService {
     const repository = this.resolveRepository(scenarioId)
     const info = await repository.getVehicleInfo()
     const vin = String(info.vin)
+    const vinStatus: VehicleInfoOutput['vinStatus'] = info.vinStatus ?? (vin === FALLBACK_VIN ? 'unreadable' : 'read')
+
+    // En modo Docker, fusionar metadatos del descriptor (make/model/year/engineType)
+    // con el VIN del ECU. En modo TCP no hay descriptor: se mantiene lo que devuelve el adaptador.
+    const descriptor = scenarioId ? this.scenarios.find((s) => s.id === scenarioId) : undefined
+
     return {
       vin,
-      make: info.make,
-      model: info.model,
-      year: info.year,
-      engineType: info.engineType,
+      make: descriptor?.vehicleInfo.make ?? info.make,
+      model: descriptor?.vehicleInfo.model ?? info.model,
+      year: descriptor?.vehicleInfo.year ?? info.year,
+      engineType: descriptor?.vehicleInfo.engineType ?? info.engineType,
+      vinStatus,
       ...this.decodeVin(vin),
     }
   }

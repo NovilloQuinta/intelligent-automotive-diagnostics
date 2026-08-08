@@ -16,20 +16,20 @@ const kawaData = new LiveData({ rpm: 4500, coolantTemp: 105, speed: 0, intakeTem
 const CAN_PROTOCOL = 'ISO 15765-4 (CAN 11/500)'
 const UNASSIGNED_VEHICLE_ID = 0
 
-function createEcu(
-  id: number,
-  name: string,
-  type: string,
-  requestAddr: string,
-  responseAddr: string,
-): EcuInfo {
+function createEcu(params: {
+  id: number
+  name: string
+  type: string
+  requestAddr: string
+  responseAddr: string
+}): EcuInfo {
   return new EcuInfo({
-    id,
+    id: params.id,
     vehicleId: UNASSIGNED_VEHICLE_ID,
-    name,
-    requestAddr,
-    responseAddr,
-    type,
+    name: params.name,
+    requestAddr: params.requestAddr,
+    responseAddr: params.responseAddr,
+    type: params.type,
     protocol: CAN_PROTOCOL,
   })
 }
@@ -52,12 +52,12 @@ const kawaPidValues: Record<string, number> = {
   [CONTROL_MODULE_VOLTAGE_KEY]: 10.9,
 }
 
-const ECM = createEcu(1, 'Engine Control Module', 'ECM', '7E0', '7E8')
-const TCM = createEcu(2, 'Transmission Control Module', 'TCM', '7E1', '7E9')
-const ABS = createEcu(3, 'ABS Control Module', 'ABS', '760', '768')
-const BCM = createEcu(4, 'Body Control Module', 'BCM', '7C0', '7C8')
-const SRS = createEcu(5, 'Airbag Control Module', 'SRS', '7D2', '7DA')
-const IPC = createEcu(6, 'Instrument Panel Cluster', 'IPC', '720', '728')
+const ECM = createEcu({ id: 1, name: 'Engine Control Module', type: 'ECM', requestAddr: '7E0', responseAddr: '7E8' })
+const TCM = createEcu({ id: 2, name: 'Transmission Control Module', type: 'TCM', requestAddr: '7E1', responseAddr: '7E9' })
+const ABS = createEcu({ id: 3, name: 'ABS Control Module', type: 'ABS', requestAddr: '760', responseAddr: '768' })
+const BCM = createEcu({ id: 4, name: 'Body Control Module', type: 'BCM', requestAddr: '7C0', responseAddr: '7C8' })
+const SRS = createEcu({ id: 5, name: 'Airbag Control Module', type: 'SRS', requestAddr: '7D2', responseAddr: '7DA' })
+const IPC = createEcu({ id: 6, name: 'Instrument Panel Cluster', type: 'IPC', requestAddr: '720', responseAddr: '728' })
 
 /** Escenarios de simulacion de ejemplo para desarrollo y tests. */
 export const seedScenarios: SimulationScenario[] = [
@@ -75,6 +75,7 @@ export const seedScenarios: SimulationScenario[] = [
       year: 2018,
       engineType: '2.0 TFSI',
       vin: new Vin('WAUZZZ8V5JA123456'),
+      vinStatus: 'read' as const,
     },
   },
   {
@@ -91,6 +92,7 @@ export const seedScenarios: SimulationScenario[] = [
       year: 2020,
       engineType: '948cc Inline-4',
       vin: new Vin('JKAZR2A1XLA000111'),
+      vinStatus: 'read' as const,
     },
   },
 ]

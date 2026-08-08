@@ -8,6 +8,7 @@ import { createPidFormulaCatalog } from './pidFormulaCatalog.js'
 import type { PidFormulaCatalog } from '@/application/ports/PidFormulaCatalog.js'
 import { toFormulaEntries } from '@/application/shared/formulaEntries.js'
 import { ALL_SEED_PIDS } from '../persistence/sqlite/seed-pids.js'
+import { dtcDescribe } from '@/domain/dtcCatalog.js'
 
 import { Elm327ConnectionError, Elm327NoDataError, Elm327ParseError } from './errors.js'
 import {
@@ -27,6 +28,9 @@ export { Elm327ConnectionError, Elm327NoDataError, Elm327ParseError }
 export type { Elm327TcpConfig } from './tcpTransport.js'
 
 const UNKNOWN_FREEZE_FRAME_DTC = 'UNKNOWN'
+
+/** PIDs Mode 02 que se leen para construir el freeze frame. */
+const FREEZE_FRAME_PIDS = ['04', '05', '0C', '0D', '11']
 
 /** Modo 22 (UDS ReadDataByIdentifier): su respuesta se parsea distinto a la de los modos SAE. */
 const MODE_UDS = '22'
@@ -82,27 +86,36 @@ export class Elm327TcpRepository implements ObdRepository {
     return parseSupportedPidBitmask(bytes)
   }
 
+  /**
+   * Lee el freeze frame con degradacion por PID: un {@code NO DATA} en un PID
+   * no invalida el resto. Solo devuelve {@code null} si ningun PID responde.
+   */
   async getFreezeFrame(dtc?: string): Promise<FreezeFrame | null> {
-    const raw = await this.client.sendCommand('02 0C')
-    if (/NO DATA/i.test(raw)) return null
-    try {
-      const bytes = parseModeResponse(raw)
-      return new FreezeFrame({
-        dtcCode: dtc ?? UNKNOWN_FREEZE_FRAME_DTC,
-        pidValues: { '0C': this.pidFormulas.apply('01', '0C', bytes) },
-      })
-    } catch (err) {
-      if (err instanceof Elm327ParseError || /7F\s/i.test(raw)) return null
-      throw err
+    const pidValues: Record<string, number> = {}
+    for (const pid of FREEZE_FRAME_PIDS) {
+      try {
+        const bytes = await this.fetchPidBytes('02', pid, 2)
+        pidValues[pid] = this.pidFormulas.apply('01', pid, bytes)
+      } catch (err) {
+        if (err instanceof Elm327NoDataError || err instanceof Elm327ParseError) continue
+        if (err instanceof Error && /7F\s/i.test(err.message)) continue
+        throw err
+      }
     }
+    if (Object.keys(pidValues).length === 0) return null
+    return new FreezeFrame({
+      dtcCode: dtc ?? UNKNOWN_FREEZE_FRAME_DTC,
+      pidValues,
+    })
   }
 
   async readDtcCodes(): Promise<DtcCode[]> {
     const raw = await this.client.sendCommand('03')
     try {
-      return parseDtcResponse(raw).map(
-        ([b1, b2]) => new DtcCode({ code: DtcCode.decodeFromBytes(b1, b2) }),
-      )
+      return parseDtcResponse(raw).map(([b1, b2]) => {
+        const code = DtcCode.decodeFromBytes(b1, b2)
+        return new DtcCode({ code, description: dtcDescribe(code) })
+      })
     } catch (err) {
       if (err instanceof Elm327ParseError) return []
       throw err
@@ -120,22 +133,25 @@ export class Elm327TcpRepository implements ObdRepository {
 
   async getVehicleInfo(): Promise<VehicleInfo> {
     try {
-      const vin = new Vin(await this.readVin())
+      const vinValue = await this.readVin()
+      const vin = new Vin(vinValue)
       return {
         make: vin.manufacturer ?? 'unknown',
         model: 'unknown',
         year: vin.modelYear ?? 0,
         engineType: 'unknown',
         vin,
+        vinStatus: 'read' as const,
       }
-    } catch {
-      // VIN ilegible: el diagnóstico sigue siendo funcional con datos mínimos
+    } catch (err) {
+      // VIN ilegible o no soportado: el diagnostico sigue siendo funcional
       return {
         make: 'unknown',
         model: 'unknown',
         year: 0,
         engineType: 'unknown',
         vin: new Vin(FALLBACK_VIN),
+        vinStatus: err instanceof Elm327NoDataError ? ('unsupported' as const) : ('unreadable' as const),
       }
     }
   }

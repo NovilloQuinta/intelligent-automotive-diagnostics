@@ -79,6 +79,13 @@ const VehicleInfoQueryTcpSchema = z.object({
   scenarioId: optionalScenarioId,
 })
 
+const LiveDataQuerySchema = z.object({
+  scenarioId: requiredScenarioId,
+})
+const LiveDataQueryTcpSchema = z.object({
+  scenarioId: optionalScenarioId,
+})
+
 /** Controlador HTTP para los endpoints de diagnostico OBD. */
 export class DiagnosisController {
   constructor(
@@ -218,6 +225,24 @@ export class DiagnosisController {
     } catch (err) {
       if (this.respondIfCommonError(err, res)) return
       this.respondUnexpected(err, res, 'Vehicle info fetch failed')
+    }
+  }
+
+  /** GET /api/live-data — telemetria en vivo de los 4 PIDs del dashboard. 400 query invalida, 404 escenario inexistente. */
+  liveData = async (req: Request, res: Response): Promise<void> => {
+    const schema = this.selectSchema(LiveDataQuerySchema, LiveDataQueryTcpSchema)
+    const parsed = schema.safeParse(req.query)
+    if (!parsed.success) {
+      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
+      return
+    }
+
+    try {
+      const result = await this.service.getLiveData(parsed.data.scenarioId)
+      res.status(200).json(result)
+    } catch (err) {
+      if (this.respondIfCommonError(err, res)) return
+      this.respondUnexpected(err, res, 'Live data fetch failed')
     }
   }
 

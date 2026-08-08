@@ -94,6 +94,17 @@ describe('protocol', () => {
       expect(bytes.length).toBe(17)
     })
 
+    it('should parse single-line Audi VIN → 17 ASCII bytes after stripping 49 02 01 prefix', () => {
+      const raw = '09 02\r49 02 01 57 41 55 5A 5A 5A 38 56 35 4A 41 31 32 33 34 35 36 \r\r>'
+      const bytes = parseVinResponse(raw)
+      // WAUZZZ8V5JA123456
+      expect(bytes).toEqual([
+        0x57, 0x41, 0x55, 0x5a, 0x5a, 0x5a, 0x38, 0x56, 0x35, 0x4a, 0x41, 0x31, 0x32, 0x33, 0x34,
+        0x35, 0x36,
+      ])
+      expect(bytes.length).toBe(17)
+    })
+
     it('should throw Elm327NoDataError on "NO DATA"', () => {
       expect(() => parseVinResponse('NO DATA')).toThrow(Elm327NoDataError)
     })

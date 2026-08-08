@@ -60,7 +60,7 @@ export function parseMode22Response(raw: string, didLen: number): number[] {
   return didLen > 0 ? bytes.slice(0, didLen) : bytes
 }
 
-/** Mode 09 02: extrae los bytes ASCII del VIN desde líneas `N:` / `0:`..`N:`. */
+/** Mode 09 02: extrae los bytes ASCII del VIN desde líneas `N:` / `0:`..`N:` o formato single-line. */
 export function parseVinResponse(raw: string): number[] {
   const cleaned = stripEcho(raw)
   if (/NO DATA/i.test(cleaned)) throw new Elm327NoDataError(raw)
@@ -69,6 +69,13 @@ export function parseVinResponse(raw: string): number[] {
     const idx = line.indexOf(':')
     if (idx === -1) continue // salta cabecera "014" y líneas sin prefijo
     payload.push(...parseHexBytes(line.slice(idx + 1)))
+  }
+  // Single-line response: adaptador devuelve 49 02 01 ... sin prefijos de línea
+  if (payload.length === 0) {
+    const hexMatch = cleaned.match(/49\s*02\s*01\s+((?:[0-9A-F]{2}\s*)+)/i)
+    if (hexMatch) {
+      payload.push(...parseHexBytes(hexMatch[1]))
+    }
   }
   // Quita el prefijo "49 02 01" (mode + pid + count) de la primera línea si existe
   if (payload.length >= 3 && payload[0] === 0x49 && payload[1] === 0x02 && payload[2] === 0x01) {

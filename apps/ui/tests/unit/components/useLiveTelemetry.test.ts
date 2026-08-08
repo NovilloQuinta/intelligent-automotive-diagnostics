@@ -1,82 +1,79 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createElement } from "react";
 import { useLiveTelemetry } from "../../../src/components/dashboard/useLiveTelemetry";
-import type { Scenario } from "../../../src/components/dashboard/types";
 
-const MOCK_SCENARIO: Scenario = {
-  id: "audi-a3-idle",
-  name: "Audi A3",
-  vehicleType: "car",
-  sensorValues: { rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 },
-  dtcConfig: [],
-  vehicleInfo: { make: "Audi", model: "A3", year: 2018, engineType: "2.0 TFSI", vin: "WAU..." },
-};
+function wrapper({ children }: { children: React.ReactNode }) {
+  const qc = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return createElement(QueryClientProvider, { client: qc }, children);
+}
+
+const mockLiveData = { rpm: 800, coolantTemp: 90, speed: 0, intakeTemp: 35 };
 
 describe("useLiveTelemetry", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    vi.restoreAllMocks();
   });
 
-  afterEach(() => {
-    vi.useRealTimers();
-  });
-
-  it("emits first frame immediately and sets streamOk", () => {
-    const { result } = renderHook(() => useLiveTelemetry(MOCK_SCENARIO));
-
-    // With fake timers, the first jitterFrame call happens synchronously in useEffect
-    vi.advanceTimersToNextTimer();
-
-    expect(result.current.streamOk).toBe(true);
-    expect(result.current.live).not.toBeNull();
-    expect(result.current.live!.rpm).toBeGreaterThanOrEqual(690);
-    expect(result.current.live!.rpm).toBeLessThanOrEqual(810);
-  });
-
-  it("returns null and streamOk false when no scenario", () => {
-    const { result } = renderHook(() => useLiveTelemetry(null));
-
-    expect(result.current.live).toBeNull();
-    expect(result.current.streamOk).toBe(false);
-  });
-
-  it("updates frame on interval tick", () => {
-    const { result } = renderHook(() => useLiveTelemetry(MOCK_SCENARIO));
-
-    vi.advanceTimersToNextTimer();
-    expect(result.current.streamOk).toBe(true);
-
-    const firstFrame = result.current.live;
-    expect(firstFrame).not.toBeNull();
-
-    // Advance by 500ms → new frame via setInterval callback
-    vi.advanceTimersByTime(500);
-
-    // Frame should have been updated
-    expect(result.current.live).not.toBeNull();
-  });
-
-  it("cleans up interval on unmount", () => {
-    const clearIntervalSpy = vi.spyOn(global, "clearInterval");
-    const { unmount } = renderHook(() => useLiveTelemetry(MOCK_SCENARIO));
-
-    unmount();
-
-    expect(clearIntervalSpy).toHaveBeenCalled();
-  });
-
-  it("resets when scenario changes to null", () => {
-    const { result, rerender } = renderHook(
-      ({ scenario }) => useLiveTelemetry(scenario),
-      { initialProps: { scenario: MOCK_SCENARIO as Scenario | null } },
+  it("fetches live data and returns TelemetrySnapshot", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(JSON.stringify(mockLiveData), { status: 200 }),
     );
 
-    // First frame emitted synchronously with fake timers
-    vi.advanceTimersToNextTimer();
-    expect(result.current.streamOk).toBe(true);
+    const { result } = renderHook(() => useLiveTelemetry("audi-a3"), {
+      wrapper,
+    });
 
-    // Switch to null scenario
-    rerender({ scenario: null });
+    await waitFor(() => {
+      expect(result.current.streamOk).toBe(true);
+    });
+    expect(result.current.live).toEqual({
+      rpm: 800,
+      coolantTemp: 90,
+      speed: 0,
+      intakeTemp: 35,
+      rawData: "",
+      ts: expect.any(Number),
+    });
+  });
+
+  it("handles null PID values by falling back to 0", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ rpm: null, coolantTemp: 90, speed: null, intakeTemp: 35 }),
+        { status: 200 },
+      ),
+    );
+
+    const { result } = renderHook(() => useLiveTelemetry("audi-a3"), {
+      wrapper,
+    });
+
+    await waitFor(() => {
+      expect(result.current.live).not.toBeNull();
+    });
+    expect(result.current.live!.rpm).toBe(0);
+    expect(result.current.live!.speed).toBe(0);
+    expect(result.current.live!.coolantTemp).toBe(90);
+  });
+
+  it("sets streamOk false on fetch error", async () => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(new Error("fail"));
+
+    const { result } = renderHook(() => useLiveTelemetry("audi-a3"), {
+      wrapper,
+    });
+
+    await waitFor(() => {
+      expect(result.current.streamOk).toBe(false);
+    });
+  });
+
+  it("returns null and false when selectedId is empty", () => {
+    const { result } = renderHook(() => useLiveTelemetry(""), { wrapper });
 
     expect(result.current.live).toBeNull();
     expect(result.current.streamOk).toBe(false);
