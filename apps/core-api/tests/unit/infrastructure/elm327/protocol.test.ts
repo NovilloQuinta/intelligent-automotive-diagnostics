@@ -61,6 +61,15 @@ describe('protocol', () => {
     it('should throw Elm327ParseError on invalid input', () => {
       expect(() => parseModeResponse('ZZ ZZ ZZ')).toThrow(Elm327ParseError)
     })
+
+    it('should NOT treat 0x7F data byte as negative response code', () => {
+      // PID 01 byte B = 0x7F es un valor legitimo (SAE J1979: compression + all common tests)
+      expect(() => parseModeResponse('41 01 83 7F FF FF')).not.toThrow()
+    })
+
+    it('should throw Elm327ParseError on genuine negative response 7F at start', () => {
+      expect(() => parseModeResponse('7F 01 11')).toThrow(Elm327ParseError)
+    })
   })
 
   describe('parseMode22Response', () => {
