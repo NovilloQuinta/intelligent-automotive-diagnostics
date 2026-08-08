@@ -32,6 +32,7 @@ import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosi
 import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
+import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import { ALL_SEED_PIDS } from '@/infrastructure/persistence/sqlite/seed-pids.js'
 import {
   MODE_CURRENT_DATA,
@@ -139,6 +140,8 @@ export interface DiagnosisServiceOptions {
   readonly knowledgeStack?: KnowledgeStack
   /** Puerto de búsqueda web externa; ausente deshabilita la tool `web_search`. */
   readonly webSearch?: WebSearchPort
+  /** Repositorio de vehículos; ausente deshabilita `get_available_pids`. */
+  readonly vehicleRepo?: VehicleRepository
   readonly logger: LoggerPort
   /** Timeout del diagnostico cognitivo en ms. Por defecto 60 s. */
   readonly cognitiveTimeoutMs?: number
@@ -154,6 +157,7 @@ export class DiagnosisService {
   private readonly llmClient: LlmClientPort | undefined
   private readonly knowledgeStack: KnowledgeStack | undefined
   private readonly webSearch: WebSearchPort | undefined
+  private readonly vehicleRepo: VehicleRepository | undefined
   private readonly logger: LoggerPort
   private readonly cognitiveTimeoutMs: number
   private readonly toolCallTimeoutMs: number
@@ -165,6 +169,7 @@ export class DiagnosisService {
     this.llmClient = options.llmClient
     this.knowledgeStack = options.knowledgeStack
     this.webSearch = options.webSearch
+    this.vehicleRepo = options.vehicleRepo
     this.logger = options.logger
     this.cognitiveTimeoutMs = options.cognitiveTimeoutMs ?? COGNITIVE_DIAGNOSIS_TIMEOUT_MS
     this.toolCallTimeoutMs = options.toolCallTimeoutMs ?? DIAGNOSIS_TIMEOUT_MS
@@ -380,7 +385,7 @@ export class DiagnosisService {
     }
     const llmClient = this.llmClient
     const repository = this.resolveRepository(scenarioId)
-    const mcp = createMcpServer(repository, undefined, this.knowledgeStack, this.webSearch)
+    const mcp = createMcpServer(repository, this.vehicleRepo, this.knowledgeStack, this.webSearch)
     const tools = mcp.listTools()
     const handler: ToolCallHandler = async (name, args) => {
       const result = await mcp.callTool(name, args)
@@ -423,7 +428,7 @@ export class DiagnosisService {
     args?: Record<string, unknown>,
   ): Promise<string> {
     const repository = this.resolveRepository(scenarioId)
-    const mcp = createMcpServer(repository, undefined, this.knowledgeStack, this.webSearch)
+    const mcp = createMcpServer(repository, this.vehicleRepo, this.knowledgeStack, this.webSearch)
     let result: ToolCallResult
     try {
       result = await withTimeout(

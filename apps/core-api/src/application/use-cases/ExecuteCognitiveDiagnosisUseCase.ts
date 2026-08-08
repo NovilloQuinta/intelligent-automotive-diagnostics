@@ -25,6 +25,11 @@ const EXPLORATION_INSTRUCTIONS = [
   '- Lee PIDs relevantes (rpm, temperatura, velocidad) y los códigos DTC almacenados.',
   '- Consulta el freeze frame cuando existan DTCs para cruzar síntomas con valores congelados.',
   '- Usa get_vehicle_info y read_vin para identificar el vehículo.',
+  '- Usa get_available_pids para descubrir qué PIDs soporta el vehículo conectado (incluye Mode 22 propietarios).',
+  'Cuando encuentres un PID nuevo (no listado en get_available_pids), persiste el descubrimiento:',
+  '- Busca en el catálogo con search_similar_pids para ver si ya existe.',
+  '- Si no existe, regístralo con index_pid (mode, pid, formula, dataBytes) para futuras consultas.',
+  '- Usa web_search para buscar documentación de PIDs propietarios de la marca.',
   'Razona la causa raíz cruzando síntomas, DTCs y freeze frame.',
 ]
 

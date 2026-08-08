@@ -12,6 +12,9 @@ import {
   Elm327ParseError,
 } from '@/infrastructure/elm327/errors.js'
 import { ToolNotFoundError } from '@/infrastructure/mcp/errors.js'
+import { PidCode } from '@/domain/value-objects/pidCode.js'
+import { PidDefinition } from '@/domain/entities/pidDefinition.js'
+import { ALL_SEED_PIDS } from '@/infrastructure/persistence/sqlite/seed-pids.js'
 import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
 import { initialConfidenceFor } from '@/application/knowledge/confidenceScale.js'
 import type { PidFormulaSource } from '@/application/dto/diagnosis/PidFormulaSource.js'
@@ -121,8 +124,52 @@ function errorText(message: string): ToolCallResult {
 
 // ─── Handlers ───────────────────────────────────────────────────────────────
 
-function handleReadPid(repo: ObdRepository): ToolHandler {
-  return async ({ mode, pid }) => text(String(await repo.readPid(`${mode}`, `${pid}`)))
+const AUTO_DISCOVERY_FORMULA = '(A*256+B)'
+const AUTO_DISCOVERY_DATA_BYTES = 2
+const AUTO_DISCOVERY_CONFIDENCE = 0.3
+
+function autoRegisterPid(
+  vehicleRepo: VehicleRepository,
+  modeStr: string,
+  pidStr: string,
+): void {
+  void vehicleRepo
+    .findPidDefinition(modeStr, pidStr)
+    .then((existing) => {
+      if (existing) return
+      return vehicleRepo.insertPidDefinition(
+        new PidDefinition({
+          id: 0,
+          pidCode: new PidCode(modeStr, pidStr),
+          name: `${modeStr} ${pidStr}`,
+          formula: AUTO_DISCOVERY_FORMULA,
+          dataBytes: AUTO_DISCOVERY_DATA_BYTES,
+          pidType: 'formula',
+          confidence: AUTO_DISCOVERY_CONFIDENCE,
+          source: 'auto',
+        }),
+      )
+    })
+    .catch(() => {
+      // best-effort
+    })
+}
+
+function handleReadPid(
+  repo: ObdRepository,
+  vehicleRepo: VehicleRepository | undefined,
+): ToolHandler {
+  return async ({ mode, pid }) => {
+    const modeStr = `${mode}`
+    const pidStr = `${pid}`
+    const value = await repo.readPid(modeStr, pidStr)
+
+    if (vehicleRepo && modeStr !== '01') {
+      void autoRegisterPid(vehicleRepo, modeStr, pidStr)
+    }
+
+    return text(String(value))
+  }
 }
 
 function handleGetDtcCodes(repo: ObdRepository): ToolHandler {
@@ -167,21 +214,39 @@ function handleGetEcuInfo(repo: ObdRepository): ToolHandler {
   }
 }
 
-function handleGetAvailablePids(vehicleRepo: VehicleRepository | undefined): ToolHandler {
+function handleGetAvailablePids(
+  repo: ObdRepository,
+  vehicleRepo: VehicleRepository | undefined,
+): ToolHandler {
   return async ({ vehicleId }) => {
-    // Sin repositorio o sin resultados no hay fallo: es una respuesta vacia
-    // legitima, igual que en `get_dtc_codes`. Solo las excepciones son isError.
-    if (!vehicleRepo) return text('No PIDs available for this vehicle.')
-    const pids = vehicleId != null ? await vehicleRepo.findPidsByVehicle(vehicleId as number) : []
-    if (pids.length === 0) return text('No PIDs available for this vehicle.')
-    return text(
-      pids
-        .map(
-          (p) =>
-            `${p.pidCode.mode} ${p.pidCode.pid}: ${p.name} (${p.formula.toString()}) [${p.unit ?? ''}]`,
-        )
-        .join('\n'),
-    )
+    const lines: string[] = []
+
+    // 1. Escanear el vehículo real: Mode 01 PIDs soportados (J1979 PID 00)
+    try {
+      const supported = await repo.getSupportedPids()
+      if (supported.length > 0) {
+        lines.push(...supported.map((p) => `${p} (Mode 01)`))
+      }
+    } catch {
+      // Escaneo fallido (ej. coche no conectado) — continuamos con la BD
+    }
+
+    // 2. Mostrar PIDs Mode 22 conocidos del catálogo (propietarios, sin descubrimiento estándar)
+    const mode22Pids = ALL_SEED_PIDS.filter((p) => p.pidCode.mode === '22')
+    for (const p of mode22Pids) {
+      lines.push(`${p.pidCode.mode} ${p.pidCode.pid}: ${p.name} (${p.formula.toString()}) [${p.unit ?? ''}]`)
+    }
+
+    // 3. Consultar BD: PIDs almacenados por vehículo
+    if (vehicleRepo && vehicleId != null) {
+      const stored = await vehicleRepo.findPidsByVehicle(vehicleId as number)
+      for (const p of stored) {
+        lines.push(`${p.pidCode.mode} ${p.pidCode.pid}: ${p.name} (${p.formula.toString()}) [${p.unit ?? ''}]`)
+      }
+    }
+
+    if (lines.length === 0) return text('No PIDs discovered. Try read_pid with specific mode/pid.')
+    return text(lines.join('\n'))
   }
 }
 
@@ -195,7 +260,7 @@ function registerDiagnosticTools(
     'read_pid',
     'Read an OBD-II PID value. Mode 01, 22 for manufacturer-specific.',
     { mode: z.string(), pid: z.string() },
-    withErrorHandling(handleReadPid(repo)),
+    withErrorHandling(handleReadPid(repo, vehicleRepo)),
   )
   register(
     'get_dtc_codes',
@@ -218,9 +283,9 @@ function registerDiagnosticTools(
   )
   register(
     'get_available_pids',
-    'List known PIDs for a vehicle.',
+    'List PIDs supported by the connected vehicle. Scans Mode 01 via PID 00 bitmask and reads stored Mode 22 PIDs from catalog.',
     { vehicleId: z.number().optional() },
-    withErrorHandling(handleGetAvailablePids(vehicleRepo)),
+    withErrorHandling(handleGetAvailablePids(repo, vehicleRepo)),
   )
   register(
     'get_ecu_info',

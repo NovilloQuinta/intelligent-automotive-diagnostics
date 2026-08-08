@@ -33,3 +33,12 @@ export const PID_THROTTLE_POSITION = '11'
 
 /** PID 42 — Voltaje del modulo de control. */
 export const PID_CONTROL_MODULE_VOLTAGE = '42'
+
+/** Modo 22 — Datos propietarios del fabricante (UDS ReadDataByIdentifier). */
+export const MODE_PROPRIETARY = '22'
+
+/** PID 0300 — Odometro almacenado en la TCU (Toyota). */
+export const PID_ODOMETER_TCU = '0300'
+
+/** PID 0400 — Odometro almacenado en el ECM (Toyota). */
+export const PID_ODOMETER_ECM = '0400'
