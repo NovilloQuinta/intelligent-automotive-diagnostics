@@ -1,7 +1,7 @@
 # Intelligent Automotive Diagnostics - TFM
 
 > Vehicular telemetry simulation & AI-powered diagnosis using MCP.
-> Master IA - Jesus Novillo | Entrega: 20 julio 2026
+> Master IA - Jesus Novillo | Demo: semana del 10 de agosto 2026 (web publicada + coche real por cable)
 
 ## INSTRUCCIONES DE SISTEMA Y PROTOCOLO EJECUTIVO
 
@@ -26,11 +26,11 @@ Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de siste
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
 - **Flujo de ramas**: `develop` es la rama de integración; toda `feat.*`/`fix.*` sale de `develop` y se mergea ahí.
-- **Rama activa**: `feat/admin-management-panel` (worktree `.claude/worktrees/admin-panel/`)
-- **Recién completado**: Bloque D (UI) del admin panel — 6 componentes React, 6 rutas TanStack Router, DataTableFilters, TopBar con enlace admin condicional, API client con 6 funciones tipadas para `/api/admin/*`.
-- **Tests**: core-api 842 passed (89 files); UI 342 passed, 1 skipped (45 files). Build + lint core verdes. Lint UI falla por deuda `brace-expansion`.
-- **Review**: @reviewer PASS_WITH_WARNINGS (0 graves, 11 warnings no bloqueantes). @security APROBADO (0 críticas, 4 advertencias).
-- **Pendiente**: commit + push + merge a `develop`. Tareas de verificación manual (5.x en tasks.md). Archivar change OpenSpec.
+- **Rama base**: `develop`, limpia y sincronizada con origin.
+- **8 worktrees activos** en `.claude/worktrees/` (trabajo en paralelo; ver `plan-paralelo.md` y `prompt-opencode*.md` en la raíz):
+  - `deployment` (`feat/deployment`) — 2 commits por delante de develop, con `.github/workflows/deploy.yml` sin commitear.
+  - `chore-add-db-migrations` (`chore/add-db-migrations`) — 2 commits por delante de develop, en curso.
+  - `chat-ui` (`fix/mechanic-chat-ui`), `coherencia-obd` (`fix/obd-coherence`), `emulator-coherencia` (`fix/emulator-coherent-data`), `fix-telemetria-auth` (`fix/live-telemetry-auth`), `mechanic-chat` (`feat/mechanic-chat`), `obd-modes` (`feat/obd-standard-modes`) — creados desde develop, sin commits propios aún.
 - **Deuda `brace-expansion`** (lint UI): sin resolver.
 
 ## REGLAS DE SESION
