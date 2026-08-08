@@ -99,6 +99,14 @@ const UNDECODED_VIN = {
   modelYearDecoded: null,
 } as const
 
+/** Telemetria en vivo con degradacion por PID: un valor `null` indica lectura fallida. */
+export interface TelemetryOutput {
+  rpm: number | null
+  coolantTemp: number | null
+  speed: number | null
+  intakeTemp: number | null
+}
+
 /** Dependencias de {@link DiagnosisService}. */
 export interface DiagnosisServiceOptions {
   /** Descriptores de escenarios disponibles (modo docker). */
@@ -188,6 +196,43 @@ export class DiagnosisService {
   async getFreezeFrame(scenarioId?: string, dtc?: string): Promise<FreezeFrame | null> {
     const repository = this.resolveRepository(scenarioId)
     return repository.getFreezeFrame(dtc)
+  }
+
+  /**
+   * Lee los 4 PIDs del dashboard en tiempo real con degradacion por PID.
+   *
+   * Un PID que falla (NO DATA/parse error) llega a `null`; el resto con valor.
+   * La cadencia la controla el cliente (1 Hz via `refetchInterval`).
+   *
+   * @param scenarioId — Escenario; opcional en modo TCP directo.
+   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
+   */
+  async getLiveData(scenarioId?: string): Promise<TelemetryOutput> {
+    const repository = this.resolveRepository(scenarioId)
+    const pids = ['05', '0C', '0D', '0F'] as const
+    const result: TelemetryOutput = { rpm: null, coolantTemp: null, speed: null, intakeTemp: null }
+    for (const pid of pids) {
+      try {
+        const value = await repository.readPid('01', pid)
+        switch (pid) {
+          case '05':
+            result.coolantTemp = value
+            break
+          case '0C':
+            result.rpm = value
+            break
+          case '0D':
+            result.speed = value
+            break
+          case '0F':
+            result.intakeTemp = value
+            break
+        }
+      } catch {
+        // degradacion por PID: uno que falla no tumba el resto
+      }
+    }
+    return result
   }
 
   /**
