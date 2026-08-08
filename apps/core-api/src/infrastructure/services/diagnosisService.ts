@@ -45,7 +45,10 @@ const COGNITIVE_DIAGNOSIS_TIMEOUT_MS = 60_000
 
 /** Nombre legible de un PID Mode 01 por su código hex (ej. "0C" → "Engine RPM"). */
 const PID_NAMES: Record<string, string> = Object.fromEntries(
-  ALL_SEED_PIDS.filter((p) => p.pidCode.mode === '01').map((p) => [p.pidCode.pid, p.name]),
+  ALL_SEED_PIDS.filter((p) => p.pidCode.mode === MODE_CURRENT_DATA).map((p) => [
+    p.pidCode.pid,
+    p.name,
+  ]),
 )
 
 /** Descriptor de un escenario de vehiculo disponible para diagnostico. */
