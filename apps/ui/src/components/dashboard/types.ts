@@ -20,7 +20,7 @@ export type Scenario = {
     speed: number;
     intakeTemp: number;
   };
-  dtcConfig: { code: string; description: string }[];
+  dtcConfig: DtcCode[];
   vehicleInfo: {
     make: string;
     model: string;
@@ -41,7 +41,7 @@ export type DiagnosisResponse = {
     speed: number;
     intakeTemp: number;
   };
-  dtcCodes: { code: string; description: string }[];
+  dtcCodes: DtcCode[];
   diagnosisText: string;
   severity: Severity;
 };
@@ -123,6 +123,31 @@ export type RegisterInput = {
   businessName?: string;
   taxId?: string;
   address?: string;
+};
+
+// ---------------------------------------------------------------------------
+// DTC / vehicle status types
+// ---------------------------------------------------------------------------
+
+/** OBD-II Diagnostic Trouble Code. */
+export type DtcCode = {
+  code: string;
+  description: string;
+};
+
+/** Emission monitor readiness status. */
+export type MonitorStatus = {
+  name: string;
+  supported: boolean;
+  completed: boolean;
+};
+
+/** Vehicle status as returned by GET /api/vehicle-status. */
+export type VehicleStatusOutput = {
+  milOn: boolean;
+  dtcCount: number;
+  engineType: "spark" | "compression";
+  monitors: MonitorStatus[];
 };
 
 // ---------------------------------------------------------------------------

@@ -57,6 +57,16 @@ ObdMessage = {
         "Header": ECU_ADDR_E,
         "Response": HD(ECU_R_ADDR_E) + SZ("06") + DT("41 00 B8 3B A8 13"),
     },
+    "MIL_STATUS": {
+        "Request": "^0101" + ELM_FOOTER,
+        "Descr": "MIL status and emissions monitors (PID 01) — MIL on, 3 DTCs, compression, monitors complete",
+        "Header": ECU_ADDR_E,
+        "Response": HD(ECU_R_ADDR_E) + SZ("06") + DT("41 01 83 8F E0 FF"),
+        # Byte A=0x83: MIL on (bit7=1), 3 DTCs stored (bits 0-6=3)
+        # Byte B=0x8F: compression (bit7=1), comprehensive+fuel+misfire+EGR supported (bits 0-3)
+        # Byte C=0xE0: comprehensive, fuel, misfire monitors completed
+        # Byte D=0xFF: all remaining monitors completed
+    },
     "FUEL_STATUS": {
         "Request": "^0103" + ELM_FOOTER,
         "Descr": "Fuel System Status (closed loop, diesel)",

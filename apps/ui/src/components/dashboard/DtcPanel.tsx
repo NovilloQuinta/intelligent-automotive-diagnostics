@@ -1,7 +1,23 @@
-import { CheckCircle2, CircuitBoard } from "lucide-react";
-import type { DiagnosisResponse, Severity } from "./types";
+import { useState } from "react";
+import { CheckCircle2, CircuitBoard, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import type { DiagnosisResponse, DtcCode, Severity } from "./types";
 import { COLORS, DTC_COLORS, SVG_STROKES } from "./types";
 import { severityMeta } from "./severityMeta";
+import { usePendingDtc } from "./usePendingDtc";
+import { usePermanentDtc } from "./usePermanentDtc";
+import { useClearDtc } from "./useClearDtc";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const DEFAULT_SEVERITY: Severity = "medium";
 
@@ -13,7 +29,13 @@ type Props = {
   selectedCode: string | null;
   /** Called with the DTC code when the user clicks a row. */
   onSelect: (code: string) => void;
+  /** Scenario ID for fetching pending/permanent DTCs and clearing codes. */
+  scenarioId: string;
 };
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
 
 function EmptyPrompt() {
   return (
@@ -50,7 +72,7 @@ function CodeList({
   selectedCode,
   onSelect,
 }: {
-  codes: DiagnosisResponse["dtcCodes"];
+  codes: DtcCode[];
   severity: Severity | null;
   selectedCode: string | null;
   onSelect: (code: string) => void;
@@ -96,14 +118,134 @@ function CodeList({
   );
 }
 
-/** Panel displaying DTC fault codes with severity-based styling and empty/no-codes states. */
+interface DtcSectionProps {
+  readonly title: string;
+  readonly description: string;
+  readonly codes: DtcCode[];
+  readonly severity: Severity | null;
+  readonly selectedCode: string | null;
+  readonly onSelect: (code: string) => void;
+}
+
+function DtcSection({
+  title,
+  description,
+  codes,
+  severity,
+  selectedCode,
+  onSelect,
+}: DtcSectionProps) {
+  return (
+    <div className="rounded-lg border border-white/5 p-3">
+      <h4 className="mb-1 text-xs font-semibold uppercase tracking-wider text-foreground/80">
+        {title}
+      </h4>
+      <p className="mb-2 text-[10px] leading-relaxed text-muted-foreground">
+        {description}
+      </p>
+      {codes.length === 0 ? (
+        <p className="py-2 text-center text-xs text-muted-foreground/60">
+          Ninguna
+        </p>
+      ) : (
+        <CodeList
+          codes={codes}
+          severity={severity}
+          selectedCode={selectedCode}
+          onSelect={onSelect}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Clear DTC dialog
+// ---------------------------------------------------------------------------
+
+function ClearDtcDialog({
+  scenarioId,
+  onCleared,
+}: {
+  scenarioId: string;
+  onCleared: () => void;
+}) {
+  const { clearDtc, loading } = useClearDtc();
+  const [open, setOpen] = useState(false);
+
+  const handleConfirm = async () => {
+    try {
+      const cleared = await clearDtc(scenarioId);
+      if (cleared) {
+        toast.success("Averías borradas", {
+          description:
+            "Los códigos y freeze frames han sido eliminados. Los monitores de emisiones se han reiniciado.",
+        });
+        onCleared();
+      } else {
+        toast.error("No se pudieron borrar las averías");
+      }
+    } catch {
+      toast.error("Error al borrar las averías");
+    } finally {
+      setOpen(false);
+    }
+  };
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger asChild>
+        <button className="inline-flex items-center gap-1.5 rounded-md border border-white/10 px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-destructive/40 hover:text-destructive">
+          <Trash2 className="h-3.5 w-3.5" />
+          Borrar averías
+        </button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Borrar averías</AlertDialogTitle>
+          <AlertDialogDescription>
+            Se borrarán las averías y sus freeze frames. Los monitores de
+            emisiones se reiniciarán. Las averías permanentes no se borran.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleConfirm}
+            disabled={loading}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {loading ? "Borrando..." : "Confirmar"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
+/** Panel displaying DTC fault codes across 3 modes (stored, pending, permanent) with a clear button. */
 export function DtcPanel({
   codes,
   severity,
   empty,
   selectedCode,
   onSelect,
+  scenarioId,
 }: Props) {
+  const { dtcCodes: pendingCodes } = usePendingDtc(empty ? "" : scenarioId);
+  const { dtcCodes: permanentCodes } = usePermanentDtc(empty ? "" : scenarioId);
+
+  // When the DTCs are cleared, the parent should refresh stored codes.
+  // The pending/permanent hooks will re-fetch because scenarioId changes.
+  const handleCleared = () => {
+    // The parent DashboardPage handles re-diagnosis; we just close the dialog.
+    // Hooks re-fetch automatically via useEffect when scenarioId is stable.
+  };
+
   return (
     <div className="panel flex min-h-0 flex-col p-4">
       <div className="mb-3 flex items-center justify-between border-b border-white/5 pb-3">
@@ -119,16 +261,48 @@ export function DtcPanel({
             : "—"}
         </span>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div className="min-h-0 flex-1 overflow-auto space-y-3">
         {empty && <EmptyPrompt />}
-        {!empty && codes && codes.length === 0 && <NoCodesMessage />}
-        {!empty && codes && codes.length > 0 && (
-          <CodeList
-            codes={codes}
-            severity={severity}
-            selectedCode={selectedCode}
-            onSelect={onSelect}
-          />
+        {!empty && (
+          <>
+            {/* Mode 03 — Stored */}
+            <DtcSection
+              title="Almacenadas"
+              description="Averías confirmadas detectadas por la ECU (Modo 03)"
+              codes={codes ?? []}
+              severity={severity}
+              selectedCode={selectedCode}
+              onSelect={onSelect}
+            />
+
+            {/* Mode 07 — Pending */}
+            <DtcSection
+              title="Pendientes"
+              description="Averías detectadas durante el ciclo de conducción actual (Modo 07)"
+              codes={pendingCodes}
+              severity={severity}
+              selectedCode={selectedCode}
+              onSelect={onSelect}
+            />
+
+            {/* Mode 0A — Permanent */}
+            <DtcSection
+              title="Permanentes"
+              description="Averías que requieren reparación y no pueden borrarse con escáner (Modo 0A)"
+              codes={permanentCodes}
+              severity={severity}
+              selectedCode={selectedCode}
+              onSelect={onSelect}
+            />
+
+            {/* Clear DTC button */}
+            <div className="flex justify-end pt-2">
+              <ClearDtcDialog
+                scenarioId={scenarioId}
+                onCleared={handleCleared}
+              />
+            </div>
+          </>
         )}
       </div>
     </div>

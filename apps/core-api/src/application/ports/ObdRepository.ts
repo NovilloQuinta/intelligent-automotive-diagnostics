@@ -2,6 +2,7 @@ import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
 import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
+import type { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 
 /** Contrato para la adquisición de datos OBD-II desde el hardware. */
 export interface ObdRepository {
@@ -40,6 +41,12 @@ export interface ObdRepository {
   /** Service 04 — Borra los DTCs y valores almacenados. */
   clearDtcCodes(): Promise<void>
 
+  /** Service 07 — Lee códigos de fallo pendientes (no confirmados). */
+  readPendingDtcCodes(): Promise<DtcCode[]>
+
+  /** Service 0A — Lee códigos de fallo permanentes (no borrables con Mode 04). */
+  readPermanentDtcCodes(): Promise<DtcCode[]>
+
   /** Service 09 PID 02 — Lee el VIN del vehículo. */
   readVin(): Promise<string>
 
@@ -48,6 +55,9 @@ export interface ObdRepository {
 
   /** Devuelve las ECUs descubiertas en el bus CAN/OBD del vehiculo conectado. */
   getEcuInfo(): Promise<EcuInfo[]>
+
+  /** Service 01 PID 01 — Estado del testigo MIL y monitores de emisiones. */
+  getVehicleStatus(): Promise<VehicleStatus>
 
   /** Activa/desactiva la alimentación del adaptador OBD. */
   setPower(on: boolean): Promise<void>

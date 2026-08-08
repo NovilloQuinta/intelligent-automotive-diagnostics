@@ -805,6 +805,227 @@ describe("api", () => {
   });
 
   // -----------------------------------------------------------------------
+  // getPendingDtc
+  // -----------------------------------------------------------------------
+
+  describe("getPendingDtc", () => {
+    it("GETs /api/pending-dtc with scenarioId and returns dtcCodes", async () => {
+      setStoredTokens();
+      const dtcCodes = [
+        { code: "P0301", description: "Cilindro 1: fallo de encendido" },
+      ];
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ dtcCodes }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getPendingDtc("audi-a3-idle");
+
+      expect(result).toEqual({ dtcCodes });
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/pending-dtc?scenarioId=audi-a3-idle");
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+
+    it("returns empty dtcCodes when no pending codes exist", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ dtcCodes: [] }),
+        }),
+      );
+
+      const result = await api.getPendingDtc("audi-a3-idle");
+      expect(result).toEqual({ dtcCodes: [] });
+    });
+
+    it("throws the generic message on a 500", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: "OBD timeout" }),
+        }),
+      );
+
+      await expect(api.getPendingDtc("audi-a3-idle")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // getPermanentDtc
+  // -----------------------------------------------------------------------
+
+  describe("getPermanentDtc", () => {
+    it("GETs /api/permanent-dtc with scenarioId and returns dtcCodes", async () => {
+      setStoredTokens();
+      const dtcCodes = [
+        { code: "P0420", description: "Eficiencia del catalizador" },
+      ];
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ dtcCodes }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getPermanentDtc("audi-a3-idle");
+
+      expect(result).toEqual({ dtcCodes });
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/permanent-dtc?scenarioId=audi-a3-idle");
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+
+    it("returns empty dtcCodes when no permanent codes exist", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ dtcCodes: [] }),
+        }),
+      );
+
+      const result = await api.getPermanentDtc("audi-a3-idle");
+      expect(result).toEqual({ dtcCodes: [] });
+    });
+
+    it("throws the generic message on a 500", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: "OBD timeout" }),
+        }),
+      );
+
+      await expect(api.getPermanentDtc("audi-a3-idle")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // clearDtc
+  // -----------------------------------------------------------------------
+
+  describe("clearDtc", () => {
+    it("POSTs /api/clear-dtc with scenarioId and returns cleared: true", async () => {
+      setStoredTokens();
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ cleared: true }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.clearDtc("audi-a3-idle");
+
+      expect(result).toEqual({ cleared: true });
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/clear-dtc");
+      expect(init.method).toBe("POST");
+      expect(JSON.parse(init.body as string)).toEqual({
+        scenarioId: "audi-a3-idle",
+      });
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+
+    it("returns cleared: false when the backend reports failure", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ cleared: false }),
+        }),
+      );
+
+      const result = await api.clearDtc("audi-a3-idle");
+      expect(result).toEqual({ cleared: false });
+    });
+
+    it("throws the generic message on a 500", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: "OBD timeout" }),
+        }),
+      );
+
+      await expect(api.clearDtc("audi-a3-idle")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // getVehicleStatus
+  // -----------------------------------------------------------------------
+
+  describe("getVehicleStatus", () => {
+    const vehicleStatus = {
+      milOn: true,
+      dtcCount: 2,
+      monitorStatuses: [
+        { name: "Catalyst", isSupported: true, isReady: false },
+        { name: "O2 Sensor", isSupported: true, isReady: true },
+      ],
+    };
+
+    it("GETs /api/vehicle-status with scenarioId and returns the status", async () => {
+      setStoredTokens();
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => vehicleStatus,
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getVehicleStatus("audi-a3-idle");
+
+      expect(result).toEqual(vehicleStatus);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/vehicle-status?scenarioId=audi-a3-idle");
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+
+    it("throws the generic message on a 500", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: "OBD timeout" }),
+        }),
+      );
+
+      await expect(api.getVehicleStatus("audi-a3-idle")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // hasTokens / logout
   // -----------------------------------------------------------------------
 

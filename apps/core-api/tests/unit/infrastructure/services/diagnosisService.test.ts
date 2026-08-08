@@ -7,6 +7,7 @@ import {
 import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
+import { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 import { VehicleType, type SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmClientPort, ToolCallTrace } from '@/application/ports/LlmClientPort.js'
@@ -74,6 +75,8 @@ function createMockObdRepo(sensorOverrides?: {
     getFreezeFrame: vi.fn(async () => null),
     readDtcCodes: vi.fn(async () => [{ code: 'P0301', description: '' }]),
     clearDtcCodes: vi.fn(async () => undefined),
+    readPendingDtcCodes: vi.fn(async () => [{ code: 'P0301', description: 'Cylinder 1 Misfire' }]),
+    readPermanentDtcCodes: vi.fn(async () => [{ code: 'P0401', description: 'EGR Flow Insufficient' }]),
     readVin: vi.fn(async () => 'WAUZZZ8V5JA123456'),
     getVehicleInfo: vi.fn(async () => ({
       make: 'Audi',
@@ -84,6 +87,7 @@ function createMockObdRepo(sensorOverrides?: {
     })),
     setPower: vi.fn(async () => undefined),
     getEcuInfo: vi.fn(async () => sensorOverrides?.ecus ?? []),
+    getVehicleStatus: vi.fn(async () => VehicleStatus.clean('spark')),
   }
 }
 
@@ -543,6 +547,136 @@ describe('DiagnosisService', () => {
     })
   })
 
+  describe('clearDtcCodes', () => {
+    it('should delegate to the repository clearDtcCodes in TCP mode', async () => {
+      const obdRepo = createMockObdRepo()
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        obdRepo,
+        logger: createMockLogger(),
+      })
+
+      await service.clearDtcCodes()
+
+      expect(obdRepo.clearDtcCodes).toHaveBeenCalledTimes(1)
+    })
+
+    it('should resolve the scenario repository and delegate in simulation mode', async () => {
+      const repos = createMockObdRepos()
+      const repo = repos.get('audi-a3-idle')!
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: repos,
+        logger: createMockLogger(),
+      })
+
+      await service.clearDtcCodes('audi-a3-idle')
+
+      expect(repo.clearDtcCodes).toHaveBeenCalledTimes(1)
+    })
+
+    it('should throw DiagnosisScenarioNotFoundError for an unknown scenario', async () => {
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        logger: createMockLogger(),
+      })
+
+      await expect(service.clearDtcCodes('no-existe')).rejects.toThrow(
+        DiagnosisScenarioNotFoundError,
+      )
+    })
+  })
+
+  describe('readPendingDtcCodes', () => {
+    it('should delegate to the repository readPendingDtcCodes in TCP mode', async () => {
+      const obdRepo = createMockObdRepo()
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        obdRepo,
+        logger: createMockLogger(),
+      })
+
+      const result = await service.readPendingDtcCodes()
+
+      expect(result).toEqual([{ code: 'P0301', description: 'Cylinder 1 Misfire' }])
+      expect(obdRepo.readPendingDtcCodes).toHaveBeenCalledTimes(1)
+    })
+
+    it('should resolve the scenario repository and delegate in simulation mode', async () => {
+      const repos = createMockObdRepos()
+      const repo = repos.get('audi-a3-idle')!
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: repos,
+        logger: createMockLogger(),
+      })
+
+      const result = await service.readPendingDtcCodes('audi-a3-idle')
+
+      expect(result).toEqual([{ code: 'P0301', description: 'Cylinder 1 Misfire' }])
+      expect(repo.readPendingDtcCodes).toHaveBeenCalledTimes(1)
+    })
+
+    it('should throw DiagnosisScenarioNotFoundError for an unknown scenario', async () => {
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        logger: createMockLogger(),
+      })
+
+      await expect(service.readPendingDtcCodes('no-existe')).rejects.toThrow(
+        DiagnosisScenarioNotFoundError,
+      )
+    })
+  })
+
+  describe('readPermanentDtcCodes', () => {
+    it('should delegate to the repository readPermanentDtcCodes in TCP mode', async () => {
+      const obdRepo = createMockObdRepo()
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        obdRepo,
+        logger: createMockLogger(),
+      })
+
+      const result = await service.readPermanentDtcCodes()
+
+      expect(result).toEqual([{ code: 'P0401', description: 'EGR Flow Insufficient' }])
+      expect(obdRepo.readPermanentDtcCodes).toHaveBeenCalledTimes(1)
+    })
+
+    it('should resolve the scenario repository and delegate in simulation mode', async () => {
+      const repos = createMockObdRepos()
+      const repo = repos.get('audi-a3-idle')!
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: repos,
+        logger: createMockLogger(),
+      })
+
+      const result = await service.readPermanentDtcCodes('audi-a3-idle')
+
+      expect(result).toEqual([{ code: 'P0401', description: 'EGR Flow Insufficient' }])
+      expect(repo.readPermanentDtcCodes).toHaveBeenCalledTimes(1)
+    })
+
+    it('should throw DiagnosisScenarioNotFoundError for an unknown scenario', async () => {
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        logger: createMockLogger(),
+      })
+
+      await expect(service.readPermanentDtcCodes('no-existe')).rejects.toThrow(
+        DiagnosisScenarioNotFoundError,
+      )
+    })
+  })
+
   describe('callMcpTool', () => {
     it('should call the MCP tool and return its text result', async () => {
       const service = new DiagnosisService({
@@ -595,6 +729,50 @@ describe('DiagnosisService', () => {
 
       expect(pidsIndex.search).toHaveBeenCalledWith('battery', expect.anything())
       expect(result).toContain('No PIDs')
+    })
+  })
+
+  describe('getVehicleStatus', () => {
+    it('should delegate to the repository getVehicleStatus in simulation mode', async () => {
+      const repos = createMockObdRepos()
+      const repo = repos.get('audi-a3-idle')!
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: repos,
+        logger: createMockLogger(),
+      })
+
+      const result = await service.getVehicleStatus('audi-a3-idle')
+
+      expect(result).toBeInstanceOf(VehicleStatus)
+      expect(repo.getVehicleStatus).toHaveBeenCalledTimes(1)
+    })
+
+    it('should delegate to obdRepo in TCP mode without scenarioId', async () => {
+      const obdRepo = createMockObdRepo()
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        obdRepo,
+        logger: createMockLogger(),
+      })
+
+      const result = await service.getVehicleStatus()
+
+      expect(result).toBeInstanceOf(VehicleStatus)
+      expect(obdRepo.getVehicleStatus).toHaveBeenCalledTimes(1)
+    })
+
+    it('should throw DiagnosisScenarioNotFoundError for an unknown scenario', async () => {
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        logger: createMockLogger(),
+      })
+
+      await expect(service.getVehicleStatus('no-existe')).rejects.toThrow(
+        DiagnosisScenarioNotFoundError,
+      )
     })
   })
 })

@@ -50,6 +50,9 @@ function createMockRepo(): ObdRepository {
     getFreezeFrame: vi.fn(async () => null),
     readDtcCodes: vi.fn(async () => []),
     clearDtcCodes: vi.fn(async () => undefined),
+    readPendingDtcCodes: vi.fn(async () => []),
+    readPermanentDtcCodes: vi.fn(async () => []),
+    readPidRaw: vi.fn(async () => []),
     readVin: vi.fn(async () => ''),
     getVehicleInfo: vi.fn(async () => ({
       make: '',

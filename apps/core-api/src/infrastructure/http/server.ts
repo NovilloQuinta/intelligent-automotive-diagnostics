@@ -146,11 +146,16 @@ function mountAuthRoutes(
 function applyDiagnosisRateLimits(app: express.Application): void {
   const diagnosisLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 20 })
   const cognitiveLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 5 })
+  const clearDtcLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 5 })
 
   app.use('/api/diagnosis', diagnosisLimiter)
   app.use('/api/freeze-frame', diagnosisLimiter)
   app.use('/api/ecu-info', diagnosisLimiter)
+  app.use('/api/pending-dtc', diagnosisLimiter)
+  app.use('/api/permanent-dtc', diagnosisLimiter)
+  app.use('/api/vehicle-status', diagnosisLimiter)
   app.use('/api/mcp/cognitive-diagnosis', cognitiveLimiter)
+  app.use('/api/clear-dtc', clearDtcLimiter)
 }
 
 /** Crea y devuelve la instancia de Express con todas las rutas montadas. */

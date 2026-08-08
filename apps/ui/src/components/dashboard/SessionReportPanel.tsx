@@ -59,9 +59,7 @@ const COGNITIVE_SEVERITY_MAP: Record<string, { label: string; color: string }> =
     critica: { label: "CRÍTICO", color: COLORS.destructive },
   };
 
-function cognitiveSeverityBadge(
-  sev: string,
-): { label: string; color: string } {
+function cognitiveSeverityBadge(sev: string): { label: string; color: string } {
   return (
     COGNITIVE_SEVERITY_MAP[sev.toLowerCase()] ?? {
       label: sev.toUpperCase(),
@@ -253,20 +251,14 @@ function EcuSection({ state }: { readonly state: SessionReportState }) {
 // Section: Freeze frame
 // ---------------------------------------------------------------------------
 
-function FreezeFrameSection({
-  state,
-}: {
-  readonly state: SessionReportState;
-}) {
+function FreezeFrameSection({ state }: { readonly state: SessionReportState }) {
   const { freezeFrame, freezeFrameLoading } = state;
 
   if (freezeFrame === null && !freezeFrameLoading) return null;
 
   return (
     <SectionCard icon={Snowflake} title="Freeze Frame">
-      {freezeFrameLoading && (
-        <SectionLoading text="Cargando freeze frame…" />
-      )}
+      {freezeFrameLoading && <SectionLoading text="Cargando freeze frame…" />}
       {freezeFrame && !freezeFrameLoading && (
         <div className="space-y-2">
           <div className="mono text-xs text-muted-foreground">
@@ -353,14 +345,12 @@ function ToolCallsTrace({
   );
 }
 
-function CognitiveSection({
-  state,
-}: {
-  readonly state: SessionReportState;
-}) {
+function CognitiveSection({ state }: { readonly state: SessionReportState }) {
   const { cognitive, cognitiveLoading, cognitiveError, capabilities } = state;
   const isUnavailable =
-    capabilities && !capabilities.cognitiveDiagnosis && cognitive === "unavailable";
+    capabilities &&
+    !capabilities.cognitiveDiagnosis &&
+    cognitive === "unavailable";
 
   return (
     <SectionCard icon={Brain} title="Diagnóstico Cognitivo">
@@ -371,43 +361,38 @@ function CognitiveSection({
       {isUnavailable && (
         <SectionEmpty text="Diagnóstico cognitivo no disponible" />
       )}
-      {cognitive &&
-        typeof cognitive === "object" &&
-        !cognitiveLoading && (
-          <div className="space-y-4">
-            {/* Narrative + badges */}
-            <div className="fade-up rounded-lg border border-white/10 p-4">
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <Badge
-                  variant="outline"
-                  className="text-[10px] font-bold uppercase tracking-wider"
-                  style={{
-                    color: cognitiveSeverityBadge(cognitive.severity).color,
-                    borderColor: cognitiveSeverityBadge(cognitive.severity)
-                      .color,
-                    background: `${cognitiveSeverityBadge(cognitive.severity).color}15`,
-                  }}
-                >
-                  {cognitiveSeverityBadge(cognitive.severity).label}
-                </Badge>
-                <Badge variant="secondary" className="text-[10px]">
-                  Confianza: {Math.round(cognitive.confidence * 100)} %
-                </Badge>
-              </div>
-              <p className="text-sm leading-relaxed whitespace-pre-line text-foreground/90">
-                {cognitive.diagnosis}
-              </p>
+      {cognitive && typeof cognitive === "object" && !cognitiveLoading && (
+        <div className="space-y-4">
+          {/* Narrative + badges */}
+          <div className="fade-up rounded-lg border border-white/10 p-4">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <Badge
+                variant="outline"
+                className="text-[10px] font-bold uppercase tracking-wider"
+                style={{
+                  color: cognitiveSeverityBadge(cognitive.severity).color,
+                  borderColor: cognitiveSeverityBadge(cognitive.severity).color,
+                  background: `${cognitiveSeverityBadge(cognitive.severity).color}15`,
+                }}
+              >
+                {cognitiveSeverityBadge(cognitive.severity).label}
+              </Badge>
+              <Badge variant="secondary" className="text-[10px]">
+                Confianza: {Math.round(cognitive.confidence * 100)} %
+              </Badge>
             </div>
-            {cognitive.recommendations.length > 0 && (
-              <RecommendationsList
-                recommendations={cognitive.recommendations}
-              />
-            )}
-            {cognitive.toolCalls.length > 0 && (
-              <ToolCallsTrace toolCalls={cognitive.toolCalls} />
-            )}
+            <p className="text-sm leading-relaxed whitespace-pre-line text-foreground/90">
+              {cognitive.diagnosis}
+            </p>
           </div>
-        )}
+          {cognitive.recommendations.length > 0 && (
+            <RecommendationsList recommendations={cognitive.recommendations} />
+          )}
+          {cognitive.toolCalls.length > 0 && (
+            <ToolCallsTrace toolCalls={cognitive.toolCalls} />
+          )}
+        </div>
+      )}
       {!cognitive && !cognitiveLoading && !cognitiveError && !isUnavailable && (
         <SectionEmpty text="Esperando datos del diagnóstico cognitivo…" />
       )}

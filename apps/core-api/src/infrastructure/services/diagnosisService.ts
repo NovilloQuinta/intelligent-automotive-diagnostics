@@ -26,6 +26,7 @@ import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import { LiveData } from '@/domain/value-objects/liveData.js'
 import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
 import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
+import type { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
@@ -244,6 +245,50 @@ export class DiagnosisService {
   async getEcuInfo(scenarioId?: string): Promise<EcuInfo[]> {
     const repository = this.resolveRepository(scenarioId)
     return repository.getEcuInfo()
+  }
+
+  /**
+   * Devuelve el estado del testigo MIL y monitores de emisiones del vehiculo activo.
+   *
+   * @param scenarioId — Escenario; opcional en modo TCP directo.
+   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
+   */
+  async getVehicleStatus(scenarioId?: string): Promise<VehicleStatus> {
+    const repository = this.resolveRepository(scenarioId)
+    return repository.getVehicleStatus()
+  }
+
+  /**
+   * Borra los DTCs y valores almacenados del vehiculo activo (Mode 04).
+   *
+   * @param scenarioId — Escenario; opcional en modo TCP directo.
+   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
+   */
+  async clearDtcCodes(scenarioId?: string): Promise<void> {
+    const repository = this.resolveRepository(scenarioId)
+    await repository.clearDtcCodes()
+  }
+
+  /**
+   * Lee los codigos de fallo pendientes (Mode 07 — no confirmados).
+   *
+   * @param scenarioId — Escenario; opcional en modo TCP directo.
+   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
+   */
+  async readPendingDtcCodes(scenarioId?: string): Promise<DtcCode[]> {
+    const repository = this.resolveRepository(scenarioId)
+    return repository.readPendingDtcCodes()
+  }
+
+  /**
+   * Lee los codigos de fallo permanentes (Mode 0A — no borrables con Mode 04).
+   *
+   * @param scenarioId — Escenario; opcional en modo TCP directo.
+   * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
+   */
+  async readPermanentDtcCodes(scenarioId?: string): Promise<DtcCode[]> {
+    const repository = this.resolveRepository(scenarioId)
+    return repository.readPermanentDtcCodes()
   }
 
   /**

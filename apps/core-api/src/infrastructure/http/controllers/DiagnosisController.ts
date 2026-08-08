@@ -86,6 +86,30 @@ const LiveDataQueryTcpSchema = z.object({
   scenarioId: optionalScenarioId,
 })
 
+const ClearDtcBodySchema = z.object({ scenarioId: requiredScenarioId })
+const ClearDtcBodyTcpSchema = z.object({ scenarioId: optionalScenarioId })
+
+const PendingDtcQuerySchema = z.object({
+  scenarioId: requiredScenarioId,
+})
+const PendingDtcQueryTcpSchema = z.object({
+  scenarioId: optionalScenarioId,
+})
+
+const PermanentDtcQuerySchema = z.object({
+  scenarioId: requiredScenarioId,
+})
+const PermanentDtcQueryTcpSchema = z.object({
+  scenarioId: optionalScenarioId,
+})
+
+const VehicleStatusQuerySchema = z.object({
+  scenarioId: requiredScenarioId,
+})
+const VehicleStatusQueryTcpSchema = z.object({
+  scenarioId: optionalScenarioId,
+})
+
 /** Controlador HTTP para los endpoints de diagnostico OBD. */
 export class DiagnosisController {
   constructor(
@@ -243,6 +267,78 @@ export class DiagnosisController {
     } catch (err) {
       if (this.respondIfCommonError(err, res)) return
       this.respondUnexpected(err, res, 'Live data fetch failed')
+    }
+  }
+
+  /** POST /api/clear-dtc — borra DTCs almacenados (Mode 04). 400 body invalido, 404 escenario inexistente. */
+  clearDtc = async (req: Request, res: Response): Promise<void> => {
+    const schema = this.selectSchema(ClearDtcBodySchema, ClearDtcBodyTcpSchema)
+    const parsed = schema.safeParse(req.body)
+    if (!parsed.success) {
+      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
+      return
+    }
+
+    try {
+      await this.service.clearDtcCodes(parsed.data.scenarioId)
+      res.status(200).json({ cleared: true })
+    } catch (err) {
+      if (this.respondIfCommonError(err, res)) return
+      this.respondUnexpected(err, res, 'Clear DTC failed')
+    }
+  }
+
+  /** GET /api/pending-dtc — lee DTCs pendientes (Mode 07). 400 query invalida, 404 escenario inexistente. */
+  pendingDtc = async (req: Request, res: Response): Promise<void> => {
+    const schema = this.selectSchema(PendingDtcQuerySchema, PendingDtcQueryTcpSchema)
+    const parsed = schema.safeParse(req.query)
+    if (!parsed.success) {
+      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
+      return
+    }
+
+    try {
+      const result = await this.service.readPendingDtcCodes(parsed.data.scenarioId)
+      res.status(200).json({ dtcCodes: result })
+    } catch (err) {
+      if (this.respondIfCommonError(err, res)) return
+      this.respondUnexpected(err, res, 'Pending DTC fetch failed')
+    }
+  }
+
+  /** GET /api/permanent-dtc — lee DTCs permanentes (Mode 0A). 400 query invalida, 404 escenario inexistente. */
+  permanentDtc = async (req: Request, res: Response): Promise<void> => {
+    const schema = this.selectSchema(PermanentDtcQuerySchema, PermanentDtcQueryTcpSchema)
+    const parsed = schema.safeParse(req.query)
+    if (!parsed.success) {
+      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
+      return
+    }
+
+    try {
+      const result = await this.service.readPermanentDtcCodes(parsed.data.scenarioId)
+      res.status(200).json({ dtcCodes: result })
+    } catch (err) {
+      if (this.respondIfCommonError(err, res)) return
+      this.respondUnexpected(err, res, 'Permanent DTC fetch failed')
+    }
+  }
+
+  /** GET /api/vehicle-status — testigo MIL y monitores de emisiones (Mode 01 PID 01). 400 query invalida, 404 escenario inexistente. */
+  vehicleStatus = async (req: Request, res: Response): Promise<void> => {
+    const schema = this.selectSchema(VehicleStatusQuerySchema, VehicleStatusQueryTcpSchema)
+    const parsed = schema.safeParse(req.query)
+    if (!parsed.success) {
+      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
+      return
+    }
+
+    try {
+      const result = await this.service.getVehicleStatus(parsed.data.scenarioId)
+      res.status(200).json(result)
+    } catch (err) {
+      if (this.respondIfCommonError(err, res)) return
+      this.respondUnexpected(err, res, 'Vehicle status fetch failed')
     }
   }
 

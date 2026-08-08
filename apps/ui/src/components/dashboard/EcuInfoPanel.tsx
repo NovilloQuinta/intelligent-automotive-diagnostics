@@ -78,7 +78,9 @@ export function EcuTable({ ecus }: { ecus: EcuInfo[] }) {
             <TableCell className="text-xs font-bold text-foreground/90">
               {ecu.name}
             </TableCell>
-            <TableCell className="text-xs text-foreground/70">{ecu.type}</TableCell>
+            <TableCell className="text-xs text-foreground/70">
+              {ecu.type}
+            </TableCell>
             <TableCell className="mono text-xs text-foreground/80">
               {ecu.requestAddr} → {ecu.responseAddr}
             </TableCell>

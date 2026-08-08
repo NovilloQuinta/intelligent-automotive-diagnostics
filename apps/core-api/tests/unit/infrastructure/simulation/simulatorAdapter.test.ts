@@ -4,6 +4,7 @@ import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { ObdSimulator } from '@/infrastructure/simulation/simulator.js'
 import { seedScenarios } from '@/infrastructure/simulation/seedScenarios.js'
 import { PidRawReadNotSupportedError } from '@/application/obd/obdErrors.js'
+import { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 
 function mockSimulator(overrides: Partial<ObdSimulator> = {}): ObdSimulator {
   return {
@@ -21,6 +22,7 @@ function mockSimulator(overrides: Partial<ObdSimulator> = {}): ObdSimulator {
     }),
     getEcus: vi.fn().mockReturnValue([]),
     setScenario: vi.fn(),
+    getVehicleStatus: vi.fn().mockReturnValue(VehicleStatus.clean('spark')),
     ...overrides,
   } as unknown as ObdSimulator
 }
@@ -87,6 +89,19 @@ describe('ObdSimulatorRepository', () => {
       await expect(realRepo().readPidRaw('01', '11', 1)).rejects.toThrow(
         PidRawReadNotSupportedError,
       )
+    })
+  })
+
+  describe('getVehicleStatus', () => {
+    it('should delegate to simulator.getVehicleStatus', async () => {
+      const status = VehicleStatus.clean('spark')
+      const simulator = mockSimulator({ getVehicleStatus: vi.fn().mockReturnValue(status) })
+      const repo = new ObdSimulatorRepository(simulator)
+
+      const result = await repo.getVehicleStatus()
+
+      expect(simulator.getVehicleStatus).toHaveBeenCalledOnce()
+      expect(result).toBe(status)
     })
   })
 })

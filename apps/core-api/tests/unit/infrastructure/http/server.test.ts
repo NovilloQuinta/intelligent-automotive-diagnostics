@@ -67,6 +67,9 @@ function createMockRepo(rpm: number, coolantTemp: number): ObdRepository {
       return rpm === 750 ? [{ code: 'P0301', description: 'Cylinder 1 Misfire' }] : []
     }),
     clearDtcCodes: vi.fn(async () => undefined),
+    readPendingDtcCodes: vi.fn(async () => []),
+    readPermanentDtcCodes: vi.fn(async () => []),
+    readPidRaw: vi.fn(async () => []),
     readVin: vi.fn(async () => 'WAUZZZ8V5JA123456'),
     getVehicleInfo: vi.fn(async () => ({
       make: 'Audi',
@@ -282,6 +285,9 @@ describe('HTTP server', () => {
       getFreezeFrame: vi.fn(async () => null),
       readDtcCodes: vi.fn(async () => [{ code: 'P0301', description: '' }]),
       clearDtcCodes: vi.fn(async () => undefined),
+      readPendingDtcCodes: vi.fn(async () => []),
+      readPermanentDtcCodes: vi.fn(async () => []),
+      readPidRaw: vi.fn(async () => []),
       readVin: vi.fn(async () => 'WP0ZZZ99ZTS390000'),
       getVehicleInfo: vi.fn(async () => ({
         make: 'Porsche',

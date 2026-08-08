@@ -16,6 +16,7 @@ import { FreezeFramePanel } from "./FreezeFramePanel";
 import { EcuInfoPanel } from "./EcuInfoPanel";
 import { DiagnosisPanel } from "./DiagnosisPanel";
 import { PidsTable } from "./PidsTable";
+import { VehicleStatusPanel } from "./VehicleStatusPanel";
 import { SessionReportPanel } from "./SessionReportPanel";
 
 /** Main OBD-II dashboard page: telemetry gauges, vehicle selection, DTC panel, and AI diagnosis. */
@@ -123,14 +124,16 @@ export function DashboardPage() {
               telemetryStatus={telemetryStatus}
               onDiagnose={handleDiagnose}
             />
-            <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:gap-6">
+            <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:gap-6">
               <DtcPanel
                 codes={result?.dtcCodes ?? null}
                 severity={result?.severity ?? null}
                 empty={!result && !loading}
                 selectedCode={selectedDtc}
                 onSelect={setSelectedDtc}
+                scenarioId={selectedId || ""}
               />
+              <VehicleStatusPanel scenarioId={selectedId} />
               <FreezeFramePanel scenarioId={selectedId} dtc={selectedDtc} />
               <EcuInfoPanel
                 ecus={ecus}

@@ -3,12 +3,14 @@ import type {
   AuthTokens,
   AuthUser,
   DiagnosisResponse,
+  DtcCode,
   EcuInfo,
   FreezeFrame,
   LoginInput,
   RegisterInput,
   Scenario,
   VehicleInfoResponse,
+  VehicleStatusOutput,
 } from "@/components/dashboard/types";
 
 // ---------------------------------------------------------------------------
@@ -374,6 +376,43 @@ export const api = {
     );
     await assertOk(res, GENERIC_ERROR_MESSAGE);
     return (await res.json()) as VehicleInfoResponse;
+  },
+
+  /** GET /api/pending-dtc — returns pending DTCs (Mode 07). */
+  async getPendingDtc(scenarioId: string): Promise<{ dtcCodes: DtcCode[] }> {
+    const res = await apiFetch(
+      `/api/pending-dtc?scenarioId=${encodeURIComponent(scenarioId)}`,
+    );
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+    return (await res.json()) as { dtcCodes: DtcCode[] };
+  },
+
+  /** GET /api/permanent-dtc — returns permanent DTCs (Mode 0A). */
+  async getPermanentDtc(scenarioId: string): Promise<{ dtcCodes: DtcCode[] }> {
+    const res = await apiFetch(
+      `/api/permanent-dtc?scenarioId=${encodeURIComponent(scenarioId)}`,
+    );
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+    return (await res.json()) as { dtcCodes: DtcCode[] };
+  },
+
+  /** POST /api/clear-dtc — clears stored DTCs and resets emission monitors. */
+  async clearDtc(scenarioId: string): Promise<{ cleared: boolean }> {
+    const res = await apiFetch("/api/clear-dtc", {
+      method: "POST",
+      body: JSON.stringify({ scenarioId }),
+    });
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+    return (await res.json()) as { cleared: boolean };
+  },
+
+  /** GET /api/vehicle-status — returns MIL status, DTC count, and monitor readiness. */
+  async getVehicleStatus(scenarioId: string): Promise<VehicleStatusOutput> {
+    const res = await apiFetch(
+      `/api/vehicle-status?scenarioId=${encodeURIComponent(scenarioId)}`,
+    );
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+    return (await res.json()) as VehicleStatusOutput;
   },
 
   /** POST /api/mcp/cognitive-diagnosis — AI-powered cognitive analysis. */

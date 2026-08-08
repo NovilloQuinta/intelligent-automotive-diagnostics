@@ -3,6 +3,7 @@ import { DtcCode } from '@/domain/value-objects/dtcCode.js'
 import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
+import type { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 import type { ObdSimulator } from './simulator.js'
 
 /** Adaptador que implementa {@link ObdRepository} usando el simulador de hardware. */
@@ -33,6 +34,14 @@ export class ObdSimulatorRepository implements ObdRepository {
     return this.simulator.getRawDtcs().map((code: string) => new DtcCode({ code }))
   }
 
+  async readPendingDtcCodes(): Promise<DtcCode[]> {
+    return this.simulator.getRawDtcs().map((code: string) => new DtcCode({ code }))
+  }
+
+  async readPermanentDtcCodes(): Promise<DtcCode[]> {
+    return this.simulator.getRawDtcs().map((code: string) => new DtcCode({ code }))
+  }
+
   async clearDtcCodes(): Promise<void> {
     // No-op en simulación: los DTCs se gestionan vía el escenario activo
   }
@@ -47,6 +56,10 @@ export class ObdSimulatorRepository implements ObdRepository {
 
   async getEcuInfo(): Promise<EcuInfo[]> {
     return this.simulator.getEcus()
+  }
+
+  async getVehicleStatus(): Promise<VehicleStatus> {
+    return this.simulator.getVehicleStatus()
   }
 
   async setPower(_on: boolean): Promise<void> {

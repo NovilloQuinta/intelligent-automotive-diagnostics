@@ -84,11 +84,22 @@ export function parseVinResponse(raw: string): number[] {
   return payload
 }
 
-/** Mode 03: extrae pares de 2 bytes (cada par = un DTC). */
-export function parseDtcResponse(raw: string): Array<[number, number]> {
+/**
+ * Extrae pares de 2 bytes (cada par = un DTC) de una respuesta Mode 03, 07 o 0A.
+ *
+ * El header de respuesta es `0x40 + mode`. Por defecto usa Mode 03 (header `43`).
+ * Mode 07 usa header `47` y Mode 0A usa header `4A`.
+ *
+ * @param raw - Respuesta cruda del adaptador ELM327.
+ * @param mode - Modo OBD-II (`'03'`, `'07'`, `'0A'`). Por defecto `'03'`.
+ * @returns Pares de bytes DTC. Array vacio si no hay codigos (`NO DATA`).
+ * @throws {Elm327ParseError} Si la respuesta no contiene el header esperado.
+ */
+export function parseDtcResponse(raw: string, mode: '03' | '07' | '0A' = '03'): Array<[number, number]> {
+  const headerByte = (0x40 + Number.parseInt(mode, 16)).toString(16).toUpperCase()
   const cleaned = stripEcho(raw)
   if (/NO DATA/i.test(cleaned)) return []
-  const match = cleaned.match(/43\s+((?:[0-9A-F]{2}\s+)*[0-9A-F]{2})/i)
+  const match = cleaned.match(new RegExp(`${headerByte}\\s+((?:[0-9A-F]{2}\\s+)*[0-9A-F]{2})`, 'i'))
   if (!match) throw new Elm327ParseError(raw)
   const bytes = parseHexBytes(match[1])
   const pairs: Array<[number, number]> = []

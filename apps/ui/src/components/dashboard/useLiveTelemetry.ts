@@ -25,7 +25,9 @@ export function useLiveTelemetry(selectedId: string) {
   const { data, isError, isLoading } = useQuery({
     queryKey: ["live-telemetry", selectedId],
     queryFn: async () => {
-      const res = await fetch(`/api/live-data?scenarioId=${encodeURIComponent(selectedId)}`);
+      const res = await fetch(
+        `/api/live-data?scenarioId=${encodeURIComponent(selectedId)}`,
+      );
       if (!res.ok) throw new Error("live-data fetch failed");
       return res.json() as Promise<{
         rpm: number | null;
