@@ -101,7 +101,7 @@ export function EcuInfoPanel({ ecus, loading, error, selectedId }: Props) {
         <div className="flex items-center gap-2">
           <Cpu className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-semibold uppercase tracking-[0.15em]">
-            ECU Info
+            Unidades de Control
           </h3>
         </div>
         <span className="mono text-[10px] text-muted-foreground">

@@ -1,5 +1,7 @@
+import React from "react";
 import { describe, expect, it, vi } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as apiModule from "../../../src/lib/api";
 
 vi.mock("../../../src/lib/api", () => ({
@@ -9,6 +11,15 @@ vi.mock("../../../src/lib/api", () => ({
 }));
 
 const mockApi = vi.mocked(apiModule.api);
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return React.createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+}
 
 async function loadUsePermanentDtc() {
   const mod = await import(
@@ -20,7 +31,9 @@ async function loadUsePermanentDtc() {
 describe("usePermanentDtc", () => {
   it("should return empty array and not call api when no scenarioId", async () => {
     const usePermanentDtc = await loadUsePermanentDtc();
-    const { result } = renderHook(() => usePermanentDtc("" as string));
+    const { result } = renderHook(() => usePermanentDtc("" as string), {
+      wrapper: createWrapper(),
+    });
 
     expect(result.current.dtcCodes).toEqual([]);
     expect(result.current.loading).toBe(false);
@@ -34,7 +47,9 @@ describe("usePermanentDtc", () => {
     mockApi.getPermanentDtc.mockResolvedValue({ dtcCodes });
 
     const usePermanentDtc = await loadUsePermanentDtc();
-    const { result } = renderHook(() => usePermanentDtc("audi-a3-idle"));
+    const { result } = renderHook(() => usePermanentDtc("audi-a3-idle"), {
+      wrapper: createWrapper(),
+    });
 
     expect(result.current.loading).toBe(true);
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -46,7 +61,9 @@ describe("usePermanentDtc", () => {
     mockApi.getPermanentDtc.mockRejectedValue(new Error("Not found"));
 
     const usePermanentDtc = await loadUsePermanentDtc();
-    const { result } = renderHook(() => usePermanentDtc("audi-a3-idle"));
+    const { result } = renderHook(() => usePermanentDtc("audi-a3-idle"), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.error).toBe("Not found");

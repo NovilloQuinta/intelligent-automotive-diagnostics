@@ -18,24 +18,18 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const DEFAULT_SEVERITY: Severity = "medium";
 
-type Props = {
+interface Props {
   codes: DiagnosisResponse["dtcCodes"] | null;
   severity: Severity | null;
   empty: boolean;
-  /** Code of the DTC the user selected, to highlight it. */
   selectedCode: string | null;
-  /** Called with the DTC code when the user clicks a row. */
   onSelect: (code: string) => void;
-  /** Scenario ID for fetching pending/permanent DTCs and clearing codes. */
   scenarioId: string;
-};
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
+}
 
 function EmptyPrompt() {
   return (
@@ -118,51 +112,6 @@ function CodeList({
   );
 }
 
-interface DtcSectionProps {
-  readonly title: string;
-  readonly description: string;
-  readonly codes: DtcCode[];
-  readonly severity: Severity | null;
-  readonly selectedCode: string | null;
-  readonly onSelect: (code: string) => void;
-}
-
-function DtcSection({
-  title,
-  description,
-  codes,
-  severity,
-  selectedCode,
-  onSelect,
-}: DtcSectionProps) {
-  return (
-    <div className="rounded-lg border border-white/5 p-3">
-      <h4 className="mb-1 text-xs font-semibold uppercase tracking-wider text-foreground/80">
-        {title}
-      </h4>
-      <p className="mb-2 text-[10px] leading-relaxed text-muted-foreground">
-        {description}
-      </p>
-      {codes.length === 0 ? (
-        <p className="py-2 text-center text-xs text-muted-foreground/60">
-          Ninguna
-        </p>
-      ) : (
-        <CodeList
-          codes={codes}
-          severity={severity}
-          selectedCode={selectedCode}
-          onSelect={onSelect}
-        />
-      )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Clear DTC dialog
-// ---------------------------------------------------------------------------
-
 function ClearDtcDialog({
   scenarioId,
   onCleared,
@@ -223,11 +172,6 @@ function ClearDtcDialog({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Main component
-// ---------------------------------------------------------------------------
-
-/** Panel displaying DTC fault codes across 3 modes (stored, pending, permanent) with a clear button. */
 export function DtcPanel({
   codes,
   severity,
@@ -238,65 +182,94 @@ export function DtcPanel({
 }: Props) {
   const { dtcCodes: pendingCodes } = usePendingDtc(empty ? "" : scenarioId);
   const { dtcCodes: permanentCodes } = usePermanentDtc(empty ? "" : scenarioId);
+  const storedCodes = codes ?? [];
 
-  // When the DTCs are cleared, the parent should refresh stored codes.
-  // The pending/permanent hooks will re-fetch because scenarioId changes.
-  const handleCleared = () => {
-    // The parent DashboardPage handles re-diagnosis; we just close the dialog.
-    // Hooks re-fetch automatically via useEffect when scenarioId is stable.
-  };
+  const handleCleared = () => {};
 
   return (
-    <div className="panel flex min-h-0 flex-col p-4">
+    <div className="flex min-h-0 flex-col">
       <div className="mb-3 flex items-center justify-between border-b border-white/5 pb-3">
         <div className="flex items-center gap-2">
           <CircuitBoard className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-semibold uppercase tracking-[0.15em]">
-            Códigos DTC
+            Códigos de Avería
           </h3>
         </div>
         <span className="mono text-[10px] text-muted-foreground">
-          {codes
-            ? `${codes.length} registrado${codes.length === 1 ? "" : "s"}`
+          {storedCodes.length > 0
+            ? `${storedCodes.length} registrado${storedCodes.length === 1 ? "" : "s"}`
             : "—"}
         </span>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto space-y-3">
+      <div className="min-h-0 flex-1 overflow-auto">
         {empty && <EmptyPrompt />}
         {!empty && (
           <>
-            {/* Mode 03 — Stored */}
-            <DtcSection
-              title="Almacenadas"
-              description="Averías confirmadas detectadas por la ECU (Modo 03)"
-              codes={codes ?? []}
-              severity={severity}
-              selectedCode={selectedCode}
-              onSelect={onSelect}
-            />
-
-            {/* Mode 07 — Pending */}
-            <DtcSection
-              title="Pendientes"
-              description="Averías detectadas durante el ciclo de conducción actual (Modo 07)"
-              codes={pendingCodes}
-              severity={severity}
-              selectedCode={selectedCode}
-              onSelect={onSelect}
-            />
-
-            {/* Mode 0A — Permanent */}
-            <DtcSection
-              title="Permanentes"
-              description="Averías que requieren reparación y no pueden borrarse con escáner (Modo 0A)"
-              codes={permanentCodes}
-              severity={severity}
-              selectedCode={selectedCode}
-              onSelect={onSelect}
-            />
-
-            {/* Clear DTC button */}
-            <div className="flex justify-end pt-2">
+            <Tabs defaultValue="stored">
+              <TabsList className="mb-4 w-full">
+                <TabsTrigger value="stored" className="flex-1 text-xs">
+                  Almacenadas
+                </TabsTrigger>
+                <TabsTrigger value="pending" className="flex-1 text-xs">
+                  Pendientes
+                </TabsTrigger>
+                <TabsTrigger value="permanent" className="flex-1 text-xs">
+                  Permanentes
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="stored">
+                <p className="mb-3 text-[10px] leading-relaxed text-muted-foreground">
+                  Averías confirmadas detectadas por la ECU (Modo 03)
+                </p>
+                {storedCodes.length === 0 ? (
+                  <NoCodesMessage />
+                ) : (
+                  <CodeList
+                    codes={storedCodes}
+                    severity={severity}
+                    selectedCode={selectedCode}
+                    onSelect={onSelect}
+                  />
+                )}
+              </TabsContent>
+              <TabsContent value="pending">
+                <p className="mb-3 text-[10px] leading-relaxed text-muted-foreground">
+                  Averías detectadas durante el ciclo de conducción actual (Modo
+                  07)
+                </p>
+                {pendingCodes.length === 0 ? (
+                  <p className="py-4 text-center text-xs text-muted-foreground/60">
+                    Ninguna
+                  </p>
+                ) : (
+                  <CodeList
+                    codes={pendingCodes}
+                    severity={severity}
+                    selectedCode={selectedCode}
+                    onSelect={onSelect}
+                  />
+                )}
+              </TabsContent>
+              <TabsContent value="permanent">
+                <p className="mb-3 text-[10px] leading-relaxed text-muted-foreground">
+                  Averías que requieren reparación y no pueden borrarse con
+                  escáner (Modo 0A)
+                </p>
+                {permanentCodes.length === 0 ? (
+                  <p className="py-4 text-center text-xs text-muted-foreground/60">
+                    Ninguna
+                  </p>
+                ) : (
+                  <CodeList
+                    codes={permanentCodes}
+                    severity={severity}
+                    selectedCode={selectedCode}
+                    onSelect={onSelect}
+                  />
+                )}
+              </TabsContent>
+            </Tabs>
+            <div className="flex justify-end pt-4">
               <ClearDtcDialog
                 scenarioId={scenarioId}
                 onCleared={handleCleared}

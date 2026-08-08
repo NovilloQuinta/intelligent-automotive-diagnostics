@@ -13,23 +13,25 @@ interface MechanicChatProps {
   readonly onSend: (query: string) => void;
 }
 
-const SEVERITY_LABELS: Record<"low" | "medium" | "high" | "critical", string> =
-  {
-    low: "Baja",
-    medium: "Media",
-    high: "Alta",
-    critical: "Crítica",
-  };
+type SeverityKey = "low" | "medium" | "high" | "critical";
 
-const SEVERITY_VARIANTS: Record<
-  string,
-  "default" | "secondary" | "destructive"
-> = {
+const SEVERITY_LABELS: Record<SeverityKey, string> = {
+  low: "Baja",
+  medium: "Media",
+  high: "Alta",
+  critical: "Crítica",
+};
+
+const SEVERITY_VARIANTS: Record<SeverityKey, "default" | "secondary" | "destructive"> = {
   low: "default",
   medium: "secondary",
   high: "destructive",
   critical: "destructive",
 };
+
+function isSeverityKey(v: string): v is SeverityKey {
+  return v === "low" || v === "medium" || v === "high" || v === "critical";
+}
 
 export function MechanicChat({
   diagnosisText,
@@ -104,10 +106,16 @@ export function MechanicChat({
           <div className="flex flex-wrap items-center gap-2">
             {severity && (
               <Badge
-                variant={SEVERITY_VARIANTS[severity] ?? "default"}
+                variant={
+                  isSeverityKey(severity)
+                    ? SEVERITY_VARIANTS[severity]
+                    : "default"
+                }
                 className="text-[10px] uppercase tracking-wider"
               >
-                {SEVERITY_LABELS[severity] ?? severity}
+                {isSeverityKey(severity)
+                  ? SEVERITY_LABELS[severity]
+                  : severity}
               </Badge>
             )}
             {confidence !== null && (

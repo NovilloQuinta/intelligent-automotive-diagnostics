@@ -4,7 +4,6 @@ import type { ComponentType, ReactNode } from "react";
 
 const routerMock = vi.hoisted(() => ({ invalidate: vi.fn() }));
 
-// Must mock before any imports that touch @tanstack/react-router
 vi.mock("@tanstack/react-router", () => {
   let routeConfig: unknown = null;
   return {
@@ -52,8 +51,6 @@ describe("__root", () => {
     routerMock.invalidate.mockClear();
   });
 
-  // RootComponent skipped — infrastructure wrapper (providers + Outlet + Toaster).
-  // Covered indirectly by integration tests. Equivalent to Tier INFRA.
   it.skip("should render RootComponent with Outlet", () => {
     const RootComponent = (
       Route as unknown as { options: { component: ComponentType } }
@@ -62,19 +59,19 @@ describe("__root", () => {
     expect(screen.getByRole("status")).toBeDefined();
   });
 
-  it("should render 404 and Page not found in NotFoundComponent", () => {
+  it("should render 404 and not-found message in NotFoundComponent", () => {
     render(<NotFoundComponent />);
     expect(screen.getByText("404")).toBeDefined();
-    expect(screen.getByText("Page not found")).toBeDefined();
+    expect(screen.getByText("Página no encontrada")).toBeDefined();
   });
 
-  it("should render error message and Try again calls router.invalidate and reset", () => {
+  it("should render error message and Reintentar calls router.invalidate and reset", () => {
     const reset = vi.fn();
     render(<ErrorComponent error={new Error("boom")} reset={reset} />);
 
-    expect(screen.getByText("This page didn't load")).toBeDefined();
+    expect(screen.getByText("Esta página no cargó")).toBeDefined();
 
-    fireEvent.click(screen.getByText("Try again"));
+    fireEvent.click(screen.getByText("Reintentar"));
 
     expect(routerMock.invalidate).toHaveBeenCalledTimes(1);
     expect(reset).toHaveBeenCalledTimes(1);

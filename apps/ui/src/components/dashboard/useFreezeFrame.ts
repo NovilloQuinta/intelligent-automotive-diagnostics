@@ -1,47 +1,21 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { extractErrorMessage } from "@/lib/errors";
 import type { FreezeFrame } from "./types";
 
-/**
- * Loads the OBD-II freeze frame for the selected DTC, refetching whenever the
- * scenario or the DTC changes. `frame` is null both when no snapshot exists
- * for the code and while nothing is selected; use `dtc` and `loading` to tell
- * those states apart.
- */
 export function useFreezeFrame(scenarioId: string, dtc: string | null) {
-  const [loading, setLoading] = useState(false);
-  const [frame, setFrame] = useState<FreezeFrame | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    data: frame = null,
+    isLoading: loading,
+    error,
+  } = useQuery<FreezeFrame | null>({
+    queryKey: ["freeze-frame", scenarioId, dtc],
+    queryFn: () => api.getFreezeFrame(scenarioId, dtc!),
+    enabled: !!scenarioId && !!dtc,
+  });
 
-  useEffect(() => {
-    if (!scenarioId || !dtc) {
-      setFrame(null);
-      setError(null);
-      setLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    api
-      .getFreezeFrame(scenarioId, dtc)
-      .then((data) => {
-        if (cancelled) return;
-        setFrame(data);
-      })
-      .catch((e: unknown) => {
-        if (cancelled) return;
-        setError(extractErrorMessage(e, "Fallo al cargar el freeze frame"));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [scenarioId, dtc]);
-
-  return { loading, frame, error };
+  return {
+    loading,
+    frame,
+    error: error instanceof Error ? error.message : null,
+  };
 }

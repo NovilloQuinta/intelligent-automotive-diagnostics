@@ -41,7 +41,7 @@ function LiveBadge({
         className="mono text-[10px] font-bold uppercase tracking-widest"
         style={{ color: COLORS.accent }}
       >
-        Live
+        En Vivo
       </span>
     </span>
   );
