@@ -41,7 +41,7 @@ export interface ScenarioDescriptor {
   readonly name: string
   readonly vehicleType: 'car' | 'motorcycle' | 'unknown'
   readonly sensorValues?: LiveData
-  readonly dtcConfig: DtcCode[]
+  readonly dtcConfig?: DtcCode[]
   readonly vehicleInfo: VehicleInfo
   /** Host del emulador/dispositivo OBD (no se expone al cliente). */
   readonly host: string
