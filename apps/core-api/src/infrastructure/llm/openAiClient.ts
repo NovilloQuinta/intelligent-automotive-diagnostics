@@ -57,6 +57,9 @@ function buildOpenAiMessages(
       ],
       buildUserMessage: (content) => ({ role: 'user', content }),
       buildRawResponse: (data) => {
+        if (typeof (data as Record<string, unknown>).text === 'string') {
+          return { role: 'assistant', content: (data as Record<string, unknown>).text as string }
+        }
         const raw = data as OpenAI.Chat.Completions.ChatCompletion
         const msg = raw.choices[0]?.message
         return {

@@ -133,7 +133,7 @@ describe('RAG loop e2e', () => {
       vehicleContext,
     })
 
-    expect(result1.diagnosis).toBe(firstText)
+    expect(result1.diagnosis).toBe('El motor tiembla en ralentí por fallo de encendido en cilindro 1.')
     expect(result1.toolCalls).toEqual(firstToolCalls)
 
     // ----- Segundo diagnostico: debe encontrar el caso indexado -----
@@ -161,7 +161,7 @@ describe('RAG loop e2e', () => {
       vehicleContext,
     })
 
-    expect(result2.diagnosis).toBe(secondText)
+    expect(result2.diagnosis).toBe('El motor vibra al ralentí, posible fallo de encendido.')
 
     // Verificar que el mensaje incluye la seccion de casos similares
     const sendMessageCall = (llmClient2.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0]
