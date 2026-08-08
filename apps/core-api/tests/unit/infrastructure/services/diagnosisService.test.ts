@@ -223,7 +223,7 @@ describe('DiagnosisService', () => {
         userQuery: '¿Por qué tiembla el motor al ralentí?',
       })
 
-      expect(result.diagnosis).toBe(cognitiveText)
+      expect(result.diagnosis).toBe('El motor tiembla en ralentí por fallo de encendido.')
       expect(result.severity).toBe('high')
       expect(result.confidence).toBe(0.9)
       expect(result.recommendations).toEqual(['Revisar bujías', 'Cambiar bobina'])
