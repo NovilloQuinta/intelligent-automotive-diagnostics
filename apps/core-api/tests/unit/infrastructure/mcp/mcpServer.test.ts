@@ -170,13 +170,15 @@ describe('McpServer', () => {
       expect(result.content[0].text).toContain('TCU Odometer')
     })
 
-    it('get_available_pids should return empty message', async () => {
+    it('get_available_pids should return Mode 01 scan + Mode 22 catalog', async () => {
       const vRepo = mockVehicleRepo({ findPidsByVehicle: vi.fn().mockResolvedValue([]) })
       const mcp = createMcpServer(mockObdRepo(), vRepo)
 
       const result = await mcp.callTool('get_available_pids', { vehicleId: 1 })
 
-      expect(result.content[0].text).toContain('No PIDs')
+      expect(result.content[0].text).toContain('01 0C')
+      expect(result.content[0].text).toContain('TCU Odometer')
+      expect(result.content[0].text).toContain('ECM Odometer')
     })
   })
 
@@ -281,13 +283,13 @@ describe('McpServer', () => {
   })
 
   describe('isError propagation', () => {
-    it('an empty result is not an error: no PIDs is a legitimate answer', async () => {
+    it('an empty result is not an error: PIDs with catalog fallback is legitimate', async () => {
       const mcp = createMcpServer(mockObdRepo(), undefined)
 
       const result = await mcp.callTool('get_available_pids', { vehicleId: 1 })
 
       expect(result.isError).toBeFalsy()
-      expect(result.content[0].text).toContain('No PIDs')
+      expect(result.content[0].text).toContain('01 0C')
     })
 
     it('a throwing handler should also be reported as isError', async () => {
