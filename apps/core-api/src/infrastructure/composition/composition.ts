@@ -126,7 +126,16 @@ function createAuthStack(
   }
 }
 
-/** Escenarios disponibles en modo Docker emulador. */
+/**
+ * Escenarios disponibles en modo Docker emulador.
+ *
+ * `sensorValues` y `dtcConfig` DEBEN coincidir con lo que responden los
+ * escenarios de `docker/elm327/`. Si divergen, la misma lectura aparece con
+ * dos valores distintos en la pantalla.
+ *
+ * Deuda conocida: `sensorValues` desaparece cuando la telemetria se lea del
+ * vehiculo en vez de generarse en el cliente.
+ */
 function createDockerScenarios(config: AppConfig): ScenarioDescriptor[] {
   return [
     {
@@ -149,8 +158,15 @@ function createDockerScenarios(config: AppConfig): ScenarioDescriptor[] {
       id: 'audi-a3-tdi',
       name: 'Audi A3 2.0 TDI',
       vehicleType: 'car',
-      sensorValues: new LiveData({ rpm: 800, coolantTemp: 90, speed: 0, intakeTemp: 35 }),
-      dtcConfig: [{ code: 'P0301', description: 'Cylinder 1 Misfire' }],
+      sensorValues: new LiveData({ rpm: 770, coolantTemp: 90, speed: 0, intakeTemp: 35 }),
+      dtcConfig: [
+        { code: 'P0301', description: 'Cylinder 1 Misfire Detected' },
+        { code: 'P0401', description: 'Exhaust Gas Recirculation Flow Insufficient Detected' },
+        {
+          code: 'P2002',
+          description: 'Diesel Particulate Filter Efficiency Below Threshold (Bank 1)',
+        },
+      ],
       vehicleInfo: new VehicleInfo({
         make: 'Audi',
         model: 'A3',
