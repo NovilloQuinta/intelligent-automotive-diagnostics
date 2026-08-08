@@ -12,6 +12,8 @@ import {
   Elm327ParseError,
 } from '@/infrastructure/elm327/errors.js'
 import { ToolNotFoundError } from '@/infrastructure/mcp/errors.js'
+import { PidCode } from '@/domain/value-objects/pidCode.js'
+import { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import { ALL_SEED_PIDS } from '@/infrastructure/persistence/sqlite/seed-pids.js'
 import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
 import { initialConfidenceFor } from '@/application/knowledge/confidenceScale.js'
@@ -122,8 +124,52 @@ function errorText(message: string): ToolCallResult {
 
 // ─── Handlers ───────────────────────────────────────────────────────────────
 
-function handleReadPid(repo: ObdRepository): ToolHandler {
-  return async ({ mode, pid }) => text(String(await repo.readPid(`${mode}`, `${pid}`)))
+const AUTO_DISCOVERY_FORMULA = '(A*256+B)'
+const AUTO_DISCOVERY_DATA_BYTES = 2
+const AUTO_DISCOVERY_CONFIDENCE = 0.3
+
+function autoRegisterPid(
+  vehicleRepo: VehicleRepository,
+  modeStr: string,
+  pidStr: string,
+): Promise<void> {
+  return vehicleRepo
+    .findPidDefinition(modeStr, pidStr)
+    .then((existing) => {
+      if (existing) return
+      return vehicleRepo.insertPidDefinition(
+        new PidDefinition({
+          id: 0,
+          pidCode: new PidCode(modeStr, pidStr),
+          name: `${modeStr} ${pidStr}`,
+          formula: AUTO_DISCOVERY_FORMULA,
+          dataBytes: AUTO_DISCOVERY_DATA_BYTES,
+          pidType: 'formula',
+          confidence: AUTO_DISCOVERY_CONFIDENCE,
+          source: 'auto',
+        }),
+      )
+    })
+    .catch(() => {
+      // best-effort
+    })
+}
+
+function handleReadPid(
+  repo: ObdRepository,
+  vehicleRepo: VehicleRepository | undefined,
+): ToolHandler {
+  return async ({ mode, pid }) => {
+    const modeStr = `${mode}`
+    const pidStr = `${pid}`
+    const value = await repo.readPid(modeStr, pidStr)
+
+    if (vehicleRepo && modeStr !== '01') {
+      void autoRegisterPid(vehicleRepo, modeStr, pidStr)
+    }
+
+    return text(String(value))
+  }
 }
 
 function handleGetDtcCodes(repo: ObdRepository): ToolHandler {
@@ -214,7 +260,7 @@ function registerDiagnosticTools(
     'read_pid',
     'Read an OBD-II PID value. Mode 01, 22 for manufacturer-specific.',
     { mode: z.string(), pid: z.string() },
-    withErrorHandling(handleReadPid(repo)),
+    withErrorHandling(handleReadPid(repo, vehicleRepo)),
   )
   register(
     'get_dtc_codes',
