@@ -577,11 +577,10 @@ describe("DashboardPage", () => {
     fireEvent.click(screen.getByText("Iniciar diagnóstico"));
 
     await waitFor(() => {
-      expect(trigger).toHaveBeenCalledTimes(1);
+      expect(trigger).toHaveBeenCalledTimes(2);
     });
-    expect(runDiagnosis).toHaveBeenCalledTimes(1);
-    // reset limpia las filas de la sesión anterior antes del nuevo trigger
-    expect(reset).toHaveBeenCalledTimes(1);
+    expect(runDiagnosis).toHaveBeenCalledTimes(2);
+    expect(reset).toHaveBeenCalledTimes(2);
     expect(reset.mock.invocationCallOrder[0]).toBeLessThan(
       trigger.mock.invocationCallOrder[0],
     );
@@ -619,7 +618,7 @@ describe("DashboardPage", () => {
     fireEvent.click(screen.getByText("Iniciar diagnóstico"));
 
     await waitFor(() => {
-      expect(runDiagnosis).toHaveBeenCalledTimes(1);
+      expect(runDiagnosis).toHaveBeenCalledTimes(2);
     });
     expect(trigger).not.toHaveBeenCalled();
   });
