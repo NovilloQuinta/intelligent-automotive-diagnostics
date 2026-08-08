@@ -15,6 +15,7 @@ import {
   CognitiveDiagnosisUnavailableError,
   CognitiveDiagnosisTimeoutError,
 } from '@/infrastructure/services/errors.js'
+import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
@@ -840,6 +841,22 @@ describe('diagnosisRoutes', () => {
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('Internal server error')
       expect(JSON.stringify(res.body)).not.toContain('llm internal explosion')
+    })
+
+    it('should return 422 with an actionable message when tool calling hits the max iterations', async () => {
+      const service = createServiceStub({
+        cognitiveDiagnosis: vi.fn(async () => {
+          throw new MaxToolCallIterationsError('too many iterations', [])
+        }),
+      })
+      const { app } = createApp(service)
+
+      const res = await request(app)
+        .post('/api/mcp/cognitive-diagnosis')
+        .send({ scenarioId: 'audi-a3-idle', query: 'x' })
+
+      expect(res.status).toBe(422)
+      expect(res.body.error).toMatch(/demasiados pasos/i)
     })
   })
 })

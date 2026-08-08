@@ -10,6 +10,7 @@ describe("MechanicChat", () => {
     recommendations: null,
     conversationHistory: [],
     loading: false,
+    error: null,
     onSend: vi.fn(),
   };
 
@@ -67,23 +68,58 @@ describe("MechanicChat", () => {
         {...defaultProps}
         loading={true}
         diagnosisText="No debería verse"
+        conversationHistory={[
+          {
+            __type: "raw_response",
+            data: { text: "No debería verse" },
+          },
+        ]}
       />,
     );
     expect(screen.queryByText("No debería verse")).toBeNull();
   });
 
-  it("shows diagnosis text and severity badge when available", () => {
+  it("shows the severity badge attached to the last assistant bubble, not as a separate block", () => {
     render(
       <MechanicChat
         {...defaultProps}
         diagnosisText="Fallo de encendido en cilindro 1"
         severity="high"
         confidence={0.92}
+        conversationHistory={[
+          { __type: "user_message", content: "¿Qué le pasa?" },
+          {
+            __type: "raw_response",
+            data: { text: "Fallo de encendido en cilindro 1" },
+          },
+        ]}
       />,
     );
-    expect(screen.getByText("Fallo de encendido en cilindro 1")).toBeDefined();
+    // El texto del diagnóstico aparece una única vez (no duplicado).
+    expect(
+      screen.getAllByText("Fallo de encendido en cilindro 1"),
+    ).toHaveLength(1);
     expect(screen.getByText("Alta")).toBeDefined();
     expect(screen.getByText("Confianza: 92%")).toBeDefined();
+  });
+
+  it("does not attach the severity badge to an earlier assistant bubble", () => {
+    render(
+      <MechanicChat
+        {...defaultProps}
+        severity="high"
+        confidence={0.92}
+        conversationHistory={[
+          {
+            __type: "raw_response",
+            data: { text: "Primera respuesta" },
+          },
+          { __type: "user_message", content: "otra pregunta" },
+        ]}
+      />,
+    );
+    // La última burbuja es del usuario, no del asistente: no hay badge que mostrar.
+    expect(screen.queryByText("Alta")).toBeNull();
   });
 
   it("shows conversation history messages", () => {
@@ -101,6 +137,79 @@ describe("MechanicChat", () => {
     );
     expect(screen.getByText("¿Por qué tiembla?")).toBeDefined();
     expect(screen.getByText("Es un fallo de encendido.")).toBeDefined();
+  });
+
+  it("renders markdown formatting (bold, lists) in assistant bubbles", () => {
+    render(
+      <MechanicChat
+        {...defaultProps}
+        conversationHistory={[
+          {
+            __type: "raw_response",
+            data: {
+              text: "**Diagnóstico:**\n- Bujía defectuosa\n- Revisar bobina",
+            },
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText("Diagnóstico:").tagName).toBe("STRONG");
+    expect(screen.getByText("Bujía defectuosa").closest("li")).not.toBeNull();
+    expect(screen.getByText("Revisar bobina").closest("li")).not.toBeNull();
+  });
+
+  it("renders user messages as plain text, not markdown", () => {
+    render(
+      <MechanicChat
+        {...defaultProps}
+        conversationHistory={[
+          { __type: "user_message", content: "**no debería negritear**" },
+        ]}
+      />,
+    );
+    expect(screen.getByText("**no debería negritear**")).toBeDefined();
+  });
+
+  it("renders the error message visibly when error is not null", () => {
+    render(
+      <MechanicChat
+        {...defaultProps}
+        error={{ kind: "timeout", message: "La petición tardó demasiado" }}
+      />,
+    );
+    expect(screen.getByText("La petición tardó demasiado")).toBeDefined();
+  });
+
+  it("does not show the error message while a new attempt is loading", () => {
+    render(
+      <MechanicChat
+        {...defaultProps}
+        loading={true}
+        error={{ kind: "timeout", message: "La petición tardó demasiado" }}
+      />,
+    );
+    expect(screen.queryByText("La petición tardó demasiado")).toBeNull();
+  });
+
+  it("shows no error message when error is null", () => {
+    render(<MechanicChat {...defaultProps} error={null} />);
+    expect(
+      screen.queryByText("La petición tardó demasiado"),
+    ).toBeNull();
+  });
+
+  it("does not couple the message thread container to its own scroll", () => {
+    render(
+      <MechanicChat
+        {...defaultProps}
+        conversationHistory={[
+          { __type: "user_message", content: "¿Por qué tiembla?" },
+        ]}
+      />,
+    );
+    const thread = screen.getByText("¿Por qué tiembla?").parentElement;
+    expect(thread?.className).not.toMatch(/max-h-80/);
+    expect(thread?.className).not.toMatch(/overflow-y-auto/);
   });
 
   it("does not call onSend for empty or whitespace-only query", () => {

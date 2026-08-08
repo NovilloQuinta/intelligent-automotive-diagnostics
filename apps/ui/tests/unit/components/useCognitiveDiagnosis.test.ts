@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, useState } from "react";
 import { useCognitiveDiagnosis } from "../../../src/components/dashboard/useCognitiveDiagnosis";
 import type { CognitiveOutput, ConversationItem } from "../../../src/lib/api";
+import { ApiHttpError } from "../../../src/lib/api-errors";
 
 vi.mock("../../../src/lib/api", () => ({
   api: {
@@ -266,6 +267,148 @@ describe("useCognitiveDiagnosis", () => {
       expect(result.current.pidRows).toBeNull();
     });
     expect(result.current.loading).toBe(false);
+  });
+
+  it("exposes error.kind 'timeout' and the message on a 504 rejection", async () => {
+    vi.mocked(api.getCognitiveDiagnosis).mockRejectedValue(
+      new ApiHttpError("La petición tardó demasiado", 504),
+    );
+
+    const { result } = renderHook(() => useCognitiveDiagnosis("kawa-z900"), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await result.current.trigger();
+    });
+
+    await waitFor(() => {
+      expect(result.current.error).toEqual({
+        kind: "timeout",
+        message: "La petición tardó demasiado",
+      });
+    });
+  });
+
+  it("exposes error.kind 'too_many_steps' on a 422 rejection", async () => {
+    vi.mocked(api.getCognitiveDiagnosis).mockRejectedValue(
+      new ApiHttpError(
+        "El diagnóstico necesitó demasiados pasos. Prueba con una pregunta más concreta.",
+        422,
+      ),
+    );
+
+    const { result } = renderHook(() => useCognitiveDiagnosis("kawa-z900"), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await result.current.trigger();
+    });
+
+    await waitFor(() => {
+      expect(result.current.error?.kind).toBe("too_many_steps");
+    });
+    expect(result.current.error?.message).toBe(
+      "El diagnóstico necesitó demasiados pasos. Prueba con una pregunta más concreta.",
+    );
+  });
+
+  it("exposes error.kind 'unavailable' on a 404 rejection", async () => {
+    vi.mocked(api.getCognitiveDiagnosis).mockRejectedValue(
+      new ApiHttpError("No disponible", 404),
+    );
+
+    const { result } = renderHook(() => useCognitiveDiagnosis("kawa-z900"), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await result.current.trigger();
+    });
+
+    await waitFor(() => {
+      expect(result.current.error?.kind).toBe("unavailable");
+    });
+  });
+
+  it("exposes error.kind 'unknown' with a non-empty message for a non-ApiHttpError rejection", async () => {
+    vi.mocked(api.getCognitiveDiagnosis).mockRejectedValue(
+      new Error("network exploded"),
+    );
+
+    const { result } = renderHook(() => useCognitiveDiagnosis("kawa-z900"), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await result.current.trigger();
+    });
+
+    await waitFor(() => {
+      expect(result.current.error?.kind).toBe("unknown");
+    });
+    expect(result.current.error?.message).toBeTruthy();
+  });
+
+  it("clears a previous error to null while a new trigger() is in flight", async () => {
+    vi.mocked(api.getCognitiveDiagnosis).mockRejectedValueOnce(
+      new ApiHttpError("La petición tardó demasiado", 504),
+    );
+
+    const { result } = renderHook(() => useCognitiveDiagnosis("kawa-z900"), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await result.current.trigger();
+    });
+    await waitFor(() => {
+      expect(result.current.error).not.toBeNull();
+    });
+
+    let resolveSecond!: (v: CognitiveOutput) => void;
+    vi.mocked(api.getCognitiveDiagnosis).mockImplementationOnce(
+      () => new Promise((resolve) => (resolveSecond = resolve)),
+    );
+
+    act(() => {
+      void result.current.trigger();
+    });
+
+    await waitFor(() => {
+      expect(result.current.error).toBeNull();
+    });
+
+    await act(async () => {
+      resolveSecond(cognitiveOutput());
+      await Promise.resolve();
+    });
+  });
+
+  it("clears a previous error to null once the next trigger() resolves successfully", async () => {
+    vi.mocked(api.getCognitiveDiagnosis)
+      .mockRejectedValueOnce(new ApiHttpError("La petición tardó demasiado", 504))
+      .mockResolvedValueOnce(cognitiveOutput());
+
+    const { result } = renderHook(() => useCognitiveDiagnosis("kawa-z900"), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await result.current.trigger();
+    });
+    await waitFor(() => {
+      expect(result.current.error).not.toBeNull();
+    });
+
+    await act(async () => {
+      await result.current.trigger();
+    });
+
+    await waitFor(() => {
+      expect(result.current.error).toBeNull();
+    });
   });
 
   it("clears the conversation thread when the vehicle changes", async () => {

@@ -184,6 +184,34 @@ describe("PidsTable", () => {
     expect(screen.getAllByTestId("pid-row")).toHaveLength(4);
   });
 
+  it("should show a brief failure notice when the AI search errored with no rows", () => {
+    render(
+      <PidsTable
+        parsedValues={NORMAL_VALUES}
+        empty={false}
+        aiRows={[]}
+        aiLoading={false}
+        aiError={{ kind: "timeout", message: "La petición tardó demasiado" }}
+      />,
+    );
+
+    expect(screen.getByText(/no se pudieron buscar/i)).toBeDefined();
+  });
+
+  it("should not show a failure notice when there are no AI rows and no error", () => {
+    render(
+      <PidsTable
+        parsedValues={NORMAL_VALUES}
+        empty={false}
+        aiRows={[]}
+        aiLoading={false}
+        aiError={null}
+      />,
+    );
+
+    expect(screen.queryByText(/no se pudieron buscar/i)).toBeNull();
+  });
+
   it("should render neither the loading row nor AI rows when the capability is off", () => {
     const { rerender } = render(
       <PidsTable

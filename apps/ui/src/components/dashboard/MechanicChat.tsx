@@ -1,8 +1,10 @@
 import { useState, useCallback, type KeyboardEvent } from "react";
+import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ConversationItem } from "@/lib/api";
+import type { CognitiveDiagnosisError } from "./useCognitiveDiagnosis";
 
 interface MechanicChatProps {
   readonly diagnosisText: string | null;
@@ -10,6 +12,7 @@ interface MechanicChatProps {
   readonly confidence: number | null;
   readonly conversationHistory: ConversationItem[];
   readonly loading: boolean;
+  readonly error: CognitiveDiagnosisError | null;
   readonly onSend: (query: string) => void;
 }
 
@@ -42,6 +45,7 @@ export function MechanicChat({
   confidence,
   conversationHistory,
   loading,
+  error,
   onSend,
 }: MechanicChatProps) {
   const [query, setQuery] = useState("");
@@ -69,8 +73,8 @@ export function MechanicChat({
         Chat con el Mecánico
       </h3>
 
-      {conversationHistory.length > 0 && (
-        <div className="flex max-h-80 min-h-0 flex-col gap-2 overflow-y-auto pr-1">
+      {conversationHistory.length > 0 && !loading && (
+        <div className="flex min-h-0 flex-col gap-2 pr-1">
           {conversationHistory.map((item, i) => {
             if (item.__type === "user_message" && item.content) {
               return (
@@ -89,12 +93,41 @@ export function MechanicChat({
               "text" in item.data &&
               typeof item.data.text === "string"
             ) {
+              // El badge de severidad/confianza solo se pega a la ÚLTIMA
+              // burbuja del asistente: es la única que le corresponde, las
+              // anteriores ya quedaron resueltas en su propio turno.
+              const isLastItem = i === conversationHistory.length - 1;
               return (
                 <div
                   key={i}
                   className="self-start rounded-lg bg-white/5 px-3 py-1.5 text-sm text-foreground/80 max-w-[80%]"
                 >
-                  {item.data.text}
+                  {isLastItem && (severity || confidence !== null) && (
+                    <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                      {severity && (
+                        <Badge
+                          variant={
+                            severityKey
+                              ? SEVERITY_VARIANTS[severityKey]
+                              : "default"
+                          }
+                          className="text-[10px] uppercase tracking-wider"
+                        >
+                          {severityKey
+                            ? SEVERITY_LABELS[severityKey]
+                            : severity}
+                        </Badge>
+                      )}
+                      {confidence !== null && (
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                          Confianza: {Math.round(confidence * 100)}%
+                        </span>
+                      )}
+                    </div>
+                  )}
+                  <div className="[&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:my-0.5 [&_strong]:font-semibold [&_strong]:text-foreground/95 [&_code]:rounded [&_code]:bg-white/10 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs">
+                    <ReactMarkdown>{item.data.text}</ReactMarkdown>
+                  </div>
                 </div>
               );
             }
@@ -110,28 +143,9 @@ export function MechanicChat({
         </div>
       )}
 
-      {diagnosisText && !loading && (
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            {severity && (
-              <Badge
-                variant={
-                  severityKey ? SEVERITY_VARIANTS[severityKey] : "default"
-                }
-                className="text-[10px] uppercase tracking-wider"
-              >
-                {severityKey ? SEVERITY_LABELS[severityKey] : severity}
-              </Badge>
-            )}
-            {confidence !== null && (
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Confianza: {Math.round(confidence * 100)}%
-              </span>
-            )}
-          </div>
-          <p className="whitespace-pre-line text-sm text-foreground/80">
-            {diagnosisText}
-          </p>
+      {error && !loading && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {error.message}
         </div>
       )}
 

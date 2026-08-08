@@ -155,6 +155,7 @@ export function DashboardPage() {
               empty={!result && !loading}
               aiRows={cognitive.pidRows}
               aiLoading={cognitive.loading}
+              aiError={cognitive.error}
             />
           </div>
         );
@@ -204,6 +205,7 @@ export function DashboardPage() {
             confidence={cognitive.confidence}
             conversationHistory={cognitive.conversationHistory}
             loading={cognitive.loading}
+            error={cognitive.error}
             onSend={handleChatSend}
           />
         );

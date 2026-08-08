@@ -11,6 +11,7 @@ import {
   CognitiveDiagnosisUnavailableError,
   CognitiveDiagnosisTimeoutError,
 } from '@/infrastructure/services/errors.js'
+import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
 
@@ -23,6 +24,7 @@ const ERROR_MESSAGES = {
   emptyToolResult: 'Tool returned no content',
   cognitiveTimedOut: 'Cognitive diagnosis timed out',
   cognitiveUnavailable: 'Cognitive diagnosis is not available',
+  cognitiveTooManySteps: 'El diagnóstico necesitó demasiados pasos. Prueba con una pregunta más concreta.',
   internalError: 'Internal server error',
 } as const
 
@@ -402,6 +404,12 @@ export class DiagnosisController {
     }
     if (err instanceof CognitiveDiagnosisTimeoutError) {
       res.status(504).json({ error: ERROR_MESSAGES.cognitiveTimedOut })
+      return
+    }
+    if (err instanceof MaxToolCallIterationsError) {
+      // 422: la peticion era valida, pero el LLM no pudo terminar en el limite de
+      // iteraciones. Un 4xx preserva el mensaje hasta la UI (ver design.md Decision 2).
+      res.status(422).json({ error: ERROR_MESSAGES.cognitiveTooManySteps })
       return
     }
     this.respondUnexpected(err, res, 'Cognitive diagnosis failed')
