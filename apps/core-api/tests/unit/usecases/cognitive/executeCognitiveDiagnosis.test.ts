@@ -103,6 +103,23 @@ function createMockLogger(): LoggerPort {
 }
 
 describe('executeCognitiveDiagnosis', () => {
+  it('should pass conversationHistory from execute to sendMessage', async () => {
+    const llmClient = mockLlmClient({
+      sendMessage: vi.fn().mockResolvedValue(cognitiveResponse('ok')),
+    })
+    const historyItem = { __type: 'user_message' as const, content: '¿Por qué tiembla el motor?' }
+
+    await makeUseCase(llmClient).execute({
+      userQuery: '¿Y eso por qué?',
+      vehicleContext,
+      conversationHistory: [historyItem],
+    })
+
+    expect(llmClient.sendMessage).toHaveBeenCalledTimes(1)
+    const input = (llmClient.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    expect(input.conversationHistory).toEqual([historyItem])
+  })
+
   it('should call sendMessage with systemPrompt, userMessage, tools and handler', async () => {
     const llmClient = mockLlmClient({
       sendMessage: vi.fn().mockResolvedValue(cognitiveResponse('ok')),

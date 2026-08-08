@@ -253,6 +253,35 @@ describe('DiagnosisService', () => {
       expect(llmClient.sendMessage).not.toHaveBeenCalled()
     })
 
+    it('should pass conversationHistory to the use case', async () => {
+      const llmClient = mockLlmClient({
+        sendMessage: vi
+          .fn()
+          .mockResolvedValue({ text: cognitiveText, toolCalls: cognitiveToolCalls }),
+      })
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        llmClient,
+        logger: createMockLogger(),
+      })
+
+      await service.cognitiveDiagnosis({
+        scenarioId: 'audi-a3-idle',
+        userQuery: '¿Y eso por qué?',
+        conversationHistory: [
+          { __type: 'user_message', content: '¿Por qué tiembla?' },
+          { __type: 'raw_response', data: { text: 'Fallos de cilindro 1' } },
+        ],
+      })
+
+      const input = (llmClient.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
+      expect(input.conversationHistory).toEqual([
+        { __type: 'user_message', content: '¿Por qué tiembla?' },
+        { __type: 'raw_response', data: { text: 'Fallos de cilindro 1' } },
+      ])
+    })
+
     it('should propagate knowledgeStack to the cognitive use case', async () => {
       const llmClient = mockLlmClient({
         sendMessage: vi
@@ -412,7 +441,9 @@ describe('DiagnosisService', () => {
     it('should merge descriptor data with VIN from ECU, keeping VIN from ECU always', async () => {
       const repos = createMockObdRepos()
       // Mock the repo to return a different VIN than the descriptor
-      vi.mocked(repos.get('audi-a3-idle')!.getVehicleInfo as ReturnType<typeof vi.fn>).mockResolvedValue({
+      vi.mocked(
+        repos.get('audi-a3-idle')!.getVehicleInfo as ReturnType<typeof vi.fn>,
+      ).mockResolvedValue({
         make: 'unknown',
         model: 'unknown',
         year: 0,

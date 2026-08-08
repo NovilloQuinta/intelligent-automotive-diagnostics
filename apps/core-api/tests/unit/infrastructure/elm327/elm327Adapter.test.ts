@@ -222,7 +222,13 @@ describe('Elm327TcpRepository', () => {
     const frame = await promise
     expect(frame).toEqual({
       dtcCode: 'P0301',
-      pidValues: { '04': 18.03921568627451, '05': 90, '0C': 800, '0D': 0, '11': 14.117647058823529 },
+      pidValues: {
+        '04': 18.03921568627451,
+        '05': 90,
+        '0C': 800,
+        '0D': 0,
+        '11': 14.117647058823529,
+      },
     })
   })
 

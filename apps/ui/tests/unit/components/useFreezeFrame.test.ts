@@ -19,7 +19,9 @@ describe("useFreezeFrame", () => {
     const frame = { dtcCode: "P0301", pidValues: { "0C": 850 } };
     vi.mocked(api.getFreezeFrame).mockResolvedValueOnce(frame);
 
-    const { result } = renderHook(() => useFreezeFrame("audi-a3-idle", "P0301"));
+    const { result } = renderHook(() =>
+      useFreezeFrame("audi-a3-idle", "P0301"),
+    );
 
     await waitFor(() => {
       expect(result.current.frame).toEqual(frame);
@@ -32,7 +34,9 @@ describe("useFreezeFrame", () => {
   it("keeps frame null when the API reports no freeze frame for the code", async () => {
     vi.mocked(api.getFreezeFrame).mockResolvedValueOnce(null);
 
-    const { result } = renderHook(() => useFreezeFrame("audi-a3-idle", "P0420"));
+    const { result } = renderHook(() =>
+      useFreezeFrame("audi-a3-idle", "P0420"),
+    );
 
     await waitFor(() => {
       expect(result.current.frame).toBeNull();
@@ -54,7 +58,9 @@ describe("useFreezeFrame", () => {
       new Error("Scenario not found"),
     );
 
-    const { result } = renderHook(() => useFreezeFrame("audi-a3-idle", "P0301"));
+    const { result } = renderHook(() =>
+      useFreezeFrame("audi-a3-idle", "P0301"),
+    );
 
     await waitFor(() => {
       expect(result.current.error).toBe("Scenario not found");

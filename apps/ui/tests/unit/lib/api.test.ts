@@ -246,9 +246,7 @@ describe("api", () => {
       });
       vi.stubGlobal("fetch", mockFetch);
 
-      await expect(api.getScenarios()).rejects.toThrow(
-        GENERIC_ERROR_MESSAGE,
-      );
+      await expect(api.getScenarios()).rejects.toThrow(GENERIC_ERROR_MESSAGE);
       // Only the original call happened — no refresh was attempted
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
@@ -504,6 +502,29 @@ describe("api", () => {
       });
     });
 
+    it("sends conversation history when provided", async () => {
+      setStoredTokens();
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({ ok: true, json: async () => cognitive });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const historyItem = {
+        __type: "user_message" as const,
+        content: "¿Por qué tiembla?",
+      };
+      await api.getCognitiveDiagnosis("audi-a3-idle", "¿Y eso por qué?", [
+        historyItem,
+      ]);
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(init.body as string)).toEqual({
+        scenarioId: "audi-a3-idle",
+        query: "¿Y eso por qué?",
+        history: [historyItem],
+      });
+    });
+
     it("throws the generic message on a 503, never the raw server error", async () => {
       setStoredTokens();
       vi.stubGlobal(
@@ -515,9 +536,9 @@ describe("api", () => {
         }),
       );
 
-      await expect(
-        api.getCognitiveDiagnosis("audi-a3-idle"),
-      ).rejects.toThrow(GENERIC_ERROR_MESSAGE);
+      await expect(api.getCognitiveDiagnosis("audi-a3-idle")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
     });
 
     it("throws the generic message on a 503 even when the error body is unreadable", async () => {
@@ -533,9 +554,9 @@ describe("api", () => {
         }),
       );
 
-      await expect(
-        api.getCognitiveDiagnosis("audi-a3-idle"),
-      ).rejects.toThrow(GENERIC_ERROR_MESSAGE);
+      await expect(api.getCognitiveDiagnosis("audi-a3-idle")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
     });
   });
 
@@ -547,12 +568,10 @@ describe("api", () => {
     it("GETs /api/freeze-frame with scenarioId and dtc and returns the frame", async () => {
       setStoredTokens();
       const frame = { dtcCode: "P0301", pidValues: { "0C": 850 } };
-      const mockFetch = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ freezeFrame: frame }),
-        });
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ freezeFrame: frame }),
+      });
       vi.stubGlobal("fetch", mockFetch);
 
       const result = await api.getFreezeFrame("audi-a3-idle", "P0301");
@@ -567,12 +586,10 @@ describe("api", () => {
 
     it("GETs without the dtc param when omitted", async () => {
       setStoredTokens();
-      const mockFetch = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ freezeFrame: null }),
-        });
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ freezeFrame: null }),
+      });
       vi.stubGlobal("fetch", mockFetch);
 
       const result = await api.getFreezeFrame("audi-a3-idle");
@@ -611,6 +628,44 @@ describe("api", () => {
       await expect(api.getFreezeFrame("audi-a3-idle", "P0301")).rejects.toThrow(
         GENERIC_ERROR_MESSAGE,
       );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // getLiveData
+  // -----------------------------------------------------------------------
+
+  describe("getLiveData", () => {
+    it("GETs /api/live-data con el token, que es lo que faltaba", async () => {
+      setStoredTokens();
+      const live = { rpm: 770, coolantTemp: 90, speed: 0, intakeTemp: 35 };
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => live,
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getLiveData("audi-a3-tdi");
+
+      expect(result).toEqual(live);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/live-data?scenarioId=audi-a3-tdi");
+      // El endpoint exige autenticacion: sin esta cabecera responde 401 y los
+      // gauges no muestran ni un valor.
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+
+    it("propaga los null de cada PID sin convertirlos", async () => {
+      setStoredTokens();
+      const live = { rpm: null, coolantTemp: 90, speed: null, intakeTemp: 35 };
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({ ok: true, json: async () => live }),
+      );
+
+      await expect(api.getLiveData("audi-a3-tdi")).resolves.toEqual(live);
     });
   });
 

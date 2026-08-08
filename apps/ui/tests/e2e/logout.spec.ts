@@ -3,7 +3,9 @@ import { test, expect } from "@playwright/test";
 const SUFFIX = `${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 
 test.describe("Logout", () => {
-  test("should logout and show the anonymous landing page", async ({ page }) => {
+  test("should logout and show the anonymous landing page", async ({
+    page,
+  }) => {
     // Register a fresh user
     await page.goto("/login");
     await page.getByRole("tab", { name: "Registrarse" }).click();
@@ -18,12 +20,18 @@ test.describe("Logout", () => {
     await page.getByRole("button", { name: "Cerrar sesión" }).click();
 
     // Anonymous users land on the public landing page at "/"
-    await expect(page.getByRole("link", { name: "Iniciar sesión" })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Iniciar sesión" }),
+    ).toBeVisible();
     await expect(page.getByRole("link", { name: "Registrarse" })).toBeVisible();
 
     // localStorage should be clean of tokens
-    const accessToken = await page.evaluate(() => localStorage.getItem("iad.accessToken"));
-    const refreshToken = await page.evaluate(() => localStorage.getItem("iad.refreshToken"));
+    const accessToken = await page.evaluate(() =>
+      localStorage.getItem("iad.accessToken"),
+    );
+    const refreshToken = await page.evaluate(() =>
+      localStorage.getItem("iad.refreshToken"),
+    );
     expect(accessToken).toBeNull();
     expect(refreshToken).toBeNull();
   });

@@ -17,6 +17,7 @@ import { EcuInfoPanel } from "./EcuInfoPanel";
 import { DiagnosisPanel } from "./DiagnosisPanel";
 import { PidsTable } from "./PidsTable";
 import { VehicleStatusPanel } from "./VehicleStatusPanel";
+import { MechanicChat } from "./MechanicChat";
 import { SessionReportPanel } from "./SessionReportPanel";
 
 /** Main OBD-II dashboard page: telemetry gauges, vehicle selection, DTC panel, and AI diagnosis. */
@@ -54,6 +55,13 @@ export function DashboardPage() {
     await runDiagnosis();
     if (cognitiveDiagnosis) void cognitive.trigger();
   }, [runDiagnosis, cognitiveDiagnosis, cognitive.reset, cognitive.trigger]);
+
+  const handleChatSend = useCallback(
+    (q: string) => {
+      void cognitive.trigger(q);
+    },
+    [cognitive.trigger],
+  );
 
   /** Confirmar el vehículo identificado es lo único que abre el menú de diagnóstico. */
   const handleVehicleConfirmed = useCallback(
@@ -153,6 +161,16 @@ export function DashboardPage() {
                 aiRows={cognitive.pidRows}
                 aiLoading={cognitive.loading}
               />
+              {cognitiveDiagnosis && (
+                <MechanicChat
+                  diagnosisText={cognitive.diagnosisText}
+                  severity={cognitive.severity}
+                  confidence={cognitive.confidence}
+                  conversationHistory={cognitive.conversationHistory}
+                  loading={cognitive.loading}
+                  onSend={handleChatSend}
+                />
+              )}
             </section>
           </div>
         </main>

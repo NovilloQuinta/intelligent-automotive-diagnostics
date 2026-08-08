@@ -76,7 +76,9 @@ describe("DiagnoseButton", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Iniciar diagnóstico" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Iniciar diagnóstico" }),
+    );
 
     expect(onClick).toHaveBeenCalledTimes(1);
   });

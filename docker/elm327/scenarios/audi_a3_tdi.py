@@ -311,8 +311,8 @@ ObdMessage = {
         "Request": "^0204" + ELM_FOOTER,
         "Descr": "Freeze frame engine load",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 04 2E"),
-        # 18 %  (A*100/255) — carga al ralentí
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 04 9E"),
+        # 62.0 %  (A*100/255) — engine working, not idling
     },
     "FF_COOLANT_TEMP": {
         "Request": "^0205" + ELM_FOOTER,
@@ -339,8 +339,8 @@ ObdMessage = {
         "Request": "^0211" + ELM_FOOTER,
         "Descr": "Freeze frame throttle position",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 11 24"),
-        # 14.1 %  (A*100/255)
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 11 73"),
+        # 45.1 %  (A*100/255) — intake flap well open, consistent with 62 % load
     },
 
     # ==================================================================

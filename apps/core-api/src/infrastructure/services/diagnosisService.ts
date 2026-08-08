@@ -29,6 +29,7 @@ import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import type { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
+import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 
@@ -306,7 +307,8 @@ export class DiagnosisService {
     const repository = this.resolveRepository(scenarioId)
     const info = await repository.getVehicleInfo()
     const vin = String(info.vin)
-    const vinStatus: VehicleInfoOutput['vinStatus'] = info.vinStatus ?? (vin === FALLBACK_VIN ? 'unreadable' : 'read')
+    const vinStatus: VehicleInfoOutput['vinStatus'] =
+      info.vinStatus ?? (vin === FALLBACK_VIN ? 'unreadable' : 'read')
 
     // En modo Docker, fusionar metadatos del descriptor (make/model/year/engineType)
     // con el VIN del ECU. En modo TCP no hay descriptor: se mantiene lo que devuelve el adaptador.
@@ -362,8 +364,9 @@ export class DiagnosisService {
   async cognitiveDiagnosis(input: {
     scenarioId?: string
     userQuery?: string
+    conversationHistory?: readonly LlmConversationItem[]
   }): Promise<ExecuteCognitiveDiagnosisOutput> {
-    const { scenarioId, userQuery } = input
+    const { scenarioId, userQuery, conversationHistory } = input
     if (!this.llmClient) {
       this.logger.warn('Cognitive diagnosis requested but no LLM client is configured')
       throw new CognitiveDiagnosisUnavailableError()
@@ -386,7 +389,7 @@ export class DiagnosisService {
         logger: this.logger,
         diagnosisIndex: this.knowledgeStack?.diagnosisIndex,
       })
-      return useCase.execute({ userQuery, vehicleContext })
+      return useCase.execute({ userQuery, vehicleContext, conversationHistory })
     })()
 
     try {

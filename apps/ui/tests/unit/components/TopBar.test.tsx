@@ -47,10 +47,14 @@ describe("TopBar", () => {
     render(<TopBar {...baseProps} />);
 
     expect(screen.getByText(/Intelligent Automotive/)).toBeDefined();
-    expect(screen.getByText("OBD-II · AI Assisted Workshop Tool")).toBeDefined();
+    expect(
+      screen.getByText("OBD-II · AI Assisted Workshop Tool"),
+    ).toBeDefined();
     expect(screen.getByText("Conectado")).toBeDefined();
     expect(screen.getByText("12:30:45")).toBeDefined();
-    expect(screen.getByRole("button", { name: /Audi A3 1.6 TDI/ })).toBeDefined();
+    expect(
+      screen.getByRole("button", { name: /Audi A3 1.6 TDI/ }),
+    ).toBeDefined();
   });
 
   it("should call onLogout when the logout button is clicked", () => {
@@ -99,11 +103,7 @@ describe("TopBar", () => {
   it("should disable the Informe button when no vehicle is selected", () => {
     const onReportClick = vi.fn();
     render(
-      <TopBar
-        {...baseProps}
-        selectedId=""
-        onReportClick={onReportClick}
-      />,
+      <TopBar {...baseProps} selectedId="" onReportClick={onReportClick} />,
     );
 
     const btn = screen.getByTitle(
@@ -123,8 +123,6 @@ describe("TopBar", () => {
   it("should not render the Informe button when onReportClick is not provided", () => {
     render(<TopBar {...baseProps} />);
 
-    expect(
-      screen.queryByTitle("Generar informe de la sesión"),
-    ).toBeNull();
+    expect(screen.queryByTitle("Generar informe de la sesión")).toBeNull();
   });
 });

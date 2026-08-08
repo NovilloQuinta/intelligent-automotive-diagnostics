@@ -8,7 +8,9 @@ const TEST_USER = {
 };
 
 test.describe("Authentication", () => {
-  test("should register a new user and redirect to dashboard", async ({ page }) => {
+  test("should register a new user and redirect to dashboard", async ({
+    page,
+  }) => {
     await page.goto("/login");
 
     // Switch to register tab
@@ -47,7 +49,9 @@ test.describe("Authentication", () => {
     await page.locator('button[type="submit"]').click();
 
     // Should show error and stay on login page
-    await expect(page.locator(".text-destructive").first()).toBeVisible({ timeout: 10000 });
+    await expect(page.locator(".text-destructive").first()).toBeVisible({
+      timeout: 10000,
+    });
     await expect(page).toHaveURL("/login");
   });
 
@@ -65,12 +69,16 @@ test.describe("Authentication", () => {
     await page.getByRole("button", { name: "Crear cuenta" }).click();
 
     await expect(
-      page.getByText("Debe incluir 1 mayúscula, 1 número y 1 carácter especial"),
+      page.getByText(
+        "Debe incluir 1 mayúscula, 1 número y 1 carácter especial",
+      ),
     ).toBeVisible();
     await expect(page).toHaveURL("/login");
   });
 
-  test("should toggle password visibility with the eye button", async ({ page }) => {
+  test("should toggle password visibility with the eye button", async ({
+    page,
+  }) => {
     await page.goto("/login");
 
     const loginPassword = page.locator("#login-password");

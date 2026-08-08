@@ -1,24 +1,35 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
-const mockAuthState = { status: "anonymous" as string, user: null as unknown, login: vi.fn(), register: vi.fn(), logout: vi.fn() };
+const mockAuthState = {
+  status: "anonymous" as string,
+  user: null as unknown,
+  login: vi.fn(),
+  register: vi.fn(),
+  logout: vi.fn(),
+};
 
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => (config: Record<string, unknown>) => ({
     ...config,
     options: { component: config.component },
   }),
-  Navigate: ({ to }: { to: string }) => `<navigate data-to="${to}" data-testid="navigate" />` as unknown as JSX.Element,
+  Navigate: ({ to }: { to: string }) =>
+    `<navigate data-to="${to}" data-testid="navigate" />` as unknown as JSX.Element,
   useNavigate: () => vi.fn(),
 }));
 
 vi.mock("../../../src/lib/auth-context", () => ({
   useAuth: () => mockAuthState,
-  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  AuthProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 
 import { Route } from "../../../src/routes/login";
-const AuthPage = (Route as unknown as { options: { component: React.ComponentType } }).options.component;
+const AuthPage = (
+  Route as unknown as { options: { component: React.ComponentType } }
+).options.component;
 
 describe("AuthPage", () => {
   beforeEach(() => {
@@ -78,12 +89,19 @@ describe("AuthPage", () => {
     mockAuthState.login = login;
     render(<AuthPage />);
 
-    fireEvent.change(screen.getByPlaceholderText("tu@email.com"), { target: { value: "a@b.com" } });
-    fireEvent.change(screen.getByPlaceholderText("••••••••"), { target: { value: "password123" } });
+    fireEvent.change(screen.getByPlaceholderText("tu@email.com"), {
+      target: { value: "a@b.com" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("••••••••"), {
+      target: { value: "password123" },
+    });
     fireEvent.click(screen.getByRole("button", { name: /Iniciar sesión/i }));
 
     await waitFor(() => {
-      expect(login).toHaveBeenCalledWith({ email: "a@b.com", password: "password123" });
+      expect(login).toHaveBeenCalledWith({
+        email: "a@b.com",
+        password: "password123",
+      });
     });
   });
 
@@ -115,21 +133,29 @@ describe("AuthPage", () => {
       expect(screen.getByText("Crear cuenta")).toBeDefined();
     });
 
-    const usernameInput = container.querySelector('#reg-username') as HTMLInputElement;
-    const emailInput = container.querySelector('#reg-email') as HTMLInputElement;
-    const passwordInput = container.querySelector('#reg-password') as HTMLInputElement;
+    const usernameInput = container.querySelector(
+      "#reg-username",
+    ) as HTMLInputElement;
+    const emailInput = container.querySelector(
+      "#reg-email",
+    ) as HTMLInputElement;
+    const passwordInput = container.querySelector(
+      "#reg-password",
+    ) as HTMLInputElement;
     fireEvent.change(usernameInput, { target: { value: "juan" } });
     fireEvent.change(emailInput, { target: { value: "j@b.com" } });
     fireEvent.change(passwordInput, { target: { value: "Password123!" } });
     fireEvent.click(screen.getByRole("button", { name: /Crear cuenta/i }));
 
     await waitFor(() => {
-      expect(register).toHaveBeenCalledWith(expect.objectContaining({
-        username: "juan",
-        email: "j@b.com",
-        password: "Password123!",
-        userType: "individual",
-      }));
+      expect(register).toHaveBeenCalledWith(
+        expect.objectContaining({
+          username: "juan",
+          email: "j@b.com",
+          password: "Password123!",
+          userType: "individual",
+        }),
+      );
     });
   });
 
@@ -143,9 +169,15 @@ describe("AuthPage", () => {
       expect(screen.getByText("Crear cuenta")).toBeDefined();
     });
 
-    const usernameInput = container.querySelector('#reg-username') as HTMLInputElement;
-    const emailInput = container.querySelector('#reg-email') as HTMLInputElement;
-    const passwordInput = container.querySelector('#reg-password') as HTMLInputElement;
+    const usernameInput = container.querySelector(
+      "#reg-username",
+    ) as HTMLInputElement;
+    const emailInput = container.querySelector(
+      "#reg-email",
+    ) as HTMLInputElement;
+    const passwordInput = container.querySelector(
+      "#reg-password",
+    ) as HTMLInputElement;
     fireEvent.change(usernameInput, { target: { value: "juan" } });
     fireEvent.change(emailInput, { target: { value: "j@b.com" } });
     fireEvent.change(passwordInput, { target: { value: "password123" } });
@@ -153,7 +185,9 @@ describe("AuthPage", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("Debe incluir 1 mayúscula, 1 número y 1 carácter especial"),
+        screen.getByText(
+          "Debe incluir 1 mayúscula, 1 número y 1 carácter especial",
+        ),
       ).toBeDefined();
     });
     expect(register).not.toHaveBeenCalled();
@@ -162,7 +196,9 @@ describe("AuthPage", () => {
   it("toggles password visibility on login and register forms", async () => {
     const { container } = render(<AuthPage />);
 
-    const loginPassword = container.querySelector('#login-password') as HTMLInputElement;
+    const loginPassword = container.querySelector(
+      "#login-password",
+    ) as HTMLInputElement;
     expect(loginPassword.type).toBe("password");
     fireEvent.click(screen.getByLabelText("Mostrar contraseña"));
     expect(loginPassword.type).toBe("text");
@@ -171,9 +207,11 @@ describe("AuthPage", () => {
 
     fireEvent.mouseDown(screen.getByText("Registrarse"));
     await waitFor(() => {
-      expect(container.querySelector('#reg-password')).not.toBeNull();
+      expect(container.querySelector("#reg-password")).not.toBeNull();
     });
-    const regPassword = container.querySelector('#reg-password') as HTMLInputElement;
+    const regPassword = container.querySelector(
+      "#reg-password",
+    ) as HTMLInputElement;
     expect(regPassword.type).toBe("password");
     fireEvent.click(screen.getByLabelText("Mostrar contraseña"));
     expect(regPassword.type).toBe("text");

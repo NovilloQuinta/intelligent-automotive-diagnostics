@@ -18,7 +18,9 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("../../../src/lib/auth-context", () => ({
   useAuth: () => mockAuthState,
-  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  AuthProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 
 vi.mock("../../../src/components/dashboard/DashboardPage", () => ({
@@ -30,8 +32,9 @@ vi.mock("../../../src/components/landing/LandingPage", () => ({
 }));
 
 import { Route } from "../../../src/routes/index";
-const HomeRoute = (Route as unknown as { options: { component: React.ComponentType } })
-  .options.component;
+const HomeRoute = (
+  Route as unknown as { options: { component: React.ComponentType } }
+).options.component;
 
 describe("index route", () => {
   beforeEach(() => {

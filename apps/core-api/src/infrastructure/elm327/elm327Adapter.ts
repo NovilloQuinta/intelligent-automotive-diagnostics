@@ -165,7 +165,8 @@ export class Elm327TcpRepository implements ObdRepository {
         year: 0,
         engineType: 'unknown',
         vin: new Vin(FALLBACK_VIN),
-        vinStatus: err instanceof Elm327NoDataError ? ('unsupported' as const) : ('unreadable' as const),
+        vinStatus:
+          err instanceof Elm327NoDataError ? ('unsupported' as const) : ('unreadable' as const),
       }
     }
   }

@@ -91,7 +91,9 @@ test.describe("Dashboard", () => {
     await page.getByRole("button", { name: "Iniciar diagnóstico" }).click();
 
     // Wait for DTC result
-    await expect(page.getByText("P0301").first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("P0301").first()).toBeVisible({
+      timeout: 15000,
+    });
     await expect(page.getByText("ALTA").first()).toBeVisible();
     await expect(page.getByText("1 registrado")).toBeVisible();
   });
@@ -109,19 +111,27 @@ test.describe("Dashboard", () => {
     await page.waitForTimeout(5000);
     // Should NOT show DTC code P0301
     const dtcElement = page.getByText("P0301").first();
-    await expect(dtcElement).not.toBeVisible({ timeout: 5000 }).catch(() => {});
+    await expect(dtcElement)
+      .not.toBeVisible({ timeout: 5000 })
+      .catch(() => {});
   });
 
-  test("should show the no-freeze-frame state when selecting a DTC on Audi", async ({ page }) => {
+  test("should show the no-freeze-frame state when selecting a DTC on Audi", async ({
+    page,
+  }) => {
     await registerAndLogin(page, `ff_${SUFFIX}`);
 
     // Run diagnosis to surface the DTC list
     await page.getByRole("button", { name: "Iniciar diagnóstico" }).click();
-    await expect(page.getByText("P0301").first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("P0301").first()).toBeVisible({
+      timeout: 15000,
+    });
 
     // Select the DTC row — Audi has no freeze frame seeded, so the panel reports it
     await page.getByText("P0301").first().click();
-    await expect(page.getByText("Sin freeze frame para este código")).toBeVisible({
+    await expect(
+      page.getByText("Sin freeze frame para este código"),
+    ).toBeVisible({
       timeout: 15000,
     });
   });

@@ -87,10 +87,10 @@ describe("useDiagnosis", () => {
     };
     vi.mocked(api.runDiagnosis).mockResolvedValue(mockResult);
 
-    const { result, rerender } = renderHook(
-      ({ id }) => useDiagnosis(id),
-      { initialProps: { id: "audi-a3-idle" }, wrapper },
-    );
+    const { result, rerender } = renderHook(({ id }) => useDiagnosis(id), {
+      initialProps: { id: "audi-a3-idle" },
+      wrapper,
+    });
 
     await act(async () => {
       await result.current.runDiagnosis();

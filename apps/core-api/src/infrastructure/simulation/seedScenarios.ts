@@ -52,12 +52,48 @@ const kawaPidValues: Record<string, number> = {
   [CONTROL_MODULE_VOLTAGE_KEY]: 10.9,
 }
 
-const ECM = createEcu({ id: 1, name: 'Engine Control Module', type: 'ECM', requestAddr: '7E0', responseAddr: '7E8' })
-const TCM = createEcu({ id: 2, name: 'Transmission Control Module', type: 'TCM', requestAddr: '7E1', responseAddr: '7E9' })
-const ABS = createEcu({ id: 3, name: 'ABS Control Module', type: 'ABS', requestAddr: '760', responseAddr: '768' })
-const BCM = createEcu({ id: 4, name: 'Body Control Module', type: 'BCM', requestAddr: '7C0', responseAddr: '7C8' })
-const SRS = createEcu({ id: 5, name: 'Airbag Control Module', type: 'SRS', requestAddr: '7D2', responseAddr: '7DA' })
-const IPC = createEcu({ id: 6, name: 'Instrument Panel Cluster', type: 'IPC', requestAddr: '720', responseAddr: '728' })
+const ECM = createEcu({
+  id: 1,
+  name: 'Engine Control Module',
+  type: 'ECM',
+  requestAddr: '7E0',
+  responseAddr: '7E8',
+})
+const TCM = createEcu({
+  id: 2,
+  name: 'Transmission Control Module',
+  type: 'TCM',
+  requestAddr: '7E1',
+  responseAddr: '7E9',
+})
+const ABS = createEcu({
+  id: 3,
+  name: 'ABS Control Module',
+  type: 'ABS',
+  requestAddr: '760',
+  responseAddr: '768',
+})
+const BCM = createEcu({
+  id: 4,
+  name: 'Body Control Module',
+  type: 'BCM',
+  requestAddr: '7C0',
+  responseAddr: '7C8',
+})
+const SRS = createEcu({
+  id: 5,
+  name: 'Airbag Control Module',
+  type: 'SRS',
+  requestAddr: '7D2',
+  responseAddr: '7DA',
+})
+const IPC = createEcu({
+  id: 6,
+  name: 'Instrument Panel Cluster',
+  type: 'IPC',
+  requestAddr: '720',
+  responseAddr: '728',
+})
 
 /** Escenarios de simulacion de ejemplo para desarrollo y tests. */
 export const seedScenarios: SimulationScenario[] = [

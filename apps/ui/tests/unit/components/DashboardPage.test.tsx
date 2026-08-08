@@ -175,6 +175,11 @@ describe("DashboardPage", () => {
       loading: false,
       trigger: vi.fn(),
       reset: vi.fn(),
+      diagnosisText: null,
+      severity: null,
+      confidence: null,
+      recommendations: null,
+      conversationHistory: [],
     });
   });
 
@@ -561,6 +566,11 @@ describe("DashboardPage", () => {
       loading: false,
       trigger,
       reset,
+      diagnosisText: null,
+      severity: null,
+      confidence: null,
+      recommendations: null,
+      conversationHistory: [],
     });
 
     render(<DashboardPage />);
@@ -598,6 +608,11 @@ describe("DashboardPage", () => {
       loading: false,
       trigger,
       reset: vi.fn(),
+      diagnosisText: null,
+      severity: null,
+      confidence: null,
+      recommendations: null,
+      conversationHistory: [],
     });
 
     render(<DashboardPage />);
@@ -634,6 +649,11 @@ describe("DashboardPage", () => {
       loading: true,
       trigger: vi.fn(),
       reset: vi.fn(),
+      diagnosisText: null,
+      severity: null,
+      confidence: null,
+      recommendations: null,
+      conversationHistory: [],
     });
 
     render(<DashboardPage />);
@@ -677,6 +697,11 @@ describe("DashboardPage", () => {
       loading: false,
       trigger: vi.fn(),
       reset: vi.fn(),
+      diagnosisText: null,
+      severity: null,
+      confidence: null,
+      recommendations: null,
+      conversationHistory: [],
     });
 
     render(<DashboardPage />);

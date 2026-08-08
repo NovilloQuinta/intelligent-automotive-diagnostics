@@ -6,7 +6,9 @@ describe('dtcCatalog', () => {
     it('devuelve la descripcion SAE J2012 para un codigo presente', () => {
       expect(dtcDescribe('P0301')).toBe('Cylinder 1 Misfire Detected')
       expect(dtcDescribe('P0401')).toBe('Exhaust Gas Recirculation Flow Insufficient Detected')
-      expect(dtcDescribe('P2002')).toBe('Diesel Particulate Filter Efficiency Below Threshold (Bank 1)')
+      expect(dtcDescribe('P2002')).toBe(
+        'Diesel Particulate Filter Efficiency Below Threshold (Bank 1)',
+      )
     })
 
     it('es case-insensitive', () => {

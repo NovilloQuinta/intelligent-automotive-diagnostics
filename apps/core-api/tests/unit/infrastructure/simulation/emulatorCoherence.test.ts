@@ -31,9 +31,11 @@ const FORMULAS: Record<string, { formula: string; bytes: number }> = {
   '0C': { formula: '(A*256+B)/4', bytes: 2 }, // regimen (rpm)
   '0D': { formula: 'A', bytes: 1 }, // velocidad (km/h)
   '10': { formula: '(A*256+B)/100', bytes: 2 }, // caudal de aire (g/s)
+  '11': { formula: 'A*100/255', bytes: 1 }, // posicion de mariposa (%)
   '1F': { formula: 'A*256+B', bytes: 2 }, // tiempo de marcha (s)
   '2D': { formula: '(A-128)*100/128', bytes: 1 }, // error de EGR (%)
   '3C': { formula: '((A*256+B)/10)-40', bytes: 2 }, // temperatura de escape (degC)
+  '42': { formula: '(A*256+B)/1000', bytes: 2 }, // tension de la centralita (V)
 }
 
 /**
@@ -124,6 +126,10 @@ describe('coherencia de los escenarios del emulador', () => {
 
       expect(v.get('02 0C')).toBeGreaterThan(1500)
       expect(v.get('02 0D')).toBeGreaterThan(0)
+      // Carga y mariposa deben acompanar al regimen: un freeze frame con
+      // 2100 rpm y la mariposa cerrada seria otra incoherencia.
+      expect(v.get('02 04')).toBeGreaterThan(40)
+      expect(v.get('02 11')).toBeGreaterThan(30)
       // Si el freeze frame coincide con la lectura actual no aporta nada, y con
       // el se cae el argumento de leerlo antes de borrar las averias.
       expect(v.get('02 0C')).not.toBe(v.get('01 0C'))

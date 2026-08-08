@@ -230,6 +230,14 @@ type ScenariosResponse = { scenarios: Scenario[] };
 
 /** Cognitive diagnosis output. */
 /** PID reading enriched by the backend from the AI's `read_pid` tool calls. */
+/** Respuesta de `GET /api/live-data`: `null` en un campo = ese PID falló. */
+export type LiveDataResponse = {
+  rpm: number | null;
+  coolantTemp: number | null;
+  speed: number | null;
+  intakeTemp: number | null;
+};
+
 export type PidObservation = {
   code: string;
   name: string;
@@ -245,6 +253,14 @@ export type CognitiveOutput = {
   recommendations: string[];
   toolCalls: { tool: string; args: Record<string, unknown>; result: string }[];
   pidObservations: PidObservation[];
+};
+
+export type ConversationItem = {
+  readonly __type: "user_message" | "raw_response" | "tool_result";
+  readonly content?: string;
+  readonly data?: unknown;
+  readonly toolCallId?: string;
+  readonly isError?: boolean;
 };
 
 /** Register response from backend. */
@@ -359,6 +375,19 @@ export const api = {
     return data.freezeFrame;
   },
 
+  /**
+   * GET /api/live-data — reads the four dashboard PIDs from the vehicle.
+   *
+   * A `null` field means that single PID failed; the others keep their value.
+   */
+  async getLiveData(scenarioId: string): Promise<LiveDataResponse> {
+    const res = await apiFetch(
+      `/api/live-data?scenarioId=${encodeURIComponent(scenarioId)}`,
+    );
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+    return (await res.json()) as LiveDataResponse;
+  },
+
   /** GET /api/ecu-info — returns the ECUs discovered for the vehicle. */
   async getEcuInfo(scenarioId: string): Promise<EcuInfo[]> {
     const res = await apiFetch(
@@ -419,10 +448,11 @@ export const api = {
   async getCognitiveDiagnosis(
     scenarioId: string,
     query?: string,
+    history?: readonly ConversationItem[],
   ): Promise<CognitiveOutput> {
     const res = await apiFetch("/api/mcp/cognitive-diagnosis", {
       method: "POST",
-      body: JSON.stringify({ scenarioId, query }),
+      body: JSON.stringify({ scenarioId, query, history }),
       signal: AbortSignal.timeout(COGNITIVE_TIMEOUT_MS),
     });
     await assertOk(res, GENERIC_ERROR_MESSAGE);

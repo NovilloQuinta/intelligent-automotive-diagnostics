@@ -1,9 +1,9 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createElement } from "react";
+import { createElement, useState } from "react";
 import { useCognitiveDiagnosis } from "../../../src/components/dashboard/useCognitiveDiagnosis";
-import type { CognitiveOutput } from "../../../src/lib/api";
+import type { CognitiveOutput, ConversationItem } from "../../../src/lib/api";
 
 vi.mock("../../../src/lib/api", () => ({
   api: {
@@ -13,10 +13,22 @@ vi.mock("../../../src/lib/api", () => ({
 
 import { api } from "../../../src/lib/api";
 
+/**
+ * El QueryClient se crea una sola vez por montaje, no en cada render.
+ * Con `new QueryClient()` en el cuerpo, cada re-render estrenaba cliente y la
+ * cache escrita por la mutacion desaparecia: los asserts leian null de forma
+ * intermitente segun el orden de los renders.
+ */
 function wrapper({ children }: { children: React.ReactNode }) {
-  const qc = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
+  const [qc] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { retry: false },
+          mutations: { retry: false },
+        },
+      }),
+  );
   return createElement(QueryClientProvider, { client: qc }, children);
 }
 
@@ -25,7 +37,7 @@ function cognitiveOutput(): CognitiveOutput {
     diagnosis: "Narrativa",
     severity: "low",
     confidence: 0.8,
-    recommendations: [],
+    recommendations: ["Revisar bujías"],
     toolCalls: [],
     pidObservations: [
       {
@@ -71,6 +83,7 @@ describe("useCognitiveDiagnosis", () => {
     });
     expect(api.getCognitiveDiagnosis).toHaveBeenCalledWith(
       "kawa-z900",
+      undefined,
       undefined,
     );
     expect(result.current.loading).toBe(false);
@@ -120,7 +133,9 @@ describe("useCognitiveDiagnosis", () => {
     await act(async () => {
       await result.current.trigger();
     });
-    expect(result.current.pidRows).toHaveLength(1);
+    await waitFor(() => {
+      expect(result.current.pidRows).toHaveLength(1);
+    });
 
     act(() => {
       result.current.reset();
@@ -141,6 +156,92 @@ describe("useCognitiveDiagnosis", () => {
 
     expect(api.getCognitiveDiagnosis).not.toHaveBeenCalled();
     expect(result.current.pidRows).toBeNull();
+  });
+
+  it("stores the diagnosis text from the cognitive response", async () => {
+    vi.mocked(api.getCognitiveDiagnosis).mockResolvedValue(cognitiveOutput());
+
+    const { result } = renderHook(() => useCognitiveDiagnosis("kawa-z900"), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await result.current.trigger("¿Por qué tiembla?");
+    });
+
+    await waitFor(() => {
+      expect(result.current.diagnosisText).toBe("Narrativa");
+    });
+    expect(result.current.severity).toBe("low");
+    expect(result.current.confidence).toBe(0.8);
+    expect(result.current.recommendations).toEqual(["Revisar bujías"]);
+  });
+
+  it("accumulates conversation history across triggers", async () => {
+    vi.mocked(api.getCognitiveDiagnosis).mockResolvedValueOnce(
+      cognitiveOutput(),
+    );
+
+    const { result } = renderHook(() => useCognitiveDiagnosis("kawa-z900"), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await result.current.trigger("¿Por qué tiembla?");
+    });
+
+    await waitFor(() => {
+      expect(result.current.conversationHistory).toHaveLength(2);
+    });
+    expect(result.current.conversationHistory[0]).toEqual({
+      __type: "user_message",
+      content: "¿Por qué tiembla?",
+    });
+    expect(result.current.conversationHistory[1]).toEqual({
+      __type: "raw_response",
+      data: { text: "Narrativa" },
+    });
+  });
+
+  it("updates conversationHistory on next trigger keeping prior context", async () => {
+    vi.mocked(api.getCognitiveDiagnosis)
+      .mockResolvedValueOnce(cognitiveOutput())
+      .mockResolvedValueOnce({
+        ...cognitiveOutput(),
+        diagnosis: "Segunda respuesta",
+      });
+
+    const { result } = renderHook(() => useCognitiveDiagnosis("kawa-z900"), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await result.current.trigger("¿Por qué tiembla?");
+    });
+
+    await waitFor(() => {
+      expect(result.current.conversationHistory).toHaveLength(2);
+    });
+    const firstHistory = result.current.conversationHistory;
+
+    await act(async () => {
+      await result.current.trigger("¿Y eso por qué?");
+    });
+
+    await waitFor(() => {
+      expect(result.current.conversationHistory).toHaveLength(4);
+    });
+    expect(result.current.conversationHistory[0]).toEqual(firstHistory[0]);
+    expect(result.current.conversationHistory[1]).toEqual(firstHistory[1]);
+    expect(result.current.conversationHistory[2]).toEqual({
+      __type: "user_message",
+      content: "¿Y eso por qué?",
+    });
+    expect(result.current.conversationHistory[3]).toEqual({
+      __type: "raw_response",
+      data: { text: "Segunda respuesta" },
+    });
+    expect(result.current.conversationHistory).toHaveLength(4);
   });
 
   it("clears pidRows when selectedId changes to a different vehicle", async () => {
@@ -165,5 +266,31 @@ describe("useCognitiveDiagnosis", () => {
       expect(result.current.pidRows).toBeNull();
     });
     expect(result.current.loading).toBe(false);
+  });
+
+  it("clears the conversation thread when the vehicle changes", async () => {
+    vi.mocked(api.getCognitiveDiagnosis).mockResolvedValue(cognitiveOutput());
+
+    const { result, rerender } = renderHook(
+      ({ id }) => useCognitiveDiagnosis(id),
+      { initialProps: { id: "kawa-z900" }, wrapper },
+    );
+
+    await act(async () => {
+      await result.current.trigger("¿Por qué tiembla?");
+    });
+
+    await waitFor(() => {
+      expect(result.current.conversationHistory).toHaveLength(2);
+    });
+
+    rerender({ id: "audi-a3" });
+
+    // Arrastrar el hilo del coche anterior haria que la IA respondiera sobre
+    // un vehiculo que ya no esta en pantalla.
+    await waitFor(() => {
+      expect(result.current.conversationHistory).toHaveLength(0);
+    });
+    expect(result.current.diagnosisText).toBeNull();
   });
 });
