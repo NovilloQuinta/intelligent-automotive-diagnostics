@@ -55,7 +55,6 @@ import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { KnowledgeVectorStores } from '@/application/use-cases/admin/GetKnowledgeStatsUseCase.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import { createSerpApiClient } from '@/infrastructure/web-search/serpApiClient.js'
-import { LiveData } from '@/domain/value-objects/liveData.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 
@@ -181,12 +180,9 @@ export async function seedAdminUser(
 /**
  * Escenarios disponibles en modo Docker emulador.
  *
- * `sensorValues` y `dtcConfig` DEBEN coincidir con lo que responden los
- * escenarios de `docker/elm327/`. Si divergen, la misma lectura aparece con
- * dos valores distintos en la pantalla.
- *
- * Deuda conocida: `sensorValues` desaparece cuando la telemetria se lea del
- * vehiculo en vez de generarse en el cliente.
+ * La telemetria (PIDs 05, 0C, 0D, 0F) y los codigos de averia se leen en
+ * tiempo real del emulador via `GET /api/live-data` y `GET /api/dtc-codes`.
+ * No se hardcodean valores que el emulador ya provee.
  */
 function createDockerScenarios(config: AppConfig): ScenarioDescriptor[] {
   return [
@@ -194,7 +190,6 @@ function createDockerScenarios(config: AppConfig): ScenarioDescriptor[] {
       id: 'toyota',
       name: 'Toyota (Built-in)',
       vehicleType: 'car',
-      sensorValues: new LiveData({ rpm: 750, coolantTemp: 55, speed: 0, intakeTemp: 17 }),
       dtcConfig: [],
       vehicleInfo: new VehicleInfo({
         make: 'Toyota',
@@ -210,15 +205,6 @@ function createDockerScenarios(config: AppConfig): ScenarioDescriptor[] {
       id: 'audi-a3-tdi',
       name: 'Audi A3 2.0 TDI',
       vehicleType: 'car',
-      sensorValues: new LiveData({ rpm: 770, coolantTemp: 90, speed: 0, intakeTemp: 35 }),
-      dtcConfig: [
-        { code: 'P0301', description: 'Cylinder 1 Misfire Detected' },
-        { code: 'P0401', description: 'Exhaust Gas Recirculation Flow Insufficient Detected' },
-        {
-          code: 'P2002',
-          description: 'Diesel Particulate Filter Efficiency Below Threshold (Bank 1)',
-        },
-      ],
       vehicleInfo: new VehicleInfo({
         make: 'Audi',
         model: 'A3',
@@ -233,7 +219,6 @@ function createDockerScenarios(config: AppConfig): ScenarioDescriptor[] {
       id: 'kawasaki-z900',
       name: 'Kawasaki Z900',
       vehicleType: 'motorcycle',
-      sensorValues: new LiveData({ rpm: 1300, coolantTemp: 95, speed: 0, intakeTemp: 28 }),
       dtcConfig: [],
       vehicleInfo: new VehicleInfo({
         make: 'Kawasaki',

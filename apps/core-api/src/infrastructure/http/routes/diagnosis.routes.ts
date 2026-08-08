@@ -24,6 +24,10 @@ export function createDiagnosisRoutes(controller: DiagnosisController): Router {
   router.get('/live-data', liveDataRateLimit, controller.liveData)
   router.post('/mcp/tools/:toolName', controller.mcpTool)
   router.post('/mcp/cognitive-diagnosis', controller.cognitiveDiagnosis)
+  router.post('/clear-dtc', controller.clearDtc)
+  router.get('/pending-dtc', controller.pendingDtc)
+  router.get('/permanent-dtc', controller.permanentDtc)
+  router.get('/vehicle-status', controller.vehicleStatus)
 
   return router
 }

@@ -110,6 +110,9 @@ type ServiceStub = Pick<
   | 'getFreezeFrame'
   | 'getEcuInfo'
   | 'getVehicleInfo'
+  | 'clearDtcCodes'
+  | 'readPendingDtcCodes'
+  | 'readPermanentDtcCodes'
 >
 
 /** Stub de DiagnosisService: el controlador solo consume su superficie publica. */
@@ -133,6 +136,13 @@ function createServiceStub(overrides: Partial<ServiceStub> = {}): DiagnosisServi
       region: { country: 'Germany', region: 'Europe' },
       modelYearDecoded: 2018,
     })),
+    clearDtcCodes: vi.fn(async () => undefined),
+    readPendingDtcCodes: vi.fn(async () => [
+      { code: 'P0301', description: 'Cylinder 1 Misfire' },
+    ]),
+    readPermanentDtcCodes: vi.fn(async () => [
+      { code: 'P0401', description: 'EGR Flow Insufficient' },
+    ]),
     ...overrides,
   } as unknown as DiagnosisService
 }
@@ -566,6 +576,165 @@ describe('diagnosisRoutes', () => {
       expect(res.status).toBe(400)
       expect(res.body.error).toBe('Invalid request body')
       expect(service.callMcpTool).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('POST /api/clear-dtc', () => {
+    it('should return { cleared: true } for a valid scenario', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service)
+      const res = await request(app)
+        .post('/api/clear-dtc')
+        .send({ scenarioId: 'audi-a3-idle' })
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({ cleared: true })
+      expect(service.clearDtcCodes).toHaveBeenCalledWith('audi-a3-idle')
+    })
+
+    it('should return 404 when the scenario does not exist', async () => {
+      const service = createServiceStub({
+        clearDtcCodes: vi.fn(async () => {
+          throw new DiagnosisScenarioNotFoundError()
+        }),
+      })
+      const { app } = createApp(service)
+      const res = await request(app).post('/api/clear-dtc').send({ scenarioId: 'no-existe' })
+
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe('Scenario not found')
+    })
+
+    it('should return 400 for invalid body', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service)
+      const res = await request(app).post('/api/clear-dtc').send({})
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid request body')
+      expect(service.clearDtcCodes).not.toHaveBeenCalled()
+    })
+
+    it('should return 500 without leaking details on unexpected errors', async () => {
+      const service = createServiceStub({
+        clearDtcCodes: vi.fn(async () => {
+          throw new Error('bus error')
+        }),
+      })
+      const { app } = createApp(service)
+      const res = await request(app)
+        .post('/api/clear-dtc')
+        .send({ scenarioId: 'audi-a3-idle' })
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Internal server error')
+      expect(JSON.stringify(res.body)).not.toContain('bus error')
+    })
+  })
+
+  describe('GET /api/pending-dtc', () => {
+    const pendingDtcs = [{ code: 'P0301', description: 'Cylinder 1 Misfire' }]
+
+    it('should return pending DTC codes for a valid scenario', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/pending-dtc').query({ scenarioId: 'audi-a3-idle' })
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({ dtcCodes: pendingDtcs })
+      expect(service.readPendingDtcCodes).toHaveBeenCalledWith('audi-a3-idle')
+    })
+
+    it('should return 404 when the scenario does not exist', async () => {
+      const service = createServiceStub({
+        readPendingDtcCodes: vi.fn(async () => {
+          throw new DiagnosisScenarioNotFoundError()
+        }),
+      })
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/pending-dtc').query({ scenarioId: 'no-existe' })
+
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe('Scenario not found')
+    })
+
+    it('should return 400 when scenarioId is missing in simulation mode', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/pending-dtc')
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid request body')
+      expect(service.readPendingDtcCodes).not.toHaveBeenCalled()
+    })
+
+    it('should return 500 without leaking details on unexpected errors', async () => {
+      const service = createServiceStub({
+        readPendingDtcCodes: vi.fn(async () => {
+          throw new Error('connection lost')
+        }),
+      })
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/pending-dtc').query({ scenarioId: 'audi-a3-idle' })
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Internal server error')
+      expect(JSON.stringify(res.body)).not.toContain('connection lost')
+    })
+  })
+
+  describe('GET /api/permanent-dtc', () => {
+    const permanentDtcs = [{ code: 'P0401', description: 'EGR Flow Insufficient' }]
+
+    it('should return permanent DTC codes for a valid scenario', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service)
+      const res = await request(app)
+        .get('/api/permanent-dtc')
+        .query({ scenarioId: 'audi-a3-idle' })
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({ dtcCodes: permanentDtcs })
+      expect(service.readPermanentDtcCodes).toHaveBeenCalledWith('audi-a3-idle')
+    })
+
+    it('should return 404 when the scenario does not exist', async () => {
+      const service = createServiceStub({
+        readPermanentDtcCodes: vi.fn(async () => {
+          throw new DiagnosisScenarioNotFoundError()
+        }),
+      })
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/permanent-dtc').query({ scenarioId: 'no-existe' })
+
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe('Scenario not found')
+    })
+
+    it('should return 400 when scenarioId is missing in simulation mode', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/permanent-dtc')
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid request body')
+      expect(service.readPermanentDtcCodes).not.toHaveBeenCalled()
+    })
+
+    it('should return 500 without leaking details on unexpected errors', async () => {
+      const service = createServiceStub({
+        readPermanentDtcCodes: vi.fn(async () => {
+          throw new Error('permanent dtc read failure')
+        }),
+      })
+      const { app } = createApp(service)
+      const res = await request(app)
+        .get('/api/permanent-dtc')
+        .query({ scenarioId: 'audi-a3-idle' })
+
+      expect(res.status).toBe(500)
+      expect(res.body.error).toBe('Internal server error')
+      expect(JSON.stringify(res.body)).not.toContain('permanent dtc read failure')
     })
   })
 

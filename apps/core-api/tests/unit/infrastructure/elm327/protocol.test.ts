@@ -61,6 +61,15 @@ describe('protocol', () => {
     it('should throw Elm327ParseError on invalid input', () => {
       expect(() => parseModeResponse('ZZ ZZ ZZ')).toThrow(Elm327ParseError)
     })
+
+    it('should NOT treat 0x7F data byte as negative response code', () => {
+      // PID 01 byte B = 0x7F es un valor legitimo (SAE J1979: compression + all common tests)
+      expect(() => parseModeResponse('41 01 83 7F FF FF')).not.toThrow()
+    })
+
+    it('should throw Elm327ParseError on genuine negative response 7F at start', () => {
+      expect(() => parseModeResponse('7F 01 11')).toThrow(Elm327ParseError)
+    })
   })
 
   describe('parseMode22Response', () => {
@@ -111,8 +120,22 @@ describe('protocol', () => {
   })
 
   describe('parseDtcResponse', () => {
-    it('should parse "43 03 01 04 01" → [[0x03,0x01],[0x04,0x01]]', () => {
+    it('should parse "43 03 01 04 01" → [[0x03,0x01],[0x04,0x01]] (default Mode 03)', () => {
       expect(parseDtcResponse('43 03 01 04 01')).toEqual([
+        [0x03, 0x01],
+        [0x04, 0x01],
+      ])
+    })
+
+    it('should parse "47 03 01 04 01" → [[0x03,0x01],[0x04,0x01]] (Mode 07, header 47)', () => {
+      expect(parseDtcResponse('47 03 01 04 01', '07')).toEqual([
+        [0x03, 0x01],
+        [0x04, 0x01],
+      ])
+    })
+
+    it('should parse "4A 03 01 04 01" → [[0x03,0x01],[0x04,0x01]] (Mode 0A, header 4A)', () => {
+      expect(parseDtcResponse('4A 03 01 04 01', '0A')).toEqual([
         [0x03, 0x01],
         [0x04, 0x01],
       ])
@@ -124,6 +147,10 @@ describe('protocol', () => {
 
     it('should throw Elm327ParseError on "CAN ERROR"', () => {
       expect(() => parseDtcResponse('CAN ERROR')).toThrow(Elm327ParseError)
+    })
+
+    it('should throw Elm327ParseError when header does not match mode (Mode 03 with 47 header)', () => {
+      expect(() => parseDtcResponse('47 03 01 04 01', '03')).toThrow(Elm327ParseError)
     })
   })
 

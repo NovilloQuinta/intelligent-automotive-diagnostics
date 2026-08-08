@@ -2,6 +2,7 @@ import type { SimulationScenario } from './scenario.js'
 import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
+import { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 import {
   MODE_CURRENT_DATA,
   MODE_DTC,
@@ -148,5 +149,13 @@ export class ObdSimulator {
   /** Devuelve las ECUs del escenario activo (vacio si no estan definidas). */
   getEcus(): EcuInfo[] {
     return this.scenario.ecus ?? []
+  }
+
+  /** Service 01 PID 01 — Estado del testigo MIL y monitores (simulado). */
+  getVehicleStatus(): VehicleStatus {
+    const isDiesel = /tdi|diesel/i.test(this.scenario.vehicleInfo.engineType)
+    const engineType = isDiesel ? 'compression' : 'spark'
+    // Hardcoded: sin averias, todos los monitores completados.
+    return VehicleStatus.clean(engineType)
   }
 }

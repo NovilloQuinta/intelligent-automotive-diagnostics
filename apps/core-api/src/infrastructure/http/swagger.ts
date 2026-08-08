@@ -336,6 +336,179 @@ export const openApiSpec = {
         },
       },
     },
+    '/api/clear-dtc': {
+      post: {
+        tags: ['Diagnosis'],
+        summary: 'Clear stored DTC codes and freeze frame data',
+        description:
+          'Clears diagnostic trouble codes and stored sensor values (Mode 04). ' +
+          'Requires authentication.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['scenarioId'],
+                properties: {
+                  scenarioId: {
+                    type: 'string',
+                    description: 'Scenario ID (e.g. "audi-a3-idle"). Optional in TCP direct mode.',
+                    example: 'audi-a3-idle',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'DTCs cleared successfully',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: { cleared: { type: 'boolean', example: true } },
+                },
+              },
+            },
+          },
+          '401': { description: 'Access token required' },
+          '404': { description: 'Scenario not found' },
+        },
+      },
+    },
+    '/api/pending-dtc': {
+      get: {
+        tags: ['Diagnosis'],
+        summary: 'Read pending DTC codes (Mode 07)',
+        description:
+          'Returns pending (not yet confirmed) diagnostic trouble codes. ' +
+          'Requires authentication.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'scenarioId',
+            in: 'query',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Scenario ID (e.g. "audi-a3-idle"). Optional in TCP direct mode.',
+            example: 'audi-a3-idle',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Pending DTC codes',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    dtcCodes: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/DtcCode' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '401': { description: 'Access token required' },
+          '404': { description: 'Scenario not found' },
+        },
+      },
+    },
+    '/api/permanent-dtc': {
+      get: {
+        tags: ['Diagnosis'],
+        summary: 'Read permanent DTC codes (Mode 0A)',
+        description:
+          'Returns permanent diagnostic trouble codes that cannot be cleared with Mode 04. ' +
+          'Requires authentication.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'scenarioId',
+            in: 'query',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Scenario ID (e.g. "audi-a3-idle"). Optional in TCP direct mode.',
+            example: 'audi-a3-idle',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Permanent DTC codes',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    dtcCodes: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/DtcCode' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '401': { description: 'Access token required' },
+          '404': { description: 'Scenario not found' },
+        },
+      },
+    },
+    '/api/vehicle-status': {
+      get: {
+        tags: ['Diagnosis'],
+        summary: 'Get MIL status and emissions monitors (Mode 01 PID 01)',
+        description:
+          'Returns the status of the Malfunction Indicator Lamp (MIL), stored DTC count, ' +
+          'engine type, and the supported/completed emissions monitors. Requires authentication.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'scenarioId',
+            in: 'query',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Scenario ID (e.g. "audi-a3-idle"). Optional in TCP direct mode.',
+            example: 'audi-a3-idle',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Vehicle status with MIL, DTCs, and monitors',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    milOn: { type: 'boolean', example: true },
+                    dtcCount: { type: 'integer', example: 3 },
+                    engineType: { type: 'string', enum: ['spark', 'compression'], example: 'spark' },
+                    monitors: {
+                      type: 'array',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          name: { type: 'string', example: 'misfire' },
+                          supported: { type: 'boolean', example: true },
+                          completed: { type: 'boolean', example: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '401': { description: 'Access token required' },
+          '404': { description: 'Scenario not found' },
+        },
+      },
+    },
     '/api/diagnosis': {
       post: {
         tags: ['Diagnosis'],
@@ -656,6 +829,7 @@ export const openApiSpec = {
       },
       Scenario: {
         type: 'object',
+        required: ['id', 'name', 'vehicleType', 'vehicleInfo'],
         properties: {
           id: { type: 'string', example: 'audi-a3-idle' },
           name: { type: 'string', example: 'Audi A3 al ralenti' },

@@ -78,6 +78,9 @@ function createMockRepo(): ObdRepository {
     getFreezeFrame: vi.fn(async () => null),
     readDtcCodes: vi.fn(async () => [{ code: 'P0301', description: 'Cylinder 1 Misfire' }]),
     clearDtcCodes: vi.fn(async () => undefined),
+    readPendingDtcCodes: vi.fn(async () => []),
+    readPermanentDtcCodes: vi.fn(async () => []),
+    readPidRaw: vi.fn(async () => []),
     readVin: vi.fn(async () => 'WAUZZZ8V5JA123456'),
     getVehicleInfo: vi.fn(async () => ({
       make: 'Audi',

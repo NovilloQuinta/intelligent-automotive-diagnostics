@@ -16,6 +16,7 @@ import { FreezeFramePanel } from "./FreezeFramePanel";
 import { EcuInfoPanel } from "./EcuInfoPanel";
 import { DiagnosisPanel } from "./DiagnosisPanel";
 import { PidsTable } from "./PidsTable";
+import { VehicleStatusPanel } from "./VehicleStatusPanel";
 import { MechanicChat } from "./MechanicChat";
 import { SessionReportPanel } from "./SessionReportPanel";
 
@@ -131,14 +132,16 @@ export function DashboardPage() {
               telemetryStatus={telemetryStatus}
               onDiagnose={handleDiagnose}
             />
-            <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:gap-6">
+            <section className="grid min-h-0 grid-rows-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4 lg:gap-6">
               <DtcPanel
                 codes={result?.dtcCodes ?? null}
                 severity={result?.severity ?? null}
                 empty={!result && !loading}
                 selectedCode={selectedDtc}
                 onSelect={setSelectedDtc}
+                scenarioId={selectedId || ""}
               />
+              <VehicleStatusPanel scenarioId={selectedId} />
               <FreezeFramePanel scenarioId={selectedId} dtc={selectedDtc} />
               <EcuInfoPanel
                 ecus={ecus}

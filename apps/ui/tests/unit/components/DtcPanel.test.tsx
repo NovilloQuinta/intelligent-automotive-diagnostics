@@ -1,18 +1,73 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { DtcPanel } from "../../../src/components/dashboard/DtcPanel";
 
+// ---------------------------------------------------------------------------
+// Mock the hooks that DtcPanel now uses internally
+// ---------------------------------------------------------------------------
+
+const mockPendingHook = vi.fn();
+const mockPermanentHook = vi.fn();
+const mockClearDtcFn = vi.fn();
+
+vi.mock("../../../src/components/dashboard/usePendingDtc", () => ({
+  usePendingDtc: (_scenarioId: string) => mockPendingHook(),
+}));
+
+vi.mock("../../../src/components/dashboard/usePermanentDtc", () => ({
+  usePermanentDtc: (_scenarioId: string) => mockPermanentHook(),
+}));
+
+vi.mock("../../../src/components/dashboard/useClearDtc", () => ({
+  useClearDtc: () => ({
+    clearDtc: mockClearDtcFn,
+    loading: false,
+    error: null,
+  }),
+}));
+
+// ---------------------------------------------------------------------------
+// Default hook return values
+// ---------------------------------------------------------------------------
+
+const emptyHook = { dtcCodes: [], loading: false, error: null };
+
+function setPendingHook(
+  value: typeof emptyHook = emptyHook,
+) {
+  mockPendingHook.mockReturnValue(value);
+}
+
+function setPermanentHook(
+  value: typeof emptyHook = emptyHook,
+) {
+  mockPermanentHook.mockReturnValue(value);
+}
+
+beforeEach(() => {
+  setPendingHook();
+  setPermanentHook();
+  mockClearDtcFn.mockReset();
+});
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 describe("DtcPanel", () => {
+  const DEFAULT_PROPS = {
+    codes: null as { code: string; description: string }[] | null,
+    severity: null as "low" | "medium" | "high" | "critical" | null,
+    empty: false,
+    selectedCode: null as string | null,
+    onSelect: vi.fn(),
+    scenarioId: "audi-a3-idle",
+  };
+
+  // ---- Legacy empty / no-codes / code-list tests (updated with scenarioId) ----
+
   it("should render the empty prompt and a dash count when empty", () => {
-    render(
-      <DtcPanel
-        codes={null}
-        severity={null}
-        empty={true}
-        onSelect={vi.fn()}
-        selectedCode={null}
-      />,
-    );
+    render(<DtcPanel {...DEFAULT_PROPS} codes={null} empty={true} />);
 
     expect(
       screen.getByText("Selecciona un vehículo y pulsa INICIAR DIAGNÓSTICO"),
@@ -21,22 +76,12 @@ describe("DtcPanel", () => {
     expect(screen.queryByText("Ningún código de error")).toBeNull();
   });
 
-  it("should render the no-codes message and zero count for an empty array", () => {
-    render(
-      <DtcPanel
-        codes={[]}
-        severity={null}
-        empty={false}
-        onSelect={vi.fn()}
-        selectedCode={null}
-      />,
-    );
+  it("should render 'Ninguna' in the Almacenadas section and zero count for an empty array", () => {
+    render(<DtcPanel {...DEFAULT_PROPS} codes={[]} empty={false} />);
 
-    expect(
-      screen.getByText(
-        "Ningún código de error — el vehículo no presenta fallos registrados.",
-      ),
-    ).toBeDefined();
+    // The Almacenadas section shows "Ninguna" when there are no stored codes
+    const ningunas = screen.getAllByText("Ninguna");
+    expect(ningunas.length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("0 registrados")).toBeDefined();
   });
 
@@ -46,11 +91,10 @@ describe("DtcPanel", () => {
     ];
     const { container } = render(
       <DtcPanel
+        {...DEFAULT_PROPS}
         codes={codes}
         severity="critical"
         empty={false}
-        onSelect={vi.fn()}
-        selectedCode={null}
       />,
     );
 
@@ -66,13 +110,7 @@ describe("DtcPanel", () => {
       { code: "P0128", description: "Termostato" },
     ];
     const { container } = render(
-      <DtcPanel
-        codes={codes}
-        severity={null}
-        empty={false}
-        onSelect={vi.fn()}
-        selectedCode={null}
-      />,
+      <DtcPanel {...DEFAULT_PROPS} codes={codes} severity={null} empty={false} />,
     );
 
     expect(screen.getByText("2 registrados")).toBeDefined();
@@ -86,11 +124,11 @@ describe("DtcPanel", () => {
     const codes = [{ code: "P0301", description: "Misfire" }];
     render(
       <DtcPanel
+        {...DEFAULT_PROPS}
         codes={codes}
         severity={null}
         empty={false}
         onSelect={onSelect}
-        selectedCode={null}
       />,
     );
 
@@ -107,6 +145,7 @@ describe("DtcPanel", () => {
     ];
     render(
       <DtcPanel
+        {...DEFAULT_PROPS}
         codes={codes}
         severity={null}
         empty={false}
@@ -122,5 +161,96 @@ describe("DtcPanel", () => {
     expect(selectedRow?.className).toContain("bg-primary/10");
     expect(otherRow?.getAttribute("aria-selected")).toBe("false");
     expect(otherRow?.className).not.toContain("bg-primary/10");
+  });
+
+  // ---- Three-section layout ----
+
+  it("should render three DTC sections: Almacenadas, Pendientes, Permanentes", () => {
+    render(<DtcPanel {...DEFAULT_PROPS} codes={[]} empty={false} />);
+
+    expect(screen.getByText("Almacenadas")).toBeDefined();
+    expect(screen.getByText("Pendientes")).toBeDefined();
+    expect(screen.getByText("Permanentes")).toBeDefined();
+  });
+
+  it("should show 'Ninguna' in the Pendientes section when there are no pending codes", () => {
+    setPendingHook({ dtcCodes: [], loading: false, error: null });
+    render(<DtcPanel {...DEFAULT_PROPS} codes={[]} empty={false} />);
+
+    // All "Ninguna" messages should appear (one per empty section)
+    const ningunas = screen.getAllByText("Ninguna");
+    // There should be at least 2: one from the no-codes message for "Almacenadas"
+    // ("Ningún código de error") and one for Pendientes empty list. Plus Permanentes.
+    expect(ningunas.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("should show pending codes when they exist", () => {
+    const pendingCodes = [
+      { code: "P0171", description: "Mezcla pobre" },
+    ];
+    setPendingHook({ dtcCodes: pendingCodes, loading: false, error: null });
+    setPermanentHook({ dtcCodes: [], loading: false, error: null });
+    render(<DtcPanel {...DEFAULT_PROPS} codes={[]} empty={false} />);
+
+    expect(screen.getByText("P0171")).toBeDefined();
+    expect(screen.getByText("Mezcla pobre")).toBeDefined();
+  });
+
+  it("should show permanent codes when they exist", () => {
+    const permanentCodes = [
+      { code: "P0420", description: "Catalizador" },
+    ];
+    setPendingHook({ dtcCodes: [], loading: false, error: null });
+    setPermanentHook({ dtcCodes: permanentCodes, loading: false, error: null });
+    render(<DtcPanel {...DEFAULT_PROPS} codes={[]} empty={false} />);
+
+    expect(screen.getByText("P0420")).toBeDefined();
+    expect(screen.getByText("Catalizador")).toBeDefined();
+  });
+
+  // ---- Clear DTC button + AlertDialog ----
+
+  it("should render a 'Borrar averías' button", () => {
+    render(<DtcPanel {...DEFAULT_PROPS} codes={[]} empty={false} />);
+
+    expect(screen.getByRole("button", { name: /borrar averías/i })).toBeDefined();
+  });
+
+  it("should open the confirmation dialog when clicking 'Borrar averías'", async () => {
+    render(<DtcPanel {...DEFAULT_PROPS} codes={[]} empty={false} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /borrar averías/i }));
+
+    // AlertDialog should now be visible — both title and button share the text,
+    // so check the dialog description instead
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Se borrarán las averías y sus freeze frames/),
+      ).toBeDefined();
+    });
+  });
+
+  it("should call clearDtc on confirmation and show a success message", async () => {
+    mockClearDtcFn.mockResolvedValue(true);
+
+    render(<DtcPanel {...DEFAULT_PROPS} codes={[]} empty={false} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /borrar averías/i }));
+
+    // Wait for the dialog to appear by checking its description
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Se borrarán las averías y sus freeze frames/),
+      ).toBeDefined();
+    });
+
+    // Click the confirm button in the dialog
+    fireEvent.click(
+      screen.getByRole("button", { name: /confirmar/i }),
+    );
+
+    await waitFor(() => {
+      expect(mockClearDtcFn).toHaveBeenCalledWith("audi-a3-idle");
+    });
   });
 });

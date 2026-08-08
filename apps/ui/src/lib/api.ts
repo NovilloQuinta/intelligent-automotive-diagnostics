@@ -3,12 +3,14 @@ import type {
   AuthTokens,
   AuthUser,
   DiagnosisResponse,
+  DtcCode,
   EcuInfo,
   FreezeFrame,
   LoginInput,
   RegisterInput,
   Scenario,
   VehicleInfoResponse,
+  VehicleStatusOutput,
 } from "@/components/dashboard/types";
 import type {
   AdminAuditFilter,
@@ -241,6 +243,14 @@ type ScenariosResponse = { scenarios: Scenario[] };
 
 /** Cognitive diagnosis output. */
 /** PID reading enriched by the backend from the AI's `read_pid` tool calls. */
+/** Respuesta de `GET /api/live-data`: `null` en un campo = ese PID falló. */
+export type LiveDataResponse = {
+  rpm: number | null;
+  coolantTemp: number | null;
+  speed: number | null;
+  intakeTemp: number | null;
+};
+
 export type PidObservation = {
   code: string;
   name: string;
@@ -400,6 +410,19 @@ export const api = {
     return data.freezeFrame;
   },
 
+  /**
+   * GET /api/live-data — reads the four dashboard PIDs from the vehicle.
+   *
+   * A `null` field means that single PID failed; the others keep their value.
+   */
+  async getLiveData(scenarioId: string): Promise<LiveDataResponse> {
+    const res = await apiFetch(
+      `/api/live-data?scenarioId=${encodeURIComponent(scenarioId)}`,
+    );
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+    return (await res.json()) as LiveDataResponse;
+  },
+
   /** GET /api/ecu-info — returns the ECUs discovered for the vehicle. */
   async getEcuInfo(scenarioId: string): Promise<EcuInfo[]> {
     const res = await apiFetch(
@@ -417,6 +440,43 @@ export const api = {
     );
     await assertOk(res, GENERIC_ERROR_MESSAGE);
     return (await res.json()) as VehicleInfoResponse;
+  },
+
+  /** GET /api/pending-dtc — returns pending DTCs (Mode 07). */
+  async getPendingDtc(scenarioId: string): Promise<{ dtcCodes: DtcCode[] }> {
+    const res = await apiFetch(
+      `/api/pending-dtc?scenarioId=${encodeURIComponent(scenarioId)}`,
+    );
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+    return (await res.json()) as { dtcCodes: DtcCode[] };
+  },
+
+  /** GET /api/permanent-dtc — returns permanent DTCs (Mode 0A). */
+  async getPermanentDtc(scenarioId: string): Promise<{ dtcCodes: DtcCode[] }> {
+    const res = await apiFetch(
+      `/api/permanent-dtc?scenarioId=${encodeURIComponent(scenarioId)}`,
+    );
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+    return (await res.json()) as { dtcCodes: DtcCode[] };
+  },
+
+  /** POST /api/clear-dtc — clears stored DTCs and resets emission monitors. */
+  async clearDtc(scenarioId: string): Promise<{ cleared: boolean }> {
+    const res = await apiFetch("/api/clear-dtc", {
+      method: "POST",
+      body: JSON.stringify({ scenarioId }),
+    });
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+    return (await res.json()) as { cleared: boolean };
+  },
+
+  /** GET /api/vehicle-status — returns MIL status, DTC count, and monitor readiness. */
+  async getVehicleStatus(scenarioId: string): Promise<VehicleStatusOutput> {
+    const res = await apiFetch(
+      `/api/vehicle-status?scenarioId=${encodeURIComponent(scenarioId)}`,
+    );
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+    return (await res.json()) as VehicleStatusOutput;
   },
 
   /** POST /api/mcp/cognitive-diagnosis — AI-powered cognitive analysis. */

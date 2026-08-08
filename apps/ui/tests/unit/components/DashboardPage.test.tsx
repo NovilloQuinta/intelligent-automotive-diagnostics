@@ -70,6 +70,9 @@ vi.mock("../../../src/components/dashboard/useCognitiveDiagnosis", () => ({
 vi.mock("../../../src/components/dashboard/useEcuInfo", () => ({
   useEcuInfo: () => ({ ecus: [], loading: false, error: null }),
 }));
+vi.mock("../../../src/components/dashboard/useVehicleStatus", () => ({
+  useVehicleStatus: () => ({ status: null, loading: false, error: null }),
+}));
 vi.mock("../../../src/components/dashboard/useSessionReport", () => ({
   useSessionReport: () => ({
     capabilities: { cognitiveDiagnosis: true },
@@ -91,6 +94,10 @@ vi.mock("../../../src/lib/api", () => ({
   api: {
     getFreezeFrame: vi.fn(),
     getEcuInfo: vi.fn(),
+    getVehicleStatus: vi.fn(),
+    getPendingDtc: vi.fn(),
+    getPermanentDtc: vi.fn(),
+    clearDtc: vi.fn(),
   },
 }));
 
@@ -141,6 +148,10 @@ function wizardState(overrides: Record<string, unknown> = {}) {
 describe("DashboardPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Default resolved values for API methods called by DtcPanel hooks
+    vi.mocked(api.getPendingDtc).mockResolvedValue({ dtcCodes: [] });
+    vi.mocked(api.getPermanentDtc).mockResolvedValue({ dtcCodes: [] });
+    vi.mocked(api.clearDtc).mockResolvedValue({ cleared: true });
     mockUseVehicleAutoDetect.mockReturnValue(wizardState());
     // Stub the animation driver so the gauges never fire frames (deterministic)
     vi.stubGlobal("requestAnimationFrame", vi.fn());

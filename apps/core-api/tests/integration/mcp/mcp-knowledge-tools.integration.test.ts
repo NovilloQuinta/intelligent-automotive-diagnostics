@@ -42,6 +42,8 @@ function mockObdRepo(): ObdRepository {
     getFreezeFrame: async () => null,
     readDtcCodes: async () => [{ code: 'P1234', description: 'Test DTC' }],
     clearDtcCodes: async () => {},
+    readPendingDtcCodes: async () => [],
+    readPermanentDtcCodes: async () => [],
     readVin: async () => 'WAUZZZ8V5JA123456',
     getVehicleInfo: async (): Promise<VehicleInfo> => ({
       make: 'Audi',

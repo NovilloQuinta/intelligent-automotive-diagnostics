@@ -3,6 +3,7 @@ import { DtcCode } from '@/domain/value-objects/dtcCode.js'
 import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
+import { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import { createPidFormulaCatalog } from './pidFormulaCatalog.js'
 import type { PidFormulaCatalog } from '@/application/ports/PidFormulaCatalog.js'
@@ -109,10 +110,11 @@ export class Elm327TcpRepository implements ObdRepository {
     })
   }
 
-  async readDtcCodes(): Promise<DtcCode[]> {
-    const raw = await this.client.sendCommand('03')
+  /** Envia un comando de lectura DTC y parsea la respuesta con el header del modo indicado. */
+  private async fetchDtcCodes(mode: '03' | '07' | '0A'): Promise<DtcCode[]> {
+    const raw = await this.client.sendCommand(mode)
     try {
-      return parseDtcResponse(raw).map(([b1, b2]) => {
+      return parseDtcResponse(raw, mode).map(([b1, b2]) => {
         const code = DtcCode.decodeFromBytes(b1, b2)
         return new DtcCode({ code, description: dtcDescribe(code) })
       })
@@ -120,6 +122,18 @@ export class Elm327TcpRepository implements ObdRepository {
       if (err instanceof Elm327ParseError) return []
       throw err
     }
+  }
+
+  async readDtcCodes(): Promise<DtcCode[]> {
+    return this.fetchDtcCodes('03')
+  }
+
+  async readPendingDtcCodes(): Promise<DtcCode[]> {
+    return this.fetchDtcCodes('07')
+  }
+
+  async readPermanentDtcCodes(): Promise<DtcCode[]> {
+    return this.fetchDtcCodes('0A')
   }
 
   async clearDtcCodes(): Promise<void> {
@@ -155,6 +169,12 @@ export class Elm327TcpRepository implements ObdRepository {
           err instanceof Elm327NoDataError ? ('unsupported' as const) : ('unreadable' as const),
       }
     }
+  }
+
+  async getVehicleStatus(): Promise<VehicleStatus> {
+    const raw = await this.client.sendCommand('01 01')
+    const bytes = parseModeResponse(raw)
+    return VehicleStatus.parse(bytes)
   }
 
   async setPower(_on: boolean): Promise<void> {

@@ -7,6 +7,7 @@ import {
   Elm327ParseError,
 } from '@/infrastructure/elm327/elm327Adapter.js'
 import { EcuInfo } from '@/domain/entities/ecuInfo.js'
+import { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 
 vi.mock('node:net', () => {
   const createConnection = vi.fn(() => {
@@ -68,6 +69,9 @@ const RESPONSES: Record<string, string> = {
   '02 05': '02 05\r42 05 82\r\r>',
   '02 0D': '02 0D\r42 0D 00\r\r>',
   '02 11': '02 11\r42 11 24\r\r>',
+  '01 01': '01 01\r41 01 83 07 E0 FF\r\r>',
+  '07': '07\r47 03 01 04 01\r\r>',
+  '0A': '0A\r4A 03 01 04 01\r\r>',
 }
 
 describe('Elm327TcpRepository', () => {
@@ -138,6 +142,46 @@ describe('Elm327TcpRepository', () => {
     const repo = makeRepo()
     const promise = repo.readDtcCodes()
     expectSent('03')
+    respond('NO DATA\r\r>')
+    await expect(promise).resolves.toEqual([])
+  })
+
+  it('readPendingDtcCodes: mock responde "47 03 01 04 01" → [P0301, P0401] con descripcion', async () => {
+    const repo = makeRepo()
+    const promise = repo.readPendingDtcCodes()
+    expectSent('07')
+    respond(RESPONSES['07'])
+    const dtcs = await promise
+    expect(dtcs).toEqual([
+      { code: 'P0301', description: 'Cylinder 1 Misfire Detected' },
+      { code: 'P0401', description: 'Exhaust Gas Recirculation Flow Insufficient Detected' },
+    ])
+  })
+
+  it('readPendingDtcCodes: mock responde "NO DATA" → []', async () => {
+    const repo = makeRepo()
+    const promise = repo.readPendingDtcCodes()
+    expectSent('07')
+    respond('NO DATA\r\r>')
+    await expect(promise).resolves.toEqual([])
+  })
+
+  it('readPermanentDtcCodes: mock responde "4A 03 01 04 01" → [P0301, P0401] con descripcion', async () => {
+    const repo = makeRepo()
+    const promise = repo.readPermanentDtcCodes()
+    expectSent('0A')
+    respond(RESPONSES['0A'])
+    const dtcs = await promise
+    expect(dtcs).toEqual([
+      { code: 'P0301', description: 'Cylinder 1 Misfire Detected' },
+      { code: 'P0401', description: 'Exhaust Gas Recirculation Flow Insufficient Detected' },
+    ])
+  })
+
+  it('readPermanentDtcCodes: mock responde "NO DATA" → []', async () => {
+    const repo = makeRepo()
+    const promise = repo.readPermanentDtcCodes()
+    expectSent('0A')
     respond('NO DATA\r\r>')
     await expect(promise).resolves.toEqual([])
   })
@@ -371,6 +415,30 @@ describe('Elm327TcpRepository', () => {
       respond(RESPONSES['01 0C'])
 
       await expect(promise).resolves.toEqual([0x0c, 0x80])
+    })
+  })
+
+  describe('getVehicleStatus', () => {
+    it('should send 01 01 and parse MIL + monitor status bytes', async () => {
+      const repo = makeRepo()
+      const promise = repo.getVehicleStatus()
+      expectSent('01 01')
+      respond(RESPONSES['01 01'])
+      const status = await promise
+
+      expect(status).toBeInstanceOf(VehicleStatus)
+      expect(status.milOn).toBe(true)
+      expect(status.dtcCount).toBe(3)
+      expect(status.engineType).toBe('spark')
+      expect(status.monitors.length).toBe(11)
+    })
+
+    it('should throw Elm327ParseError on malformed response', async () => {
+      const repo = makeRepo()
+      const promise = repo.getVehicleStatus()
+      expectSent('01 01')
+      respond('CAN ERROR\r\r>')
+      await expect(promise).rejects.toBeInstanceOf(Elm327ParseError)
     })
   })
 })
