@@ -12,6 +12,19 @@ import type {
   VehicleInfoResponse,
   VehicleStatusOutput,
 } from "@/components/dashboard/types";
+import type {
+  AdminAuditFilter,
+  AdminAuditLog,
+  AdminKnowledgeStats,
+  AdminLog,
+  AdminLogsFilter,
+  AdminOverview,
+  AdminUser,
+  AdminUsersFilter,
+  KnowledgeSearchInput,
+  KnowledgeSearchResponse,
+  Paginated,
+} from "@/components/admin/types";
 
 // ---------------------------------------------------------------------------
 // Token storage (localStorage)
@@ -290,6 +303,28 @@ async function logoutServer(): Promise<void> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Query string builder for admin filters
+// ---------------------------------------------------------------------------
+
+/**
+ * Builds a query string from a filter object, omitting undefined/null values.
+ * Used by admin API methods to serialize filter params without sending empty
+ * query parameters.
+ */
+function buildQuery(
+  params: Record<string, string | number | boolean | undefined>,
+): string {
+  const sp = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== "") {
+      sp.set(key, String(value));
+    }
+  }
+  const qs = sp.toString();
+  return qs ? `?${qs}` : "";
+}
+
 export const api = {
   // ---- Auth ----
 
@@ -468,6 +503,62 @@ export const api = {
     } catch {
       return { cognitiveDiagnosis: false };
     }
+  },
+
+  // ---- Admin ----
+
+  admin: {
+    /** GET /api/admin/overview — returns aggregated admin dashboard stats. */
+    async overview(): Promise<AdminOverview> {
+      const res = await apiFetch("/api/admin/overview");
+      await assertOk(res, GENERIC_ERROR_MESSAGE);
+      return (await res.json()) as AdminOverview;
+    },
+
+    /** GET /api/admin/logs?level=&from=&to=&q=&page=&pageSize= */
+    async logs(filter: AdminLogsFilter): Promise<Paginated<AdminLog>> {
+      const qs = buildQuery(filter as Record<string, string | number | boolean | undefined>);
+      const res = await apiFetch(`/api/admin/logs${qs}`);
+      await assertOk(res, GENERIC_ERROR_MESSAGE);
+      return (await res.json()) as Paginated<AdminLog>;
+    },
+
+    /** GET /api/admin/audit-logs?statusCode=&path=&userId=&from=&to=&q=&page=&pageSize= */
+    async auditLogs(
+      filter: AdminAuditFilter,
+    ): Promise<Paginated<AdminAuditLog>> {
+      const qs = buildQuery(filter as Record<string, string | number | boolean | undefined>);
+      const res = await apiFetch(`/api/admin/audit-logs${qs}`);
+      await assertOk(res, GENERIC_ERROR_MESSAGE);
+      return (await res.json()) as Paginated<AdminAuditLog>;
+    },
+
+    /** GET /api/admin/users?q=&from=&to=&page=&pageSize= */
+    async users(filter: AdminUsersFilter): Promise<Paginated<AdminUser>> {
+      const qs = buildQuery(filter as Record<string, string | number | boolean | undefined>);
+      const res = await apiFetch(`/api/admin/users${qs}`);
+      await assertOk(res, GENERIC_ERROR_MESSAGE);
+      return (await res.json()) as Paginated<AdminUser>;
+    },
+
+    /** GET /api/admin/knowledge — returns index stats for all knowledge bases. */
+    async knowledgeStats(): Promise<AdminKnowledgeStats> {
+      const res = await apiFetch("/api/admin/knowledge");
+      await assertOk(res, GENERIC_ERROR_MESSAGE);
+      return (await res.json()) as AdminKnowledgeStats;
+    },
+
+    /** POST /api/admin/knowledge/search — semantic search across a knowledge index. */
+    async knowledgeSearch(
+      input: KnowledgeSearchInput,
+    ): Promise<KnowledgeSearchResponse> {
+      const res = await apiFetch("/api/admin/knowledge/search", {
+        method: "POST",
+        body: JSON.stringify(input),
+      });
+      await assertOk(res, GENERIC_ERROR_MESSAGE);
+      return (await res.json()) as KnowledgeSearchResponse;
+    },
   },
 
   // ---- Session management ----

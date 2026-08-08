@@ -40,11 +40,11 @@ ObdMessage = {
         "Request": "^0101" + ELM_FOOTER,
         "Descr": "MIL status and emissions monitors (PID 01) — MIL off, 0 DTCs, spark, all monitors complete",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("06") + DT("41 01 00 0F E0 FF"),
+        "Response": HD(ECU_R_ADDR_E) + SZ("06") + DT("41 01 00 77 FF FF"),
         # Byte A=0x00: MIL off (bit7=0), 0 DTCs (bits 0-6=0)
-        # Byte B=0x0F: spark (bit7=0), misfire+fuel+comprehensive+catalyst supported (bits 0-3)
-        # Byte C=0xE0: misfire, fuel, comprehensive monitors completed
-        # Byte D=0xFF: all remaining monitors completed
+        # Byte B=0x77: spark (bit3=0), common tests available (bits 0-2=1), common tests complete (bits 4-6=1)
+        # Byte C=0xFF: all engine-specific monitors available
+        # Byte D=0xFF: all engine-specific monitors completed
     },
     "FUEL_STATUS": {
         "Request": "^0103" + ELM_FOOTER,

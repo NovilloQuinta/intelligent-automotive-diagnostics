@@ -62,7 +62,7 @@ export function MechanicChat({
       </h3>
 
       {conversationHistory.length > 0 && (
-        <div className="flex max-h-64 flex-col gap-2 overflow-y-auto pr-1">
+        <div className="flex max-h-80 min-h-0 flex-col gap-2 overflow-y-auto pr-1">
           {conversationHistory.map((item, i) => {
             if (item.__type === "user_message" && item.content) {
               return (

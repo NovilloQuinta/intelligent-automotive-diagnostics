@@ -374,6 +374,30 @@ describe('OpenAiClient', () => {
     ).rejects.toThrow(LlmApiError)
   })
 
+  // ── Escenario: conversationHistory con raw_response { text: ... } (compatible frontend) ──
+
+  it('should handle raw_response with text property from frontend conversation history', async () => {
+    mockCreate.mockResolvedValueOnce(openAiTextResponse('Nueva respuesta del asistente.'))
+
+    await client.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Siguiente pregunta',
+        tools: [],
+        conversationHistory: [{ __type: 'raw_response', data: { text: 'respuesta previa' } }],
+      },
+      handler,
+    )
+
+    const callArgs = mockCreate.mock.calls[0][0] as {
+      messages: Array<{ role: string; content: unknown }>
+    }
+    expect(callArgs.messages).toHaveLength(2) // system + previous response
+    const assistantMsg = callArgs.messages.find((m) => m.role === 'assistant')
+    expect(assistantMsg).toBeDefined()
+    expect(assistantMsg!.content).toBe('respuesta previa')
+  })
+
   // ── Escenario: Sanitizacion de errores (no expone mensajes crudos) ──
 
   it('should NOT expose raw SDK error message in LlmApiError', async () => {

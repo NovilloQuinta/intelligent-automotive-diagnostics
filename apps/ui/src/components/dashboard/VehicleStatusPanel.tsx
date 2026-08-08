@@ -54,12 +54,12 @@ function MonitorRow({ monitor }: { readonly monitor: MonitorStatus }) {
   return (
     <div className="flex items-center gap-2 text-[11px] text-foreground/80">
       {monitor.completed ? (
-        <CheckCircle2 className="h-3.5 w-3.5 text-accent" />
+        <CheckCircle2 className="h-3.5 w-3.5 text-success" />
       ) : (
         <AlertTriangle className="h-3.5 w-3.5 text-warning" />
       )}
       <span className="capitalize">{monitor.name}</span>
-      <span className="ml-auto text-[10px] text-muted-foreground">
+      <span className={`ml-auto text-[10px] ${monitor.completed ? "text-success font-medium" : "text-muted-foreground"}`}>
         {monitor.completed ? "Completado" : "Pendiente"}
       </span>
     </div>

@@ -1,7 +1,7 @@
 # Intelligent Automotive Diagnostics - TFM
 
 > Vehicular telemetry simulation & AI-powered diagnosis using MCP.
-> Master IA - Jesus Novillo | Entrega: 20 julio 2026
+> Master IA - Jesus Novillo | Demo: semana del 10 de agosto 2026 (web publicada + coche real por cable)
 
 ## INSTRUCCIONES DE SISTEMA Y PROTOCOLO EJECUTIVO
 
@@ -26,12 +26,12 @@ Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de siste
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
 - **Flujo de ramas**: `develop` es la rama de integración; toda `feat.*`/`fix.*` sale de `develop` y se mergea ahí.
-- **Rama activa**: `chore/add-db-migrations` (migraciones Drizzle, pendiente merge a `develop`)
-- **Recién mergeado**: `add-web-search-tool` (RAG 4, SerpAPI), `add-cognitive-pid-discovery` (PID observations + UI enriquecido).
-- **Recién archivado**: `add-web-search-tool`, `add-cognitive-pid-discovery` → archive.
-- **Chore completado en esta sesión**: `chore/add-db-migrations` — migración inicial generada (9 tablas), `migrate()` en `getDb()` antes de devolver la BD, fix de `resetDb()` (delega en `closeDb()`, evitaba fuga de conexión), deuda eliminada de AGENTS.md.
-- **Siguiente**: `add-vehicle-autodetect-flow`, `add-knowledge-mcp-tools` (RAG 3b).
-- **Tests + CI**: core-api 793+ (71 files); UI 269+ (36 files). Build + lint core verdes. Deuda `brace-expansion` (lint UI) sin resolver.
+- **Rama base**: `develop`, limpia y sincronizada con origin.
+- **8 worktrees activos** en `.claude/worktrees/` (trabajo en paralelo; ver `plan-paralelo.md` y `prompt-opencode*.md` en la raíz):
+  - `deployment` (`feat/deployment`) — 2 commits por delante de develop, con `.github/workflows/deploy.yml` sin commitear.
+  - `chore-add-db-migrations` (`chore/add-db-migrations`) — mergeado con develop, migración DB activa.
+  - `chat-ui` (`fix/mechanic-chat-ui`), `coherencia-obd` (`fix/obd-coherence`), `emulator-coherencia` (`fix/emulator-coherent-data`), `fix-telemetria-auth` (`fix/live-telemetry-auth`), `mechanic-chat` (`feat/mechanic-chat`), `obd-modes` (`feat/obd-standard-modes`) — creados desde develop, sin commits propios aún.
+- **Deuda `brace-expansion`** (lint UI): sin resolver.
 
 ## REGLAS DE SESION
 

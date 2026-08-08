@@ -1,6 +1,6 @@
 import { Severity } from '@/domain/value-objects/diagnosisResult.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
-import { parseCognitiveDiagnosis } from '@/application/llm/extractLlmDiagnosis.js'
+import { parseCognitiveDiagnosis, JSON_BLOCK_REGEX } from '@/application/llm/extractLlmDiagnosis.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { McpToolDefinition } from '@/application/dto/llm/McpToolDefinition.js'
 import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
@@ -135,11 +135,12 @@ export class ExecuteCognitiveDiagnosisUseCase {
     )
 
     const parsed = parseCognitiveDiagnosis(text)
+    const cleanedText = text.replace(JSON_BLOCK_REGEX, '').trim()
 
-    await this.indexResolvedCase(text, toolCalls, userQuery, vehicleContext)
+    await this.indexResolvedCase(cleanedText, toolCalls, userQuery, vehicleContext)
 
     return {
-      diagnosis: text,
+      diagnosis: cleanedText,
       severity: parsed.severity,
       confidence: parsed.confidence,
       recommendations: parsed.recommendations,

@@ -11,16 +11,24 @@ import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.
 import { createAuthMiddleware } from '@/infrastructure/http/middleware/auth.middleware.js'
 import { createAuthRoutes } from '@/infrastructure/http/routes/auth.routes.js'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
+import { createAdminRoutes } from '@/infrastructure/http/routes/admin.routes.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 import type { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
+import type { AdminController } from '@/infrastructure/http/controllers/AdminController.js'
+import type { RequestHandler } from 'express'
 
 /** Dependencias del servidor Express. */
 export interface ServerDependencies {
   readonly rateLimit?: Partial<RateLimiterConfig>
+  readonly adminRateLimit?: Partial<RateLimiterConfig>
   readonly auditRepo: AuditLogRepository
   readonly authController: AuthController
   readonly diagnosisController: DiagnosisController
+  /** `undefined` en tests que no ejercitan `/api/admin` (evita cablear el stack completo). */
+  readonly adminController?: AdminController
+  /** Construido en `composition.ts` con `createRequireAdmin(userRepo)`. */
+  readonly requireAdmin?: RequestHandler
   readonly accessTokenSecret?: string
   readonly allowedOrigins: string
   readonly nodeEnv: string
@@ -158,6 +166,32 @@ function applyDiagnosisRateLimits(app: express.Application): void {
   app.use('/api/clear-dtc', clearDtcLimiter)
 }
 
+/**
+ * Rate limiter propio de `/api/admin`, independiente del resto de la API (Requirement
+ * "Todas las rutas de administracion exigen rol admin y limitan tasa"). Un operador
+ * navegando el panel no debe agotar el limite de `/api/diagnosis` ni de `/api/auth`, y
+ * viceversa.
+ */
+function applyAdminRateLimits(
+  app: express.Application,
+  config: Partial<RateLimiterConfig> | undefined,
+): void {
+  app.use('/api/admin', createRateLimiter(config ?? { windowMinutes: 1, maxRequests: 30 }))
+}
+
+/**
+ * Monta `/api/admin` con el orden exigido por `design.md` (Decision 6):
+ * `authMiddleware` (ya global en este punto) -> `requireAdmin` -> rate limiter -> controlador.
+ * Sin `adminController`/`requireAdmin` no se monta nada, para no exponer rutas a medio cablear.
+ */
+function mountAdminRoutes(app: express.Application, deps: ServerDependencies): void {
+  if (!deps.adminController || !deps.requireAdmin) return
+
+  app.use('/api/admin', deps.requireAdmin)
+  applyAdminRateLimits(app, deps.adminRateLimit)
+  app.use('/api/admin', createAdminRoutes(deps.adminController))
+}
+
 /** Crea y devuelve la instancia de Express con todas las rutas montadas. */
 export function createServer(deps: ServerDependencies): express.Application {
   const app = express()
@@ -185,6 +219,8 @@ export function createServer(deps: ServerDependencies): express.Application {
 
   applyDiagnosisRateLimits(app)
   app.use('/api', createDiagnosisRoutes(deps.diagnosisController))
+
+  mountAdminRoutes(app, deps)
 
   mountErrorHandler(app, deps.logger)
 

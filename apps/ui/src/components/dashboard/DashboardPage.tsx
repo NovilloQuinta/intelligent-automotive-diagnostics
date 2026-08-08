@@ -45,6 +45,17 @@ export function DashboardPage() {
     setSelectedDtc(null);
   }, [selectedId]);
 
+  /** Al seleccionar vehiculo se dispara el diagnostico automaticamente. */
+  useEffect(() => {
+    if (!selectedId) return;
+    cognitive.reset();
+    void (async () => {
+      await runDiagnosis();
+      if (cognitiveDiagnosis) void cognitive.trigger();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId]);
+
   /**
    * El diagnóstico cognitivo se dispara tras el determinista y sin `await`: la
    * respuesta LLM puede tardar hasta 60 s y no debe retrasar la pintura de

@@ -79,6 +79,31 @@ describe('createKnowledgeStack', () => {
     expect(createLanceVectorStore).toHaveBeenCalledTimes(3)
   })
 
+  it('should also expose the three raw vector stores for admin stats (count/sample)', async () => {
+    const { createKnowledgeStack } = await import('@/infrastructure/composition/composition.js')
+
+    const lanceDb = mockLanceDb()
+    vi.mocked(initLanceDb).mockResolvedValue(lanceDb)
+    const pidsStore = mockVectorStore()
+    const dtcsStore = mockVectorStore()
+    const diagnosesStore = mockVectorStore()
+    vi.mocked(createLanceVectorStore)
+      .mockResolvedValueOnce(pidsStore)
+      .mockResolvedValueOnce(dtcsStore)
+      .mockResolvedValueOnce(diagnosesStore)
+    vi.mocked(createEmbedding).mockResolvedValue([0.1, 0.2, 0.3])
+    const logger = createMockLogger()
+
+    const stack = await createKnowledgeStack(
+      { LANCEDB_PATH: '/tmp/test-lancedb' } as Parameters<typeof createKnowledgeStack>[0],
+      logger,
+    )
+
+    expect(stack!.vectorStores.pids).toBe(pidsStore)
+    expect(stack!.vectorStores.dtcs).toBe(dtcsStore)
+    expect(stack!.vectorStores.diagnoses).toBe(diagnosesStore)
+  })
+
   it('should return undefined when initLanceDb throws', async () => {
     const { createKnowledgeStack } = await import('@/infrastructure/composition/composition.js')
 

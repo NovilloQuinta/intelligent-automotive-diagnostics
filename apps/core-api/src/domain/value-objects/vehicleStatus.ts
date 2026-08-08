@@ -51,9 +51,12 @@ export class VehicleStatusError extends Error {
  *
  * Decodifica los 4 bytes de datos del PID 01 segun SAE J1979:
  * - Byte A: bit 7 = MIL, bits 0-6 = nº de averias almacenadas
- * - Byte B: bit 7 = tipo de motor (0=gasolina, 1=diesel), bits 0-3 = monitores soportados
- * - Byte C: bits 7-5 = monitores completados (0-2)
- * - Byte D: bits 7-0 = monitores completados (3-10)
+ * - Byte B: bits 0-2 = availability de common tests (misfire, fuelSystem, components),
+ *           bit 3 = engine type (0=spark, 1=compression),
+ *           bits 4-6 = completeness de common tests,
+ *           bit 7 = reserved
+ * - Byte C: bits 7-0 = availability de engine-specific tests (indices 3-10)
+ * - Byte D: bits 7-0 = completeness de engine-specific tests (indices 3-10)
  */
 export class VehicleStatus {
   readonly milOn: boolean
@@ -109,31 +112,22 @@ export class VehicleStatus {
 
     const milOn = (byteA & 0x80) !== 0
     const dtcCount = byteA & 0x7f
-    const engineType: 'spark' | 'compression' = (byteB & 0x80) === 0 ? 'spark' : 'compression'
+    const engineType: 'spark' | 'compression' = (byteB & 0x08) === 0 ? 'spark' : 'compression'
 
     const monitorNames = engineType === 'spark' ? SPARK_MONITORS : COMPRESSION_MONITORS
 
     const monitors: MonitorStatus[] = monitorNames.map((name, index) => {
-      const supported = index < 4 ? (byteB & (1 << index)) !== 0 : true
-      const completed = parseCompletedBit(byteC, byteD, index)
+      if (index <= 2) {
+        const supported = (byteB & (1 << index)) !== 0
+        const completed = (byteB & (1 << (index + 4))) !== 0
+        return { name, supported, completed }
+      }
+      const ci = index - 3
+      const supported = (byteC & (0x80 >> ci)) !== 0
+      const completed = (byteD & (0x80 >> ci)) !== 0
       return { name, supported, completed }
     })
 
     return new VehicleStatus({ milOn, dtcCount, engineType, monitors })
   }
-}
-
-/**
- * Extrae el bit de "completado" para el monitor en el indice dado.
- *
- * Los indices 0-2 se leen del byte C (bits 7-5).
- * Los indices 3-10 se leen del byte D (bits 7-0).
- */
-function parseCompletedBit(byteC: number, byteD: number, index: number): boolean {
-  if (index <= 2) {
-    // Byte C: bit 7 → index 0, bit 6 → index 1, bit 5 → index 2
-    return (byteC & (0x80 >> index)) !== 0
-  }
-  // Byte D: bit 7 → index 3, bit 6 → index 4, ..., bit 0 → index 10
-  return (byteD & (0x80 >> (index - 3))) !== 0
 }

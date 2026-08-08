@@ -1184,6 +1184,248 @@ describe("api", () => {
   });
 
   // -----------------------------------------------------------------------
+  // admin
+  // -----------------------------------------------------------------------
+
+  describe("admin", () => {
+    const overview: Record<string, unknown> = {
+      userStats: { byUserType: { individual: 3, workshop: 1 }, byRole: { user: 3, admin: 1 } },
+      recentErrorCount: 5,
+      httpRequestsByPathApprox: { "/api/scenarios": 42, "/api/diagnosis": 15 },
+    };
+
+    const logs: Record<string, unknown>[] = [
+      { id: 1, level: "error", message: "DB timeout", context: null, createdAt: "2026-01-01" },
+    ];
+
+    const auditLogs: Record<string, unknown>[] = [
+      { id: 1, method: "POST", path: "/api/diagnosis", statusCode: 200, ip: null, userAgent: null, durationMs: 45, userId: 1, createdAt: "2026-01-01" },
+    ];
+
+    const users: Record<string, unknown>[] = [
+      { id: 1, username: "admin", email: "a@b.com", userType: "individual", role: "admin", businessName: null, taxId: null, address: null, createdAt: "2026-01-01", failedLoginAttempts: 0, lockedUntil: null, isWorkshop: false, isAdmin: true },
+    ];
+
+    const knowledgeStats: Record<string, unknown> = {
+      pids: { count: 120, sample: [] },
+      dtcs: { count: 80, sample: [] },
+      diagnoses: { count: 45, sample: [] },
+    };
+
+    const knowledgeSearchResponse: Record<string, unknown> = {
+      results: [{ entry: { code: "P0301" }, distance: 0.12 }],
+    };
+
+    // -------------------------------------------------------------------
+    // overview
+    // -------------------------------------------------------------------
+
+    describe("overview", () => {
+      it("GETs /api/admin/overview and returns AdminOverview", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => overview,
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        const result = await api.admin.overview();
+
+        expect(result).toEqual(overview);
+        const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+        expect(url).toBe("/api/admin/overview");
+        expect(init.method).toBeUndefined();
+        expect(init.headers).toMatchObject({ Authorization: "Bearer access-abc" });
+      });
+
+      it("throws the generic message on a 500", async () => {
+        setStoredTokens();
+        vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) }));
+        await expect(api.admin.overview()).rejects.toThrow(GENERIC_ERROR_MESSAGE);
+      });
+    });
+
+    // -------------------------------------------------------------------
+    // logs
+    // -------------------------------------------------------------------
+
+    describe("logs", () => {
+      it("GETs /api/admin/logs with query params and returns Paginated<AdminLog>", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ items: logs, total: 1 }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        const result = await api.admin.logs({ level: "error", page: 1, pageSize: 10 });
+
+        expect(result).toEqual({ items: logs, total: 1 });
+        const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+        expect(url).toBe("/api/admin/logs?level=error&page=1&pageSize=10");
+        expect(init.method).toBeUndefined();
+      });
+
+      it("omits undefined filter values from query params", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ items: logs, total: 1 }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await api.admin.logs({});
+
+        const [url] = mockFetch.mock.calls[0] as [string];
+        expect(url).toBe("/api/admin/logs");
+      });
+
+      it("encodes filter values properly", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ items: [], total: 0 }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await api.admin.logs({ q: "error & timeout", from: "2026-01-01T00:00:00Z" });
+
+        const [url] = mockFetch.mock.calls[0] as [string];
+        expect(url).toContain("q=error+%26+timeout");
+      });
+    });
+
+    // -------------------------------------------------------------------
+    // auditLogs
+    // -------------------------------------------------------------------
+
+    describe("auditLogs", () => {
+      it("GETs /api/admin/audit-logs with filter params", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ items: auditLogs, total: 1 }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        const result = await api.admin.auditLogs({ statusCode: 200, path: "/api/diagnosis" });
+
+        expect(result).toEqual({ items: auditLogs, total: 1 });
+        const [url] = mockFetch.mock.calls[0] as [string];
+        expect(url).toContain("statusCode=200");
+        expect(url).toContain("path=%2Fapi%2Fdiagnosis");
+      });
+
+      it("omits undefined filter values", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ items: [], total: 0 }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await api.admin.auditLogs({});
+
+        const [url] = mockFetch.mock.calls[0] as [string];
+        expect(url).toBe("/api/admin/audit-logs");
+      });
+    });
+
+    // -------------------------------------------------------------------
+    // users
+    // -------------------------------------------------------------------
+
+    describe("users", () => {
+      it("GETs /api/admin/users with filter params", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ items: users, total: 1 }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        const result = await api.admin.users({ q: "admin", page: 1, pageSize: 20 });
+
+        expect(result).toEqual({ items: users, total: 1 });
+        const [url] = mockFetch.mock.calls[0] as [string];
+        expect(url).toBe("/api/admin/users?q=admin&page=1&pageSize=20");
+      });
+
+      it("omits undefined filter values", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ items: [], total: 0 }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await api.admin.users({});
+
+        const [url] = mockFetch.mock.calls[0] as [string];
+        expect(url).toBe("/api/admin/users");
+      });
+    });
+
+    // -------------------------------------------------------------------
+    // knowledgeStats
+    // -------------------------------------------------------------------
+
+    describe("knowledgeStats", () => {
+      it("GETs /api/admin/knowledge and returns AdminKnowledgeStats", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => knowledgeStats,
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        const result = await api.admin.knowledgeStats();
+
+        expect(result).toEqual(knowledgeStats);
+        const [url] = mockFetch.mock.calls[0] as [string];
+        expect(url).toBe("/api/admin/knowledge");
+      });
+    });
+
+    // -------------------------------------------------------------------
+    // knowledgeSearch
+    // -------------------------------------------------------------------
+
+    describe("knowledgeSearch", () => {
+      it("POSTs /api/admin/knowledge/search and returns KnowledgeSearchResponse", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => knowledgeSearchResponse,
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        const result = await api.admin.knowledgeSearch({ text: "P0301", index: "dtcs" });
+
+        expect(result).toEqual(knowledgeSearchResponse);
+        const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+        expect(url).toBe("/api/admin/knowledge/search");
+        expect(init.method).toBe("POST");
+        expect(JSON.parse(init.body as string)).toEqual({ text: "P0301", index: "dtcs" });
+      });
+
+      it("includes optional limit when provided", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => knowledgeSearchResponse,
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await api.admin.knowledgeSearch({ text: "P0301", index: "dtcs", limit: 5 });
+
+        const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+        expect(JSON.parse(init.body as string)).toEqual({ text: "P0301", index: "dtcs", limit: 5 });
+      });
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // timeout
   // -----------------------------------------------------------------------
 

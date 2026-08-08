@@ -9,8 +9,10 @@ describe('VehicleStatus', () => {
     // ===== Spark Ignition (gasolina) =====
 
     it('should parse a clean spark vehicle: MIL off, 0 DTCs, all monitors complete', () => {
-      // Byte B=0x0F → bits 0-3 set → monitors[0-3] supported; monitors[4-10] always supported
-      const bytes = b(0x00, 0x0f, 0xe0, 0xff)
+      // Byte B=0x77 → bits 0-2=1 (common tests available), bit3=0 (spark), bits 4-6=1 (common tests complete)
+      // Byte C=0xFF → all 8 engine-specific monitors available
+      // Byte D=0xFF → all 8 engine-specific monitors complete
+      const bytes = b(0x00, 0x77, 0xff, 0xff)
       const status = VehicleStatus.parse(bytes)
 
       expect(status.milOn).toBe(false)
@@ -23,34 +25,35 @@ describe('VehicleStatus', () => {
       }
     })
 
-    it('should parse a faulty spark vehicle: MIL on, 3 DTCs, some monitors incomplete', () => {
+    it('should parse a faulty spark vehicle: MIL on, 3 DTCs, engine-specific monitors incomplete', () => {
       // Byte A=0x83: MIL on (bit7=1), 3 DTCs (bits 0-6=0x03)
-      // Byte C=0xE0: monitors[0,1,2] completed
-      // Byte D=0x00: monitors[3-10] NOT completed
-      const bytes = b(0x83, 0x0f, 0xe0, 0x00)
+      // Byte B=0x77: common tests available+complete, spark
+      // Byte C=0xFF: engine-specific monitors all available
+      // Byte D=0x00: engine-specific monitors NOT completed
+      const bytes = b(0x83, 0x77, 0xff, 0x00)
       const status = VehicleStatus.parse(bytes)
 
       expect(status.milOn).toBe(true)
       expect(status.dtcCount).toBe(3)
       expect(status.engineType).toBe('spark')
 
-      // First 3 completed (byte C bits 7-5)
+      // Common tests [0-2] complete (from byte B bits 4-6)
       expect(status.monitors[0].completed).toBe(true)
       expect(status.monitors[1].completed).toBe(true)
       expect(status.monitors[2].completed).toBe(true)
-      // Remaining 8 NOT completed (byte D = 0)
+      // Engine-specific monitors [3-10] NOT completed (byte D = 0)
       for (let i = 3; i < status.monitors.length; i++) {
         expect(status.monitors[i].completed).toBe(false)
       }
     })
 
     it('should parse DTC count at max value (127)', () => {
-      const bytes = b(0xff, 0x0f, 0xe0, 0xff)
+      const bytes = b(0xff, 0x77, 0xff, 0xff)
       expect(VehicleStatus.parse(bytes).dtcCount).toBe(127)
     })
 
     it('should parse MIL on with 0 DTCs', () => {
-      const bytes = b(0x80, 0x0f, 0xe0, 0xff)
+      const bytes = b(0x80, 0x77, 0xff, 0xff)
       const status = VehicleStatus.parse(bytes)
       expect(status.milOn).toBe(true)
       expect(status.dtcCount).toBe(0)
@@ -60,10 +63,11 @@ describe('VehicleStatus', () => {
 
     it('should parse a compression vehicle with partial monitor completion', () => {
       // Byte A=0x03: MIL off, 3 DTCs
-      // Byte B=0x8F: compression (bit7=1), monitors[0-3] supported
-      // Byte C=0x60: bits 7,6,5 = 0,1,1 → monitor[0] not done, [1] done, [2] done
-      // Byte D=0x80: bit 7 set → monitor[3] done, rest not
-      const bytes = b(0x03, 0x8f, 0x60, 0x80)
+      // Byte B=0x6F: bits 0-2=1 (common tests available), bit3=1 (compression), bits 4-6=0b110
+      //   → [0]=false, [1]=true, [2]=true
+      // Byte C=0xFF: all 8 engine-specific monitors available
+      // Byte D=0x80: bit 7 set → monitor[3] complete, rest not
+      const bytes = b(0x03, 0x6f, 0xff, 0x80)
       const status = VehicleStatus.parse(bytes)
 
       expect(status.milOn).toBe(false)
@@ -73,16 +77,16 @@ describe('VehicleStatus', () => {
 
       // Compression monitors: comprehensiveComponent, fuelSystem, misfire, egrSystem, ...
       expect(status.monitors[0].name).toBe('comprehensiveComponent')
-      expect(status.monitors[0].completed).toBe(false) // byte C bit 7 = 0
-      expect(status.monitors[1].completed).toBe(true)  // byte C bit 6 = 1
-      expect(status.monitors[2].completed).toBe(true)  // byte C bit 5 = 1
-      expect(status.monitors[3].completed).toBe(true)  // byte D bit 7 = 1
+      expect(status.monitors[0].completed).toBe(false) // byte B bit 4 = 0
+      expect(status.monitors[1].completed).toBe(true) // byte B bit 5 = 1
+      expect(status.monitors[2].completed).toBe(true) // byte B bit 6 = 1
+      expect(status.monitors[3].completed).toBe(true) // byte D bit 7 = 1
       expect(status.monitors[4].completed).toBe(false) // byte D bit 6 = 0
     })
 
-    it('should identify spark vs compression from byte B bit 7', () => {
+    it('should identify spark vs compression from byte B bit 3', () => {
       expect(VehicleStatus.parse(b(0x00, 0x00, 0x00, 0x00)).engineType).toBe('spark')
-      expect(VehicleStatus.parse(b(0x00, 0x80, 0x00, 0x00)).engineType).toBe('compression')
+      expect(VehicleStatus.parse(b(0x00, 0x08, 0x00, 0x00)).engineType).toBe('compression')
     })
 
     // ===== Edge cases =====
@@ -93,22 +97,55 @@ describe('VehicleStatus', () => {
       expect(() => VehicleStatus.parse([0x00, 0x00, 0x00])).toThrow()
     })
 
-    it('should handle all first-4 monitors unsupported (Byte B bits 0-3 = 0)', () => {
+    it('should handle all common tests unsupported (byte B bits 0-2 = 0)', () => {
+      // Byte B=0x00: no common tests available, spark, no common tests complete
+      // Byte C=0x00: no engine-specific monitors available
+      // Byte D=0x00: no engine-specific monitors complete
       const bytes = b(0x00, 0x00, 0x00, 0x00)
       const status = VehicleStatus.parse(bytes)
 
-      // First 4 not supported
-      for (let i = 0; i < 4; i++) {
+      // Common tests [0-2] not supported
+      for (let i = 0; i < 3; i++) {
         expect(status.monitors[i].supported).toBe(false)
       }
-      // Monitors 4-10 always supported
-      for (let i = 4; i < 11; i++) {
-        expect(status.monitors[i].supported).toBe(true)
+      // Engine-specific [3-10] not supported (byte C = 0)
+      for (let i = 3; i < 11; i++) {
+        expect(status.monitors[i].supported).toBe(false)
       }
     })
 
+    it('should handle engine-specific monitors availability from byte C', () => {
+      // Byte B=0x07: common tests available, spark, common tests not complete
+      // Byte C=0x80: only monitor[3] available, rest not
+      const bytes = b(0x00, 0x07, 0x80, 0x00)
+      const status = VehicleStatus.parse(bytes)
+
+      // Common tests [0-2] available (byte B bits 0-2)
+      expect(status.monitors[0].supported).toBe(true)
+      expect(status.monitors[1].supported).toBe(true)
+      expect(status.monitors[2].supported).toBe(true)
+      // Engine-specific: only [3] available (byte C bit 7)
+      expect(status.monitors[3].supported).toBe(true)
+      for (let i = 4; i < 11; i++) {
+        expect(status.monitors[i].supported).toBe(false)
+      }
+    })
+
+    it('should parse common tests completeness from byte B bits 4-6', () => {
+      // Byte B=0x60: common tests not available (bits 0-2=0), spark (bit3=0),
+      // completeness: bit4=0, bit5=1, bit6=1 → [0]=false, [1]=true, [2]=true
+      const bytes = b(0x00, 0x60, 0x00, 0x00)
+      const status = VehicleStatus.parse(bytes)
+
+      // Common tests completeness from byte B
+      expect(status.monitors[0].completed).toBe(false)
+      expect(status.monitors[1].completed).toBe(true)
+      expect(status.monitors[2].completed).toBe(true)
+    })
+
     it('should return spark monitors in correct SAE J1979 order', () => {
-      const status = VehicleStatus.parse(b(0x00, 0x0f, 0x00, 0x00))
+      // Byte B=0x07: common tests available, bit3=0 (spark), not complete
+      const status = VehicleStatus.parse(b(0x00, 0x07, 0xff, 0xff))
       const names = status.monitors.map((m) => m.name)
 
       expect(names).toEqual([
@@ -127,7 +164,8 @@ describe('VehicleStatus', () => {
     })
 
     it('should return compression monitors in correct SAE J1979 order', () => {
-      const status = VehicleStatus.parse(b(0x00, 0x8f, 0x00, 0x00))
+      // Byte B=0x0F: bits 0-2=1, bit3=1 (compression), bits 4-6=0
+      const status = VehicleStatus.parse(b(0x00, 0x0f, 0xff, 0xff))
       const names = status.monitors.map((m) => m.name)
 
       expect(names).toEqual([
@@ -167,15 +205,13 @@ describe('VehicleStatus', () => {
 
     it('should throw for dtcCount < 0', () => {
       expect(
-        () =>
-          new VehicleStatus({ milOn: false, dtcCount: -1, engineType: 'spark', monitors: [] }),
+        () => new VehicleStatus({ milOn: false, dtcCount: -1, engineType: 'spark', monitors: [] }),
       ).toThrow()
     })
 
     it('should throw for dtcCount > 127', () => {
       expect(
-        () =>
-          new VehicleStatus({ milOn: false, dtcCount: 128, engineType: 'spark', monitors: [] }),
+        () => new VehicleStatus({ milOn: false, dtcCount: 128, engineType: 'spark', monitors: [] }),
       ).toThrow()
     })
   })

@@ -73,6 +73,9 @@ function buildAnthropicMessages(
       buildInitial: (um) => [{ role: 'user', content: um }],
       buildUserMessage: (content) => ({ role: 'user', content }),
       buildRawResponse: (data) => {
+        if (typeof (data as Record<string, unknown>).text === 'string') {
+          return { role: 'assistant', content: (data as Record<string, unknown>).text as string }
+        }
         const raw = data as Anthropic.Messages.Message
         return { role: 'assistant', content: raw.content }
       },

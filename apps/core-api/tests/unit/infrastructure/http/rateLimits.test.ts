@@ -12,8 +12,14 @@ import type { AuthController } from '@/infrastructure/http/controllers/AuthContr
 import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
+import type { AdminController } from '@/infrastructure/http/controllers/AdminController.js'
+import type { Request, Response, NextFunction } from 'express'
 
-const mockAuditRepo: AuditLogRepository = { create: async () => {} }
+const mockAuditRepo: AuditLogRepository = {
+  create: async () => {},
+  list: async () => ({ items: [], total: 0 }),
+  stats: async () => ({ byStatusCode: {}, byPath: {} }),
+}
 const mockLogger: LoggerPort = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
 
 const mockAuthController = {
@@ -97,6 +103,19 @@ interface BootedApp {
   readonly close: () => Promise<void>
 }
 
+/** requireAdmin de prueba: nunca bloquea. El foco de este archivo es el rate limit, no el rol. */
+const noopRequireAdmin = (_req: Request, _res: Response, next: NextFunction): void => next()
+
+/** AdminController de prueba: cada metodo responde 200 sin tocar ningun repositorio. */
+const mockAdminController = {
+  overview: vi.fn((_req: Request, res: Response) => res.status(200).json({})),
+  logs: vi.fn((_req: Request, res: Response) => res.status(200).json({ items: [], total: 0 })),
+  auditLogs: vi.fn((_req: Request, res: Response) => res.status(200).json({ items: [], total: 0 })),
+  users: vi.fn((_req: Request, res: Response) => res.status(200).json({ items: [], total: 0 })),
+  knowledge: vi.fn((_req: Request, res: Response) => res.status(200).json({})),
+  searchKnowledge: vi.fn((_req: Request, res: Response) => res.status(200).json({ results: [] })),
+} as unknown as AdminController
+
 /** Bootea una instancia fresca de la app con limiters activos (NODE_ENV=production). */
 async function bootApp(): Promise<BootedApp> {
   const app = createServer({
@@ -114,6 +133,8 @@ async function bootApp(): Promise<BootedApp> {
     auditRepo: mockAuditRepo,
     logger: mockLogger,
     authController: mockAuthController,
+    adminController: mockAdminController,
+    requireAdmin: noopRequireAdmin,
   })
   const httpServer = await new Promise<Server>((resolve) => {
     const server = app.listen(0, () => resolve(server))
@@ -262,6 +283,42 @@ describe('HTTP server rate limits', () => {
         header.toLowerCase().includes('ratelimit'),
       )
       expect(rateLimitHeaders.length).toBeGreaterThan(0)
+    } finally {
+      await close()
+    }
+  })
+
+  it('should allow 30 GET /api/admin/overview requests and return 429 on the 31st', async () => {
+    const { baseUrl, close } = await bootApp()
+    try {
+      const url = `${baseUrl}/api/admin/overview`
+
+      for (let i = 0; i < 30; i += 1) {
+        const res = await fetch(url)
+        expect(res.status).toBe(200)
+      }
+
+      const res = await fetch(url)
+      expect(res.status).toBe(429)
+    } finally {
+      await close()
+    }
+  })
+
+  it('should not let /api/admin exhaustion affect /api/diagnosis, nor vice versa', async () => {
+    const { baseUrl, close } = await bootApp()
+    try {
+      const adminUrl = `${baseUrl}/api/admin/overview`
+      for (let i = 0; i < 30; i += 1) {
+        await fetch(adminUrl)
+      }
+      const exhaustedAdmin = await fetch(adminUrl)
+      expect(exhaustedAdmin.status).toBe(429)
+
+      // El limite de /api/diagnosis (20/min) sigue intacto tras agotar el de /api/admin.
+      const diagnosisBody = { scenarioId: 'audi-a3-idle' }
+      const diagnosisRes = await postJson(baseUrl, '/api/diagnosis', diagnosisBody)
+      expect(diagnosisRes.status).toBe(200)
     } finally {
       await close()
     }

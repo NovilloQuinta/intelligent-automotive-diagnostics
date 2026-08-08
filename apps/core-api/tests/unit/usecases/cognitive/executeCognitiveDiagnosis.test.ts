@@ -185,7 +185,7 @@ describe('executeCognitiveDiagnosis', () => {
       logger: createMockLogger(),
     }).execute({})
 
-    expect(result.diagnosis).toBe(text)
+    expect(result.diagnosis).toBe('El motor falla en el cilindro 1.')
     expect(result.severity).toBe(Severity.High)
     expect(result.confidence).toBe(0.9)
     expect(result.recommendations).toEqual(['Revisar bujías', 'Cambiar bobina'])
@@ -225,7 +225,7 @@ describe('executeCognitiveDiagnosis', () => {
       logger: createMockLogger(),
     }).execute({})
 
-    expect(result.diagnosis).toBe(text)
+    expect(result.diagnosis).toBe('El motor falla en el cilindro 1.')
     expect(result.severity).toBe(Severity.High)
     expect(result.confidence).toBe(0.78)
     expect(result.recommendations).toEqual([
@@ -268,7 +268,7 @@ describe('executeCognitiveDiagnosis', () => {
       logger: createMockLogger(),
     }).execute({})
 
-    expect(result.diagnosis).toBe(text)
+    expect(result.diagnosis).toBe('Narrativa.')
     expect(result.severity).toBe(Severity.Medium)
     expect(result.confidence).toBe(0.5)
     expect(result.recommendations).toEqual([])

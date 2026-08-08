@@ -40,6 +40,12 @@ export class Logger implements LoggerPort {
     this.saveToDb('error', message, context)
   }
 
+  /**
+   * `createdAt` se fija aqui explicitamente, no se deja al `default` de `schema.ts`: ese
+   * default es la cadena literal `"datetime('now')"`, no una expresion SQL — omitir el
+   * campo dejaria ese texto literal en vez de una fecha real, y el panel de administracion
+   * (`GET /api/admin/logs`) filtra y ordena por esta columna.
+   */
   private saveToDb(level: string, message: string, context?: Record<string, unknown>): void {
     this.db
       .insert(schema.logs)
@@ -47,6 +53,7 @@ export class Logger implements LoggerPort {
         level,
         message,
         context: context ? JSON.stringify(context) : null,
+        createdAt: new Date().toISOString(),
       })
       .execute()
       .catch(() => {})

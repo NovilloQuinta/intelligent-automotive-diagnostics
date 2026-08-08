@@ -1,10 +1,36 @@
-import { eq, sql } from 'drizzle-orm'
+import { and, count, desc, eq, gte, like, lte, or, sql } from 'drizzle-orm'
 import * as schema from './schema.js'
 import type { DiagnosticsDb } from './db.js'
 import type { UserRepository } from '@/application/ports/UserRepository.js'
 import { User } from '@/domain/entities/user.js'
 import type { CreateUserInput } from '@/application/dto/auth/CreateUserInput.js'
 import { toUser, toCreateValues } from '@/infrastructure/persistence/mappers/userMapper.js'
+import type { AdminUsersFilter } from '@/application/dto/admin/AdminUsersFilter.js'
+import type { AdminListResult } from '@/application/dto/admin/AdminListResult.js'
+import type { UserStats } from '@/application/dto/admin/UserStats.js'
+import { toSafeUser } from '@/application/shared/safeUser.js'
+
+/** Traduce un {@link AdminUsersFilter} a las condiciones `WHERE` de `users`. */
+function buildWhereClause(filter: AdminUsersFilter) {
+  const conditions = []
+  if (filter.q) {
+    const pattern = `%${filter.q}%`
+    conditions.push(or(like(schema.users.email, pattern), like(schema.users.username, pattern)))
+  }
+  if (filter.from) conditions.push(gte(schema.users.createdAt, filter.from))
+  if (filter.to) conditions.push(lte(schema.users.createdAt, filter.to))
+
+  return conditions.length > 0 ? and(...conditions) : undefined
+}
+
+/** Convierte pares `{ key, value }` de un `GROUP BY` en un `Record` indexado por clave. */
+function toCountRecord(rows: readonly { key: string; value: number }[]): Record<string, number> {
+  const record: Record<string, number> = {}
+  for (const row of rows) {
+    record[row.key] = row.value
+  }
+  return record
+}
 
 const MAX_FAILED_ATTEMPTS = 5
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000
@@ -67,5 +93,49 @@ export class SqliteUserRepository implements UserRepository {
       .update(schema.users)
       .set({ failedLoginAttempts: 0, lockedUntil: null })
       .where(eq(schema.users.id, userId))
+  }
+
+  /**
+   * Lista usuarios paginados/filtrados. Pasa cada fila por {@link toUser} + `toSafeUser`
+   * (la misma proyeccion que usa `/api/auth/me`), en vez de reimplementar una proyeccion
+   * paralela que pueda olvidar `passwordHash`.
+   */
+  async list(filter: AdminUsersFilter): Promise<AdminListResult<Omit<User, 'passwordHash'>>> {
+    const where = buildWhereClause(filter)
+    const offset = (filter.page - 1) * filter.pageSize
+
+    const [rows, totalRows] = await Promise.all([
+      this.db
+        .select()
+        .from(schema.users)
+        .where(where)
+        .orderBy(desc(schema.users.createdAt))
+        .limit(filter.pageSize)
+        .offset(offset),
+      this.db.select({ value: count() }).from(schema.users).where(where),
+    ])
+
+    return {
+      items: rows.map((row) => toSafeUser(toUser(row))),
+      total: totalRows[0]?.value ?? 0,
+    }
+  }
+
+  async stats(): Promise<UserStats> {
+    const [byUserTypeRows, byRoleRows] = await Promise.all([
+      this.db
+        .select({ key: schema.users.userType, value: count() })
+        .from(schema.users)
+        .groupBy(schema.users.userType),
+      this.db
+        .select({ key: schema.users.role, value: count() })
+        .from(schema.users)
+        .groupBy(schema.users.role),
+    ])
+
+    return {
+      byUserType: toCountRecord(byUserTypeRows),
+      byRole: toCountRecord(byRoleRows),
+    }
   }
 }

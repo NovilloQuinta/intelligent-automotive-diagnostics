@@ -13,8 +13,13 @@ import { LogoutUserUseCase } from '@/application/use-cases/LogoutUserUseCase.js'
 import { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
+import { Email } from '@/domain/value-objects/email.js'
 
-const mockAuditRepo: AuditLogRepository = { create: async () => {} }
+const mockAuditRepo: AuditLogRepository = {
+  create: async () => {},
+  list: async () => ({ items: [], total: 0 }),
+  stats: async () => ({ byStatusCode: {}, byPath: {} }),
+}
 const mockLogger: LoggerPort = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
 import { SqliteRefreshTokenStore } from '@/infrastructure/persistence/sqlite/refreshTokenStore.js'
@@ -25,6 +30,8 @@ const REFRESH_SECRET = 'integration-refresh-secret'
 
 describe('Auth integration', () => {
   let app: ReturnType<typeof createServer>
+  let userRepo: SqliteUserRepository
+  let authServiceForSeed: ReturnType<typeof createAuthService>
 
   beforeAll(() => {
     const sqlite = new Database(':memory:')
@@ -37,6 +44,7 @@ describe('Auth integration', () => {
         email TEXT NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
         user_type TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'user',
         business_name TEXT,
         tax_id TEXT,
         address TEXT,
@@ -55,7 +63,7 @@ describe('Auth integration', () => {
     `)
 
     const db = drizzle(sqlite)
-    const userRepo = new SqliteUserRepository(db)
+    userRepo = new SqliteUserRepository(db)
     const tokenStore = new SqliteRefreshTokenStore(db)
     const authService = createAuthService({
       accessTokenSecret: ACCESS_SECRET,
@@ -64,6 +72,7 @@ describe('Auth integration', () => {
       refreshTokenExpiresIn: '7d',
       tokenStore,
     })
+    authServiceForSeed = authService
 
     const authController = new AuthController({
       registerUser: new RegisterUserUseCase(userRepo, authService, tokenStore),
@@ -242,10 +251,36 @@ describe('Auth integration', () => {
       expect(res.body.id).toBeGreaterThan(0)
       expect(res.body.email).toBe('juan@test.com')
       expect(res.body.isWorkshop).toBe(false)
+      expect(res.body.role).toBe('user')
+      expect(res.body.isAdmin).toBe(false)
     })
 
     it('should return 401 without a token', async () => {
       await request(app).get('/api/auth/me').expect(401)
+    })
+
+    it('should return role "admin" for an admin user', async () => {
+      const passwordHash = await authServiceForSeed.hashPassword('AdminPass123!')
+      await userRepo.create({
+        username: 'admin',
+        email: new Email('admin@test.com'),
+        passwordHash,
+        userType: 'individual',
+        role: 'admin',
+      })
+
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'admin@test.com', password: 'AdminPass123!' })
+        .expect(200)
+
+      const res = await request(app)
+        .get('/api/auth/me')
+        .set('Authorization', `Bearer ${loginRes.body.accessToken}`)
+        .expect(200)
+
+      expect(res.body.role).toBe('admin')
+      expect(res.body.isAdmin).toBe(true)
     })
   })
 

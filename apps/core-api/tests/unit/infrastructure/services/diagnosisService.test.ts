@@ -76,7 +76,9 @@ function createMockObdRepo(sensorOverrides?: {
     readDtcCodes: vi.fn(async () => [{ code: 'P0301', description: '' }]),
     clearDtcCodes: vi.fn(async () => undefined),
     readPendingDtcCodes: vi.fn(async () => [{ code: 'P0301', description: 'Cylinder 1 Misfire' }]),
-    readPermanentDtcCodes: vi.fn(async () => [{ code: 'P0401', description: 'EGR Flow Insufficient' }]),
+    readPermanentDtcCodes: vi.fn(async () => [
+      { code: 'P0401', description: 'EGR Flow Insufficient' },
+    ]),
     readVin: vi.fn(async () => 'WAUZZZ8V5JA123456'),
     getVehicleInfo: vi.fn(async () => ({
       make: 'Audi',
@@ -223,7 +225,7 @@ describe('DiagnosisService', () => {
         userQuery: '¿Por qué tiembla el motor al ralentí?',
       })
 
-      expect(result.diagnosis).toBe(cognitiveText)
+      expect(result.diagnosis).toBe('El motor tiembla en ralentí por fallo de encendido.')
       expect(result.severity).toBe('high')
       expect(result.confidence).toBe(0.9)
       expect(result.recommendations).toEqual(['Revisar bujías', 'Cambiar bobina'])

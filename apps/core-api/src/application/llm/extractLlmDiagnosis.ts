@@ -5,7 +5,7 @@ import { Severity } from '@/domain/value-objects/diagnosisResult.js'
  * Extrae el bloque JSON de la respuesta del LLM.
  * Tolerante a variaciones: `---JSON---{...}---` (prompt), `---JSON\n{...}\n---` (DeepSeek real).
  */
-const JSON_BLOCK_REGEX = /---JSON[-\s]*([\s\S]*?)\s*---/
+export const JSON_BLOCK_REGEX = /---JSON[-\s]*([\s\S]*?)\s*---/
 
 const FALLBACK_SEVERITY = Severity.Medium
 const FALLBACK_CONFIDENCE = 0.5

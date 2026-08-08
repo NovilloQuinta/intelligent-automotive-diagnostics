@@ -137,9 +137,7 @@ function createServiceStub(overrides: Partial<ServiceStub> = {}): DiagnosisServi
       modelYearDecoded: 2018,
     })),
     clearDtcCodes: vi.fn(async () => undefined),
-    readPendingDtcCodes: vi.fn(async () => [
-      { code: 'P0301', description: 'Cylinder 1 Misfire' },
-    ]),
+    readPendingDtcCodes: vi.fn(async () => [{ code: 'P0301', description: 'Cylinder 1 Misfire' }]),
     readPermanentDtcCodes: vi.fn(async () => [
       { code: 'P0401', description: 'EGR Flow Insufficient' },
     ]),
@@ -583,9 +581,7 @@ describe('diagnosisRoutes', () => {
     it('should return { cleared: true } for a valid scenario', async () => {
       const service = createServiceStub()
       const { app } = createApp(service)
-      const res = await request(app)
-        .post('/api/clear-dtc')
-        .send({ scenarioId: 'audi-a3-idle' })
+      const res = await request(app).post('/api/clear-dtc').send({ scenarioId: 'audi-a3-idle' })
 
       expect(res.status).toBe(200)
       expect(res.body).toEqual({ cleared: true })
@@ -622,9 +618,7 @@ describe('diagnosisRoutes', () => {
         }),
       })
       const { app } = createApp(service)
-      const res = await request(app)
-        .post('/api/clear-dtc')
-        .send({ scenarioId: 'audi-a3-idle' })
+      const res = await request(app).post('/api/clear-dtc').send({ scenarioId: 'audi-a3-idle' })
 
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('Internal server error')
@@ -689,9 +683,7 @@ describe('diagnosisRoutes', () => {
     it('should return permanent DTC codes for a valid scenario', async () => {
       const service = createServiceStub()
       const { app } = createApp(service)
-      const res = await request(app)
-        .get('/api/permanent-dtc')
-        .query({ scenarioId: 'audi-a3-idle' })
+      const res = await request(app).get('/api/permanent-dtc').query({ scenarioId: 'audi-a3-idle' })
 
       expect(res.status).toBe(200)
       expect(res.body).toEqual({ dtcCodes: permanentDtcs })
@@ -728,9 +720,7 @@ describe('diagnosisRoutes', () => {
         }),
       })
       const { app } = createApp(service)
-      const res = await request(app)
-        .get('/api/permanent-dtc')
-        .query({ scenarioId: 'audi-a3-idle' })
+      const res = await request(app).get('/api/permanent-dtc').query({ scenarioId: 'audi-a3-idle' })
 
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('Internal server error')

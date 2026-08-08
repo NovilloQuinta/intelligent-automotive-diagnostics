@@ -11,6 +11,14 @@ import { createOpenAiClient } from '@/infrastructure/llm/openAiClient.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import { SqliteAuditLogRepository } from '@/infrastructure/persistence/sqlite/auditLogRepository.js'
+import { SqliteLogRepository } from '@/infrastructure/persistence/sqlite/logRepository.js'
+import { createRequireAdmin } from '@/infrastructure/http/middleware/admin.middleware.js'
+import { AdminController } from '@/infrastructure/http/controllers/AdminController.js'
+import { GetAdminOverviewUseCase } from '@/application/use-cases/admin/GetAdminOverviewUseCase.js'
+import { ListSystemLogsUseCase } from '@/application/use-cases/admin/ListSystemLogsUseCase.js'
+import { ListAuditLogsUseCase } from '@/application/use-cases/admin/ListAuditLogsUseCase.js'
+import { ListUsersUseCase } from '@/application/use-cases/admin/ListUsersUseCase.js'
+import { GetKnowledgeStatsUseCase } from '@/application/use-cases/admin/GetKnowledgeStatsUseCase.js'
 import { Logger } from '@/infrastructure/observability/logger.js'
 import { RegisterUserUseCase } from '@/application/use-cases/RegisterUserUseCase.js'
 import { LoginUserUseCase } from '@/application/use-cases/LoginUserUseCase.js'
@@ -24,6 +32,9 @@ import {
   type ScenarioDescriptor,
 } from '@/infrastructure/services/diagnosisService.js'
 import type { AppConfig } from '@/infrastructure/configuration/index.js'
+import type { UserRepository } from '@/application/ports/UserRepository.js'
+import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
+import { Email } from '@/domain/value-objects/email.js'
 import { initLanceDb } from '@/infrastructure/persistence/vector/lancedb.js'
 import { createLanceVectorStore } from '@/infrastructure/persistence/vector/lanceVectorStore.js'
 import { createEmbedding } from '@/infrastructure/persistence/vector/embedding.js'
@@ -41,9 +52,9 @@ import {
 } from '@/application/knowledge/diagnosisKnowledgeMapper.js'
 import type { EmbeddingGenerator } from '@/application/ports/EmbeddingGenerator.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
+import type { KnowledgeVectorStores } from '@/application/use-cases/admin/GetKnowledgeStatsUseCase.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import { createSerpApiClient } from '@/infrastructure/web-search/serpApiClient.js'
-import { LiveData } from '@/domain/value-objects/liveData.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 
@@ -81,6 +92,7 @@ interface PersistenceRepositories {
   readonly auditRepo: SqliteAuditLogRepository
   readonly userRepo: SqliteUserRepository
   readonly tokenStore: SqliteRefreshTokenStore
+  readonly logRepo: SqliteLogRepository
 }
 
 /** Crea los repositorios SQLite y devuelve la conexion compartida. */
@@ -91,6 +103,7 @@ function createPersistenceRepositories(config: AppConfig): PersistenceRepositori
     auditRepo: new SqliteAuditLogRepository(db),
     userRepo: new SqliteUserRepository(db),
     tokenStore: new SqliteRefreshTokenStore(db),
+    logRepo: new SqliteLogRepository(db),
   }
 }
 
@@ -127,14 +140,49 @@ function createAuthStack(
 }
 
 /**
+ * Crea el primer administrador desde `ADMIN_EMAIL`/`ADMIN_PASSWORD` si no existe ya.
+ *
+ * Idempotente: si ya hay un usuario con ese email no se crea uno nuevo ni se
+ * sobrescribe su contraseña (puede haber sido cambiada a mano). Reusa el
+ * hashing de {@link AuthServicePort} para no introducir un segundo camino de
+ * bcrypt. Sin las variables de entorno, no falla el arranque: solo avisa.
+ *
+ * La contraseña nunca se pasa a `logger`, ni siquiera en el warning.
+ */
+export async function seedAdminUser(
+  config: AppConfig,
+  userRepo: UserRepository,
+  authService: AuthServicePort,
+  logger: LoggerPort,
+): Promise<void> {
+  if (!config.ADMIN_EMAIL || !config.ADMIN_PASSWORD) {
+    logger.warn('Admin seed skipped: ADMIN_EMAIL/ADMIN_PASSWORD not configured')
+    return
+  }
+
+  const existing = await userRepo.findByEmail(config.ADMIN_EMAIL)
+  if (existing) {
+    return
+  }
+
+  const passwordHash = await authService.hashPassword(config.ADMIN_PASSWORD)
+  await userRepo.create({
+    username: 'admin',
+    email: new Email(config.ADMIN_EMAIL),
+    passwordHash,
+    userType: 'individual',
+    role: 'admin',
+  })
+
+  logger.info('Admin user seeded', { email: config.ADMIN_EMAIL })
+}
+
+/**
  * Escenarios disponibles en modo Docker emulador.
  *
- * `sensorValues` y `dtcConfig` DEBEN coincidir con lo que responden los
- * escenarios de `docker/elm327/`. Si divergen, la misma lectura aparece con
- * dos valores distintos en la pantalla.
- *
- * Deuda conocida: `sensorValues` desaparece cuando la telemetria se lea del
- * vehiculo en vez de generarse en el cliente.
+ * La telemetria (PIDs 05, 0C, 0D, 0F) y los codigos de averia se leen en
+ * tiempo real del emulador via `GET /api/live-data` y `GET /api/dtc-codes`.
+ * No se hardcodean valores que el emulador ya provee.
  */
 function createDockerScenarios(config: AppConfig): ScenarioDescriptor[] {
   return [
@@ -142,7 +190,6 @@ function createDockerScenarios(config: AppConfig): ScenarioDescriptor[] {
       id: 'toyota',
       name: 'Toyota (Built-in)',
       vehicleType: 'car',
-      sensorValues: new LiveData({ rpm: 750, coolantTemp: 55, speed: 0, intakeTemp: 17 }),
       dtcConfig: [],
       vehicleInfo: new VehicleInfo({
         make: 'Toyota',
@@ -158,15 +205,6 @@ function createDockerScenarios(config: AppConfig): ScenarioDescriptor[] {
       id: 'audi-a3-tdi',
       name: 'Audi A3 2.0 TDI',
       vehicleType: 'car',
-      sensorValues: new LiveData({ rpm: 770, coolantTemp: 90, speed: 0, intakeTemp: 35 }),
-      dtcConfig: [
-        { code: 'P0301', description: 'Cylinder 1 Misfire Detected' },
-        { code: 'P0401', description: 'Exhaust Gas Recirculation Flow Insufficient Detected' },
-        {
-          code: 'P2002',
-          description: 'Diesel Particulate Filter Efficiency Below Threshold (Bank 1)',
-        },
-      ],
       vehicleInfo: new VehicleInfo({
         make: 'Audi',
         model: 'A3',
@@ -181,7 +219,6 @@ function createDockerScenarios(config: AppConfig): ScenarioDescriptor[] {
       id: 'kawasaki-z900',
       name: 'Kawasaki Z900',
       vehicleType: 'motorcycle',
-      sensorValues: new LiveData({ rpm: 1300, coolantTemp: 95, speed: 0, intakeTemp: 28 }),
       dtcConfig: [],
       vehicleInfo: new VehicleInfo({
         make: 'Kawasaki',
@@ -205,11 +242,21 @@ function createObdRepoMap(scenarios: ScenarioDescriptor[]): Map<string, ObdRepos
   return map
 }
 
+/**
+ * {@link KnowledgeStack} ampliado con los tres {@link VectorStore} crudos, para el panel de
+ * administracion (`GetKnowledgeStatsUseCase.count()`/`sample()`). Extiende `KnowledgeStack`
+ * (no lo sustituye) para que sigua siendo asignable donde se espera un `KnowledgeStack`
+ * simple (p. ej. `DiagnosisService`).
+ */
+export interface KnowledgeStackWithStores extends KnowledgeStack {
+  readonly vectorStores: KnowledgeVectorStores
+}
+
 /** Inicializa la base vectorial y los tres indices de conocimiento. */
 export async function createKnowledgeStack(
   config: AppConfig,
   logger: LoggerPort,
-): Promise<KnowledgeStack | undefined> {
+): Promise<KnowledgeStackWithStores | undefined> {
   try {
     const { db } = await initLanceDb(config.LANCEDB_PATH)
     const embed: EmbeddingGenerator = createEmbedding
@@ -237,6 +284,7 @@ export async function createKnowledgeStack(
         toMetadata: toDiagnosisMetadata,
         fromMetadata: toDiagnosisEntry,
       }),
+      vectorStores: { pids: pidsStore, dtcs: dtcsStore, diagnoses: diagnosesStore },
     }
   } catch (err) {
     logger.warn('RAG knowledge stack unavailable, continuing without it', { err: String(err) })
@@ -250,11 +298,33 @@ export function createWebSearchPort(config: AppConfig): WebSearchPort | undefine
   return createSerpApiClient({ apiKey: config.WEB_SEARCH_API_KEY })
 }
 
+/** Crea el `AdminController` con sus cinco casos de uso y el catalogo vectorial si existe. */
+export function createAdminController(
+  repos: Pick<PersistenceRepositories, 'userRepo' | 'logRepo' | 'auditRepo'>,
+  knowledgeStack: KnowledgeStackWithStores | undefined,
+): AdminController {
+  return new AdminController({
+    getOverview: new GetAdminOverviewUseCase({
+      userRepo: repos.userRepo,
+      logRepo: repos.logRepo,
+      auditRepo: repos.auditRepo,
+    }),
+    listLogs: new ListSystemLogsUseCase(repos.logRepo),
+    listAuditLogs: new ListAuditLogsUseCase(repos.auditRepo),
+    listUsers: new ListUsersUseCase(repos.userRepo),
+    getKnowledgeStats: knowledgeStack
+      ? new GetKnowledgeStatsUseCase(knowledgeStack.vectorStores)
+      : undefined,
+    knowledgeStack,
+  })
+}
+
 /** Composition Root: cablea todas las dependencias y devuelve la app Express configurada. */
 export async function buildApp(config: AppConfig): Promise<Application> {
-  const { db, auditRepo, userRepo, tokenStore } = createPersistenceRepositories(config)
+  const { db, auditRepo, userRepo, tokenStore, logRepo } = createPersistenceRepositories(config)
   const logger = new Logger(config.NODE_ENV, db)
   const auth = createAuthStack(config, { userRepo, tokenStore }, logger)
+  await seedAdminUser(config, userRepo, auth.authService, logger)
   const authController = new AuthController({
     registerUser: auth.registerUseCase,
     loginUser: auth.loginUseCase,
@@ -296,10 +366,13 @@ export async function buildApp(config: AppConfig): Promise<Application> {
   }
 
   const diagnosisController = new DiagnosisController(diagnosisService, logger)
+  const adminController = createAdminController({ userRepo, logRepo, auditRepo }, knowledgeStack)
 
   return createServer({
     authController,
     diagnosisController,
+    adminController,
+    requireAdmin: createRequireAdmin(userRepo),
     auditRepo,
     logger,
     allowedOrigins: config.ALLOWED_ORIGINS,

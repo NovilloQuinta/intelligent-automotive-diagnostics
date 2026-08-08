@@ -356,6 +356,35 @@ describe('AnthropicClient', () => {
     ).rejects.toThrow(LlmTimeoutError)
   })
 
+  // ── 5.3b: conversationHistory con raw_response { text: ... } (compatible frontend) ──
+
+  it('should handle raw_response with text property from frontend conversation history', async () => {
+    mockCreate.mockResolvedValueOnce(
+      anthropicMessage({
+        content: [textBlock('Nueva respuesta del asistente.')],
+        stop_reason: 'end_turn',
+        model: 'claude-sonnet-4-20250514',
+      }),
+    )
+
+    await client.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Siguiente pregunta',
+        tools: [],
+        conversationHistory: [{ __type: 'raw_response', data: { text: 'respuesta previa' } }],
+      },
+      handler,
+    )
+
+    const callArgs = mockCreate.mock.calls[0][0] as {
+      messages: Array<{ role: string; content: unknown }>
+    }
+    const assistantMsg = callArgs.messages.find((m) => m.role === 'assistant')
+    expect(assistantMsg).toBeDefined()
+    expect(assistantMsg!.content).toBe('respuesta previa')
+  })
+
   // ── 5.4: Error de API (4xx/5xx) ──
 
   it('should throw LlmApiError when SDK throws API error', async () => {
