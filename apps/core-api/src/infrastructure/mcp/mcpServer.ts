@@ -132,8 +132,8 @@ function autoRegisterPid(
   vehicleRepo: VehicleRepository,
   modeStr: string,
   pidStr: string,
-): Promise<void> {
-  return vehicleRepo
+): void {
+  void vehicleRepo
     .findPidDefinition(modeStr, pidStr)
     .then((existing) => {
       if (existing) return
