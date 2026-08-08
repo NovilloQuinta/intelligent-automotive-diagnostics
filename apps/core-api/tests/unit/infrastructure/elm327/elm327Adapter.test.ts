@@ -64,6 +64,10 @@ const RESPONSES: Record<string, string> = {
   '03': '03\r43 03 01 04 01\r\r>',
   '09 02': '014\r0: 49 02 01 57 50 30\r1: 5A 5A 5A 39 39 5A\r2: 54 53 33 39 30 30\r3: 30 30\r\r>',
   '02 0C': '02 0C\r42 0C 0C 80\r\r>',
+  '02 04': '02 04\r42 04 2E\r\r>',
+  '02 05': '02 05\r42 05 82\r\r>',
+  '02 0D': '02 0D\r42 0D 00\r\r>',
+  '02 11': '02 11\r42 11 24\r\r>',
 }
 
 describe('Elm327TcpRepository', () => {
@@ -118,15 +122,15 @@ describe('Elm327TcpRepository', () => {
     await expect(promise).resolves.toBe(90)
   })
 
-  it('readDtcCodes: mock responde "43 03 01 04 01" → [P0301, P0401]', async () => {
+  it('readDtcCodes: mock responde "43 03 01 04 01" → [P0301, P0401] con descripcion', async () => {
     const repo = makeRepo()
     const promise = repo.readDtcCodes()
     expectSent('03')
     respond(RESPONSES['03'])
     const dtcs = await promise
     expect(dtcs).toEqual([
-      { code: 'P0301', description: '' },
-      { code: 'P0401', description: '' },
+      { code: 'P0301', description: 'Cylinder 1 Misfire Detected' },
+      { code: 'P0401', description: 'Exhaust Gas Recirculation Flow Insufficient Detected' },
     ])
   })
 
@@ -146,15 +150,76 @@ describe('Elm327TcpRepository', () => {
     await expect(promise).resolves.toBe('WP0ZZZ99ZTS390000')
   })
 
-  it('getFreezeFrame: mock responde "42 0C 0C 80" → freeze frame con valores', async () => {
-    const repo = makeRepo()
+  it('getFreezeFrame: lee 5 PIDs Mode 02 y devuelve frame con todos los valores', async () => {
+    const repo = makeRepo(100)
     const promise = repo.getFreezeFrame('P0301')
-    expectSent('02 0C')
-    respond(RESPONSES['02 0C'])
-    await expect(promise).resolves.toEqual({
-      dtcCode: 'P0301',
-      pidValues: { '0C': 800 },
+
+    await vi.waitFor(() => {
+      expect(lastSocket().write).toHaveBeenCalledTimes(1)
     })
+    respond(RESPONSES['02 04'])
+    await vi.waitFor(() => {
+      expect(lastSocket().write).toHaveBeenCalledTimes(2)
+    })
+    respond(RESPONSES['02 05'])
+    await vi.waitFor(() => {
+      expect(lastSocket().write).toHaveBeenCalledTimes(3)
+    })
+    respond(RESPONSES['02 0C'])
+    await vi.waitFor(() => {
+      expect(lastSocket().write).toHaveBeenCalledTimes(4)
+    })
+    respond(RESPONSES['02 0D'])
+    await vi.waitFor(() => {
+      expect(lastSocket().write).toHaveBeenCalledTimes(5)
+    })
+    respond(RESPONSES['02 11'])
+
+    const frame = await promise
+    expect(frame).toEqual({
+      dtcCode: 'P0301',
+      pidValues: {
+        '04': 18.03921568627451,
+        '05': 90,
+        '0C': 800,
+        '0D': 0,
+        '11': 14.117647058823529,
+      },
+    })
+  })
+
+  it('getFreezeFrame: un PID que falla (NO DATA) no invalida el resto', async () => {
+    const repo = makeRepo(100)
+    const promise = repo.getFreezeFrame()
+
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(1))
+    respond(RESPONSES['02 04'])
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(2))
+    respond('NO DATA\r\r>')
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(3))
+    respond(RESPONSES['02 0C'])
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(4))
+    respond('NO DATA\r\r>')
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(5))
+    respond(RESPONSES['02 11'])
+
+    const frame = await promise
+    expect(frame).toEqual({
+      dtcCode: 'UNKNOWN',
+      pidValues: { '04': 18.03921568627451, '0C': 800, '11': 14.117647058823529 },
+    })
+  })
+
+  it('getFreezeFrame: devuelve null si ningun PID responde', async () => {
+    const repo = makeRepo(100)
+    const promise = repo.getFreezeFrame('P0401')
+
+    for (let i = 1; i <= 5; i++) {
+      await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(i))
+      respond('NO DATA\r\r>')
+    }
+
+    await expect(promise).resolves.toBeNull()
   })
 
   it('getVehicleInfo: lee VIN → { make: "Porsche", model: "unknown", year: 2026, ... }', async () => {

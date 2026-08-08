@@ -246,9 +246,7 @@ describe("api", () => {
       });
       vi.stubGlobal("fetch", mockFetch);
 
-      await expect(api.getScenarios()).rejects.toThrow(
-        GENERIC_ERROR_MESSAGE,
-      );
+      await expect(api.getScenarios()).rejects.toThrow(GENERIC_ERROR_MESSAGE);
       // Only the original call happened — no refresh was attempted
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
@@ -511,12 +509,13 @@ describe("api", () => {
         .mockResolvedValueOnce({ ok: true, json: async () => cognitive });
       vi.stubGlobal("fetch", mockFetch);
 
-      const historyItem = { __type: "user_message" as const, content: "¿Por qué tiembla?" };
-      await api.getCognitiveDiagnosis(
-        "audi-a3-idle",
-        "¿Y eso por qué?",
-        [historyItem],
-      );
+      const historyItem = {
+        __type: "user_message" as const,
+        content: "¿Por qué tiembla?",
+      };
+      await api.getCognitiveDiagnosis("audi-a3-idle", "¿Y eso por qué?", [
+        historyItem,
+      ]);
 
       const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
       expect(JSON.parse(init.body as string)).toEqual({
@@ -537,9 +536,9 @@ describe("api", () => {
         }),
       );
 
-      await expect(
-        api.getCognitiveDiagnosis("audi-a3-idle"),
-      ).rejects.toThrow(GENERIC_ERROR_MESSAGE);
+      await expect(api.getCognitiveDiagnosis("audi-a3-idle")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
     });
 
     it("throws the generic message on a 503 even when the error body is unreadable", async () => {
@@ -555,9 +554,9 @@ describe("api", () => {
         }),
       );
 
-      await expect(
-        api.getCognitiveDiagnosis("audi-a3-idle"),
-      ).rejects.toThrow(GENERIC_ERROR_MESSAGE);
+      await expect(api.getCognitiveDiagnosis("audi-a3-idle")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
     });
   });
 
@@ -569,12 +568,10 @@ describe("api", () => {
     it("GETs /api/freeze-frame with scenarioId and dtc and returns the frame", async () => {
       setStoredTokens();
       const frame = { dtcCode: "P0301", pidValues: { "0C": 850 } };
-      const mockFetch = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ freezeFrame: frame }),
-        });
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ freezeFrame: frame }),
+      });
       vi.stubGlobal("fetch", mockFetch);
 
       const result = await api.getFreezeFrame("audi-a3-idle", "P0301");
@@ -589,12 +586,10 @@ describe("api", () => {
 
     it("GETs without the dtc param when omitted", async () => {
       setStoredTokens();
-      const mockFetch = vi
-        .fn()
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ freezeFrame: null }),
-        });
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ freezeFrame: null }),
+      });
       vi.stubGlobal("fetch", mockFetch);
 
       const result = await api.getFreezeFrame("audi-a3-idle");

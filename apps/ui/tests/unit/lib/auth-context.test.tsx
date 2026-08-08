@@ -131,7 +131,10 @@ describe("AuthProvider", () => {
     localStorage.setItem("iad.accessToken", "tok");
     localStorage.setItem("iad.refreshToken", "rtok");
 
-    let resolveMe!: (value: { ok: boolean; json: () => Promise<AuthUser> }) => void;
+    let resolveMe!: (value: {
+      ok: boolean;
+      json: () => Promise<AuthUser>;
+    }) => void;
     vi.stubGlobal(
       "fetch",
       vi.fn().mockImplementation(
@@ -227,7 +230,10 @@ describe("AuthProvider", () => {
     localStorage.setItem("iad.accessToken", "tok");
     localStorage.setItem("iad.refreshToken", "rtok");
 
-    let resolveMe!: (value: { ok: boolean; json: () => Promise<AuthUser> }) => void;
+    let resolveMe!: (value: {
+      ok: boolean;
+      json: () => Promise<AuthUser>;
+    }) => void;
     vi.stubGlobal(
       "fetch",
       vi.fn().mockImplementation(

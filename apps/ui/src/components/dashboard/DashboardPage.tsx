@@ -27,7 +27,7 @@ export function DashboardPage() {
   const { scenarios, selectedId, setSelectedId, scenariosError } =
     useScenarios();
   const selectedScenario = scenarios.find((s) => s.id === selectedId) ?? null;
-  const { live, streamOk } = useLiveTelemetry(selectedScenario);
+  const { live, streamOk } = useLiveTelemetry(selectedId);
   const { loading, result, runDiagnosis } = useDiagnosis(selectedId);
   const { cognitiveDiagnosis } = useCapabilities();
   const cognitive = useCognitiveDiagnosis(selectedId);

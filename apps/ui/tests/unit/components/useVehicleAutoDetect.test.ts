@@ -57,14 +57,18 @@ describe("useVehicleAutoDetect", () => {
   });
 
   it("should expose a recoverable error when the detection fails", async () => {
-    mockApi.getVehicleInfo.mockRejectedValueOnce(new Error("Scenario not found"));
+    mockApi.getVehicleInfo.mockRejectedValueOnce(
+      new Error("Scenario not found"),
+    );
     const { result } = renderHook(() => useVehicleAutoDetect());
 
     act(() => {
       result.current.detect("no-existe");
     });
 
-    await waitFor(() => expect(result.current.error).toBe("Scenario not found"));
+    await waitFor(() =>
+      expect(result.current.error).toBe("Scenario not found"),
+    );
     expect(result.current.step).toBe("detecting");
     expect(result.current.vehicle).toBeNull();
 

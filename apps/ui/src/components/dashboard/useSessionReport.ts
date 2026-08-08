@@ -78,8 +78,7 @@ function runSection<T>(
       setState((prev) => ({ ...prev, ...onError(e) }));
     })
     .finally(() => {
-      if (!cancelled.current)
-        setState((prev) => ({ ...prev, ...onFinally() }));
+      if (!cancelled.current) setState((prev) => ({ ...prev, ...onFinally() }));
     });
 }
 

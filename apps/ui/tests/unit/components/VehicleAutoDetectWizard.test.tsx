@@ -48,7 +48,9 @@ const vehicle: VehicleInfoResponse = {
   modelYearDecoded: 2018,
 };
 
-function renderWizard(overrides: Partial<Parameters<typeof VehicleAutoDetectWizard>[0]> = {}) {
+function renderWizard(
+  overrides: Partial<Parameters<typeof VehicleAutoDetectWizard>[0]> = {},
+) {
   const props = {
     scenarios,
     step: "selecting" as const,

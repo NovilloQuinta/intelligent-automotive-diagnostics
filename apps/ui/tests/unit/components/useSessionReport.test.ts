@@ -20,7 +20,11 @@ vi.mock("../../../src/lib/api", () => ({
 import { api } from "../../../src/lib/api";
 import { useSessionReport } from "../../../src/components/dashboard/useSessionReport";
 
-import type { DiagnosisResponse, EcuInfo, FreezeFrame } from "../../../src/components/dashboard/types";
+import type {
+  DiagnosisResponse,
+  EcuInfo,
+  FreezeFrame,
+} from "../../../src/components/dashboard/types";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -71,7 +75,9 @@ describe("useSessionReport", () => {
   // ---- Test 1: Parallel fire of all four calls ----
 
   it("should fire runDiagnosis, getEcuInfo, getFreezeFrame and getCognitiveDiagnosis when cognitive is available", async () => {
-    vi.mocked(api.getCapabilities).mockResolvedValue({ cognitiveDiagnosis: true });
+    vi.mocked(api.getCapabilities).mockResolvedValue({
+      cognitiveDiagnosis: true,
+    });
     vi.mocked(api.runDiagnosis).mockResolvedValue(SAMPLE_DIAGNOSIS);
     vi.mocked(api.getEcuInfo).mockResolvedValue(SAMPLE_ECUS);
     vi.mocked(api.getFreezeFrame).mockResolvedValue(SAMPLE_FREEZE_FRAME);
@@ -101,7 +107,9 @@ describe("useSessionReport", () => {
       resolveCognitive = r;
     });
 
-    vi.mocked(api.getCapabilities).mockResolvedValue({ cognitiveDiagnosis: true });
+    vi.mocked(api.getCapabilities).mockResolvedValue({
+      cognitiveDiagnosis: true,
+    });
     vi.mocked(api.runDiagnosis).mockReturnValue(diagnosisPromise);
     vi.mocked(api.getEcuInfo).mockResolvedValue(SAMPLE_ECUS);
     vi.mocked(api.getFreezeFrame).mockResolvedValue(SAMPLE_FREEZE_FRAME);
@@ -137,7 +145,9 @@ describe("useSessionReport", () => {
   // ---- Test 3: cognitiveDiagnosis: false → cognitive = 'unavailable' ----
 
   it("should mark cognitive as 'unavailable' and skip getCognitiveDiagnosis when capabilities say false", async () => {
-    vi.mocked(api.getCapabilities).mockResolvedValue({ cognitiveDiagnosis: false });
+    vi.mocked(api.getCapabilities).mockResolvedValue({
+      cognitiveDiagnosis: false,
+    });
     vi.mocked(api.runDiagnosis).mockResolvedValue(SAMPLE_DIAGNOSIS);
     vi.mocked(api.getEcuInfo).mockResolvedValue(SAMPLE_ECUS);
     vi.mocked(api.getFreezeFrame).mockResolvedValue(SAMPLE_FREEZE_FRAME);
@@ -145,7 +155,9 @@ describe("useSessionReport", () => {
     const { result } = renderHook(() => useSessionReport("scenario-1"));
 
     await waitFor(() => {
-      expect(result.current.capabilities).toEqual({ cognitiveDiagnosis: false });
+      expect(result.current.capabilities).toEqual({
+        cognitiveDiagnosis: false,
+      });
     });
 
     // Cognitive should be 'unavailable' and the call must never have been made
@@ -158,7 +170,9 @@ describe("useSessionReport", () => {
   it("should set ecus and freezeFrame to null on 404 without setting a global error", async () => {
     const notFoundError = new ApiHttpError("Not Found", 404);
 
-    vi.mocked(api.getCapabilities).mockResolvedValue({ cognitiveDiagnosis: false });
+    vi.mocked(api.getCapabilities).mockResolvedValue({
+      cognitiveDiagnosis: false,
+    });
     vi.mocked(api.runDiagnosis).mockResolvedValue(SAMPLE_DIAGNOSIS);
     vi.mocked(api.getEcuInfo).mockRejectedValue(notFoundError);
     vi.mocked(api.getFreezeFrame).mockRejectedValue(notFoundError);
@@ -182,7 +196,9 @@ describe("useSessionReport", () => {
   it("should set deterministicError when deterministic diagnosis fails with a 5xx error", async () => {
     const serverError = new ApiHttpError("Internal Server Error", 500);
 
-    vi.mocked(api.getCapabilities).mockResolvedValue({ cognitiveDiagnosis: false });
+    vi.mocked(api.getCapabilities).mockResolvedValue({
+      cognitiveDiagnosis: false,
+    });
     vi.mocked(api.runDiagnosis).mockRejectedValue(serverError);
     vi.mocked(api.getEcuInfo).mockResolvedValue(SAMPLE_ECUS);
     vi.mocked(api.getFreezeFrame).mockResolvedValue(SAMPLE_FREEZE_FRAME);

@@ -426,11 +426,43 @@ describe('DiagnosisService', () => {
         make: 'Audi',
         model: 'A3',
         year: 2018,
-        engineType: 'unknown',
+        engineType: '2.0 TFSI',
         manufacturer: 'Audi',
         region: { country: 'Germany', region: 'Europe' },
         modelYearDecoded: 2018,
+        vinStatus: 'read',
       })
+    })
+
+    it('should merge descriptor data with VIN from ECU, keeping VIN from ECU always', async () => {
+      const repos = createMockObdRepos()
+      // Mock the repo to return a different VIN than the descriptor
+      vi.mocked(
+        repos.get('audi-a3-idle')!.getVehicleInfo as ReturnType<typeof vi.fn>,
+      ).mockResolvedValue({
+        make: 'unknown',
+        model: 'unknown',
+        year: 0,
+        engineType: 'unknown',
+        vin: new Vin('WP0ZZZ99ZTS390000'),
+      })
+
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: repos,
+        logger: createMockLogger(),
+      })
+
+      const result = await service.getVehicleInfo('audi-a3-idle')
+
+      // VIN siempre del ECU, metadatos del descriptor
+      expect(result.vin).toBe('WP0ZZZ99ZTS390000')
+      expect(result.make).toBe('Audi')
+      expect(result.model).toBe('A3')
+      expect(result.year).toBe(2018)
+      expect(result.engineType).toBe('2.0 TFSI')
+      // Decodificacion del VIN real (Porsche WMI)
+      expect(result.manufacturer).toBe('Porsche')
     })
 
     it('should return the vehicle data from obdRepo in TCP mode without scenarioId', async () => {
@@ -446,6 +478,7 @@ describe('DiagnosisService', () => {
 
       expect(result.vin).toBe('WAUZZZ8V5JA123456')
       expect(result.manufacturer).toBe('Audi')
+      expect(result.vinStatus).toBe('read')
     })
 
     it('should null the decoded fields for FALLBACK_VIN without throwing', async () => {
@@ -475,6 +508,7 @@ describe('DiagnosisService', () => {
         manufacturer: null,
         region: null,
         modelYearDecoded: null,
+        vinStatus: 'unreadable',
       })
     })
 
@@ -500,6 +534,7 @@ describe('DiagnosisService', () => {
       expect(result.manufacturer).toBeNull()
       expect(result.region).toBeNull()
       expect(result.modelYearDecoded).toBeNull()
+      expect(result.vinStatus).toBe('read')
     })
 
     it('should throw DiagnosisScenarioNotFoundError for unknown scenario', async () => {

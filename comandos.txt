@@ -1,0 +1,53 @@
+# ============================================================
+# COMO LANZAR CADA AGENTE DE OPENCODE
+# ============================================================
+
+# --- FLUJO B: CHAT (se puede lanzar ya, en paralelo) --------
+
+git worktree add .claude/worktrees/mechanic-chat -b feat/mechanic-chat develop
+cd .claude/worktrees/mechanic-chat
+opencode
+
+# Y dentro de opencode, escribe esto:
+#
+#   Lee /home/ubuntu/projects/intelligent-automotive-diagnostics/prompt-opencode-chat.md
+#   y sigue esas instrucciones. Trabajas en el worktree
+#   /home/ubuntu/projects/intelligent-automotive-diagnostics/.claude/worktrees/mechanic-chat
+#   - TODOS los ficheros que escribas deben estar bajo esa ruta.
+
+
+# --- FLUJO D: MODOS OBD (SOLO tras mergear los arreglos) ----
+
+git worktree add .claude/worktrees/obd-modes -b feat/obd-standard-modes develop
+cd .claude/worktrees/obd-modes
+opencode
+
+# Y dentro de opencode:
+#
+#   Lee /home/ubuntu/projects/intelligent-automotive-diagnostics/prompt-opencode-obd-modes.md
+#   y sigue esas instrucciones. Trabajas en el worktree
+#   /home/ubuntu/projects/intelligent-automotive-diagnostics/.claude/worktrees/obd-modes
+#   - TODOS los ficheros que escribas deben estar bajo esa ruta.
+
+
+# --- VER QUE WORKTREES TIENES ABIERTOS ----------------------
+
+git worktree list
+
+
+# --- CERRAR UN WORKTREE (cuando su rama ya este mergeada) ---
+
+git worktree remove .claude/worktrees/mechanic-chat
+git worktree remove .claude/worktrees/obd-modes
+
+
+# --- OPCIONAL: meter el plan en git antes de crear worktrees -
+# Asi los agentes lo ven sin rutas absolutas.
+
+git add openspec/changes/fix-vehicle-identity-and-live-data/
+git commit -m "docs(openspec): plan de fix-vehicle-identity-and-live-data"
+
+
+# --- LIMPIAR ESTOS APUNTES CUANDO YA NO HAGAN FALTA ---------
+
+rm comandos.txt plan-paralelo.md prompt-opencode.md prompt-opencode-chat.md prompt-opencode-obd-modes.md

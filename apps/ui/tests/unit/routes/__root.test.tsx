@@ -8,7 +8,15 @@ const routerMock = vi.hoisted(() => ({ invalidate: vi.fn() }));
 vi.mock("@tanstack/react-router", () => {
   let routeConfig: unknown = null;
   return {
-    createRootRouteWithContext: () => (config: unknown) => { routeConfig = config; return { options: config, useRouteContext: () => ({ queryClient: { clear: vi.fn(), getQueryData: vi.fn() } }) }; },
+    createRootRouteWithContext: () => (config: unknown) => {
+      routeConfig = config;
+      return {
+        options: config,
+        useRouteContext: () => ({
+          queryClient: { clear: vi.fn(), getQueryData: vi.fn() },
+        }),
+      };
+    },
     Link: ({ to, children }: { to: string; children: ReactNode }) => (
       <a href={to}>{children}</a>
     ),
@@ -18,7 +26,13 @@ vi.mock("@tanstack/react-router", () => {
 });
 
 vi.mock("../../../src/lib/auth-context", () => ({
-  useAuth: () => ({ status: "anonymous", user: null, login: vi.fn(), register: vi.fn(), logout: vi.fn() }),
+  useAuth: () => ({
+    status: "anonymous",
+    user: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+  }),
   AuthProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
@@ -41,7 +55,9 @@ describe("__root", () => {
   // RootComponent skipped — infrastructure wrapper (providers + Outlet + Toaster).
   // Covered indirectly by integration tests. Equivalent to Tier INFRA.
   it.skip("should render RootComponent with Outlet", () => {
-    const RootComponent = (Route as unknown as { options: { component: ComponentType } }).options.component;
+    const RootComponent = (
+      Route as unknown as { options: { component: ComponentType } }
+    ).options.component;
     render(<RootComponent />);
     expect(screen.getByRole("status")).toBeDefined();
   });

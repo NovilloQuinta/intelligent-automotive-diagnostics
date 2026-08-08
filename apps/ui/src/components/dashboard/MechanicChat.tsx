@@ -13,14 +13,18 @@ interface MechanicChatProps {
   readonly onSend: (query: string) => void;
 }
 
-const SEVERITY_LABELS: Record<"low" | "medium" | "high" | "critical", string> = {
-  low: "Baja",
-  medium: "Media",
-  high: "Alta",
-  critical: "Crítica",
-};
+const SEVERITY_LABELS: Record<"low" | "medium" | "high" | "critical", string> =
+  {
+    low: "Baja",
+    medium: "Media",
+    high: "Alta",
+    critical: "Crítica",
+  };
 
-const SEVERITY_VARIANTS: Record<string, "default" | "secondary" | "destructive"> = {
+const SEVERITY_VARIANTS: Record<
+  string,
+  "default" | "secondary" | "destructive"
+> = {
   low: "default",
   medium: "secondary",
   high: "destructive",
@@ -62,7 +66,10 @@ export function MechanicChat({
           {conversationHistory.map((item, i) => {
             if (item.__type === "user_message" && item.content) {
               return (
-                <div key={i} className="self-end rounded-lg bg-primary/20 px-3 py-1.5 text-sm text-foreground/90 max-w-[80%]">
+                <div
+                  key={i}
+                  className="self-end rounded-lg bg-primary/20 px-3 py-1.5 text-sm text-foreground/90 max-w-[80%]"
+                >
                   {item.content}
                 </div>
               );

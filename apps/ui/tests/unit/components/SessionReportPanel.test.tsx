@@ -192,9 +192,7 @@ describe("SessionReportPanel", () => {
   // ------------------------------------------------------------------
 
   it("should show cognitive loading state while cognitive promise is pending", () => {
-    mockUseSessionReport.mockReturnValue(
-      setState({ cognitiveLoading: true }),
-    );
+    mockUseSessionReport.mockReturnValue(setState({ cognitiveLoading: true }));
 
     render(
       <SessionReportPanel
@@ -252,18 +250,14 @@ describe("SessionReportPanel", () => {
 
     // Narrative
     expect(
-      screen.getByText(
-        "Diagnóstico rápido sin herramientas externas.",
-      ),
+      screen.getByText("Diagnóstico rápido sin herramientas externas."),
     ).toBeDefined();
     // Severity translated: "baja" → "BAJA"
     expect(screen.getByText("BAJA")).toBeDefined();
     // Confidence (text split across nodes: "Confianza: " + "65" + " %")
     expect(screen.getByText(/Confianza: 65\s*%/)).toBeDefined();
     // Recommendation
-    expect(
-      screen.getByText("Revisar estado general del motor."),
-    ).toBeDefined();
+    expect(screen.getByText("Revisar estado general del motor.")).toBeDefined();
   });
 
   // ------------------------------------------------------------------
@@ -308,7 +302,9 @@ describe("SessionReportPanel", () => {
     const trigger = screen.getByText(/Traza de herramientas/);
     expect(trigger).toBeDefined();
     expect(
-      screen.queryByText("Documento: P0301 típicamente causado por bujías desgastadas."),
+      screen.queryByText(
+        "Documento: P0301 típicamente causado por bujías desgastadas.",
+      ),
     ).toBeNull();
 
     // Expand
@@ -398,10 +394,10 @@ describe("SessionReportPanel", () => {
       setState({ deterministic: sampleDeterministic }),
     );
 
-    render(
-      <SessionReportPanel scenarioId="audi-a3-idle" />,
-    );
+    render(<SessionReportPanel scenarioId="audi-a3-idle" />);
 
-    expect(screen.getByText("Información del vehículo no disponible")).toBeDefined();
+    expect(
+      screen.getByText("Información del vehículo no disponible"),
+    ).toBeDefined();
   });
 });

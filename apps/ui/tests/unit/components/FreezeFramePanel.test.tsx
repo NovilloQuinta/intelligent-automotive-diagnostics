@@ -19,7 +19,11 @@ const SAMPLE_FRAME: FreezeFrame = {
 describe("FreezeFramePanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockUseFreezeFrame.mockReturnValue({ loading: false, frame: null, error: null });
+    mockUseFreezeFrame.mockReturnValue({
+      loading: false,
+      frame: null,
+      error: null,
+    });
   });
 
   it("should render the empty-selection prompt when no dtc is selected", () => {
@@ -32,7 +36,11 @@ describe("FreezeFramePanel", () => {
   });
 
   it("should render a loading state while the frame is being fetched", () => {
-    mockUseFreezeFrame.mockReturnValue({ loading: true, frame: null, error: null });
+    mockUseFreezeFrame.mockReturnValue({
+      loading: true,
+      frame: null,
+      error: null,
+    });
     render(<FreezeFramePanel scenarioId="audi-a3-idle" dtc="P0301" />);
 
     expect(screen.getByText("Cargando freeze frame…")).toBeDefined();

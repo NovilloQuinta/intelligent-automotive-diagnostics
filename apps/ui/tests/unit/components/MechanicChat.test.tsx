@@ -55,7 +55,9 @@ describe("MechanicChat", () => {
 
   it("disables input and button while loading", () => {
     render(<MechanicChat {...defaultProps} loading={true} />);
-    expect(screen.getByPlaceholderText("Pregunta al mecánico...")).toBeDisabled();
+    expect(
+      screen.getByPlaceholderText("Pregunta al mecánico..."),
+    ).toBeDisabled();
     expect(screen.getByText("Enviar")).toBeDisabled();
   });
 

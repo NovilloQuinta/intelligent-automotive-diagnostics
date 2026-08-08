@@ -53,7 +53,7 @@ vi.mock("../../../src/components/dashboard/useScenarios", () => ({
   useScenarios: () => mockUseScenarios(),
 }));
 vi.mock("../../../src/components/dashboard/useLiveTelemetry", () => ({
-  useLiveTelemetry: () => mockUseLiveTelemetry(),
+  useLiveTelemetry: (_selectedId: string) => mockUseLiveTelemetry(),
 }));
 vi.mock("../../../src/components/dashboard/useDiagnosis", () => ({
   useDiagnosis: () => mockUseDiagnosis(),

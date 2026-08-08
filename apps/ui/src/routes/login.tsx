@@ -84,11 +84,7 @@ function computeStrength(password: string): StrengthLevel {
   return "strong";
 }
 
-function PasswordStrengthMeter({
-  password,
-}: {
-  password: string;
-}) {
+function PasswordStrengthMeter({ password }: { password: string }) {
   const meta = STRENGTH_META[computeStrength(password)];
 
   return (
@@ -121,20 +117,16 @@ function PasswordStrengthMeter({
 }
 
 /** Password requirement item shown below the password field. */
-function PwdReq({
-  met,
-  text,
-}: {
-  met: boolean;
-  text: string;
-}) {
+function PwdReq({ met, text }: { met: boolean; text: string }) {
   return (
     <li
       className={`flex items-center gap-1.5 text-[11px] transition-colors ${
         met ? "text-success" : "text-muted-foreground"
       }`}
     >
-      <span className={`text-xs ${met ? "text-success" : "text-muted-foreground/50"}`}>
+      <span
+        className={`text-xs ${met ? "text-success" : "text-muted-foreground/50"}`}
+      >
         {met ? "●" : "○"}
       </span>
       {text}
