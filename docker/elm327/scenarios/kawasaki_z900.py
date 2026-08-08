@@ -177,12 +177,13 @@ ObdMessage = {
     # ==================================================================
     # Mode 09 — Vehicle Information
     # ==================================================================
-    "GET_VIN": {
+    "VIN": {
         "Request": "^0902" + ELM_FOOTER,
-        "Descr": "Vehicle Identification Number",
+        "Descr": "Vehicle Identification Number (VIN)",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("02") + DT("01 0D")
-        + "JKAZR2A1XLA000111",
-        # 17-char VIN — Kawasaki Z900 2020
+        "Response": HD(ECU_R_ADDR_E) + SZ("14") + DT(
+            "49 02 01 4A 4B 41 5A 52 32 41 31 58 4C 41 30 30 30 31 31 31"
+        ),
+        # JKAZR2A1XLA000111 — Kawasaki Z900 2020
     },
 }

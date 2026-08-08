@@ -88,6 +88,8 @@ export interface VehicleInfoOutput {
   readonly region: { country: string; region: string } | null
   /** Anio de modelo deducido de la posicion 10; `null` si el VIN no es decodificable. */
   readonly modelYearDecoded: number | null
+  /** Estado de la lectura del VIN. */
+  readonly vinStatus: 'read' | 'unsupported' | 'unreadable'
 }
 
 /** Campos decodificados vacios: VIN ausente, con ruido o {@link FALLBACK_VIN}. */
@@ -200,7 +202,12 @@ export class DiagnosisService {
   }
 
   /**
-   * Identifica el vehiculo activo: datos del vehiculo mas los campos derivados del VIN.
+   * Identifica el vehiculo activo: VIN del ECU + metadatos del descriptor.
+   *
+   * En modo Docker, fusiona el VIN leido del emulador con `make`/`model`/`year`/`engineType`
+   * del {@link ScenarioDescriptor}. El VIN siempre es el del vehículo real, nunca el del catálogo.
+   * En modo TCP directo (sin descriptor) se mantiene el comportamiento actual: los metadatos
+   * se deducen exclusivamente del VIN.
    *
    * @param scenarioId — Escenario; opcional en modo TCP directo.
    * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
@@ -209,12 +216,19 @@ export class DiagnosisService {
     const repository = this.resolveRepository(scenarioId)
     const info = await repository.getVehicleInfo()
     const vin = String(info.vin)
+    const vinStatus: VehicleInfoOutput['vinStatus'] = info.vinStatus ?? (vin === FALLBACK_VIN ? 'unreadable' : 'read')
+
+    // En modo Docker, fusionar metadatos del descriptor (make/model/year/engineType)
+    // con el VIN del ECU. En modo TCP no hay descriptor: se mantiene lo que devuelve el adaptador.
+    const descriptor = scenarioId ? this.scenarios.find((s) => s.id === scenarioId) : undefined
+
     return {
       vin,
-      make: info.make,
-      model: info.model,
-      year: info.year,
-      engineType: info.engineType,
+      make: descriptor?.vehicleInfo.make ?? info.make,
+      model: descriptor?.vehicleInfo.model ?? info.model,
+      year: descriptor?.vehicleInfo.year ?? info.year,
+      engineType: descriptor?.vehicleInfo.engineType ?? info.engineType,
+      vinStatus,
       ...this.decodeVin(vin),
     }
   }

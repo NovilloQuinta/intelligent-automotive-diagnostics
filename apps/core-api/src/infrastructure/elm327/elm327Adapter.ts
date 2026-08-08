@@ -122,22 +122,25 @@ export class Elm327TcpRepository implements ObdRepository {
 
   async getVehicleInfo(): Promise<VehicleInfo> {
     try {
-      const vin = new Vin(await this.readVin())
+      const vinValue = await this.readVin()
+      const vin = new Vin(vinValue)
       return {
         make: vin.manufacturer ?? 'unknown',
         model: 'unknown',
         year: vin.modelYear ?? 0,
         engineType: 'unknown',
         vin,
+        vinStatus: 'read' as const,
       }
-    } catch {
-      // VIN ilegible: el diagnóstico sigue siendo funcional con datos mínimos
+    } catch (err) {
+      // VIN ilegible o no soportado: el diagnostico sigue siendo funcional
       return {
         make: 'unknown',
         model: 'unknown',
         year: 0,
         engineType: 'unknown',
         vin: new Vin(FALLBACK_VIN),
+        vinStatus: err instanceof Elm327NoDataError ? ('unsupported' as const) : ('unreadable' as const),
       }
     }
   }
