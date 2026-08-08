@@ -3,9 +3,11 @@ import { getDb } from '@/infrastructure/persistence/sqlite/db.js'
 import { createServer } from '@/infrastructure/http/server.js'
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
 import { SqliteRefreshTokenStore } from '@/infrastructure/persistence/sqlite/refreshTokenStore.js'
+import { SqliteVehicleRepository } from '@/infrastructure/persistence/sqlite/vehicleRepository.js'
 import { createAuthService } from '@/infrastructure/services/authService.js'
 import { Elm327TcpRepository } from '@/infrastructure/elm327/elm327Adapter.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
+import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import { createAnthropicClient } from '@/infrastructure/llm/anthropicClient.js'
 import { createOpenAiClient } from '@/infrastructure/llm/openAiClient.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
@@ -323,6 +325,7 @@ export function createAdminController(
 export async function buildApp(config: AppConfig): Promise<Application> {
   const { db, auditRepo, userRepo, tokenStore, logRepo } = createPersistenceRepositories(config)
   const logger = new Logger(config.NODE_ENV, db)
+  const vehicleRepo = new SqliteVehicleRepository(db)
   const auth = createAuthStack(config, { userRepo, tokenStore }, logger)
   await seedAdminUser(config, userRepo, auth.authService, logger)
   const authController = new AuthController({
@@ -336,35 +339,7 @@ export async function buildApp(config: AppConfig): Promise<Application> {
   const llmClient = createLlmClient(config, logger)
   const knowledgeStack = await createKnowledgeStack(config, logger)
   const webSearch = createWebSearchPort(config)
-
-  let diagnosisService: DiagnosisService
-
-  if (config.OBD_MODE === 'docker') {
-    const scenarios = createDockerScenarios(config)
-    const obdRepos = createObdRepoMap(scenarios)
-    diagnosisService = new DiagnosisService({
-      scenarios,
-      obdRepos,
-      llmClient,
-      logger,
-      knowledgeStack,
-      webSearch,
-    })
-  } else {
-    const obdRepo = new Elm327TcpRepository({
-      host: config.ELM327_HOST,
-      port: config.ELM327_PORT,
-    })
-    diagnosisService = new DiagnosisService({
-      scenarios: [],
-      obdRepo,
-      llmClient,
-      logger,
-      knowledgeStack,
-      webSearch,
-    })
-  }
-
+  const diagnosisService = createDiagnosisService(config, llmClient, knowledgeStack, webSearch, vehicleRepo, logger)
   const diagnosisController = new DiagnosisController(diagnosisService, logger)
   const adminController = createAdminController({ userRepo, logRepo, auditRepo }, knowledgeStack)
 
@@ -379,4 +354,25 @@ export async function buildApp(config: AppConfig): Promise<Application> {
     nodeEnv: config.NODE_ENV,
     accessTokenSecret: config.ACCESS_TOKEN_SECRET,
   })
+}
+
+/** Crea el servicio de diagnostico con el repositorio OBD adecuado segun el modo. */
+function createDiagnosisService(
+  config: AppConfig,
+  llmClient: LlmClientPort | undefined,
+  knowledgeStack: KnowledgeStack | undefined,
+  webSearch: WebSearchPort | undefined,
+  vehicleRepo: VehicleRepository,
+  logger: LoggerPort,
+): DiagnosisService {
+  if (config.OBD_MODE === 'docker') {
+    const scenarios = createDockerScenarios(config)
+    const obdRepos = createObdRepoMap(scenarios)
+    return new DiagnosisService({ scenarios, obdRepos, llmClient, logger, knowledgeStack, webSearch, vehicleRepo })
+  }
+  const obdRepo = new Elm327TcpRepository({
+    host: config.ELM327_HOST,
+    port: config.ELM327_PORT,
+  })
+  return new DiagnosisService({ scenarios: [], obdRepo, llmClient, logger, knowledgeStack, webSearch, vehicleRepo })
 }

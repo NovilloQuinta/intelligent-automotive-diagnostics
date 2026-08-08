@@ -5,7 +5,7 @@ import {
 } from '@/domain/pidObservationCatalog.js'
 
 describe('PID_OBSERVATION_CATALOG', () => {
-  const expectedKeys = ['01 0C', '01 05', '01 0D', '01 0F', '01 11', '01 04', '01 42']
+  const expectedKeys = ['01 0C', '01 05', '01 0D', '01 0F', '01 11', '01 04', '01 42', '22 0300', '22 0400']
 
   it.each(expectedKeys)('should contain an entry with name for %s', (key) => {
     const def = PID_OBSERVATION_CATALOG.get(key)

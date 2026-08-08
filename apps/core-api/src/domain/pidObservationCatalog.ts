@@ -1,9 +1,12 @@
 import {
   MODE_CURRENT_DATA,
+  MODE_PROPRIETARY,
   PID_CONTROL_MODULE_VOLTAGE,
   PID_COOLANT_TEMP,
   PID_ENGINE_LOAD,
   PID_INTAKE_TEMP,
+  PID_ODOMETER_ECM,
+  PID_ODOMETER_TCU,
   PID_RPM,
   PID_SPEED,
   PID_THROTTLE_POSITION,
@@ -29,6 +32,11 @@ export interface PidObservationDefinition {
 /** Construye la clave de catalogo `"MODE PID"` para un PID del modo 01. */
 function currentDataKey(pid: string): string {
   return `${MODE_CURRENT_DATA} ${pid}`
+}
+
+/** Construye la clave de catalogo `"MODE PID"` para un PID del modo 22. */
+function proprietaryKey(pid: string): string {
+  return `${MODE_PROPRIETARY} ${pid}`
 }
 
 /**
@@ -57,6 +65,14 @@ export const PID_OBSERVATION_CATALOG: ReadonlyMap<string, PidObservationDefiniti
   [
     currentDataKey(PID_CONTROL_MODULE_VOLTAGE),
     { name: 'Voltaje del módulo de control', unit: 'V', minValue: 11.5, maxValue: 15.5 },
+  ],
+  [
+    proprietaryKey(PID_ODOMETER_TCU),
+    { name: 'Odómetro (TCU)', unit: 'km', minValue: 0, maxValue: 999999 },
+  ],
+  [
+    proprietaryKey(PID_ODOMETER_ECM),
+    { name: 'Odómetro (ECM)', unit: 'km', minValue: 0, maxValue: 999999 },
   ],
 ])
 
