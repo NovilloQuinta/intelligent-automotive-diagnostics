@@ -624,6 +624,7 @@ export const openApiSpec = {
       },
       Scenario: {
         type: 'object',
+        required: ['id', 'name', 'vehicleType', 'dtcConfig', 'vehicleInfo'],
         properties: {
           id: { type: 'string', example: 'audi-a3-idle' },
           name: { type: 'string', example: 'Audi A3 al ralenti' },
