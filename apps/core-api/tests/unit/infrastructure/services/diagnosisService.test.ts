@@ -76,7 +76,9 @@ function createMockObdRepo(sensorOverrides?: {
     readDtcCodes: vi.fn(async () => [{ code: 'P0301', description: '' }]),
     clearDtcCodes: vi.fn(async () => undefined),
     readPendingDtcCodes: vi.fn(async () => [{ code: 'P0301', description: 'Cylinder 1 Misfire' }]),
-    readPermanentDtcCodes: vi.fn(async () => [{ code: 'P0401', description: 'EGR Flow Insufficient' }]),
+    readPermanentDtcCodes: vi.fn(async () => [
+      { code: 'P0401', description: 'EGR Flow Insufficient' },
+    ]),
     readVin: vi.fn(async () => 'WAUZZZ8V5JA123456'),
     getVehicleInfo: vi.fn(async () => ({
       make: 'Audi',

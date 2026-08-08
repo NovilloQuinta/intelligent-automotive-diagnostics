@@ -487,7 +487,11 @@ export const openApiSpec = {
                   properties: {
                     milOn: { type: 'boolean', example: true },
                     dtcCount: { type: 'integer', example: 3 },
-                    engineType: { type: 'string', enum: ['spark', 'compression'], example: 'spark' },
+                    engineType: {
+                      type: 'string',
+                      enum: ['spark', 'compression'],
+                      example: 'spark',
+                    },
                     monitors: {
                       type: 'array',
                       items: {

@@ -131,5 +131,3 @@ export class VehicleStatus {
     return new VehicleStatus({ milOn, dtcCount, engineType, monitors })
   }
 }
-
-

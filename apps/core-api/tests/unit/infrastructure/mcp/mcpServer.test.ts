@@ -24,8 +24,12 @@ function mockObdRepo(overrides: Partial<ObdRepository> = {}): ObdRepository {
     getFreezeFrame: vi.fn().mockResolvedValue(null),
     readDtcCodes: vi.fn().mockResolvedValue([{ code: 'P0301', description: 'Cylinder 1 Misfire' }]),
     clearDtcCodes: vi.fn().mockResolvedValue(undefined),
-    readPendingDtcCodes: vi.fn().mockResolvedValue([{ code: 'P0301', description: 'Cylinder 1 Misfire' }]),
-    readPermanentDtcCodes: vi.fn().mockResolvedValue([{ code: 'P0401', description: 'EGR Flow Insufficient' }]),
+    readPendingDtcCodes: vi
+      .fn()
+      .mockResolvedValue([{ code: 'P0301', description: 'Cylinder 1 Misfire' }]),
+    readPermanentDtcCodes: vi
+      .fn()
+      .mockResolvedValue([{ code: 'P0401', description: 'EGR Flow Insufficient' }]),
     readVin: vi.fn().mockResolvedValue('WAUZZZ8V5JA123456'),
     getVehicleInfo: vi.fn().mockResolvedValue({
       make: 'Audi',

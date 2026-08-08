@@ -95,7 +95,10 @@ export function parseVinResponse(raw: string): number[] {
  * @returns Pares de bytes DTC. Array vacio si no hay codigos (`NO DATA`).
  * @throws {Elm327ParseError} Si la respuesta no contiene el header esperado.
  */
-export function parseDtcResponse(raw: string, mode: '03' | '07' | '0A' = '03'): Array<[number, number]> {
+export function parseDtcResponse(
+  raw: string,
+  mode: '03' | '07' | '0A' = '03',
+): Array<[number, number]> {
   const headerByte = (0x40 + Number.parseInt(mode, 16)).toString(16).toUpperCase()
   const cleaned = stripEcho(raw)
   if (/NO DATA/i.test(cleaned)) return []

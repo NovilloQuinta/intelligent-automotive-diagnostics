@@ -78,9 +78,9 @@ describe('VehicleStatus', () => {
       // Compression monitors: comprehensiveComponent, fuelSystem, misfire, egrSystem, ...
       expect(status.monitors[0].name).toBe('comprehensiveComponent')
       expect(status.monitors[0].completed).toBe(false) // byte B bit 4 = 0
-      expect(status.monitors[1].completed).toBe(true)  // byte B bit 5 = 1
-      expect(status.monitors[2].completed).toBe(true)  // byte B bit 6 = 1
-      expect(status.monitors[3].completed).toBe(true)  // byte D bit 7 = 1
+      expect(status.monitors[1].completed).toBe(true) // byte B bit 5 = 1
+      expect(status.monitors[2].completed).toBe(true) // byte B bit 6 = 1
+      expect(status.monitors[3].completed).toBe(true) // byte D bit 7 = 1
       expect(status.monitors[4].completed).toBe(false) // byte D bit 6 = 0
     })
 
@@ -205,15 +205,13 @@ describe('VehicleStatus', () => {
 
     it('should throw for dtcCount < 0', () => {
       expect(
-        () =>
-          new VehicleStatus({ milOn: false, dtcCount: -1, engineType: 'spark', monitors: [] }),
+        () => new VehicleStatus({ milOn: false, dtcCount: -1, engineType: 'spark', monitors: [] }),
       ).toThrow()
     })
 
     it('should throw for dtcCount > 127', () => {
       expect(
-        () =>
-          new VehicleStatus({ milOn: false, dtcCount: 128, engineType: 'spark', monitors: [] }),
+        () => new VehicleStatus({ milOn: false, dtcCount: 128, engineType: 'spark', monitors: [] }),
       ).toThrow()
     })
   })
