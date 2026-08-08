@@ -32,8 +32,21 @@ import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosi
 import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
+import { ALL_SEED_PIDS } from '@/infrastructure/persistence/sqlite/seed-pids.js'
+import {
+  MODE_CURRENT_DATA,
+  PID_COOLANT_TEMP,
+  PID_RPM,
+  PID_SPEED,
+  PID_INTAKE_TEMP,
+} from '@/domain/pids.js'
 
 const COGNITIVE_DIAGNOSIS_TIMEOUT_MS = 60_000
+
+/** Nombre legible de un PID Mode 01 por su código hex (ej. "0C" → "Engine RPM"). */
+const PID_NAMES: Record<string, string> = Object.fromEntries(
+  ALL_SEED_PIDS.filter((p) => p.pidCode.mode === '01').map((p) => [p.pidCode.pid, p.name]),
+)
 
 /** Descriptor de un escenario de vehiculo disponible para diagnostico. */
 export interface ScenarioDescriptor {
@@ -211,25 +224,16 @@ export class DiagnosisService {
    */
   async getLiveData(scenarioId?: string): Promise<TelemetryOutput> {
     const repository = this.resolveRepository(scenarioId)
-    const pids = ['05', '0C', '0D', '0F'] as const
+    const pidToField: Record<string, keyof TelemetryOutput> = {
+      [PID_COOLANT_TEMP]: 'coolantTemp',
+      [PID_RPM]: 'rpm',
+      [PID_SPEED]: 'speed',
+      [PID_INTAKE_TEMP]: 'intakeTemp',
+    }
     const result: TelemetryOutput = { rpm: null, coolantTemp: null, speed: null, intakeTemp: null }
-    for (const pid of pids) {
+    for (const [pid, field] of Object.entries(pidToField)) {
       try {
-        const value = await repository.readPid('01', pid)
-        switch (pid) {
-          case '05':
-            result.coolantTemp = value
-            break
-          case '0C':
-            result.rpm = value
-            break
-          case '0D':
-            result.speed = value
-            break
-          case '0F':
-            result.intakeTemp = value
-            break
-        }
+        result[field] = await repository.readPid(MODE_CURRENT_DATA, pid)
       } catch {
         // degradacion por PID: uno que falla no tumba el resto
       }
@@ -466,7 +470,7 @@ export class DiagnosisService {
 
     const base = `[${result.severity.toUpperCase()}] ${description}`
     if (result.freezeFrame) {
-      const freezeKeys = result.freezeFrame.pidKeys.join(', ')
+      const freezeKeys = result.freezeFrame.pidKeys.map((pid) => PID_NAMES[pid] ?? pid).join(', ')
       return `${base} (freeze frame: ${result.freezeFrame.dtcCode} → ${freezeKeys})`
     }
     return base
