@@ -266,6 +266,19 @@ ObdMessage = {
     },
 
     # ==================================================================
+    # Mode 09 — Vehicle Information
+    # ==================================================================
+    "VIN": {
+        "Request": "^0902" + ELM_FOOTER,
+        "Descr": "Vehicle Identification Number (VIN)",
+        "Header": ECU_ADDR_E,
+        "Response": HD(ECU_R_ADDR_E) + SZ("14") + DT(
+            "49 02 01 57 41 55 5A 5A 5A 38 56 35 4A 41 31 32 33 34 35 36"
+        ),
+        # WAUZZZ8V5JA123456 — Audi A3 2.0 TDI 2018
+    },
+
+    # ==================================================================
     # Mode 03 — Diagnostic Trouble Codes (emission related, SAE J2012)
     # P0301 = 03 01, P0401 = 04 01, P2002 = 20 02
     # ==================================================================
@@ -284,12 +297,12 @@ ObdMessage = {
     # argument for reading the freeze frame before clearing codes collapses
     # if these values are identical to the Mode 01 ones.
     # ==================================================================
-    "FF_RPM": {
-        "Request": "^020C" + ELM_FOOTER,
-        "Descr": "Freeze frame RPM (moment of P0301)",
+    "FF_LOAD": {
+        "Request": "^0204" + ELM_FOOTER,
+        "Descr": "Freeze frame engine load",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("42 0C 20 D0"),
-        # 2100 RPM — under load when the misfire was detected
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 04 9E"),
+        # 62.0 %  (A*100/255) — engine working, not idling
     },
     "FF_COOLANT_TEMP": {
         "Request": "^0205" + ELM_FOOTER,
@@ -298,12 +311,26 @@ ObdMessage = {
         "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 05 80"),
         # 88 degC  (A-40) — already at operating temperature
     },
+    "FF_RPM": {
+        "Request": "^020C" + ELM_FOOTER,
+        "Descr": "Freeze frame RPM",
+        "Header": ECU_ADDR_E,
+        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("42 0C 20 D0"),
+        # 2100 RPM — under load when the misfire was detected
+    },
     "FF_SPEED": {
         "Request": "^020D" + ELM_FOOTER,
         "Descr": "Freeze frame vehicle speed",
         "Header": ECU_ADDR_E,
         "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 0D 41"),
         # 65 km/h — the vehicle was moving, not standing still
+    },
+    "FF_THROTTLE": {
+        "Request": "^0211" + ELM_FOOTER,
+        "Descr": "Freeze frame throttle position",
+        "Header": ECU_ADDR_E,
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 11 73"),
+        # 45.1 %  (A*100/255) — intake flap well open, consistent with 62 % load
     },
 
     # ==================================================================

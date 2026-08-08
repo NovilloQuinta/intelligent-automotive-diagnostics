@@ -1,43 +1,55 @@
-import { useEffect, useRef, useState } from "react";
-import type { Scenario, TelemetrySnapshot } from "./types";
-import { jitterFrame } from "@/lib/jitter";
-
-const TICK_MS = 500;
+import { useQuery } from "@tanstack/react-query";
+import type { TelemetrySnapshot } from "./types";
 
 /**
- * Generates live telemetry by jittering the selected scenario's baseline
- * sensorValues at 2 Hz. Replaces the old SSE-based fake stream.
+ * Cadencia de polling para la telemetria en vivo.
  *
- * When no scenario is selected, returns `null` live data and `streamOk: false`.
+ * 1 Hz en vez de 2 Hz por una razon de transporte: el ELM327 serializa todos los
+ * comandos en una unica conexion TCP con cola FIFO. Cada ciclo son 4 lecturas
+ * secuenciales (PIDs 05, 0C, 0D, 0F); contra un adaptador real cada comando
+ * cuesta ~50-100 ms, sumando ~200-400 ms por ciclo. A 2 Hz el margen desaparece
+ * en cuanto el enlace tiene un mal momento y las peticiones se solapan sobre la
+ * misma cola. 1 Hz deja el doble de margen y sigue leyendose como tiempo real.
  */
-export function useLiveTelemetry(scenario: Scenario | null) {
-  const [live, setLive] = useState<TelemetrySnapshot | null>(null);
-  const [streamOk, setStreamOk] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+export const LIVE_TELEMETRY_INTERVAL_MS = 1000;
 
-  useEffect(() => {
-    if (!scenario) {
-      setLive(null);
-      setStreamOk(false);
-      return;
-    }
+/**
+ * Lee los 4 PIDs del dashboard desde {@code GET /api/live-data} una vez por
+ * segundo. Sustituye al antiguo generador de jitter en navegador.
+ *
+ * Degradacion por PID: un valor {@code null} significa lectura fallida en ese
+ * sensor; los demas mantienen su valor. El badge {@code LIVE} cae a
+ * "Reconectando..." mientras el endpoint no responde.
+ */
+export function useLiveTelemetry(selectedId: string) {
+  const { data, isError, isLoading } = useQuery({
+    queryKey: ["live-telemetry", selectedId],
+    queryFn: async () => {
+      const res = await fetch(`/api/live-data?scenarioId=${encodeURIComponent(selectedId)}`);
+      if (!res.ok) throw new Error("live-data fetch failed");
+      return res.json() as Promise<{
+        rpm: number | null;
+        coolantTemp: number | null;
+        speed: number | null;
+        intakeTemp: number | null;
+      }>;
+    },
+    enabled: selectedId.length > 0,
+    refetchInterval: LIVE_TELEMETRY_INTERVAL_MS,
+  });
 
-    // Emit first frame immediately
-    setLive(jitterFrame(scenario.sensorValues, Date.now()));
-    setStreamOk(true);
+  if (!selectedId || !data || isLoading) {
+    return { live: null, streamOk: false } as const;
+  }
 
-    // Then tick at TICK_MS
-    intervalRef.current = setInterval(() => {
-      setLive(jitterFrame(scenario.sensorValues, Date.now()));
-    }, TICK_MS);
+  const live: TelemetrySnapshot = {
+    rpm: data.rpm ?? 0,
+    speed: data.speed ?? 0,
+    coolantTemp: data.coolantTemp ?? 0,
+    intakeTemp: data.intakeTemp ?? 0,
+    rawData: "",
+    ts: Date.now(),
+  };
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [scenario]);
-
-  return { live, streamOk };
+  return { live, streamOk: !isError };
 }

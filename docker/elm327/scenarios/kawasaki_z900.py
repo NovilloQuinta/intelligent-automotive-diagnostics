@@ -91,8 +91,9 @@ ObdMessage = {
         "Request": "^0111" + ELM_FOOTER,
         "Descr": "Throttle Position",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("41 11 85"),
-        # 52.2 %  (A*100/255) — acelerando
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("41 11 12"),
+        # 7.1 %  (A*100/255) — closed throttle. The previous 52 % ("acelerando")
+        # contradicted 1300 RPM at 0 km/h: you cannot be accelerating and idling
     },
     "OBD_COMPLIANCE": {
         "Request": "^011C" + ELM_FOOTER,
@@ -151,8 +152,11 @@ ObdMessage = {
         "Request": "^0142" + ELM_FOOTER,
         "Descr": "Control Module Voltage",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("41 42 2A 94"),
-        # 10.9 V  ((A*256+B)/1000) — fallo de carga: bateria/alternador
+        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("41 42 37 78"),
+        # 14.2 V  ((A*256+B)/1000) — charging normally. The previous 10.9 V was
+        # labelled a charging fault, on the vehicle that declares NO DTCs and
+        # serves as the healthy control group. A real bike reading 10.9 V with
+        # the engine running is on its way to not starting again
     },
     "AMBIANT_AIR_TEMP": {
         "Request": "^0146" + ELM_FOOTER,
@@ -183,12 +187,13 @@ ObdMessage = {
     # ==================================================================
     # Mode 09 — Vehicle Information
     # ==================================================================
-    "GET_VIN": {
+    "VIN": {
         "Request": "^0902" + ELM_FOOTER,
-        "Descr": "Vehicle Identification Number",
+        "Descr": "Vehicle Identification Number (VIN)",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("02") + DT("01 0D")
-        + "JKAZR2A1XLA000111",
-        # 17-char VIN — Kawasaki Z900 2020
+        "Response": HD(ECU_R_ADDR_E) + SZ("14") + DT(
+            "49 02 01 4A 4B 41 5A 52 32 41 31 58 4C 41 30 30 30 31 31 31"
+        ),
+        # JKAZR2A1XLA000111 — Kawasaki Z900 2020
     },
 }

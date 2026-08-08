@@ -1,6 +1,8 @@
-import { useCallback, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { pidObservationToRow, type PidRow } from "./pidCatalog";
+
+const COGNITIVE_QUERY_KEY = "cognitive-diagnosis";
 
 /**
  * Runs the LLM cognitive diagnosis for the selected scenario and exposes the
@@ -11,30 +13,49 @@ import { pidObservationToRow, type PidRow } from "./pidCatalog";
  * its own error semantics.
  */
 export function useCognitiveDiagnosis(selectedId: string) {
-  const [loading, setLoading] = useState(false);
-  const [pidRows, setPidRows] = useState<PidRow[] | null>(null);
+  const queryClient = useQueryClient();
+  const queryKey = [COGNITIVE_QUERY_KEY, selectedId] as const;
 
-  const trigger = useCallback(
-    async (query?: string) => {
-      if (!selectedId) return;
-      setLoading(true);
-      setPidRows(null);
-      try {
-        const output = await api.getCognitiveDiagnosis(selectedId, query);
-        setPidRows(output.pidObservations.map(pidObservationToRow));
-      } catch {
-        setPidRows(null);
-      } finally {
-        setLoading(false);
-      }
+  const { data: pidRows } = useQuery<PidRow[]>({
+    queryKey,
+    queryFn: async () => {
+      const output = await api.getCognitiveDiagnosis(selectedId);
+      return output.pidObservations.map(pidObservationToRow);
     },
-    [selectedId],
-  );
+    enabled: false,
+  });
 
-  const reset = useCallback(() => {
-    setPidRows(null);
-    setLoading(false);
-  }, []);
+  const mutation = useMutation({
+    mutationFn: async (query?: string) => {
+      const output = await api.getCognitiveDiagnosis(selectedId, query);
+      return output.pidObservations.map(pidObservationToRow);
+    },
+    onSuccess: (rows) => {
+      queryClient.setQueryData(queryKey, rows);
+    },
+    onError: () => {
+      // swallowed by design
+    },
+  });
 
-  return { pidRows, loading, trigger, reset };
+  const trigger = async (query?: string) => {
+    if (!selectedId) return;
+    try {
+      return await mutation.mutateAsync(query);
+    } catch {
+      // swallowed by design — onError already handled it
+    }
+  };
+
+  const reset = () => {
+    mutation.reset();
+    queryClient.removeQueries({ queryKey });
+  };
+
+  return {
+    pidRows: pidRows ?? null,
+    loading: mutation.isPending,
+    trigger,
+    reset,
+  };
 }
