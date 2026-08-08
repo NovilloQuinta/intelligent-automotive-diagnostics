@@ -45,7 +45,6 @@ export function DashboardPage() {
     setSelectedDtc(null);
   }, [selectedId]);
 
-  /** Al seleccionar vehiculo se dispara el diagnostico automaticamente. */
   useEffect(() => {
     if (!selectedId) return;
     cognitive.reset();
@@ -110,8 +109,7 @@ export function DashboardPage() {
         scenarios={scenarios}
         selectedId={selectedId}
         onSelectVehicle={wizard.detect}
-        loading={loading}
-        streamOk={false}
+        telemetry={{ loading, streamOk: false }}
         onLogout={() => auth.logout()}
       >
         {scenariosError && (
@@ -172,9 +170,7 @@ export function DashboardPage() {
           />
         );
       case "freeze-frame":
-        return (
-          <FreezeFramePanel scenarioId={selectedId} dtc={selectedDtc} />
-        );
+        return <FreezeFramePanel scenarioId={selectedId} dtc={selectedDtc} />;
       case "ecu":
         return (
           <EcuInfoPanel
@@ -237,8 +233,7 @@ export function DashboardPage() {
       scenarios={scenarios}
       selectedId={selectedId}
       onSelectVehicle={wizard.detect}
-      loading={loading}
-      streamOk={streamOk}
+      telemetry={{ loading, streamOk }}
       onLogout={() => auth.logout()}
     >
       {scenariosError && (

@@ -3,14 +3,14 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Scenario } from "./types";
 
+/** Los escenarios de simulación apenas cambian; se refrescan cada 30s. */
+const SCENARIOS_STALE_MS = 30_000;
+
 export function useScenarios() {
-  const {
-    data: scenarios = [],
-    error,
-  } = useQuery<Scenario[]>({
+  const { data: scenarios = [], error } = useQuery<Scenario[]>({
     queryKey: ["scenarios"],
     queryFn: () => api.getScenarios(),
-    staleTime: 30_000,
+    staleTime: SCENARIOS_STALE_MS,
   });
 
   const [selectedId, setSelectedId] = useState("");

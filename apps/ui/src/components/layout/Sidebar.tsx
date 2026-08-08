@@ -62,9 +62,7 @@ export function Sidebar({
             className="relative flex flex-col items-center gap-1 px-1 py-3 text-muted-foreground transition-colors hover:text-foreground"
             title={item.label}
           >
-            <Icon
-              className={`h-5 w-5 ${isActive ? "text-primary" : ""}`}
-            />
+            <Icon className={`h-5 w-5 ${isActive ? "text-primary" : ""}`} />
             <span
               className={`text-[9px] font-medium leading-none ${isActive ? "text-primary" : ""}`}
             >

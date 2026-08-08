@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, type KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,7 +22,10 @@ const SEVERITY_LABELS: Record<SeverityKey, string> = {
   critical: "Crítica",
 };
 
-const SEVERITY_VARIANTS: Record<SeverityKey, "default" | "secondary" | "destructive"> = {
+const SEVERITY_VARIANTS: Record<
+  SeverityKey,
+  "default" | "secondary" | "destructive"
+> = {
   low: "default",
   medium: "secondary",
   high: "destructive",
@@ -51,11 +54,14 @@ export function MechanicChat({
   }, [query, loading, onSend]);
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
+    (e: KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Enter") handleSend();
     },
     [handleSend],
   );
+
+  const severityKey =
+    severity && isSeverityKey(severity) ? severity : null;
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-white/10 bg-black/30 p-4">
@@ -76,18 +82,21 @@ export function MechanicChat({
                 </div>
               );
             }
-            if (item.__type === "raw_response" && item.data) {
-              const data = item.data as { text?: string };
-              if (data.text) {
-                return (
-                  <div
-                    key={i}
-                    className="self-start rounded-lg bg-white/5 px-3 py-1.5 text-sm text-foreground/80 max-w-[80%]"
-                  >
-                    {data.text}
-                  </div>
-                );
-              }
+            if (
+              item.__type === "raw_response" &&
+              item.data &&
+              typeof item.data === "object" &&
+              "text" in item.data &&
+              typeof item.data.text === "string"
+            ) {
+              return (
+                <div
+                  key={i}
+                  className="self-start rounded-lg bg-white/5 px-3 py-1.5 text-sm text-foreground/80 max-w-[80%]"
+                >
+                  {item.data.text}
+                </div>
+              );
             }
             return null;
           })}
@@ -107,15 +116,11 @@ export function MechanicChat({
             {severity && (
               <Badge
                 variant={
-                  isSeverityKey(severity)
-                    ? SEVERITY_VARIANTS[severity]
-                    : "default"
+                  severityKey ? SEVERITY_VARIANTS[severityKey] : "default"
                 }
                 className="text-[10px] uppercase tracking-wider"
               >
-                {isSeverityKey(severity)
-                  ? SEVERITY_LABELS[severity]
-                  : severity}
+                {severityKey ? SEVERITY_LABELS[severityKey] : severity}
               </Badge>
             )}
             {confidence !== null && (

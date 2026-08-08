@@ -3,6 +3,12 @@ import { Sidebar, type SidebarSection } from "./Sidebar";
 import { TopBar } from "@/components/dashboard/TopBar";
 import type { Scenario } from "@/components/dashboard/types";
 
+/** Estado del stream de telemetría en vivo del vehículo seleccionado. */
+interface TelemetryStatus {
+  readonly loading: boolean;
+  readonly streamOk: boolean;
+}
+
 interface DashboardLayoutProps {
   readonly children: ReactNode;
   readonly activeSection: SidebarSection;
@@ -12,8 +18,7 @@ interface DashboardLayoutProps {
   readonly scenarios: Scenario[];
   readonly selectedId: string;
   readonly onSelectVehicle: (id: string) => void;
-  readonly loading: boolean;
-  readonly streamOk: boolean;
+  readonly telemetry: TelemetryStatus;
   readonly onLogout: () => void;
 }
 
@@ -26,8 +31,7 @@ export function DashboardLayout({
   scenarios,
   selectedId,
   onSelectVehicle,
-  loading,
-  streamOk,
+  telemetry,
   onLogout,
 }: DashboardLayoutProps) {
   return (
@@ -36,8 +40,8 @@ export function DashboardLayout({
         scenarios={scenarios}
         selectedId={selectedId}
         onSelect={onSelectVehicle}
-        loading={loading}
-        streamOk={streamOk}
+        loading={telemetry.loading}
+        streamOk={telemetry.streamOk}
         onLogout={onLogout}
       />
       <div className="flex flex-1">
@@ -47,9 +51,7 @@ export function DashboardLayout({
           dtcCount={dtcCount}
           hasDiagnosis={hasDiagnosis}
         />
-        <main className="flex-1 overflow-auto p-4 md:p-6">
-          {children}
-        </main>
+        <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
       </div>
       <footer className="relative z-10 border-t border-white/5 bg-black/40 px-6 py-2">
         <div className="mono flex flex-wrap items-center justify-between gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
