@@ -1,8 +1,9 @@
+import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useScenarios } from "../../../src/components/dashboard/useScenarios";
 
-// Mock the api module
 vi.mock("../../../src/lib/api", () => ({
   api: {
     getScenarios: vi.fn(),
@@ -11,13 +12,20 @@ vi.mock("../../../src/lib/api", () => ({
 
 import { api } from "../../../src/lib/api";
 
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return React.createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+}
+
 describe("useScenarios", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  // El vehículo activo ya no se auto-selecciona: lo fija el wizard de
-  // identificación (VehicleAutoDetectWizard) tras leer y decodificar el VIN.
   it("fetches scenarios on mount without selecting any of them", async () => {
     const mockScenarios = [
       {
@@ -51,7 +59,9 @@ describe("useScenarios", () => {
     ];
     vi.mocked(api.getScenarios).mockResolvedValueOnce(mockScenarios);
 
-    const { result } = renderHook(() => useScenarios());
+    const { result } = renderHook(() => useScenarios(), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => {
       expect(result.current.scenarios).toEqual(mockScenarios);
@@ -63,7 +73,9 @@ describe("useScenarios", () => {
   it("keeps the selection made by the caller", async () => {
     vi.mocked(api.getScenarios).mockResolvedValueOnce([]);
 
-    const { result } = renderHook(() => useScenarios());
+    const { result } = renderHook(() => useScenarios(), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => expect(result.current.scenarios).toEqual([]));
     act(() => result.current.setSelectedId("kawa-z900"));
@@ -75,7 +87,9 @@ describe("useScenarios", () => {
       new Error("Network error"),
     );
 
-    const { result } = renderHook(() => useScenarios());
+    const { result } = renderHook(() => useScenarios(), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => {
       expect(result.current.scenariosError).toBe("Network error");

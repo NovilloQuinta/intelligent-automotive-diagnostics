@@ -1,5 +1,7 @@
+import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useCapabilities } from "../../../src/components/dashboard/useCapabilities";
 
 vi.mock("../../../src/lib/api", () => ({
@@ -9,6 +11,15 @@ vi.mock("../../../src/lib/api", () => ({
 }));
 
 import { api } from "../../../src/lib/api";
+
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return React.createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+}
 
 describe("useCapabilities", () => {
   beforeEach(() => {
@@ -20,7 +31,9 @@ describe("useCapabilities", () => {
       cognitiveDiagnosis: true,
     });
 
-    const { result } = renderHook(() => useCapabilities());
+    const { result } = renderHook(() => useCapabilities(), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => {
       expect(result.current.cognitiveDiagnosis).toBe(true);
@@ -33,7 +46,9 @@ describe("useCapabilities", () => {
       () => new Promise(() => {}),
     );
 
-    const { result } = renderHook(() => useCapabilities());
+    const { result } = renderHook(() => useCapabilities(), {
+      wrapper: createWrapper(),
+    });
 
     expect(result.current.cognitiveDiagnosis).toBe(false);
   });
@@ -41,7 +56,9 @@ describe("useCapabilities", () => {
   it("keeps cognitiveDiagnosis false when the probe rejects", async () => {
     vi.mocked(api.getCapabilities).mockRejectedValue(new Error("network"));
 
-    const { result } = renderHook(() => useCapabilities());
+    const { result } = renderHook(() => useCapabilities(), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => {
       expect(api.getCapabilities).toHaveBeenCalled();

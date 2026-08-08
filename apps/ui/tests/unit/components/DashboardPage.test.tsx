@@ -2,7 +2,6 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import type { Scenario } from "../../../src/components/dashboard/types";
 
-// Mutable auth state shared between the mock factory and the tests
 const {
   mockAuthStatus,
   mockLogout,
@@ -23,18 +22,15 @@ const {
   mockUseCognitiveDiagnosis: vi.fn(),
 }));
 
-// Must mock before any imports that touch @tanstack/react-router
 vi.mock("@tanstack/react-router", () => {
   return {
     useNavigate: () => vi.fn(),
-    // Renders a test hook instead of actually redirecting
     Navigate: ({ to, replace }: { to: string; replace?: boolean }) => (
       <div data-testid="navigate" data-to={to} data-replace={String(replace)} />
     ),
   };
 });
 
-// Mock auth context
 vi.mock("../../../src/lib/auth-context", () => ({
   useAuth: () => ({
     status: mockAuthStatus.value,
@@ -48,7 +44,6 @@ vi.mock("../../../src/lib/auth-context", () => ({
   ),
 }));
 
-// Mock dashboard data hooks (they talk to the real backend via api)
 vi.mock("../../../src/components/dashboard/useScenarios", () => ({
   useScenarios: () => mockUseScenarios(),
 }));
@@ -89,7 +84,6 @@ vi.mock("../../../src/components/dashboard/useSessionReport", () => ({
   }),
 }));
 
-// FreezeFramePanel fetches through the real api module — mock only the network call
 vi.mock("../../../src/lib/api", () => ({
   api: {
     getFreezeFrame: vi.fn(),
@@ -101,8 +95,27 @@ vi.mock("../../../src/lib/api", () => ({
   },
 }));
 
+vi.mock("../../../src/components/dashboard/usePendingDtc", () => ({
+  usePendingDtc: () => ({ dtcCodes: [], loading: false, error: null }),
+}));
+
+vi.mock("../../../src/components/dashboard/usePermanentDtc", () => ({
+  usePermanentDtc: () => ({ dtcCodes: [], loading: false, error: null }),
+}));
+
+vi.mock("../../../src/components/dashboard/useClearDtc", () => ({
+  useClearDtc: () => ({ clearDtc: vi.fn(), loading: false, error: null }),
+}));
+
+const mockFreezeFrameHook = vi.fn();
+
+vi.mock("../../../src/components/dashboard/useFreezeFrame", () => ({
+  useFreezeFrame: (...args: unknown[]) => mockFreezeFrameHook(...args),
+}));
+
 import { api } from "../../../src/lib/api";
 import { DashboardPage } from "../../../src/components/dashboard/DashboardPage";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 const scenario: Scenario = {
   id: "audi-a3",
@@ -130,7 +143,6 @@ const identifiedVehicle = {
   modelYearDecoded: 2015,
 };
 
-/** Estado por defecto del wizard: vehículo ya identificado y confirmado. */
 function wizardState(overrides: Record<string, unknown> = {}) {
   return {
     step: "done",
@@ -148,12 +160,15 @@ function wizardState(overrides: Record<string, unknown> = {}) {
 describe("DashboardPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default resolved values for API methods called by DtcPanel hooks
     vi.mocked(api.getPendingDtc).mockResolvedValue({ dtcCodes: [] });
     vi.mocked(api.getPermanentDtc).mockResolvedValue({ dtcCodes: [] });
     vi.mocked(api.clearDtc).mockResolvedValue({ cleared: true });
+    mockFreezeFrameHook.mockReturnValue({
+      frame: null,
+      loading: false,
+      error: null,
+    });
     mockUseVehicleAutoDetect.mockReturnValue(wizardState());
-    // Stub the animation driver so the gauges never fire frames (deterministic)
     vi.stubGlobal("requestAnimationFrame", vi.fn());
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
     mockAuthStatus.value = "anonymous";
@@ -193,12 +208,10 @@ describe("DashboardPage", () => {
     const nav = screen.getByTestId("navigate");
     expect(nav.getAttribute("data-to")).toBe("/login");
     expect(nav.getAttribute("data-replace")).toBe("true");
-    // Dashboard content must not render while redirecting
     expect(screen.queryByText("Telemetría en vivo")).toBeNull();
-    expect(screen.queryByText("Protocolo: ISO 15765-4 CAN")).toBeNull();
   });
 
-  it("should render TopBar and dashboard sections when auth is authed", () => {
+  it("should render sidebar and live-data section when auth is authed", () => {
     mockAuthStatus.value = "authed";
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
@@ -220,24 +233,16 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    // TopBar (branding + connection status)
     expect(
-      screen.getByText("OBD-II · AI Assisted Workshop Tool"),
+      screen.getByText("Herramienta OBD-II · Diagnóstico Asistido por IA"),
     ).toBeDefined();
     expect(screen.getByText("Conectado")).toBeDefined();
-    // Telemetry section
     expect(screen.getByText("Telemetría en vivo")).toBeDefined();
-    // DTC panel + PIDs table empty state (both render the same prompt)
-    expect(
-      screen.getAllByText("Selecciona un vehículo y pulsa INICIAR DIAGNÓSTICO"),
-    ).toHaveLength(2);
-    // Diagnosis panel heading
-    expect(screen.getByText("Diagnóstico IA")).toBeDefined();
-    // PIDs table heading
-    expect(screen.getByText("PIDs Leídos")).toBeDefined();
-    // Footer
-    expect(screen.getByText("Protocolo: ISO 15765-4 CAN")).toBeDefined();
-    // No redirect when authed
+    expect(screen.getByText("Datos Vivo")).toBeDefined();
+    expect(screen.getByText("Códigos DTC")).toBeDefined();
+    expect(screen.getByText("Unidades Control")).toBeDefined();
+    expect(screen.getByText("Diagnóstico")).toBeDefined();
+    expect(screen.getByText("Protocolo ISO 15765-4 CAN")).toBeDefined();
     expect(screen.queryByTestId("navigate")).toBeNull();
   });
 
@@ -265,7 +270,7 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Error al cargar escenarios")).toBeDefined();
   });
 
-  it("should show the Diagnosticando status and loading UI while a diagnosis runs", () => {
+  it("should show the loading UI in diagnosis panel while a diagnosis runs", () => {
     mockAuthStatus.value = "authed";
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
@@ -281,13 +286,9 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    // Status + diagnose button
-    expect(screen.getAllByText("Diagnosticando…").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByTitle("Diagnóstico"));
+
     expect(screen.getByText("Analizando datos OBD-II con IA…")).toBeDefined();
-    expect(screen.queryByText("Streaming ECU · 2 Hz")).toBeNull();
-    expect(
-      screen.queryByText("Selecciona un vehículo y pulsa INICIAR DIAGNÓSTICO"),
-    ).toBeNull();
   });
 
   it("should show the Streaming status and Live badge when the stream is live", () => {
@@ -312,11 +313,11 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    expect(screen.getByText("Streaming ECU · 2 Hz")).toBeDefined();
-    expect(screen.getByText("Live")).toBeDefined();
+    expect(screen.getByText("Transmisión ECU · 1 Hz")).toBeDefined();
+    expect(screen.getByText("En Vivo")).toBeDefined();
   });
 
-  it("should show the Conectando status when a vehicle is selected but the stream is down", () => {
+  it("should show the Reconectando status when stream is down", () => {
     mockAuthStatus.value = "authed";
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
@@ -327,8 +328,8 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    expect(screen.getByText("Conectando…")).toBeDefined();
-    expect(screen.queryByText("Live")).toBeNull();
+    expect(screen.getByText("Reconectando…")).toBeDefined();
+    expect(screen.queryByText("En Vivo")).toBeNull();
   });
 
   it("should render the identification wizard instead of the diagnosis menu without a confirmed vehicle", () => {
@@ -347,11 +348,8 @@ describe("DashboardPage", () => {
 
     expect(screen.getByText("Identificación del vehículo")).toBeDefined();
     expect(screen.queryByText("Telemetría en vivo")).toBeNull();
-    expect(screen.queryByText("Diagnóstico IA")).toBeNull();
-    expect(screen.queryByText("PIDs Leídos")).toBeNull();
-    // La cabecera se mantiene: el wizard sustituye al menú de diagnóstico, no a la app
     expect(
-      screen.getByText("OBD-II · AI Assisted Workshop Tool"),
+      screen.getByText("Herramienta OBD-II · Diagnóstico Asistido por IA"),
     ).toBeDefined();
   });
 
@@ -395,7 +393,6 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    // Abre el dropdown del TopBar y elige el otro vehículo
     fireEvent.click(screen.getByText("Audi A3 1.6 TDI"));
     fireEvent.click(screen.getByText("Kawasaki Z900"));
 
@@ -420,7 +417,7 @@ describe("DashboardPage", () => {
     expect(screen.queryByText("Telemetría en vivo")).toBeNull();
   });
 
-  it("should render the diagnosis result (DTCs, text, severity) once available", () => {
+  it("should render the diagnosis result in DTC and diagnosis panels", () => {
     mockAuthStatus.value = "authed";
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
@@ -444,29 +441,25 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    // DTC panel with count and code
+    fireEvent.click(screen.getByTitle("Códigos DTC"));
     expect(screen.getByText("1 registrado")).toBeDefined();
     expect(screen.getByText("P0301")).toBeDefined();
     expect(screen.getByText("Fallo de encendido cilindro 1")).toBeDefined();
-    // Diagnosis panel with severity badge
+
+    fireEvent.click(screen.getByTitle("Diagnóstico"));
     expect(screen.getByText("Se recomienda revisar las bujías.")).toBeDefined();
     expect(screen.getByText("ALTA")).toBeDefined();
-    // Telemetry falls back to result.parsedValues
+
+    fireEvent.click(screen.getByTitle("Datos Vivo"));
     expect(screen.getByText("850")).toBeDefined();
     expect(screen.getByText("050")).toBeDefined();
-    // No live stream → Conectando status
-    expect(screen.getByText("Conectando…")).toBeDefined();
-    expect(
-      screen.queryByText("Selecciona un vehículo y pulsa INICIAR DIAGNÓSTICO"),
-    ).toBeNull();
-    // PIDs table lists all 4 generic PIDs with their code and OK status
     expect(screen.getByText("4 registrados")).toBeDefined();
     expect(screen.getByText("01 0C")).toBeDefined();
     expect(screen.getByText("850 RPM")).toBeDefined();
     expect(screen.getAllByText("OK")).toHaveLength(4);
   });
 
-  it("should fetch the freeze frame for a DTC when its row is selected", async () => {
+  it("should navigate to freeze-frame when DTC row is selected", async () => {
     mockAuthStatus.value = "authed";
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
@@ -487,25 +480,23 @@ describe("DashboardPage", () => {
       },
       runDiagnosis: vi.fn(),
     });
-    vi.mocked(api.getFreezeFrame).mockResolvedValue({
-      dtcCode: "P0301",
-      pidValues: { "0C": 850 },
+    mockFreezeFrameHook.mockReturnValue({
+      frame: { dtcCode: "P0301", pidValues: { "0C": 850 } },
+      loading: false,
+      error: null,
     });
 
     render(<DashboardPage />);
 
+    fireEvent.click(screen.getByTitle("Códigos DTC"));
     fireEvent.click(screen.getByText("P0301"));
 
-    await waitFor(() => {
-      expect(api.getFreezeFrame).toHaveBeenCalledWith(scenario.id, "P0301");
-    });
-    // "0C" is the freeze-frame PID cell — PidsTable renders it as "01 0C"
     await waitFor(() => {
       expect(screen.getByText("0C")).toBeDefined();
     });
   });
 
-  it("should show the session report panel when the Informe button is clicked", () => {
+  it("should show the report panel when sidebar Informe button is clicked", () => {
     mockAuthStatus.value = "authed";
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
@@ -516,15 +507,14 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    const informeBtn = screen.getByTitle("Generar informe de la sesión");
-    fireEvent.click(informeBtn);
+    fireEvent.click(screen.getByTitle("Informe"));
 
     expect(screen.getByText("Informe de Sesión de Diagnóstico")).toBeDefined();
     expect(screen.getByText("Diagnóstico Determinista")).toBeDefined();
     expect(screen.getByText("Diagnóstico Cognitivo")).toBeDefined();
   });
 
-  it("should hide the report panel when Cerrar informe is clicked", () => {
+  it("should hide the report panel when another sidebar section is clicked", () => {
     mockAuthStatus.value = "authed";
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
@@ -535,12 +525,10 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    // Open report
-    fireEvent.click(screen.getByTitle("Generar informe de la sesión"));
+    fireEvent.click(screen.getByTitle("Informe"));
     expect(screen.getByText("Informe de Sesión de Diagnóstico")).toBeDefined();
 
-    // Close report
-    fireEvent.click(screen.getByText("Cerrar informe ✕"));
+    fireEvent.click(screen.getByTitle("Datos Vivo"));
     expect(screen.queryByText("Informe de Sesión de Diagnóstico")).toBeNull();
   });
 
@@ -657,10 +645,11 @@ describe("DashboardPage", () => {
 
     render(<DashboardPage />);
 
-    // Los 4 PIDs fijos y el resto del diagnóstico están visibles pese al loading cognitivo
     expect(screen.getAllByTestId("pid-row")).toHaveLength(4);
-    expect(screen.getByText("P0301")).toBeDefined();
     expect(screen.getByText("Buscando PIDs adicionales…")).toBeDefined();
+
+    fireEvent.click(screen.getByTitle("Códigos DTC"));
+    expect(screen.getByText("P0301")).toBeDefined();
   });
 
   it("should append the AI rows to the PIDs table once they resolve", () => {

@@ -1,5 +1,7 @@
+import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useFreezeFrame } from "../../../src/components/dashboard/useFreezeFrame";
 
 vi.mock("../../../src/lib/api", () => ({
@@ -10,6 +12,15 @@ vi.mock("../../../src/lib/api", () => ({
 
 import { api } from "../../../src/lib/api";
 
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return React.createElement(QueryClientProvider, { client: queryClient }, children);
+  };
+}
+
 describe("useFreezeFrame", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -19,8 +30,9 @@ describe("useFreezeFrame", () => {
     const frame = { dtcCode: "P0301", pidValues: { "0C": 850 } };
     vi.mocked(api.getFreezeFrame).mockResolvedValueOnce(frame);
 
-    const { result } = renderHook(() =>
-      useFreezeFrame("audi-a3-idle", "P0301"),
+    const { result } = renderHook(
+      () => useFreezeFrame("audi-a3-idle", "P0301"),
+      { wrapper: createWrapper() },
     );
 
     await waitFor(() => {
@@ -34,8 +46,9 @@ describe("useFreezeFrame", () => {
   it("keeps frame null when the API reports no freeze frame for the code", async () => {
     vi.mocked(api.getFreezeFrame).mockResolvedValueOnce(null);
 
-    const { result } = renderHook(() =>
-      useFreezeFrame("audi-a3-idle", "P0420"),
+    const { result } = renderHook(
+      () => useFreezeFrame("audi-a3-idle", "P0420"),
+      { wrapper: createWrapper() },
     );
 
     await waitFor(() => {
@@ -46,7 +59,10 @@ describe("useFreezeFrame", () => {
   });
 
   it("does not fetch when selectedDtc is null", () => {
-    const { result } = renderHook(() => useFreezeFrame("audi-a3-idle", null));
+    const { result } = renderHook(
+      () => useFreezeFrame("audi-a3-idle", null),
+      { wrapper: createWrapper() },
+    );
 
     expect(api.getFreezeFrame).not.toHaveBeenCalled();
     expect(result.current.frame).toBeNull();
@@ -58,8 +74,9 @@ describe("useFreezeFrame", () => {
       new Error("Scenario not found"),
     );
 
-    const { result } = renderHook(() =>
-      useFreezeFrame("audi-a3-idle", "P0301"),
+    const { result } = renderHook(
+      () => useFreezeFrame("audi-a3-idle", "P0301"),
+      { wrapper: createWrapper() },
     );
 
     await waitFor(() => {
@@ -74,7 +91,10 @@ describe("useFreezeFrame", () => {
 
     const { rerender } = renderHook(
       ({ dtc }: { dtc: string | null }) => useFreezeFrame("audi-a3-idle", dtc),
-      { initialProps: { dtc: "P0301" } },
+      {
+        initialProps: { dtc: "P0301" },
+        wrapper: createWrapper(),
+      },
     );
     await waitFor(() => {
       expect(api.getFreezeFrame).toHaveBeenCalledWith("audi-a3-idle", "P0301");

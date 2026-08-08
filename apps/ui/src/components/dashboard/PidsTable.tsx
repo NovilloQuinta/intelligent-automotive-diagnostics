@@ -1,4 +1,4 @@
-import { Gauge, Loader2, Sparkles } from "lucide-react";
+import { AlertTriangle, Gauge, Loader2, Sparkles } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -14,6 +14,7 @@ import {
   pidStatusMeta,
   type PidRow,
 } from "./pidCatalog";
+import type { CognitiveDiagnosisError } from "./useCognitiveDiagnosis";
 
 type Props = {
   parsedValues: DiagnosisResponse["parsedValues"] | null;
@@ -22,6 +23,8 @@ type Props = {
   aiRows?: PidRow[] | null;
   /** True while the cognitive response (up to 60 s) is still in flight. */
   aiLoading?: boolean;
+  /** Set when the last cognitive search failed — shown only when there are no AI rows to display instead. */
+  aiError?: CognitiveDiagnosisError | null;
 };
 
 /** Discreet badge marking a row as discovered by the AI rather than read by the fixed diagnosis. */
@@ -51,6 +54,23 @@ function AiLoadingRow() {
   );
 }
 
+/** Brief, non-blocking notice shown when the cognitive PID search failed and left no AI rows. */
+function AiErrorRow({ message }: { message: string }) {
+  return (
+    <TableRow className="border-white/5 hover:bg-transparent">
+      <TableCell
+        colSpan={4}
+        className="text-xs italic text-muted-foreground"
+      >
+        <span className="inline-flex items-center gap-2">
+          <AlertTriangle className="h-3 w-3 text-destructive" />
+          No se pudieron buscar PIDs adicionales: {message}
+        </span>
+      </TableCell>
+    </TableRow>
+  );
+}
+
 function EmptyPrompt() {
   return (
     <div className="flex h-full min-h-[120px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
@@ -62,10 +82,13 @@ function EmptyPrompt() {
 function PidRowsTable({
   rows,
   aiLoading,
+  aiError,
 }: {
   rows: PidRow[];
   aiLoading: boolean;
+  aiError: CognitiveDiagnosisError | null;
 }) {
+  const hasAiRows = rows.some((row) => row.source === "ai");
   return (
     <Table>
       <TableHeader>
@@ -125,6 +148,9 @@ function PidRowsTable({
           );
         })}
         {aiLoading ? <AiLoadingRow /> : null}
+        {!aiLoading && !hasAiRows && aiError ? (
+          <AiErrorRow message={aiError.message} />
+        ) : null}
       </TableBody>
     </Table>
   );
@@ -136,6 +162,7 @@ export function PidsTable({
   empty,
   aiRows = null,
   aiLoading = false,
+  aiError = null,
 }: Props) {
   const fixedRows = parsedValues ? buildPidRows(parsedValues) : null;
   const rows = fixedRows ? mergePidRows(fixedRows, aiRows) : null;
@@ -154,7 +181,9 @@ export function PidsTable({
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {empty && <EmptyPrompt />}
-        {!empty && rows && <PidRowsTable rows={rows} aiLoading={aiLoading} />}
+        {!empty && rows && (
+          <PidRowsTable rows={rows} aiLoading={aiLoading} aiError={aiError} />
+        )}
       </div>
     </div>
   );

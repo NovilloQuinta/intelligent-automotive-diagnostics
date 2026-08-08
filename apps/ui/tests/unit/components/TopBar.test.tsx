@@ -62,6 +62,7 @@ const baseProps = {
   selectedId: "audi-a3",
   onSelect: vi.fn(),
   loading: false,
+  streamOk: true,
   onLogout: mockOnLogout,
 };
 
@@ -76,7 +77,7 @@ describe("TopBar", () => {
 
     expect(screen.getByText(/Intelligent Automotive/)).toBeDefined();
     expect(
-      screen.getByText("OBD-II · AI Assisted Workshop Tool"),
+      screen.getByText("Herramienta OBD-II · Diagnóstico Asistido por IA"),
     ).toBeDefined();
     expect(screen.getByText("Conectado")).toBeDefined();
     expect(screen.getByText("12:30:45")).toBeDefined();
@@ -119,39 +120,11 @@ describe("TopBar", () => {
     expect(screen.getByText("--:--:--")).toBeDefined();
   });
 
-  it("should render the Informe button when onReportClick is provided", () => {
-    const onReportClick = vi.fn();
-    render(<TopBar {...baseProps} onReportClick={onReportClick} />);
+  it("should show 'Sin conexión' when streamOk is false", () => {
+    render(<TopBar {...baseProps} streamOk={false} />);
 
-    const btn = screen.getByTitle("Generar informe de la sesión");
-    expect(btn).toBeDefined();
-    expect(btn.textContent).toContain("Informe");
-  });
-
-  it("should disable the Informe button when no vehicle is selected", () => {
-    const onReportClick = vi.fn();
-    render(
-      <TopBar {...baseProps} selectedId="" onReportClick={onReportClick} />,
-    );
-
-    const btn = screen.getByTitle(
-      "Generar informe de la sesión",
-    ) as HTMLButtonElement;
-    expect(btn.disabled).toBe(true);
-  });
-
-  it("should call onReportClick when the Informe button is clicked", () => {
-    const onReportClick = vi.fn();
-    render(<TopBar {...baseProps} onReportClick={onReportClick} />);
-
-    fireEvent.click(screen.getByTitle("Generar informe de la sesión"));
-    expect(onReportClick).toHaveBeenCalledTimes(1);
-  });
-
-  it("should not render the Informe button when onReportClick is not provided", () => {
-    render(<TopBar {...baseProps} />);
-
-    expect(screen.queryByTitle("Generar informe de la sesión")).toBeNull();
+    expect(screen.getByText("Sin conexión")).toBeDefined();
+    expect(screen.queryByText("Conectado")).toBeNull();
   });
 
   it("should NOT show the admin link when the user is not an admin", () => {
