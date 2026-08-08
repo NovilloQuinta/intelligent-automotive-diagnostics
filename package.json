@@ -5,6 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "bash scripts/start-dev.sh",
     "predev:all": "sh -c 'for p in 4000 5173; do pids=$(lsof -ti:${p} 2>/dev/null); if [ -n \"$pids\" ]; then kill -9 $pids 2>/dev/null; echo \"[predev:all] puerto $p liberado (PID(s): $pids)\"; else fuser -k ${p}/tcp 2>/dev/null && echo \"[predev:all] puerto $p liberado (fuser)\" || echo \"[predev:all] puerto $p ya estaba libre\"; fi; done' || true",
     "dev": "cd apps/core-api && pnpm dev",
     "dev:ui": "cd apps/ui && pnpm dev",
