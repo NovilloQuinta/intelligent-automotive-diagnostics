@@ -4,6 +4,7 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
 import type { CreateUserInput } from '@/application/dto/auth/CreateUserInput.js'
 import { Email } from '@/domain/value-objects/email.js'
+import { adminUsersFilterSchema } from '@/application/dto/admin/AdminUsersFilter.js'
 
 const mockUser: CreateUserInput = {
   username: 'testuser',
@@ -36,6 +37,7 @@ describe('SqliteUserRepository', () => {
         email TEXT NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
         user_type TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'user',
         business_name TEXT,
         tax_id TEXT,
         address TEXT,
@@ -178,6 +180,87 @@ describe('SqliteUserRepository', () => {
 
       const after = await repo.findById(user.id)
       expect(after?.lockedUntil).not.toBeNull()
+    })
+  })
+})
+
+describe('SqliteUserRepository — list/stats', () => {
+  let repo: SqliteUserRepository
+
+  beforeAll(async () => {
+    const sqlite = new Database(':memory:')
+    sqlite.pragma('foreign_keys = ON')
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        user_type TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'user',
+        business_name TEXT,
+        tax_id TEXT,
+        address TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        failed_login_attempts INTEGER NOT NULL DEFAULT 0,
+        locked_until TEXT
+      );
+    `)
+
+    repo = new SqliteUserRepository(drizzle(sqlite))
+
+    await repo.create({
+      username: 'juan',
+      email: new Email('juan@example.com'),
+      passwordHash: '$2b$12$hash1',
+      userType: 'individual',
+    })
+    await repo.create({
+      username: 'tallerfix',
+      email: new Email('taller@example.com'),
+      passwordHash: '$2b$12$hash2',
+      userType: 'workshop',
+    })
+    await repo.create({
+      username: 'admin',
+      email: new Email('admin@example.com'),
+      passwordHash: '$2b$12$hash3',
+      userType: 'individual',
+      role: 'admin',
+    })
+  })
+
+  describe('list', () => {
+    it('should never include passwordHash', async () => {
+      const result = await repo.list(adminUsersFilterSchema.parse({}))
+
+      expect(result.total).toBe(3)
+      for (const item of result.items) {
+        expect(item).not.toHaveProperty('passwordHash')
+      }
+    })
+
+    it('should filter by q over email/username', async () => {
+      const result = await repo.list(adminUsersFilterSchema.parse({ q: 'taller' }))
+
+      expect(result.total).toBe(1)
+      expect(result.items[0]?.username).toBe('tallerfix')
+    })
+
+    it('should paginate with page/pageSize', async () => {
+      const result = await repo.list(adminUsersFilterSchema.parse({ page: 1, pageSize: 2 }))
+
+      expect(result.items).toHaveLength(2)
+      expect(result.total).toBe(3)
+    })
+  })
+
+  describe('stats', () => {
+    it('should aggregate totals by userType and by role', async () => {
+      const stats = await repo.stats()
+
+      expect(stats.byUserType).toEqual({ individual: 2, workshop: 1 })
+      expect(stats.byRole).toEqual({ user: 2, admin: 1 })
     })
   })
 })

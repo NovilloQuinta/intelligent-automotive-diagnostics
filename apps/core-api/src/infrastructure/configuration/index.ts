@@ -23,6 +23,8 @@ const configSchema = z.object({
   LLM_BASE_URL: z.string().optional(),
   LLM_MODEL: z.string().optional(),
   WEB_SEARCH_API_KEY: z.string().optional(),
+  ADMIN_EMAIL: z.string().optional(),
+  ADMIN_PASSWORD: z.string().optional(),
 })
 
 /** Configuracion tipada de la aplicacion validada desde variables de entorno. */

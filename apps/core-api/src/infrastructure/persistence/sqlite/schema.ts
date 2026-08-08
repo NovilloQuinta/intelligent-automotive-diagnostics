@@ -74,6 +74,7 @@ export const users = sqliteTable('users', {
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   userType: text('user_type').notNull(), // 'individual' | 'workshop'
+  role: text('role').notNull().default('user'), // 'user' | 'admin'
   businessName: text('business_name'),
   taxId: text('tax_id'),
   address: text('address'),

@@ -26,12 +26,12 @@ Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de siste
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
 - **Flujo de ramas**: `develop` es la rama de integración; toda `feat.*`/`fix.*` sale de `develop` y se mergea ahí.
-- **Rama activa**: `fix/vehicle-identity-and-live-data` (5 defectos corregidos, pendiente merge a `develop`)
-- **Recién mergeado**: `add-web-search-tool` (RAG 4, SerpAPI), `add-cognitive-pid-discovery` (PID observations + UI enriquecido).
-- **Recién archivado**: `add-web-search-tool`, `add-cognitive-pid-discovery` → archive.
-- **Fix completado en esta sesión**: `fix/vehicle-identity-and-live-data` — 5 defectos: descripciones DTC (catálogo SAE J2012), refresco al cambiar vehículo (TanStack Query), identificación compuesta VIN/descriptor (vinStatus), freeze frame multi-PID (degradación), telemetría real (endpoint /api/live-data 1 Hz, borrado jitter).
-- **Siguiente**: `add-vehicle-autodetect-flow`, `add-knowledge-mcp-tools` (RAG 3b).
-- **Tests + CI**: core-api 732+ (69 files); UI 269+ (36 files). Build + lint core verdes. Deuda `brace-expansion` (lint UI) sin resolver.
+- **Rama activa**: `feat/admin-management-panel` (worktree `.claude/worktrees/admin-panel/`)
+- **Recién completado**: Bloque D (UI) del admin panel — 6 componentes React, 6 rutas TanStack Router, DataTableFilters, TopBar con enlace admin condicional, API client con 6 funciones tipadas para `/api/admin/*`.
+- **Tests**: core-api 842 passed (89 files); UI 342 passed, 1 skipped (45 files). Build + lint core verdes. Lint UI falla por deuda `brace-expansion`.
+- **Review**: @reviewer PASS_WITH_WARNINGS (0 graves, 11 warnings no bloqueantes). @security APROBADO (0 críticas, 4 advertencias).
+- **Pendiente**: commit + push + merge a `develop`. Tareas de verificación manual (5.x en tasks.md). Archivar change OpenSpec.
+- **Deuda `brace-expansion`** (lint UI): sin resolver.
 
 ## REGLAS DE SESION
 

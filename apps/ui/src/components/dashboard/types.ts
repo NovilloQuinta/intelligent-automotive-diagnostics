@@ -108,6 +108,8 @@ export type AuthUser = {
   address?: string | null;
   createdAt: string;
   isWorkshop: boolean;
+  role: "user" | "admin";
+  isAdmin: boolean;
 };
 
 export type LoginInput = {

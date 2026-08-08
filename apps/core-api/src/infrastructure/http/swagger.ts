@@ -17,6 +17,12 @@ export const openApiSpec = {
   tags: [
     { name: 'Auth', description: 'Registro, login y refresh de tokens JWT' },
     { name: 'Diagnosis', description: 'Operaciones de diagnostico OBD-II' },
+    {
+      name: 'Admin',
+      description:
+        'Panel de administracion: logs, auditoria HTTP, usuarios y catalogo vectorial. ' +
+        'Requiere rol admin (403 en caso contrario) y tiene su propio rate limit.',
+    },
   ],
   paths: {
     '/api/auth/register': {
@@ -542,6 +548,203 @@ export const openApiSpec = {
         },
       },
     },
+    '/api/admin/overview': {
+      get: {
+        tags: ['Admin'],
+        summary: 'Admin panel overview',
+        description:
+          'Aggregated snapshot for the admin panel: user totals, recent error count, and ' +
+          'HTTP activity by path. Requires admin role.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Overview summary',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/AdminOverview' } },
+            },
+          },
+          '401': { description: 'Access token required' },
+          '403': { description: 'Admin role required' },
+          '429': { description: 'Too many requests to /api/admin' },
+        },
+      },
+    },
+    '/api/admin/logs': {
+      get: {
+        tags: ['Admin'],
+        summary: 'List application logs',
+        description:
+          'Paginated, filtered, date-descending listing of the `logs` table. Requires admin role.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'level',
+            in: 'query',
+            schema: { type: 'string', enum: ['debug', 'info', 'warn', 'error'] },
+          },
+          { name: 'from', in: 'query', schema: { type: 'string', format: 'date-time' } },
+          { name: 'to', in: 'query', schema: { type: 'string', format: 'date-time' } },
+          {
+            name: 'q',
+            in: 'query',
+            description: 'Free-text search over the log message',
+            schema: { type: 'string' },
+          },
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          {
+            name: 'pageSize',
+            in: 'query',
+            schema: { type: 'integer', default: 20, maximum: 100 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Paginated log entries',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/AdminLogsPage' } },
+            },
+          },
+          '400': { description: 'Invalid query parameters' },
+          '401': { description: 'Access token required' },
+          '403': { description: 'Admin role required' },
+        },
+      },
+    },
+    '/api/admin/audit-logs': {
+      get: {
+        tags: ['Admin'],
+        summary: 'List HTTP audit records',
+        description:
+          'Paginated, filtered, date-descending listing of the `audit_logs` table. ' +
+          'Requires admin role. Routes under /api/admin are never audited (self-exclusion).',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'statusCode',
+            in: 'query',
+            schema: { type: 'integer', minimum: 100, maximum: 599 },
+          },
+          { name: 'path', in: 'query', schema: { type: 'string' } },
+          { name: 'userId', in: 'query', schema: { type: 'integer' } },
+          { name: 'from', in: 'query', schema: { type: 'string', format: 'date-time' } },
+          { name: 'to', in: 'query', schema: { type: 'string', format: 'date-time' } },
+          {
+            name: 'q',
+            in: 'query',
+            description: 'Free-text search over path',
+            schema: { type: 'string' },
+          },
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          {
+            name: 'pageSize',
+            in: 'query',
+            schema: { type: 'integer', default: 20, maximum: 100 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Paginated audit entries',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/AdminAuditLogsPage' } },
+            },
+          },
+          '400': { description: 'Invalid query parameters' },
+          '401': { description: 'Access token required' },
+          '403': { description: 'Admin role required' },
+        },
+      },
+    },
+    '/api/admin/users': {
+      get: {
+        tags: ['Admin'],
+        summary: 'List users',
+        description:
+          'Paginated, filtered listing of users. Never includes `passwordHash` (same ' +
+          'projection as `safeUser`/`/api/auth/me`). Requires admin role.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'q',
+            in: 'query',
+            description: 'Free-text search over email/username',
+            schema: { type: 'string' },
+          },
+          { name: 'from', in: 'query', schema: { type: 'string', format: 'date-time' } },
+          { name: 'to', in: 'query', schema: { type: 'string', format: 'date-time' } },
+          { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+          {
+            name: 'pageSize',
+            in: 'query',
+            schema: { type: 'integer', default: 20, maximum: 100 },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Paginated users, without passwordHash',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/AdminUsersPage' } },
+            },
+          },
+          '400': { description: 'Invalid query parameters' },
+          '401': { description: 'Access token required' },
+          '403': { description: 'Admin role required' },
+        },
+      },
+    },
+    '/api/admin/knowledge': {
+      get: {
+        tags: ['Admin'],
+        summary: 'Vector catalog stats',
+        description:
+          'Row count and a small unordered sample for each of the three vector indices ' +
+          '(pids_index, dtcs_index, diagnoses_index). No embeddings are generated. Requires admin role.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'Count and sample per index',
+            content: {
+              'application/json': { schema: { $ref: '#/components/schemas/KnowledgeStats' } },
+            },
+          },
+          '401': { description: 'Access token required' },
+          '403': { description: 'Admin role required' },
+          '503': { description: 'Vector catalog not available' },
+        },
+      },
+    },
+    '/api/admin/knowledge/search': {
+      post: {
+        tags: ['Admin'],
+        summary: 'Test semantic search against the vector catalog',
+        description:
+          'Runs the same embed + VectorStore.query() flow used by the real RAG pipeline, ' +
+          'so the operator can preview what a diagnosis would retrieve for a given text. ' +
+          'Requires admin role.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/KnowledgeSearchRequest' },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Search results for the given text',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/KnowledgeSearchResponse' },
+              },
+            },
+          },
+          '400': { description: 'Invalid body (empty text, unknown index, or limit out of range)' },
+          '401': { description: 'Access token required' },
+          '403': { description: 'Admin role required' },
+          '503': { description: 'Vector catalog not available' },
+        },
+      },
+    },
   },
   components: {
     securitySchemes: {
@@ -588,11 +791,13 @@ export const openApiSpec = {
           username: { type: 'string' },
           email: { type: 'string' },
           userType: { type: 'string', enum: ['individual', 'workshop'] },
+          role: { type: 'string', enum: ['user', 'admin'], example: 'user' },
           businessName: { type: 'string', nullable: true },
           taxId: { type: 'string', nullable: true },
           address: { type: 'string', nullable: true },
           createdAt: { type: 'string' },
           isWorkshop: { type: 'boolean' },
+          isAdmin: { type: 'boolean' },
         },
       },
       TokenPair: {
@@ -697,6 +902,151 @@ export const openApiSpec = {
           type: { type: 'string', example: 'engine' },
           protocol: { type: 'string', example: 'ISO 15765-4' },
           discoveredAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      AdminUserStats: {
+        type: 'object',
+        properties: {
+          byUserType: {
+            type: 'object',
+            additionalProperties: { type: 'integer' },
+            example: { individual: 8, workshop: 2 },
+          },
+          byRole: {
+            type: 'object',
+            additionalProperties: { type: 'integer' },
+            example: { user: 9, admin: 1 },
+          },
+        },
+      },
+      AdminOverview: {
+        type: 'object',
+        description:
+          '`httpRequestsByPathApprox` is NOT real diagnosis volume: there is no ' +
+          'persisted-diagnoses table yet, so it is derived from audit_logs grouped by path ' +
+          '(an HTTP-traffic proxy).',
+        properties: {
+          userStats: { $ref: '#/components/schemas/AdminUserStats' },
+          recentErrorCount: {
+            type: 'integer',
+            description: 'Count of logs with level=error in the last 24h.',
+            example: 3,
+          },
+          httpRequestsByPathApprox: {
+            type: 'object',
+            additionalProperties: { type: 'integer' },
+            description:
+              'APPROXIMATION. HTTP requests grouped by path (all-time), not real ' +
+              'diagnoses. Source: audit_logs.',
+            example: { '/api/diagnosis': 42, '/api/auth/login': 10 },
+          },
+        },
+      },
+      AdminLogEntry: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', example: 1 },
+          level: { type: 'string', enum: ['debug', 'info', 'warn', 'error'] },
+          message: { type: 'string', example: 'server started' },
+          context: { type: 'string', nullable: true, example: '{"port":4000}' },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      AdminLogsPage: {
+        type: 'object',
+        properties: {
+          items: { type: 'array', items: { $ref: '#/components/schemas/AdminLogEntry' } },
+          total: { type: 'integer', example: 128 },
+        },
+      },
+      AdminAuditLogEntry: {
+        type: 'object',
+        properties: {
+          id: { type: 'integer', example: 1 },
+          method: { type: 'string', example: 'GET' },
+          path: { type: 'string', example: '/api/diagnosis' },
+          statusCode: { type: 'integer', example: 200 },
+          ip: { type: 'string', nullable: true, example: '127.0.0.1' },
+          userAgent: { type: 'string', nullable: true, example: 'Mozilla/5.0' },
+          durationMs: { type: 'integer', nullable: true, example: 42 },
+          userId: { type: 'integer', nullable: true, example: 7 },
+          createdAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      AdminAuditLogsPage: {
+        type: 'object',
+        properties: {
+          items: { type: 'array', items: { $ref: '#/components/schemas/AdminAuditLogEntry' } },
+          total: { type: 'integer', example: 512 },
+        },
+      },
+      AdminUserEntry: {
+        type: 'object',
+        description: 'Same shape as UserProfile. Never includes passwordHash.',
+        properties: {
+          id: { type: 'integer' },
+          username: { type: 'string' },
+          email: { type: 'string' },
+          userType: { type: 'string', enum: ['individual', 'workshop'] },
+          role: { type: 'string', enum: ['user', 'admin'] },
+          businessName: { type: 'string', nullable: true },
+          taxId: { type: 'string', nullable: true },
+          address: { type: 'string', nullable: true },
+          createdAt: { type: 'string', format: 'date-time' },
+          failedLoginAttempts: { type: 'integer' },
+          lockedUntil: { type: 'string', nullable: true },
+          isWorkshop: { type: 'boolean' },
+          isAdmin: { type: 'boolean' },
+        },
+      },
+      AdminUsersPage: {
+        type: 'object',
+        properties: {
+          items: { type: 'array', items: { $ref: '#/components/schemas/AdminUserEntry' } },
+          total: { type: 'integer', example: 10 },
+        },
+      },
+      KnowledgeIndexSummary: {
+        type: 'object',
+        properties: {
+          count: { type: 'integer', example: 340 },
+          sample: {
+            type: 'array',
+            items: { type: 'object', additionalProperties: true },
+            description: 'Up to 5 metadata rows, unordered (no relevance ranking).',
+          },
+        },
+      },
+      KnowledgeStats: {
+        type: 'object',
+        properties: {
+          pids: { $ref: '#/components/schemas/KnowledgeIndexSummary' },
+          dtcs: { $ref: '#/components/schemas/KnowledgeIndexSummary' },
+          diagnoses: { $ref: '#/components/schemas/KnowledgeIndexSummary' },
+        },
+      },
+      KnowledgeSearchRequest: {
+        type: 'object',
+        required: ['text', 'index'],
+        properties: {
+          text: { type: 'string', minLength: 1, maxLength: 500, example: 'cylinder 1 misfire' },
+          index: { type: 'string', enum: ['pids', 'dtcs', 'diagnoses'], example: 'dtcs' },
+          limit: { type: 'integer', minimum: 1, maximum: 20, default: 5 },
+        },
+      },
+      KnowledgeSearchResponse: {
+        type: 'object',
+        properties: {
+          results: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                entry: { type: 'object', additionalProperties: true },
+                distance: { type: 'number', example: 0.12 },
+              },
+            },
+          },
         },
       },
     },

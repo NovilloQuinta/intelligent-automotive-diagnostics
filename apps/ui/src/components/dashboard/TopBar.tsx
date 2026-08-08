@@ -1,4 +1,6 @@
-import { FileText, LogOut, ScanLine } from "lucide-react";
+import { FileText, LogOut, ScanLine, Shield } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { useAuth } from "@/lib/auth-context";
 import { useClock } from "./useClock";
 import { VehicleSelector } from "./VehicleSelector";
 import { COLORS } from "./types";
@@ -60,6 +62,7 @@ export function TopBar({
   onLogout,
   onReportClick,
 }: Props) {
+  const auth = useAuth();
   const now = useClock();
   const timeStr = now
     ? now.toLocaleTimeString(DEFAULT_LOCALE, {
@@ -96,6 +99,16 @@ export function TopBar({
             <FileText className="h-3.5 w-3.5" />
             Informe
           </button>
+        )}
+        {auth.user?.isAdmin && (
+          <Link
+            to="/admin"
+            className="flex items-center gap-1.5 rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary transition hover:border-primary/60 hover:bg-primary/20"
+            title="Panel de administración"
+          >
+            <Shield className="h-3.5 w-3.5" />
+            Admin
+          </Link>
         )}
         <button
           onClick={onLogout}

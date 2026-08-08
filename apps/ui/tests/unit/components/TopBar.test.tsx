@@ -1,17 +1,45 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { TopBar } from "../../../src/components/dashboard/TopBar";
 import type { Scenario } from "../../../src/components/dashboard/types";
 
 // useClock is timing-based (interval) and covered by its own test file;
 // here we stub it for deterministic clock assertions.
-const { mockClockNow, mockOnLogout } = vi.hoisted(() => ({
+const { mockClockNow, mockOnLogout, mockAuthUser } = vi.hoisted(() => ({
   mockClockNow: { value: new Date(2026, 0, 1, 12, 30, 45) as Date | null },
   mockOnLogout: vi.fn(),
+  mockAuthUser: {
+    id: 1,
+    username: "test",
+    email: "test@test.com",
+    userType: "individual" as const,
+    isWorkshop: false,
+    isAdmin: false,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  },
 }));
 
 vi.mock("../../../src/components/dashboard/useClock", () => ({
   useClock: () => mockClockNow.value,
+}));
+
+vi.mock("../../../src/lib/auth-context", () => ({
+  useAuth: () => ({
+    status: "authed" as const,
+    user: mockAuthUser,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+  }),
+}));
+
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ to, children, ...props }: { to: string; children: ReactNode }) => (
+    <a href={to} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
 const scenario: Scenario = {
@@ -124,5 +152,22 @@ describe("TopBar", () => {
     render(<TopBar {...baseProps} />);
 
     expect(screen.queryByTitle("Generar informe de la sesión")).toBeNull();
+  });
+
+  it("should NOT show the admin link when the user is not an admin", () => {
+    mockAuthUser.isAdmin = false;
+    render(<TopBar {...baseProps} />);
+
+    expect(screen.queryByTitle("Panel de administración")).toBeNull();
+  });
+
+  it("should show the admin link when the user is an admin", () => {
+    mockAuthUser.isAdmin = true;
+    render(<TopBar {...baseProps} />);
+
+    expect(
+      screen.getByTitle("Panel de administración"),
+    ).toBeDefined();
+    expect(screen.getByText("Admin")).toBeDefined();
   });
 });

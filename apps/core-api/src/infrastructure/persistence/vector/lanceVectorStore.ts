@@ -94,5 +94,17 @@ export async function createLanceVectorStore(
         distance: (row[DISTANCE_COLUMN] as number | undefined) ?? Number.NaN,
       }))
     },
+
+    async count(): Promise<number> {
+      return table.countRows()
+    },
+
+    async sample(limit: number): Promise<Readonly<Record<string, unknown>>[]> {
+      // `table.query()` (sin vector) es un scan plano: no genera ningun embedding, a
+      // diferencia de `table.search()` que usa `query()` de este mismo store.
+      const rows = (await table.query().limit(limit).toArray()) as Record<string, unknown>[]
+
+      return rows.map(extractMetadata)
+    },
   }
 }

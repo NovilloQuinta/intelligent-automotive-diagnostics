@@ -11,7 +11,11 @@ import { DiagnosisController } from '@/infrastructure/http/controllers/Diagnosis
 import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 
-const mockAuditRepo: AuditLogRepository = { create: async () => {} }
+const mockAuditRepo: AuditLogRepository = {
+  create: async () => {},
+  list: async () => ({ items: [], total: 0 }),
+  stats: async () => ({ byStatusCode: {}, byPath: {} }),
+}
 const mockLogger: LoggerPort = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
 const mockAuthController = {
   register: vi.fn(),
