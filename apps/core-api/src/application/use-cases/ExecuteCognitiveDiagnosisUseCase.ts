@@ -119,7 +119,7 @@ export class ExecuteCognitiveDiagnosisUseCase {
   constructor(private readonly options: ExecuteCognitiveDiagnosisUseCaseOptions) {}
 
   async execute(input: ExecuteCognitiveDiagnosisInput): Promise<ExecuteCognitiveDiagnosisOutput> {
-    const { userQuery, vehicleContext } = input
+    const { userQuery, vehicleContext, conversationHistory } = input
 
     const similarCases = await this.retrieveSimilarCases(userQuery, vehicleContext)
     const userMessage = buildUserMessage(userQuery, vehicleContext, similarCases)
@@ -129,6 +129,7 @@ export class ExecuteCognitiveDiagnosisUseCase {
         systemPrompt: COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT,
         userMessage,
         tools: this.options.tools,
+        conversationHistory,
       },
       this.options.handler,
     )

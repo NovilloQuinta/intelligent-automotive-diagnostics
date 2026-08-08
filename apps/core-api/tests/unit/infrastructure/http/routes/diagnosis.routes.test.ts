@@ -649,6 +649,23 @@ describe('diagnosisRoutes', () => {
       expect(res.body.error).toBe('Cognitive diagnosis timed out')
     })
 
+    it('should propagate conversation history to the service', async () => {
+      const historyItem = { __type: 'user_message' as const, content: '¿Fallas anteriores?' }
+      const service = createServiceStub()
+      const { app } = createApp(service)
+
+      const res = await request(app)
+        .post('/api/mcp/cognitive-diagnosis')
+        .send({ scenarioId: 'audi-a3-idle', query: '¿Y eso por qué?', history: [historyItem] })
+
+      expect(res.status).toBe(200)
+      expect(service.cognitiveDiagnosis).toHaveBeenCalledWith({
+        scenarioId: 'audi-a3-idle',
+        userQuery: '¿Y eso por qué?',
+        conversationHistory: [historyItem],
+      })
+    })
+
     it('should return 500 without leaking details when the LLM fails', async () => {
       const service = createServiceStub({
         cognitiveDiagnosis: vi.fn(async () => {

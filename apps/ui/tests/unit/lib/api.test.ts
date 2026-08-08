@@ -504,6 +504,28 @@ describe("api", () => {
       });
     });
 
+    it("sends conversation history when provided", async () => {
+      setStoredTokens();
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({ ok: true, json: async () => cognitive });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const historyItem = { __type: "user_message" as const, content: "¿Por qué tiembla?" };
+      await api.getCognitiveDiagnosis(
+        "audi-a3-idle",
+        "¿Y eso por qué?",
+        [historyItem],
+      );
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(init.body as string)).toEqual({
+        scenarioId: "audi-a3-idle",
+        query: "¿Y eso por qué?",
+        history: [historyItem],
+      });
+    });
+
     it("throws the generic message on a 503, never the raw server error", async () => {
       setStoredTokens();
       vi.stubGlobal(

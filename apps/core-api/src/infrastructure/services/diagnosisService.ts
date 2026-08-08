@@ -28,6 +28,7 @@ import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
 import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
+import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 
@@ -258,8 +259,9 @@ export class DiagnosisService {
   async cognitiveDiagnosis(input: {
     scenarioId?: string
     userQuery?: string
+    conversationHistory?: readonly LlmConversationItem[]
   }): Promise<ExecuteCognitiveDiagnosisOutput> {
-    const { scenarioId, userQuery } = input
+    const { scenarioId, userQuery, conversationHistory } = input
     if (!this.llmClient) {
       this.logger.warn('Cognitive diagnosis requested but no LLM client is configured')
       throw new CognitiveDiagnosisUnavailableError()
@@ -282,7 +284,7 @@ export class DiagnosisService {
         logger: this.logger,
         diagnosisIndex: this.knowledgeStack?.diagnosisIndex,
       })
-      return useCase.execute({ userQuery, vehicleContext })
+      return useCase.execute({ userQuery, vehicleContext, conversationHistory })
     })()
 
     try {

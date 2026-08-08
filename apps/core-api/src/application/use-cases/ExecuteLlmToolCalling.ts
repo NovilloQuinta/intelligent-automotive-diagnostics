@@ -59,9 +59,9 @@ export class ExecuteLlmToolCalling {
   async execute(input: LlmMessageInput, handler: ToolCallHandler): Promise<LlmResponse> {
     const { systemPrompt, userMessage, tools } = input
     const toolNames = new Set(tools.map((t) => t.name))
-    const conversationHistory: LlmConversationItem[] = [
-      { __type: 'user_message', content: userMessage },
-    ]
+    const conversationHistory: LlmConversationItem[] = input.conversationHistory
+      ? [...input.conversationHistory, { __type: 'user_message', content: userMessage }]
+      : [{ __type: 'user_message', content: userMessage }]
     const toolTrace: ToolCallTrace[] = []
 
     for (let iteration = 0; iteration < this.maxIterations; iteration++) {

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useCognitiveDiagnosis } from "../../../src/components/dashboard/useCognitiveDiagnosis";
-import type { CognitiveOutput } from "../../../src/lib/api";
+import type { CognitiveOutput, ConversationItem } from "../../../src/lib/api";
 
 vi.mock("../../../src/lib/api", () => ({
   api: {
@@ -16,7 +16,7 @@ function cognitiveOutput(): CognitiveOutput {
     diagnosis: "Narrativa",
     severity: "low",
     confidence: 0.8,
-    recommendations: [],
+    recommendations: ["Revisar bujías"],
     toolCalls: [],
     pidObservations: [
       {
@@ -57,6 +57,7 @@ describe("useCognitiveDiagnosis", () => {
     });
     expect(api.getCognitiveDiagnosis).toHaveBeenCalledWith(
       "kawa-z900",
+      undefined,
       undefined,
     );
     expect(result.current.loading).toBe(false);
@@ -119,5 +120,75 @@ describe("useCognitiveDiagnosis", () => {
 
     expect(api.getCognitiveDiagnosis).not.toHaveBeenCalled();
     expect(result.current.pidRows).toBeNull();
+  });
+
+  it("stores the diagnosis text from the cognitive response", async () => {
+    vi.mocked(api.getCognitiveDiagnosis).mockResolvedValue(cognitiveOutput());
+
+    const { result } = renderHook(() => useCognitiveDiagnosis("kawa-z900"));
+
+    await act(async () => {
+      await result.current.trigger("¿Por qué tiembla?");
+    });
+
+    expect(result.current.diagnosisText).toBe("Narrativa");
+    expect(result.current.severity).toBe("low");
+    expect(result.current.confidence).toBe(0.8);
+    expect(result.current.recommendations).toEqual(["Revisar bujías"]);
+  });
+
+  it("accumulates conversation history across triggers", async () => {
+    vi.mocked(api.getCognitiveDiagnosis)
+      .mockResolvedValueOnce(cognitiveOutput());
+
+    const { result } = renderHook(() => useCognitiveDiagnosis("kawa-z900"));
+
+    await act(async () => {
+      await result.current.trigger("¿Por qué tiembla?");
+    });
+
+    expect(result.current.conversationHistory).toHaveLength(2);
+    expect(result.current.conversationHistory[0]).toEqual({
+      __type: "user_message",
+      content: "¿Por qué tiembla?",
+    });
+    expect(result.current.conversationHistory[1]).toEqual({
+      __type: "raw_response",
+      data: { text: "Narrativa" },
+    });
+  });
+
+  it("updates conversationHistory on next trigger keeping prior context", async () => {
+    vi.mocked(api.getCognitiveDiagnosis)
+      .mockResolvedValueOnce(cognitiveOutput())
+      .mockResolvedValueOnce({
+        ...cognitiveOutput(),
+        diagnosis: "Segunda respuesta",
+      });
+
+    const { result } = renderHook(() => useCognitiveDiagnosis("kawa-z900"));
+
+    await act(async () => {
+      await result.current.trigger("¿Por qué tiembla?");
+    });
+
+    const firstHistory = result.current.conversationHistory;
+
+    await act(async () => {
+      await result.current.trigger("¿Y eso por qué?");
+    });
+
+    expect(result.current.conversationHistory).toHaveLength(4);
+    expect(result.current.conversationHistory[0]).toEqual(firstHistory[0]);
+    expect(result.current.conversationHistory[1]).toEqual(firstHistory[1]);
+    expect(result.current.conversationHistory[2]).toEqual({
+      __type: "user_message",
+      content: "¿Y eso por qué?",
+    });
+    expect(result.current.conversationHistory[3]).toEqual({
+      __type: "raw_response",
+      data: { text: "Segunda respuesta" },
+    });
+    expect(result.current.conversationHistory).toHaveLength(4);
   });
 });

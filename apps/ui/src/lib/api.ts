@@ -245,6 +245,14 @@ export type CognitiveOutput = {
   pidObservations: PidObservation[];
 };
 
+export type ConversationItem = {
+  readonly __type: "user_message" | "raw_response" | "tool_result";
+  readonly content?: string;
+  readonly data?: unknown;
+  readonly toolCallId?: string;
+  readonly isError?: boolean;
+};
+
 /** Register response from backend. */
 type RegisterResponse = AuthTokens & { user: AuthUser };
 
@@ -380,10 +388,11 @@ export const api = {
   async getCognitiveDiagnosis(
     scenarioId: string,
     query?: string,
+    history?: readonly ConversationItem[],
   ): Promise<CognitiveOutput> {
     const res = await apiFetch("/api/mcp/cognitive-diagnosis", {
       method: "POST",
-      body: JSON.stringify({ scenarioId, query }),
+      body: JSON.stringify({ scenarioId, query, history }),
       signal: AbortSignal.timeout(COGNITIVE_TIMEOUT_MS),
     });
     await assertOk(res, GENERIC_ERROR_MESSAGE);

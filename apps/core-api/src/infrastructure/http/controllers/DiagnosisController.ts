@@ -12,6 +12,7 @@ import {
   CognitiveDiagnosisTimeoutError,
 } from '@/infrastructure/services/errors.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
+import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
 
 const ERROR_MESSAGES = {
   scenarioNotFound: 'Scenario not found',
@@ -47,13 +48,26 @@ const McpToolParamsSchema = z.object({
   toolName: z.string().min(1),
 })
 
+const LlmConversationItemSchema = z.discriminatedUnion('__type', [
+  z.object({ __type: z.literal('user_message'), content: z.string() }),
+  z.object({ __type: z.literal('raw_response'), data: z.unknown() }),
+  z.object({
+    __type: z.literal('tool_result'),
+    toolCallId: z.string(),
+    content: z.string(),
+    isError: z.boolean(),
+  }),
+])
+
 const CognitiveDiagnosisBodySchema = z.object({
   scenarioId: requiredScenarioId,
   query: z.string().optional(),
+  history: z.array(LlmConversationItemSchema).optional(),
 })
 const CognitiveDiagnosisBodyTcpSchema = z.object({
   scenarioId: optionalScenarioId,
   query: z.string().optional(),
+  history: z.array(LlmConversationItemSchema).optional(),
 })
 
 const FreezeFrameQuerySchema = z.object({
@@ -160,6 +174,8 @@ export class DiagnosisController {
       const result = await this.service.cognitiveDiagnosis({
         scenarioId: parsed.data.scenarioId,
         userQuery: parsed.data.query,
+        conversationHistory:
+          parsed.data.history as readonly LlmConversationItem[] | undefined,
       })
       res.status(200).json(result)
     } catch (err) {
