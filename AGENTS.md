@@ -26,12 +26,12 @@ Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de siste
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
 - **Flujo de ramas**: `develop` es la rama de integración; toda `feat.*`/`fix.*` sale de `develop` y se mergea ahí.
-- **Rama activa**: `fix/vehicle-identity-and-live-data` (5 defectos corregidos, pendiente merge a `develop`)
+- **Rama activa**: `chore/add-db-migrations` (migraciones Drizzle, pendiente merge a `develop`)
 - **Recién mergeado**: `add-web-search-tool` (RAG 4, SerpAPI), `add-cognitive-pid-discovery` (PID observations + UI enriquecido).
 - **Recién archivado**: `add-web-search-tool`, `add-cognitive-pid-discovery` → archive.
-- **Fix completado en esta sesión**: `fix/vehicle-identity-and-live-data` — 5 defectos: descripciones DTC (catálogo SAE J2012), refresco al cambiar vehículo (TanStack Query), identificación compuesta VIN/descriptor (vinStatus), freeze frame multi-PID (degradación), telemetría real (endpoint /api/live-data 1 Hz, borrado jitter).
+- **Chore completado en esta sesión**: `chore/add-db-migrations` — migración inicial generada (9 tablas), `migrate()` en `getDb()` antes de devolver la BD, fix de `resetDb()` (delega en `closeDb()`, evitaba fuga de conexión), deuda eliminada de AGENTS.md.
 - **Siguiente**: `add-vehicle-autodetect-flow`, `add-knowledge-mcp-tools` (RAG 3b).
-- **Tests + CI**: core-api 732+ (69 files); UI 269+ (36 files). Build + lint core verdes. Deuda `brace-expansion` (lint UI) sin resolver.
+- **Tests + CI**: core-api 793+ (71 files); UI 269+ (36 files). Build + lint core verdes. Deuda `brace-expansion` (lint UI) sin resolver.
 
 ## REGLAS DE SESION
 
