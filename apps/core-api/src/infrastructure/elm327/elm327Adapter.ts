@@ -29,6 +29,9 @@ export type { Elm327TcpConfig } from './tcpTransport.js'
 
 const UNKNOWN_FREEZE_FRAME_DTC = 'UNKNOWN'
 
+/** PIDs Mode 02 que se leen para construir el freeze frame. */
+const FREEZE_FRAME_PIDS = ['04', '05', '0C', '0D', '11']
+
 /** Modo 22 (UDS ReadDataByIdentifier): su respuesta se parsea distinto a la de los modos SAE. */
 const MODE_UDS = '22'
 
@@ -83,19 +86,27 @@ export class Elm327TcpRepository implements ObdRepository {
     return parseSupportedPidBitmask(bytes)
   }
 
+  /**
+   * Lee el freeze frame con degradacion por PID: un {@code NO DATA} en un PID
+   * no invalida el resto. Solo devuelve {@code null} si ningun PID responde.
+   */
   async getFreezeFrame(dtc?: string): Promise<FreezeFrame | null> {
-    const raw = await this.client.sendCommand('02 0C')
-    if (/NO DATA/i.test(raw)) return null
-    try {
-      const bytes = parseModeResponse(raw)
-      return new FreezeFrame({
-        dtcCode: dtc ?? UNKNOWN_FREEZE_FRAME_DTC,
-        pidValues: { '0C': this.pidFormulas.apply('01', '0C', bytes) },
-      })
-    } catch (err) {
-      if (err instanceof Elm327ParseError || /7F\s/i.test(raw)) return null
-      throw err
+    const pidValues: Record<string, number> = {}
+    for (const pid of FREEZE_FRAME_PIDS) {
+      try {
+        const bytes = await this.fetchPidBytes('02', pid, 2)
+        pidValues[pid] = this.pidFormulas.apply('01', pid, bytes)
+      } catch (err) {
+        if (err instanceof Elm327NoDataError || err instanceof Elm327ParseError) continue
+        if (err instanceof Error && /7F\s/i.test(err.message)) continue
+        throw err
+      }
     }
+    if (Object.keys(pidValues).length === 0) return null
+    return new FreezeFrame({
+      dtcCode: dtc ?? UNKNOWN_FREEZE_FRAME_DTC,
+      pidValues,
+    })
   }
 
   async readDtcCodes(): Promise<DtcCode[]> {

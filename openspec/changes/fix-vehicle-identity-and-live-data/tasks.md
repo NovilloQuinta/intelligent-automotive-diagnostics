@@ -7,23 +7,23 @@
 
 ## 1. Emulador: Mode 09 PID 02 (VIN) en los tres escenarios
 
-- [ ] 1.1 Añadir entrada `VIN` (`^0902`) a `docker/elm327/scenarios/audi_a3_tdi.py` con `WAUZZZ8V5JA123456`
-- [ ] 1.2 Añadir entrada `VIN` (`^0902`) a `docker/elm327/scenarios/kawasaki_z900.py` con `JKAZR2A1XLA000111`
-- [ ] 1.3 Parchear el VIN del escenario nativo `car` en `run_toyota.py` con `JTDKN3DU60A123456`, mismo patrón de parcheo de `ObdMessage` que usa `run_audi.py`
-- [ ] 1.4 `docker compose build && docker compose up -d`; verificar los tres con `pnpm obd:send "09 02"` — los tres VIN correctos, respuesta multi-frame bien formada
-- [ ] 1.5 Anotar en el reporte la forma exacta de la respuesta multi-frame del emulador, para contrastarla luego con la del coche real (riesgo del `design.md`)
+- [x] 1.1 Añadir entrada `VIN` (`^0902`) a `docker/elm327/scenarios/audi_a3_tdi.py` con `WAUZZZ8V5JA123456`
+- [x] 1.2 Añadir entrada `VIN` (`^0902`) a `docker/elm327/scenarios/kawasaki_z900.py` con `JKAZR2A1XLA000111`
+- [x] 1.3 Parchear el VIN del escenario nativo `car` en `run_toyota.py` con `JTDKN3DU60A123456`, mismo patrón de parcheo de `ObdMessage` que usa `run_audi.py`
+- [x] 1.4 `docker compose build && docker compose up -d`; verificar los tres con `pnpm obd:send "09 02"` — los tres VIN correctos, respuesta multi-frame bien formada
+- [x] 1.5 Anotar en el reporte la forma exacta de la respuesta multi-frame del emulador, para contrastarla luego con la del coche real (riesgo del `design.md`)
 
 ## 2. Backend: identidad del vehículo compuesta
 
-- [ ] 2.1 RED: test — `DiagnosisService.getVehicleInfo('audi-a3-tdi')` devuelve `model: 'A3'` y `engineType: '2.0 TDI'` del descriptor, y el `vin` leído del repositorio (mockeado), no el del descriptor
-- [ ] 2.2 GREEN: `resolveDescriptor(scenarioId)` en `DiagnosisService` y fusión en `getVehicleInfo`
-- [ ] 2.3 RED: test — en modo TCP directo (sin descriptores) `getVehicleInfo()` mantiene el comportamiento actual: `make` deducido del WMI, `model`/`engineType` a `'unknown'`
-- [ ] 2.4 GREEN: rama sin descriptor
-- [ ] 2.5 RED: test — el VIN leído del ECU nunca se sustituye por el del descriptor, ni siquiera cuando difieren
-- [ ] 2.6 RED: test — `vinStatus` vale `'read'` con VIN válido, `'unsupported'` cuando el ECU responde `NO DATA` a `09 02`, y `'unreadable'` cuando responde algo que no parsea
-- [ ] 2.7 GREEN: distinguir los tres casos en `elm327Adapter.getVehicleInfo` y propagar `vinStatus` en `VehicleInfoOutput`
-- [ ] 2.8 UI: mostrar el mensaje correspondiente a cada `vinStatus` en `ConfirmingStep`/`DetectingStep` (sustituye al genérico "VIN no decodificable")
-- [ ] 2.9 REFACTOR: con la suite en verde — revisar que `decodeVin` no duplique la lógica de `vinStatus`; TSDoc de por qué el VIN nunca viene del catálogo
+- [x] 2.1 RED: test — `DiagnosisService.getVehicleInfo('audi-a3-tdi')` devuelve `model: 'A3'` y `engineType: '2.0 TDI'` del descriptor, y el `vin` leído del repositorio (mockeado), no el del descriptor
+- [x] 2.2 GREEN: `resolveDescriptor(scenarioId)` en `DiagnosisService` y fusión en `getVehicleInfo`
+- [x] 2.3 RED: test — en modo TCP directo (sin descriptores) `getVehicleInfo()` mantiene el comportamiento actual: `make` deducido del WMI, `model`/`engineType` a `'unknown'`
+- [x] 2.4 GREEN: rama sin descriptor
+- [x] 2.5 RED: test — el VIN leído del ECU nunca se sustituye por el del descriptor, ni siquiera cuando difieren
+- [x] 2.6 RED: test — `vinStatus` vale `'read'` con VIN válido, `'unsupported'` cuando el ECU responde `NO DATA` a `09 02`, y `'unreadable'` cuando responde algo que no parsea
+- [x] 2.7 GREEN: distinguir los tres casos en `elm327Adapter.getVehicleInfo` y propagar `vinStatus` en `VehicleInfoOutput`
+- [x] 2.8 UI: mostrar el mensaje correspondiente a cada `vinStatus` en `ConfirmingStep`/`DetectingStep` (sustituye al genérico "VIN no decodificable")
+- [x] 2.9 REFACTOR: con la suite en verde — revisar que `decodeVin` no duplique la lógica de `vinStatus`; TSDoc de por qué el VIN nunca viene del catálogo
 
 ## 3. Backend: catálogo de descripciones DTC
 
@@ -38,16 +38,16 @@
 
 ## 4. Backend: freeze frame multi-PID y por DTC
 
-- [ ] 4.1 Ampliar el escenario del Audi con los Mode 02 que faltan (`02 04`, `02 11`) y frames distinguibles por DTC
-- [ ] 4.2 RED: test — `getFreezeFrame` devuelve un frame con los 5 PIDs cuando el vehículo responde a todos
-- [ ] 4.3 GREEN: leer el conjunto de PIDs Mode 02 en vez de solo `02 0C`
-- [ ] 4.4 RED: test — un PID que responde `NO DATA` se omite del frame y los demás se conservan
-- [ ] 4.5 GREEN: `try` por PID
-- [ ] 4.6 RED: test — si ningún PID responde, `getFreezeFrame` devuelve `null`
-- [ ] 4.7 RED: test — pedir el frame de P0401 devuelve valores distintos que el de P0301 (deja de ser una etiqueta)
-- [ ] 4.8 GREEN: usar el `dtc` para seleccionar el frame en la trama Mode 02
-- [ ] 4.9 Verificación manual: en la UI, clicar P0301 y P0401 muestra frames distintos
-- [ ] 4.10 REFACTOR: con la suite en verde — la lista de PIDs del freeze frame a constante con nombre; TSDoc del criterio de degradación
+- [x] 4.1 Ampliar el escenario del Audi con los Mode 02 que faltan (`02 04`, `02 11`) y frames distinguibles por DTC
+- [x] 4.2 RED: test — `getFreezeFrame` devuelve un frame con los 5 PIDs cuando el vehículo responde a todos
+- [x] 4.3 GREEN: leer el conjunto de PIDs Mode 02 en vez de solo `02 0C`
+- [x] 4.4 RED: test — un PID que responde `NO DATA` se omite del frame y los demás se conservan
+- [x] 4.5 GREEN: `try` por PID
+- [x] 4.6 RED: test — si ningún PID responde, `getFreezeFrame` devuelve `null`
+- [x] 4.7 RED: test — pedir el frame de P0401 devuelve valores distintos que el de P0301 (deja de ser una etiqueta)
+- [x] 4.8 GREEN: usar el `dtc` para seleccionar el frame en la trama Mode 02
+- [x] 4.9 Verificación manual: en la UI, clicar P0301 y P0401 muestra frames distintos
+- [x] 4.10 REFACTOR: con la suite en verde — la lista de PIDs del freeze frame a constante con nombre; TSDoc del criterio de degradación
 
 ## 5. Backend: endpoint de telemetría en vivo
 
