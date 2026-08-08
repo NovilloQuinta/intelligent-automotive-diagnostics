@@ -1,5 +1,14 @@
-import { createFileRoute, Navigate, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link, Navigate, Outlet, useRouter } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
+import { FileText, LayoutDashboard, ScrollText, Shield, Users } from "lucide-react";
+
+const NAV_ITEMS = [
+  { to: "/admin", label: "Overview", icon: LayoutDashboard },
+  { to: "/admin/logs", label: "Logs", icon: ScrollText },
+  { to: "/admin/audit", label: "Auditoría", icon: FileText },
+  { to: "/admin/users", label: "Usuarios", icon: Users },
+  { to: "/admin/knowledge", label: "Knowledge", icon: Shield },
+] as const;
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -12,10 +21,11 @@ export const Route = createFileRoute("/admin")({
  * - **anonymous** (or missing user): redirects to `/login`.
  * - **non-admin** (`isAdmin === false`): shows a 403 "Acceso denegado"
  *   message without redirecting.
- * - **admin** (`isAdmin === true`): renders children via `<Outlet />`.
+ * - **admin** (`isAdmin === true`): renders sidebar + children via `<Outlet />`.
  */
 function AdminLayout() {
   const auth = useAuth();
+  const router = useRouter();
 
   // Auth still resolving from localStorage → show spinner
   if (auth.status === "loading") {
@@ -48,6 +58,40 @@ function AdminLayout() {
     );
   }
 
-  // Admin access granted → render nested routes
-  return <Outlet />;
+  const currentPath = router.state.location.pathname;
+
+  // Admin access granted → sidebar + nested routes
+  return (
+    <div className="flex min-h-screen bg-[#0d1117]">
+      <aside className="w-56 border-r border-white/5 bg-black/40 p-4">
+        <div className="mb-6 flex items-center gap-2 px-2">
+          <Shield className="h-5 w-5 text-primary" />
+          <span className="text-sm font-bold">Admin Panel</span>
+        </div>
+        <nav className="flex flex-col gap-1">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const active = currentPath === item.to || (item.to !== "/admin" && currentPath.startsWith(item.to));
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition ${
+                  active
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </aside>
+      <main className="flex-1">
+        <Outlet />
+      </main>
+    </div>
+  );
 }
