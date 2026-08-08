@@ -133,7 +133,9 @@ describe('RAG loop e2e', () => {
       vehicleContext,
     })
 
-    expect(result1.diagnosis).toBe('El motor tiembla en ralentí por fallo de encendido en cilindro 1.')
+    expect(result1.diagnosis).toBe(
+      'El motor tiembla en ralentí por fallo de encendido en cilindro 1.',
+    )
     expect(result1.toolCalls).toEqual(firstToolCalls)
 
     // ----- Segundo diagnostico: debe encontrar el caso indexado -----

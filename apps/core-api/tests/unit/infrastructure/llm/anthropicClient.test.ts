@@ -377,7 +377,9 @@ describe('AnthropicClient', () => {
       handler,
     )
 
-    const callArgs = mockCreate.mock.calls[0][0] as { messages: Array<{ role: string; content: unknown }> }
+    const callArgs = mockCreate.mock.calls[0][0] as {
+      messages: Array<{ role: string; content: unknown }>
+    }
     const assistantMsg = callArgs.messages.find((m) => m.role === 'assistant')
     expect(assistantMsg).toBeDefined()
     expect(assistantMsg!.content).toBe('respuesta previa')
