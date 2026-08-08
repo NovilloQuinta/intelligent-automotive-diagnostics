@@ -183,4 +183,4 @@ pnpm test:coverage                      # coverage (Features >=80% + Core 100%)
 ## DEUDA CONOCIDA
 
 - **`brace-expansion: '>=5.0.9'`** (pnpm-workspace.yaml) rompe `minimatch@3` de `@eslint/config-array` (ESLint 9): `pnpm test:coverage` (core-api) y `pnpm lint` (apps/ui) fallan con `TypeError: expand is not a function`. Requiere cambio propio.
-- **Sin flujo de migraciones de DB**: no hay `drizzle/` versionado ni migración en `main.ts`; los tests crean tablas a mano. Pendiente: `chore/add-db-migrations` (`pnpm db:generate`, versionar `drizzle/`, `migrate(db, ...)` antes de `app.listen()`).
+- **`brace-expansion: '>=5.0.9'`** (pnpm-workspace.yaml) rompe `minimatch@3` de `@eslint/config-array` (ESLint 9): `pnpm test:coverage` (core-api) y `pnpm lint` (apps/ui) fallan con `TypeError: expand is not a function`. Requiere cambio propio.
