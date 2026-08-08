@@ -4,7 +4,35 @@ Audi A3 2.0 TDI (EA288 CR) — OBD-II scenario for ELM327-emulator.
 PIDs sourced from real SAE J1979 Mode 01 (diesel subset) and VAG Mode 22
 DIDs documented by the Ross-Tech/VCDS community.
 
-Values represent a warm engine at idle (~800 RPM, ~90 degC coolant).
+Values represent a warm engine at idle (~770 RPM, ~90 degC coolant) with
+THREE ACTIVE FAULTS. Every out-of-range value below is evidence for one of
+them — this scenario is the reasoning input of the cognitive diagnosis, so a
+sensor reading that contradicts its own DTC would let the LLM "conclude"
+nothing but the DTC description itself.
+
+  P0301 — Cylinder 1 misfire (diesel: injector or compression)
+      ENGINE_LOAD raised to ~31 %, RPM sagging below the 800 RPM target:
+      the ECU compensates for a cylinder that contributes no torque.
+      VAG_ENGINE_TORQUE and VAG_INJECTION_QTY rise for the same reason.
+
+  P0401 — EGR insufficient flow
+      EGR_ERROR strongly negative (~-60 %) against a commanded ~30 %:
+      recirculation is requested and not obtained. MAF and
+      VAG_INTAKE_AIR_MASS RISE as a consequence — with no exhaust gas
+      displacing it, more fresh air enters. That relationship is
+      counter-intuitive and is the most valuable clue in this scenario.
+
+  P2002 — DPF efficiency below threshold
+      CATALYST_TEMP raised to ~310 degC, VAG_DPF_SOOT at ~38 g (well past
+      the ~24 g regeneration threshold) and VAG_DPF_DIFF_PRESS at ~45 mbar.
+
+LIMITATION: a misfire produces an UNSTABLE idle, i.e. oscillation. The
+ELM327 emulator answers with fixed frames and cannot express that. Only the
+offset from nominal is represented here — do not read the steady value as a
+smooth-running engine.
+
+Every value not listed above stays in its normal range on purpose: a
+scenario where everything is out of range diagnoses nothing.
 """
 from elm.obd_message import (
     ECU_ADDR_E,
@@ -39,8 +67,9 @@ ObdMessage = {
         "Request": "^0104" + ELM_FOOTER,
         "Descr": "Calculated Engine Load",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("41 04 2E"),
-        # 18.0 %  (A*100/255)
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("41 04 4F"),
+        # 31.0 %  (A*100/255) — EVIDENCE P0301: a healthy 2.0 TDI idles near
+        # 18 %; the ECU is compensating for cylinder 1 not contributing torque
     },
     "COOLANT_TEMP": {
         "Request": "^0105" + ELM_FOOTER,
@@ -60,8 +89,10 @@ ObdMessage = {
         "Request": "^010C" + ELM_FOOTER,
         "Descr": "Engine RPM",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("41 0C 0C 80"),
-        # 800 RPM  ((A*256+B)/4)
+        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("41 0C 0C 08"),
+        # 770 RPM  ((A*256+B)/4) — EVIDENCE P0301: sagging below the 800 RPM
+        # idle target. See the LIMITATION note in the module docstring: the
+        # real symptom is oscillation, which fixed frames cannot express
     },
     "SPEED": {
         "Request": "^010D" + ELM_FOOTER,
@@ -81,8 +112,10 @@ ObdMessage = {
         "Request": "^0110" + ELM_FOOTER,
         "Descr": "Mass Air Flow Rate",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("41 10 03 52"),
-        # 8.5 g/s  ((A*256+B)/100)
+        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("41 10 04 7E"),
+        # 11.5 g/s  ((A*256+B)/100) — EVIDENCE P0401, and the counter-intuitive
+        # one: airflow is ABOVE the ~8.5 g/s of a healthy idle because the
+        # blocked EGR is not displacing intake air with exhaust gas
     },
     "THROTTLE_POS": {
         "Request": "^0111" + ELM_FOOTER,
@@ -102,8 +135,10 @@ ObdMessage = {
         "Request": "^011F" + ELM_FOOTER,
         "Descr": "Engine Run Time Since Start",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("41 1F 00 78"),
-        # 120 seconds
+        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("41 1F 04 B0"),
+        # 1200 seconds (20 min) — NOT fault evidence: the previous 120 s was
+        # simply incoherent with a 90 degC coolant. A diesel does not reach
+        # operating temperature in two minutes
     },
 
     # ---------------  PIDs 21-40  ---------------
@@ -124,8 +159,10 @@ ObdMessage = {
         "Request": "^012D" + ELM_FOOTER,
         "Descr": "EGR Error",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("41 2D 7A"),
-        # -4.7 %  ((A-128)*100/128) — slight EGR flow lower than commanded
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("41 2D 33"),
+        # -60.2 %  ((A-128)*100/128) — EVIDENCE P0401: recirculation commanded
+        # at 30.2 % and almost none obtained. A residual error would not
+        # justify the DTC; this magnitude does
     },
     "FUEL_LEVEL": {
         "Request": "^012F" + ELM_FOOTER,
@@ -152,8 +189,9 @@ ObdMessage = {
         "Request": "^013C" + ELM_FOOTER,
         "Descr": "Catalyst Temperature Bank 1 Sensor 1",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("41 3C 0A 28"),
-        # 220 degC  (((A*256+B)/10)-40) — warm DOC at idle
+        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("41 3C 0D AC"),
+        # 310 degC  (((A*256+B)/10)-40) — EVIDENCE P2002: a healthy DOC idles
+        # near 220 degC; a saturated DPF restricts flow and raises exhaust temp
     },
 
     # ---------------  PIDs 41-60  ---------------
@@ -240,27 +278,32 @@ ObdMessage = {
 
     # ==================================================================
     # Mode 02 — Freeze frame data (values at the moment P0301 fired)
+    #
+    # The frame describes a moment UNDER LOAD, not the current warm idle.
+    # A misfire is registered while the engine is working, and the whole
+    # argument for reading the freeze frame before clearing codes collapses
+    # if these values are identical to the Mode 01 ones.
     # ==================================================================
     "FF_RPM": {
         "Request": "^020C" + ELM_FOOTER,
         "Descr": "Freeze frame RPM (moment of P0301)",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("42 0C 0C 80"),
-        # 800 RPM — surged from idle when misfire occurred
+        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("42 0C 20 D0"),
+        # 2100 RPM — under load when the misfire was detected
     },
     "FF_COOLANT_TEMP": {
         "Request": "^0205" + ELM_FOOTER,
         "Descr": "Freeze frame coolant temperature",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 05 82"),
-        # 90 degC  (A-40)
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 05 80"),
+        # 88 degC  (A-40) — already at operating temperature
     },
     "FF_SPEED": {
         "Request": "^020D" + ELM_FOOTER,
         "Descr": "Freeze frame vehicle speed",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 0D 00"),
-        # 0 km/h — misfire at standstill
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("42 0D 41"),
+        # 65 km/h — the vehicle was moving, not standing still
     },
 
     # ==================================================================
@@ -275,8 +318,9 @@ ObdMessage = {
         "Request": "^221130" + ELM_FOOTER,
         "Descr": "Engine Speed (VAG DID 1130)",
         "Header": ECU_ADDR_E,
-        "Response": PA("0C 80"),
-        # 800 RPM — same formula as SAE 0C: (A*256+B)*0.25
+        "Response": PA("0C 08"),
+        # 770 RPM — same formula as SAE 0C: (A*256+B)*0.25. MUST match the
+        # Mode 01 RPM: the same measurement read through two protocols
     },
     "VAG_BOOST_ACTUAL": {
         "Request": "^22115C" + ELM_FOOTER,
@@ -324,43 +368,50 @@ ObdMessage = {
         "Request": "^221035" + ELM_FOOTER,
         "Descr": "EGR Duty Cycle — Actual (VAG DID 1035)",
         "Header": ECU_ADDR_E,
-        "Response": PA("1C"),
-        # 28 % — raw * 1 percentage
+        "Response": PA("05"),
+        # 5 % — EVIDENCE P0401: actual duty far below the ~30 % commanded via
+        # SAE PID 2C. Consistent with the -60 % EGR error
     },
     "VAG_ENGINE_TORQUE": {
         "Request": "^221250" + ELM_FOOTER,
         "Descr": "Engine Torque (VAG DID 1250)",
         "Header": ECU_ADDR_E,
-        "Response": PA("00 26"),
-        # 38 Nm at idle
+        "Response": PA("00 34"),
+        # 52 Nm at idle — EVIDENCE P0301: above the ~38 Nm of a healthy idle,
+        # the three working cylinders covering for the fourth
     },
     "VAG_INJECTION_QTY": {
         "Request": "^221132" + ELM_FOOTER,
         "Descr": "Injection Quantity (VAG DID 1132)",
         "Header": ECU_ADDR_E,
-        "Response": PA("00 28"),
-        # 4.0 mg/stroke at idle — raw * 0.01
+        "Response": PA("02 6C"),
+        # 6.2 mg/stroke at idle — raw * 0.01. EVIDENCE P0301: above the
+        # ~4.0 mg/stroke of a healthy idle, more fuel to hold the target RPM
     },
     "VAG_INTAKE_AIR_MASS": {
         "Request": "^221184" + ELM_FOOTER,
         "Descr": "Intake Air Mass (VAG DID 1184)",
         "Header": ECU_ADDR_E,
-        "Response": PA("01 E0"),
-        # 480 mg/stroke at idle
+        "Response": PA("02 62"),
+        # 610 mg/stroke at idle — EVIDENCE P0401: above the ~480 mg/stroke of a
+        # healthy idle, same cause as the raised MAF (no EGR displacing air)
     },
     "VAG_DPF_SOOT": {
         "Request": "^221410" + ELM_FOOTER,
         "Descr": "DPF Soot Mass Calculated (VAG DID 1410)",
         "Header": ECU_ADDR_E,
-        "Response": PA("00 50"),
-        # 8.0 g — raw * 0.01 for measured soot
+        "Response": PA("0E D8"),
+        # 38.0 g — raw * 0.01. EVIDENCE P2002: well past the ~24 g at which a
+        # VAG DPF requests regeneration, and into the range where the filter
+        # can no longer be cleaned by a passive cycle
     },
     "VAG_DPF_DIFF_PRESS": {
         "Request": "^22140E" + ELM_FOOTER,
         "Descr": "DPF Differential Pressure (VAG DID 140E)",
         "Header": ECU_ADDR_E,
-        "Response": PA("00 0C"),
-        # 12 mbar at idle — raw * 1
+        "Response": PA("00 2D"),
+        # 45 mbar at idle — raw * 1. EVIDENCE P2002: a clear filter reads
+        # ~12 mbar at idle; this is the backpressure of a loaded one
     },
     "VAG_ACCEL_PEDAL": {
         "Request": "^22F449" + ELM_FOOTER,

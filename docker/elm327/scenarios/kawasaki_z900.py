@@ -6,6 +6,10 @@ No DTCs, no freeze frame — clean bike at idle (~1300 RPM, ~95 degC).
 
 Motorcycles typically lack MAF, EGR, DPF, and VVT sensors. They use
 speed-density (MAP/IAT/RPM) for fuel calculation.
+
+This scenario is the HEALTHY CONTROL GROUP against the faulty Audi. Every
+value must stay inside its normal range: if the healthy vehicle also reads
+oddly, the contrast carries no information and no value means anything.
 """
 from elm.obd_message import (
     ECU_ADDR_E,
@@ -43,8 +47,10 @@ ObdMessage = {
         "Request": "^0104" + ELM_FOOTER,
         "Descr": "Calculated Engine Load",
         "Header": ECU_ADDR_E,
-        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("41 04 94"),
-        # 58.0 %  (A*100/255)
+        "Response": HD(ECU_R_ADDR_E) + SZ("03") + DT("41 04 2E"),
+        # 18.0 %  (A*100/255) — the previous 58 % is a mid-load figure, not an
+        # idle one. This bike is the healthy control group: no value of its own
+        # may sit out of range, or the contrast against the Audi means nothing
     },
     "COOLANT_TEMP": {
         "Request": "^0105" + ELM_FOOTER,
