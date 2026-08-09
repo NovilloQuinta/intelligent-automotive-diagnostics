@@ -7,6 +7,7 @@ import { VinDecodeError, Vin } from '@/domain/value-objects/vin.js'
 import type { VehicleProfile } from '@/domain/value-objects/vehicleInfo.js'
 import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { PidDefinition, PidReading } from '@/domain/entities/pidDefinition.js'
+import type { DtcDefinition } from '@/domain/entities/dtcDefinition.js'
 import { PidCode } from '@/domain/value-objects/pidCode.js'
 
 describe('SqliteVehicleRepository', () => {
@@ -55,6 +56,8 @@ describe('SqliteVehicleRepository', () => {
         pid_type TEXT NOT NULL DEFAULT 'formula',
         min_value REAL,
         max_value REAL,
+        manufacturer TEXT,
+        model TEXT,
         confidence REAL NOT NULL DEFAULT 1.0,
         source TEXT NOT NULL DEFAULT 'manual',
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -75,6 +78,18 @@ describe('SqliteVehicleRepository', () => {
         scenario_id TEXT,
         started_at TEXT NOT NULL DEFAULT (datetime('now')),
         ended_at TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS dtc_definitions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        manufacturer TEXT NOT NULL,
+        model TEXT NOT NULL,
+        code TEXT NOT NULL,
+        description TEXT,
+        confidence REAL NOT NULL DEFAULT 0.5,
+        source TEXT NOT NULL DEFAULT 'web',
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(manufacturer, model, code)
       );
     `)
 
@@ -227,10 +242,10 @@ describe('SqliteVehicleRepository', () => {
       expect(result.confidence).toBe(1.0)
     })
 
-    it('should find a PID definition by mode, pidCode and vehicleId', async () => {
-      await repo.insertPidDefinition(rpmPid())
+    it('should find a PID definition by mode, pidCode and manufacturer/model', async () => {
+      await repo.insertPidDefinition({ ...rpmPid(), manufacturer: 'Toyota', model: 'Auris' })
 
-      const result = await repo.findPidDefinition('01', '0C', vehicleId)
+      const result = await repo.findPidDefinition('01', '0C', 'Toyota', 'Auris')
 
       expect(result).not.toBeNull()
       expect(result!.name).toBe('Engine RPM')
@@ -238,18 +253,36 @@ describe('SqliteVehicleRepository', () => {
     })
 
     it('should return null for unknown PID', async () => {
-      const result = await repo.findPidDefinition('22', 'FFFF', vehicleId)
+      const result = await repo.findPidDefinition('22', 'FFFF')
 
       expect(result).toBeNull()
     })
 
-    it('should find a PID by mode and code without vehicleId filter', async () => {
+    it('should find a PID by mode and code without manufacturer/model filter', async () => {
       await repo.insertPidDefinition(rpmPid())
 
       const result = await repo.findPidDefinition('01', '0C')
 
       expect(result).not.toBeNull()
       expect(result!.name).toBe('Engine RPM')
+    })
+
+    it('should store and find a PID definition with manufacturer/model', async () => {
+      await repo.insertPidDefinition({
+        ...rpmPid(),
+        manufacturer: 'Toyota',
+        model: 'Auris',
+      })
+
+      // Should find with matching manufacturer/model
+      const found = await repo.findPidDefinition('01', '0C', 'Toyota', 'Auris')
+      expect(found).not.toBeNull()
+      expect(found!.manufacturer).toBe('Toyota')
+      expect(found!.model).toBe('Auris')
+
+      // Should NOT find with different manufacturer/model
+      const notFound = await repo.findPidDefinition('01', '0C', 'Ford', 'Focus')
+      expect(notFound).toBeNull()
     })
 
     it('should find all PIDs for a vehicle', async () => {
@@ -356,6 +389,105 @@ describe('SqliteVehicleRepository', () => {
       expect(session.vehicleId).toBe(vehicleId)
 
       await repo.endSession(session.id!)
+    })
+  })
+
+  describe('dtcDefinitions', () => {
+    const sampleDtc: Omit<DtcDefinition, 'id' | 'createdAt'> = {
+      manufacturer: 'Toyota',
+      model: 'Auris Hybrid',
+      code: 'P0301',
+      description: 'Cylinder 1 Misfire Detected',
+      confidence: 0.85,
+      source: 'web',
+    }
+
+    it('upsertDtcDefinition inserts new DTC definition', async () => {
+      const result = await repo.upsertDtcDefinition(sampleDtc)
+
+      expect(result.id).toBeGreaterThan(0)
+      expect(result.manufacturer).toBe('Toyota')
+      expect(result.model).toBe('Auris Hybrid')
+      expect(result.code).toBe('P0301')
+      expect(result.confidence).toBe(0.85)
+      expect(result.source).toBe('web')
+    })
+
+    it('upsertDtcDefinition returns existing on duplicate manufacturer+model+code', async () => {
+      const first = await repo.upsertDtcDefinition(sampleDtc)
+
+      const second = await repo.upsertDtcDefinition({
+        ...sampleDtc,
+        description: 'Updated description',
+        confidence: 0.9,
+      })
+
+      expect(second.id).toBe(first.id)
+      expect(second.description).toBe('Cylinder 1 Misfire Detected')
+      expect(second.confidence).toBe(0.85)
+    })
+
+    it('findDtcDefinition returns found definition', async () => {
+      await repo.upsertDtcDefinition(sampleDtc)
+
+      const result = await repo.findDtcDefinition('Toyota', 'Auris Hybrid', 'P0301')
+
+      expect(result).not.toBeNull()
+      expect(result!.code).toBe('P0301')
+      expect(result!.manufacturer).toBe('Toyota')
+    })
+
+    it('findDtcDefinition returns null for unknown code', async () => {
+      const result = await repo.findDtcDefinition('Ford', 'Focus', 'P9999')
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('ecuLookups', () => {
+    let vehicleId: number
+    let ecuId: number
+
+    beforeAll(async () => {
+      const vehicle = await repo.upsertVehicle(toyotaAuris)
+      vehicleId = vehicle.id!
+
+      const ecu = await repo.insertEcu({
+        vehicleId,
+        name: 'Engine Control Module',
+        requestAddr: '7E0',
+        responseAddr: '7E8',
+        type: 'ECM',
+        protocol: 'CAN_11_500',
+      })
+      ecuId = ecu.id!
+    })
+
+    it('findEcuByAddress returns ECU when found', async () => {
+      const result = await repo.findEcuByAddress(vehicleId, '7E0', '7E8')
+
+      expect(result).not.toBeNull()
+      expect(result!.name).toBe('Engine Control Module')
+      expect(result!.requestAddr).toBe('7E0')
+      expect(result!.responseAddr).toBe('7E8')
+    })
+
+    it('findEcuByAddress returns null when not found', async () => {
+      const result = await repo.findEcuByAddress(vehicleId, 'FFFF', 'FFFF')
+
+      expect(result).toBeNull()
+    })
+
+    it('updateEcuDiscoveredAt updates timestamp', async () => {
+      // updateEcuDiscoveredAt should succeed without errors
+      await expect(repo.updateEcuDiscoveredAt(ecuId)).resolves.toBeUndefined()
+
+      // ECU should still be findable after update
+      const after = await repo.findEcuByAddress(vehicleId, '7E0', '7E8')
+      expect(after).not.toBeNull()
+      expect(after!.name).toBe('Engine Control Module')
+      expect(after!.discoveredAt).toBeDefined()
+      expect(() => new Date(after!.discoveredAt!)).not.toThrow()
     })
   })
 })

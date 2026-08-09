@@ -5,7 +5,11 @@ import {
   DIAGNOSIS_TIMEOUT_MS,
 } from '@/application/shared/withTimeout.js'
 import { ExecuteCognitiveDiagnosisUseCase } from '@/application/use-cases/ExecuteCognitiveDiagnosisUseCase.js'
-import { createMcpServer, type ToolCallResult } from '@/infrastructure/mcp/mcpServer.js'
+import {
+  createMcpServer,
+  type ToolCallResult,
+  type SessionContext,
+} from '@/infrastructure/mcp/mcpServer.js'
 import {
   ToolNotFoundError,
   ToolCallTimeoutError,
@@ -33,7 +37,10 @@ import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
+import { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
+import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
 import { ALL_SEED_PIDS } from '@/infrastructure/persistence/sqlite/seed-pids.js'
+import { normalizeManufacturer } from '@/domain/value-objects/manufacturer.js'
 import {
   MODE_CURRENT_DATA,
   PID_COOLANT_TEMP,
@@ -393,7 +400,27 @@ export class DiagnosisService {
   }
 
   /**
+   * Convierte un value object {@link VehicleInfo} al perfil de entidad {@link VehicleProfile}
+   * requerido por {@link VehicleRepository.upsertVehicle}.
+   *
+   * `id: 0` indica clave autogenerada en la capa de persistencia.
+   */
+  private toVehicleProfile(vehicleInfo: VehicleInfo): VehicleProfile {
+    return new VehicleProfile({
+      id: 0,
+      vin: new Vin(vehicleInfo.vin.value),
+      make: vehicleInfo.make,
+      model: vehicleInfo.model,
+      year: vehicleInfo.year,
+      engineType: vehicleInfo.engineType,
+    })
+  }
+
+  /**
    * Ejecuta el diagnostico cognitivo con tool calling sobre el servidor MCP.
+   *
+   * Persiste el vehiculo al inicio de la sesion (si `vehicleRepo` esta configurado)
+   * y registra una sesion de diagnostico con finalizacion garantizada via `try/finally`.
    *
    * @throws {CognitiveDiagnosisUnavailableError} Si no hay cliente LLM configurado.
    * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
@@ -406,13 +433,55 @@ export class DiagnosisService {
     conversationHistory?: readonly LlmConversationItem[]
   }): Promise<ExecuteCognitiveDiagnosisOutput> {
     const { scenarioId, userQuery, conversationHistory } = input
+    const repository = this.resolveRepository(scenarioId)
+
+    // Leer vehicleInfo una sola vez: se reutiliza en el upsert y en el use case
+    const vehicleInfo = await repository.getVehicleInfo()
+
+    // --- Persistencia del vehículo (D2, antes de validar LLM) ---
+    let vehicleId: number | undefined
+    if (this.vehicleRepo) {
+      try {
+        const profile = this.toVehicleProfile(vehicleInfo)
+        const result = await this.vehicleRepo.upsertVehicle(profile)
+        vehicleId = result.id
+      } catch (e) {
+        this.logger.warn('Failed to upsert vehicle in diagnosis session', { err: String(e) })
+      }
+    }
+
     if (!this.llmClient) {
       this.logger.warn('Cognitive diagnosis requested but no LLM client is configured')
       throw new CognitiveDiagnosisUnavailableError()
     }
+
+    // --- Sesión de diagnóstico (D3) ---
+    let sessionId: number | undefined
+    if (vehicleId !== undefined) {
+      try {
+        const session = await this.vehicleRepo!.createSession(
+          new DiagnosisSession({
+            id: 0,
+            vehicleId,
+            scenarioId,
+            startedAt: new Date().toISOString(),
+          }),
+        )
+        sessionId = session.id
+      } catch (e) {
+        this.logger.warn('Failed to create diagnosis session', { err: String(e) })
+      }
+    }
+
     const llmClient = this.llmClient
-    const repository = this.resolveRepository(scenarioId)
-    const mcp = this.getMcpServer(scenarioId)
+    const normalizedMake = normalizeManufacturer(vehicleInfo.make)
+    const sessionCtx: SessionContext = {
+      sessionId,
+      vehicleId,
+      manufacturer: normalizedMake,
+      model: vehicleInfo.model,
+    }
+    const mcp = this.getMcpServer(scenarioId, sessionCtx)
     const tools = mcp.listTools()
     const handler: ToolCallHandler = async (name, args) => {
       const result = await mcp.callTool(name, args)
@@ -420,7 +489,6 @@ export class DiagnosisService {
     }
 
     const diagnosis = (async () => {
-      const vehicleContext = await repository.getVehicleInfo()
       const useCase = new ExecuteCognitiveDiagnosisUseCase({
         llmClient,
         tools,
@@ -428,7 +496,7 @@ export class DiagnosisService {
         logger: this.logger,
         diagnosisIndex: this.knowledgeStack?.diagnosisIndex,
       })
-      return useCase.execute({ userQuery, vehicleContext, conversationHistory })
+      return useCase.execute({ userQuery, vehicleContext: vehicleInfo, conversationHistory })
     })()
 
     try {
@@ -438,6 +506,12 @@ export class DiagnosisService {
         throw new CognitiveDiagnosisTimeoutError()
       }
       throw err
+    } finally {
+      if (sessionId !== undefined) {
+        void this.vehicleRepo!.endSession(sessionId).catch((e) =>
+          this.logger.warn('Failed to end diagnosis session', e),
+        )
+      }
     }
   }
 
@@ -487,9 +561,15 @@ export class DiagnosisService {
     return first.text
   }
 
-  private getMcpServer(scenarioId?: string) {
+  private getMcpServer(scenarioId?: string, sessionContext?: SessionContext) {
     const repository = this.resolveRepository(scenarioId)
-    return createMcpServer(repository, this.vehicleRepo, this.knowledgeStack, this.webSearch)
+    return createMcpServer(
+      repository,
+      this.vehicleRepo,
+      this.knowledgeStack,
+      this.webSearch,
+      sessionContext,
+    )
   }
 
   private resolveRepository(scenarioId?: string): ObdRepository {

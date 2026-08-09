@@ -10,6 +10,7 @@ import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
 import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import type { PidReading } from '@/domain/entities/pidReading.js'
+import type { DtcDefinition } from '@/domain/entities/dtcDefinition.js'
 
 /** Implementación de {@link VehicleRepository} con SQLite via Drizzle ORM. */
 export class SqliteVehicleRepository implements VehicleRepository {
@@ -124,6 +125,8 @@ export class SqliteVehicleRepository implements VehicleRepository {
         pidType: pid.pidType,
         minValue: pid.minValue ?? null,
         maxValue: pid.maxValue ?? null,
+        manufacturer: pid.manufacturer ?? null,
+        model: pid.model ?? null,
         confidence: pid.confidence,
         source: pid.source,
         createdAt: new Date().toISOString(),
@@ -136,18 +139,25 @@ export class SqliteVehicleRepository implements VehicleRepository {
   async findPidDefinition(
     mode: string,
     pidCode: string,
-    vehicleId?: number,
+    manufacturer?: string,
+    model?: string,
   ): Promise<PidDefinition | null> {
-    const useVehicleFilter = vehicleId !== undefined
+    const useManufacturerFilter = manufacturer !== undefined && manufacturer !== ''
+    const useModelFilter = model !== undefined && model !== ''
+
+    let conditions = sql`${schema.pidDefinitions.mode} = ${mode} AND ${schema.pidDefinitions.pidCode} = ${pidCode}`
+
+    if (useManufacturerFilter) {
+      conditions = sql`${conditions} AND ${schema.pidDefinitions.manufacturer} = ${manufacturer}`
+    }
+    if (useModelFilter) {
+      conditions = sql`${conditions} AND ${schema.pidDefinitions.model} = ${model}`
+    }
 
     const rows = await this.db
       .select()
       .from(schema.pidDefinitions)
-      .where(
-        useVehicleFilter
-          ? sql`${schema.pidDefinitions.mode} = ${mode} AND ${schema.pidDefinitions.pidCode} = ${pidCode} AND ${schema.pidDefinitions.vehicleId} = ${vehicleId}`
-          : sql`${schema.pidDefinitions.mode} = ${mode} AND ${schema.pidDefinitions.pidCode} = ${pidCode}`,
-      )
+      .where(conditions)
       .limit(1)
 
     if (rows.length === 0) return null
@@ -166,6 +176,8 @@ export class SqliteVehicleRepository implements VehicleRepository {
       pidType: r.pidType as PidDefinition['pidType'],
       minValue: r.minValue ?? undefined,
       maxValue: r.maxValue ?? undefined,
+      manufacturer: r.manufacturer ?? undefined,
+      model: r.model ?? undefined,
       confidence: r.confidence,
       source: r.source as PidDefinition['source'],
       createdAt: r.createdAt ?? undefined,
@@ -191,6 +203,8 @@ export class SqliteVehicleRepository implements VehicleRepository {
       pidType: r.pidType as PidDefinition['pidType'],
       minValue: r.minValue ?? undefined,
       maxValue: r.maxValue ?? undefined,
+      manufacturer: r.manufacturer ?? undefined,
+      model: r.model ?? undefined,
       confidence: r.confidence,
       source: r.source as PidDefinition['source'],
       createdAt: r.createdAt ?? undefined,
@@ -235,5 +249,100 @@ export class SqliteVehicleRepository implements VehicleRepository {
       .update(schema.diagnosisSessions)
       .set({ endedAt: new Date().toISOString() })
       .where(eq(schema.diagnosisSessions.id, sessionId))
+  }
+
+  async findDtcDefinition(
+    manufacturer: string,
+    model: string,
+    code: string,
+  ): Promise<DtcDefinition | null> {
+    const rows = await this.db
+      .select()
+      .from(schema.dtcDefinitions)
+      .where(
+        sql`${schema.dtcDefinitions.manufacturer} = ${manufacturer} AND ${schema.dtcDefinitions.model} = ${model} AND ${schema.dtcDefinitions.code} = ${code}`,
+      )
+      .limit(1)
+
+    if (rows.length === 0) return null
+
+    const r = rows[0]
+    return {
+      id: r.id,
+      manufacturer: r.manufacturer,
+      model: r.model,
+      code: r.code,
+      description: r.description ?? undefined,
+      confidence: r.confidence,
+      source: r.source,
+      createdAt: r.createdAt ?? undefined,
+    }
+  }
+
+  async upsertDtcDefinition(
+    dtc: Omit<DtcDefinition, 'id' | 'createdAt'>,
+  ): Promise<DtcDefinition> {
+    const existing = await this.findDtcDefinition(dtc.manufacturer, dtc.model, dtc.code)
+    if (existing) return existing
+
+    const result = await this.db
+      .insert(schema.dtcDefinitions)
+      .values({
+        manufacturer: dtc.manufacturer,
+        model: dtc.model,
+        code: dtc.code,
+        description: dtc.description ?? null,
+        confidence: dtc.confidence,
+        source: dtc.source,
+        createdAt: new Date().toISOString(),
+      })
+      .returning()
+
+    const r = result[0]
+    return {
+      id: r.id,
+      manufacturer: r.manufacturer,
+      model: r.model,
+      code: r.code,
+      description: r.description ?? undefined,
+      confidence: r.confidence,
+      source: r.source,
+      createdAt: r.createdAt ?? undefined,
+    }
+  }
+
+  async findEcuByAddress(
+    vehicleId: number,
+    requestAddr: string,
+    responseAddr: string,
+  ): Promise<EcuInfo | null> {
+    const rows = await this.db
+      .select()
+      .from(schema.ecus)
+      .where(
+        sql`${schema.ecus.vehicleId} = ${vehicleId} AND ${schema.ecus.requestAddr} = ${requestAddr} AND ${schema.ecus.responseAddr} = ${responseAddr}`,
+      )
+      .limit(1)
+
+    if (rows.length === 0) return null
+
+    const r = rows[0]
+    return {
+      id: r.id,
+      vehicleId: r.vehicleId,
+      name: r.name,
+      requestAddr: r.requestAddr,
+      responseAddr: r.responseAddr,
+      type: r.type as EcuInfo['type'],
+      protocol: r.protocol,
+      discoveredAt: r.discoveredAt ?? undefined,
+    }
+  }
+
+  async updateEcuDiscoveredAt(ecuId: number): Promise<void> {
+    await this.db
+      .update(schema.ecus)
+      .set({ discoveredAt: new Date().toISOString() })
+      .where(eq(schema.ecus.id, ecuId))
   }
 }
