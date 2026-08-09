@@ -25,7 +25,7 @@ CREATE TABLE `__new_diagnosis_sessions` (
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
-INSERT INTO `__new_diagnosis_sessions`("id", "vehicle_id", "user_id", "scenario_id", "started_at", "ended_at", "result_json", "severity", "dtc_count") SELECT "id", "vehicle_id", "user_id", "scenario_id", "started_at", "ended_at", "result_json", "severity", "dtc_count" FROM `diagnosis_sessions`;--> statement-breakpoint
+INSERT INTO `__new_diagnosis_sessions`("id", "vehicle_id", "user_id", "scenario_id", "started_at", "ended_at", "result_json", "severity", "dtc_count") SELECT "id", "vehicle_id", NULL, "scenario_id", "started_at", "ended_at", NULL, NULL, NULL FROM `diagnosis_sessions`;--> statement-breakpoint
 DROP TABLE `diagnosis_sessions`;--> statement-breakpoint
 ALTER TABLE `__new_diagnosis_sessions` RENAME TO `diagnosis_sessions`;--> statement-breakpoint
 PRAGMA foreign_keys=ON;--> statement-breakpoint

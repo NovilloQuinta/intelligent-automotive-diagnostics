@@ -45,7 +45,10 @@ const vectorTableOptionsSchema = z.object({
 export type VectorTableOptions = z.infer<typeof vectorTableOptionsSchema>
 
 /** Operaciones de esquema que necesita `ensureVectorTable`. */
-export type LanceDbSchemaOps = Pick<Connection, 'tableNames' | 'createEmptyTable' | 'openTable'>
+export type LanceDbSchemaOps = Pick<
+  Connection,
+  'tableNames' | 'createEmptyTable' | 'openTable' | 'dropTable'
+>
 
 /** Conexion a una base de datos LanceDB con nombres de tabla en cache. */
 export interface LanceDbConnection {
@@ -67,18 +70,42 @@ export function assertVectorDimensions(vector: readonly number[], dimensions: nu
   }
 }
 
-/** Abre la tabla si existe o la crea. Garantiza idempotencia. */
+/**
+ * Abre la tabla si existe o la crea. Garantiza idempotencia.
+ *
+ * Si la tabla ya existe pero su schema no coincide con las columnas esperadas
+ * (ej. falta la columna `confidence` anadida en una migracion), la dropea y
+ * recrea desde cero. LanceDB no soporta `ALTER COLUMN`: la unica migracion
+ * viable es drop + recreate.
+ */
 async function openOrCreate(
   db: LanceDbSchemaOps,
   name: string,
   buildSchema: () => Schema,
 ): Promise<Table> {
   const existingTables = await db.tableNames()
-  if (existingTables.includes(name)) {
-    return db.openTable(name)
+  if (!existingTables.includes(name)) {
+    return db.createEmptyTable(name, buildSchema())
   }
 
-  return db.createEmptyTable(name, buildSchema())
+  const table = await db.openTable(name)
+  const actualSchema = await table.schema()
+  const expectedSchema = buildSchema()
+
+  const actualFields = new Set(actualSchema.fields.map((f) => f.name))
+  const expectedFields = expectedSchema.fields.map((f) => f.name)
+  const missing = expectedFields.filter((f) => !actualFields.has(f))
+
+  if (missing.length > 0) {
+    console.warn(
+      `[lancedb] Table '${name}' schema mismatch: missing columns [${missing.join(', ')}]. ` +
+        'Dropping and recreating table.',
+    )
+    await db.dropTable(name)
+    return db.createEmptyTable(name, expectedSchema)
+  }
+
+  return table
 }
 
 /**
