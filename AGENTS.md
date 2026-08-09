@@ -27,13 +27,14 @@ Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de siste
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
 - **Flujo de ramas**: `develop` es la rama de integración; toda `feat.*`/`fix.*` sale de `develop` y se mergea ahí.
 - **Rama base**: `develop`, limpia y sincronizada con origin.
-- **2 worktrees activos** en `.claude/worktrees/`:
+- **1 worktree activo** en `.claude/worktrees/`:
   - `deployment` (`feat/deployment`) — +2 ahead, +45 behind develop, con `.github/workflows/deploy.yml` sin commitear.
-  - `review-password-recovery` — detached HEAD en `a7ed44d`, sin cambios, para revisar password recovery.
-- **2 ramas locales pendientes**: `feat/deployment` (worktree activo), `feat/odo-ai-agent` (ya mergeada, worktree por borrar).
-- **8 OpenSpec changes archivados** (2026-08-09): add-admin-management-panel, add-obd-standard-modes, fix-cognitive-diagnosis-ux, fix-emulator-coherent-data, fix-vehicle-identity-and-live-data, add-knowledge-mcp-tools, add-vehicle-autodetect-flow, rebase-ui-autel-sidebar-dtc-badge.
-- **4 OpenSpec changes activos** (sin empezar): add-usb-serial-connection-type, add-diagnosis-history, add-monitor-reset-on-clear-dtc, add-user-profiles.
+- **12 OpenSpec changes archivados** (2026-08-09): add-admin-management-panel, add-obd-standard-modes, fix-cognitive-diagnosis-ux, fix-emulator-coherent-data, fix-vehicle-identity-and-live-data, add-knowledge-mcp-tools, add-vehicle-autodetect-flow, rebase-ui-autel-sidebar-dtc-badge, add-usb-serial-connection-type, add-monitor-reset-on-clear-dtc (discarded), add-user-profiles (discarded), add-diagnosis-history, add-diagnosis-sqlite-persistence.
+- **1 OpenSpec change activo**: add-live-data-pid-selector (solo propuesto, sin implementar).
 - **Deuda `brace-expansion`** (lint UI): sin resolver.
+- **Deuda `cognitiveDiagnosis`** >100 líneas: extraer helpers (GGA bloqueó commit).
+- **Deuda GGA vs lint/prettier**: archivos no tocados se reformatean en commits.
+- **Deuda vectorial**: migrar a schema con columna JSON metadata para evitar migraciones futuras.
 
 ## REGLAS DE SESION
 
