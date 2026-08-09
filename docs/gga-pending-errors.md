@@ -33,6 +33,22 @@ Warnings no bloqueantes también reportados: mensajes de error duplicados sin co
 `history.$sessionId.tsx` / `useDiagnosisHistoryDetail.ts`, magic number `5` en `HistoryPage.tsx`,
 swagger sin documentar los 4 endpoints nuevos de auth/perfil (deuda ya conocida).
 
+### 2026-08-09 — commit eadc28b (fix post-merge)
+
+Preexistente en `origin/develop`, ya registrado como deuda conocida en `AGENTS.md` ("Deuda
+`cognitiveDiagnosis` >100 líneas: extraer helpers (GGA bloqueó commit)"). Se eligió esta versión
+del fichero en la resolución de conflicto porque incluye `listDiagnosisSessions`/
+`getDiagnosisSession` y el snapshot en `endSession`, ausentes en la versión local más antigua.
+
+- **`apps/core-api/src/infrastructure/services/diagnosisService.ts:464-572`** —
+  `cognitiveDiagnosis()` ~108 líneas, mezcla persistencia de vehículo + creación de sesión +
+  orquestación del diagnóstico. Requiere extraer `upsertVehicle`/`createSession`/`endSession`
+  a métodos privados.
+
+Warnings no bloqueantes: doc-comments huérfanos en `api.ts:248-249`, `severityMeta` recalculado
+varias veces en `SessionReportPanel.tsx`, paginación de `HistoryPage.tsx` no centra el rango en
+la página activa (`Math.min(totalPages, 5)`).
+
 ---
 
 ## Corregidos
