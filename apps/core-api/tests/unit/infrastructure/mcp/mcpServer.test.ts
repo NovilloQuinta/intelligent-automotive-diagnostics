@@ -56,6 +56,10 @@ function mockVehicleRepo(overrides: Partial<VehicleRepository> = {}): VehicleRep
     insertPidReading: vi.fn(),
     createSession: vi.fn(),
     endSession: vi.fn(),
+    findDtcDefinition: vi.fn().mockResolvedValue(null),
+    upsertDtcDefinition: vi.fn(),
+    findEcuByAddress: vi.fn().mockResolvedValue(null),
+    updateEcuDiscoveredAt: vi.fn(),
     ...overrides,
   }
 }
@@ -707,6 +711,325 @@ describe('McpServer', () => {
         .calls[0][0] as DtcKnowledgeEntry
       expect(indexed.validated).toBe(false)
       expect(result.content[0].text).toContain('not_found')
+    })
+  })
+
+  describe('SessionContext — persistence wire-up', () => {
+    const sessionContext = { sessionId: 1, vehicleId: 42 }
+
+    it('createMcpServer accepts optional sessionContext as 5th parameter', () => {
+      const repo = mockObdRepo()
+      const vRepo = mockVehicleRepo()
+
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined, sessionContext)
+
+      expect(mcp).toBeDefined()
+      expect(mcp.listTools()).toHaveLength(7)
+    })
+
+    it('createMcpServer works without sessionContext (backward compat)', () => {
+      const repo = mockObdRepo()
+      const vRepo = mockVehicleRepo()
+
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined)
+
+      expect(mcp).toBeDefined()
+      expect(mcp.listTools()).toHaveLength(7)
+    })
+
+    it('handleReadPid persists reading when sessionContext has sessionId', async () => {
+      const repo = mockObdRepo({
+        readPid: vi.fn().mockResolvedValue(750),
+        readPidRaw: vi.fn().mockResolvedValue([0x0b, 0xb8]),
+      })
+      const vRepo = mockVehicleRepo({
+        findPidDefinition: vi.fn().mockResolvedValue({
+          id: 99,
+          dataBytes: 2,
+        } as PidDefinition),
+      })
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined, sessionContext)
+
+      await mcp.callTool('read_pid', { mode: '01', pid: '0C' })
+
+      // Flush fire-and-forget microtasks
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(vRepo.findPidDefinition).toHaveBeenCalledWith('01', '0C')
+      expect(vRepo.insertPidReading).toHaveBeenCalledTimes(1)
+      const reading = (vRepo.insertPidReading as ReturnType<typeof vi.fn>).mock.calls[0][0]
+      expect(reading.sessionId).toBe('1')
+      expect(reading.parsedValue).toBe(750)
+    })
+
+    it('handleReadPid does not persist reading without sessionContext', async () => {
+      const repo = mockObdRepo({ readPid: vi.fn().mockResolvedValue(750) })
+      const vRepo = mockVehicleRepo()
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined)
+
+      await mcp.callTool('read_pid', { mode: '01', pid: '0C' })
+
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(vRepo.insertPidReading).not.toHaveBeenCalled()
+    })
+
+    it('handleReadPid does not persist reading when sessionContext has no sessionId', async () => {
+      const repo = mockObdRepo({ readPid: vi.fn().mockResolvedValue(750) })
+      const vRepo = mockVehicleRepo()
+      const ctx = { vehicleId: 42 }
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined, ctx)
+
+      await mcp.callTool('read_pid', { mode: '01', pid: '0C' })
+
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(vRepo.insertPidReading).not.toHaveBeenCalled()
+    })
+
+    it('handleReadPid degrades gracefully when persistPidReading fails', async () => {
+      const repo = mockObdRepo({
+        readPid: vi.fn().mockResolvedValue(750),
+        readPidRaw: vi.fn().mockRejectedValue(new Error('readPidRaw failed')),
+      })
+      const vRepo = mockVehicleRepo({
+        findPidDefinition: vi.fn().mockRejectedValue(new Error('DB down')),
+      })
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined, sessionContext)
+
+      // Should NOT throw — the tool call itself must succeed
+      const result = await mcp.callTool('read_pid', { mode: '01', pid: '0C' })
+
+      expect(result.content[0].text).toBe('750')
+      expect(result.isError).toBeFalsy()
+    })
+
+    it('handleGetEcuInfo persists ECUs when sessionContext has vehicleId', async () => {
+      const ecu = new EcuInfo({
+        id: 0,
+        vehicleId: 0,
+        name: 'Engine Control Unit',
+        requestAddr: '7E0',
+        responseAddr: '7E8',
+        type: 'ECM',
+        protocol: 'ISO 15765-4 (CAN 11/500)',
+      })
+      const repo = mockObdRepo({ getEcuInfo: vi.fn().mockResolvedValue([ecu]) })
+      const vRepo = mockVehicleRepo()
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined, sessionContext)
+
+      await mcp.callTool('get_ecu_info', {})
+
+      // Flush fire-and-forget microtasks
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(vRepo.insertEcu).toHaveBeenCalledTimes(1)
+      const persistedEcu = (vRepo.insertEcu as ReturnType<typeof vi.fn>).mock.calls[0][0]
+      expect(persistedEcu.vehicleId).toBe(42)
+      expect(persistedEcu.name).toBe('Engine Control Unit')
+      expect(persistedEcu.requestAddr).toBe('7E0')
+    })
+
+    it('handleGetEcuInfo does not persist ECUs without vehicleId', async () => {
+      const ecu = new EcuInfo({
+        id: 0,
+        vehicleId: 0,
+        name: 'ECM',
+        requestAddr: '7E0',
+        responseAddr: '7E8',
+        type: 'ECM',
+        protocol: 'ISO 15765-4',
+      })
+      const repo = mockObdRepo({ getEcuInfo: vi.fn().mockResolvedValue([ecu]) })
+      const vRepo = mockVehicleRepo()
+      const ctx = { sessionId: 1 } // no vehicleId
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined, ctx)
+
+      await mcp.callTool('get_ecu_info', {})
+
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(vRepo.insertEcu).not.toHaveBeenCalled()
+    })
+
+    it('handleGetEcuInfo degrades gracefully when persistEcus fails', async () => {
+      const ecu = new EcuInfo({
+        id: 0,
+        vehicleId: 0,
+        name: 'ECM',
+        requestAddr: '7E0',
+        responseAddr: '7E8',
+        type: 'ECM',
+        protocol: 'ISO 15765-4',
+      })
+      const repo = mockObdRepo({ getEcuInfo: vi.fn().mockResolvedValue([ecu]) })
+      const vRepo = mockVehicleRepo({
+        insertEcu: vi.fn().mockRejectedValue(new Error('DB down')),
+      })
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined, sessionContext)
+
+      // Should NOT throw
+      const result = await mcp.callTool('get_ecu_info', {})
+
+      expect(result.content[0].text).toContain('ECM')
+      expect(result.isError).toBeFalsy()
+    })
+  })
+
+  describe('Task 11.1 — DTC persistence in handleGetDtcCodes', () => {
+    const dtcSessionCtx = {
+      sessionId: 1,
+      vehicleId: 42,
+      manufacturer: 'Audi',
+      model: 'A3',
+    }
+
+    it('persists DTCs when sessionContext has manufacturer/model', async () => {
+      const repo = mockObdRepo({
+        readDtcCodes: vi.fn().mockResolvedValue([
+          { code: 'P0301', description: 'Cylinder 1 Misfire' },
+          { code: 'P0401', description: 'EGR Flow Insufficient' },
+        ]),
+      })
+      const vRepo = mockVehicleRepo()
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined, dtcSessionCtx)
+
+      await mcp.callTool('get_dtc_codes', {})
+
+      // Flush fire-and-forget microtasks
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(vRepo.upsertDtcDefinition).toHaveBeenCalledTimes(2)
+      expect(vRepo.upsertDtcDefinition).toHaveBeenCalledWith(
+        expect.objectContaining({
+          manufacturer: 'Audi',
+          model: 'A3',
+          code: 'P0301',
+          description: 'Cylinder 1 Misfire',
+          confidence: 0.5,
+          source: 'auto',
+        }),
+      )
+      expect(vRepo.upsertDtcDefinition).toHaveBeenCalledWith(
+        expect.objectContaining({
+          code: 'P0401',
+        }),
+      )
+    })
+
+    it('does not persist DTCs without manufacturer/model in sessionContext', async () => {
+      const repo = mockObdRepo({
+        readDtcCodes: vi.fn().mockResolvedValue([
+          { code: 'P0301', description: 'Misfire' },
+        ]),
+      })
+      const vRepo = mockVehicleRepo()
+      // sessionContext with only sessionId/vehicleId, no manufacturer/model
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined, {
+        sessionId: 1,
+        vehicleId: 42,
+        manufacturer: '',
+        model: '',
+      })
+
+      await mcp.callTool('get_dtc_codes', {})
+
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      // Should NOT persist because manufacturer/model are empty/falsy
+      expect(vRepo.upsertDtcDefinition).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Task 11.2 — ECU dedup in persistEcus', () => {
+    const ecuSessionCtx = { sessionId: 1, vehicleId: 42 }
+
+    it('updates discoveredAt for existing ECU instead of inserting', async () => {
+      const ecu = new EcuInfo({
+        id: 0,
+        vehicleId: 0,
+        name: 'Engine Control Unit',
+        requestAddr: '7E0',
+        responseAddr: '7E8',
+        type: 'ECM',
+        protocol: 'ISO 15765-4 (CAN 11/500)',
+      })
+      const existingEcu = new EcuInfo({
+        id: 5,
+        vehicleId: 42,
+        name: 'Engine Control Unit',
+        requestAddr: '7E0',
+        responseAddr: '7E8',
+        type: 'ECM',
+        protocol: 'ISO 15765-4 (CAN 11/500)',
+      })
+      const repo = mockObdRepo({ getEcuInfo: vi.fn().mockResolvedValue([ecu]) })
+      const vRepo = mockVehicleRepo({
+        findEcuByAddress: vi.fn().mockResolvedValue(existingEcu),
+      })
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined, ecuSessionCtx)
+
+      await mcp.callTool('get_ecu_info', {})
+
+      // Flush fire-and-forget microtasks
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(vRepo.findEcuByAddress).toHaveBeenCalledWith(42, '7E0', '7E8')
+      expect(vRepo.updateEcuDiscoveredAt).toHaveBeenCalledWith(5)
+      expect(vRepo.insertEcu).not.toHaveBeenCalled()
+    })
+
+    it('inserts new ECU when findEcuByAddress returns null', async () => {
+      const ecu = new EcuInfo({
+        id: 0,
+        vehicleId: 0,
+        name: 'Engine Control Unit',
+        requestAddr: '7E0',
+        responseAddr: '7E8',
+        type: 'ECM',
+        protocol: 'ISO 15765-4 (CAN 11/500)',
+      })
+      const repo = mockObdRepo({ getEcuInfo: vi.fn().mockResolvedValue([ecu]) })
+      const vRepo = mockVehicleRepo({
+        findEcuByAddress: vi.fn().mockResolvedValue(null),
+      })
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined, ecuSessionCtx)
+
+      await mcp.callTool('get_ecu_info', {})
+
+      // Flush fire-and-forget microtasks
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(vRepo.findEcuByAddress).toHaveBeenCalledWith(42, '7E0', '7E8')
+      expect(vRepo.insertEcu).toHaveBeenCalledTimes(1)
+      expect(vRepo.updateEcuDiscoveredAt).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('Task 12.2 — PID dedup with manufacturer/model', () => {
+    it('autoRegisterPid uses manufacturer/model when available', async () => {
+      const repo = mockObdRepo({ readPid: vi.fn().mockResolvedValue(750) })
+      const vRepo = mockVehicleRepo({
+        findPidDefinition: vi.fn().mockResolvedValue(null),
+      })
+      const ctx = {
+        sessionId: 1,
+        vehicleId: 42,
+        manufacturer: 'Audi',
+        model: 'A3',
+      }
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined, ctx)
+
+      await mcp.callTool('read_pid', { mode: '22', pid: '0300' })
+
+      // Flush fire-and-forget microtasks
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(vRepo.findPidDefinition).toHaveBeenCalledWith('22', '0300', 'Audi', 'A3')
+      expect(vRepo.insertPidDefinition).toHaveBeenCalledTimes(1)
+      const inserted = (vRepo.insertPidDefinition as ReturnType<typeof vi.fn>).mock.calls[0][0]
+      expect(inserted.manufacturer).toBe('Audi')
+      expect(inserted.model).toBe('A3')
     })
   })
 

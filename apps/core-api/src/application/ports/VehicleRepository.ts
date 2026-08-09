@@ -3,6 +3,7 @@ import type { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
 import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import type { PidReading } from '@/domain/entities/pidReading.js'
+import type { DtcDefinition } from '@/domain/entities/dtcDefinition.js'
 
 /** Contrato para la persistencia del catálogo auto-expansivo de vehículos, ECUs y PIDs. */
 export interface VehicleRepository {
@@ -25,11 +26,12 @@ export interface VehicleRepository {
   /** Inserta una definición de PID en el catálogo. */
   insertPidDefinition(pid: PidDefinition): Promise<PidDefinition>
 
-  /** Busca una definición de PID por modo, código y vehículo (o global si vehicleId es null). */
+  /** Busca una definición de PID por modo, código y opcionalmente fabricante/modelo. */
   findPidDefinition(
     mode: string,
     pidCode: string,
-    vehicleId?: number,
+    manufacturer?: string,
+    model?: string,
   ): Promise<PidDefinition | null>
 
   /** Devuelve todos los PIDs conocidos para un vehículo. */
@@ -43,4 +45,24 @@ export interface VehicleRepository {
 
   /** Finaliza una sesión de diagnóstico. */
   endSession(sessionId: number): Promise<void>
+
+  /** Busca una definición de DTC por fabricante, modelo y código.
+   * Retorna null si no existe en el catálogo.
+   */
+  findDtcDefinition(manufacturer: string, model: string, code: string): Promise<DtcDefinition | null>
+
+  /** Inserta una definición de DTC o devuelve la existente si ya existe
+   * (por clave única manufacturer + model + code).
+   */
+  upsertDtcDefinition(dtc: Omit<DtcDefinition, 'id' | 'createdAt'>): Promise<DtcDefinition>
+
+  /** Busca una ECU por vehículo y direcciones CAN (request + response). */
+  findEcuByAddress(
+    vehicleId: number,
+    requestAddr: string,
+    responseAddr: string,
+  ): Promise<EcuInfo | null>
+
+  /** Actualiza la marca de tiempo de descubrimiento de una ECU. */
+  updateEcuDiscoveredAt(ecuId: number): Promise<void>
 }

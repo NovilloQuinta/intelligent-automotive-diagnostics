@@ -9,6 +9,8 @@ import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 import { VehicleType, type SimulationScenario } from '@/infrastructure/simulation/scenario.js'
+import { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
+import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmClientPort, ToolCallTrace } from '@/application/ports/LlmClientPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
@@ -16,6 +18,7 @@ import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { PidVectorRepository } from '@/application/ports/PidVectorRepository.js'
 import type { DtcVectorRepository } from '@/application/ports/DtcVectorRepository.js'
 import type { DiagnosisVectorRepository } from '@/application/ports/DiagnosisVectorRepository.js'
+import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 
 const mockScenarios: SimulationScenario[] = [
   {
@@ -105,6 +108,27 @@ function createMockObdRepos(): Map<string, ObdRepository> {
 function mockLlmClient(overrides: Partial<LlmClientPort> = {}): LlmClientPort {
   return {
     sendMessage: vi.fn(),
+    ...overrides,
+  }
+}
+
+/** Repositorio de vehículos mockeado con todos los métodos requeridos por la interfaz. */
+function createMockVehicleRepo(overrides?: Partial<VehicleRepository>): VehicleRepository {
+  return {
+    upsertVehicle: vi.fn(),
+    findVehicleByVin: vi.fn().mockResolvedValue(null),
+    insertEcu: vi.fn(),
+    findEcusByVehicle: vi.fn().mockResolvedValue([]),
+    insertPidDefinition: vi.fn(),
+    findPidDefinition: vi.fn().mockResolvedValue(null),
+    findPidsByVehicle: vi.fn().mockResolvedValue([]),
+    insertPidReading: vi.fn(),
+    createSession: vi.fn(),
+    endSession: vi.fn().mockResolvedValue(undefined),
+    findDtcDefinition: vi.fn().mockResolvedValue(null),
+    upsertDtcDefinition: vi.fn(),
+    findEcuByAddress: vi.fn().mockResolvedValue(null),
+    updateEcuDiscoveredAt: vi.fn(),
     ...overrides,
   }
 }
@@ -806,6 +830,445 @@ describe('DiagnosisService', () => {
       await expect(service.getVehicleStatus('no-existe')).rejects.toThrow(
         DiagnosisScenarioNotFoundError,
       )
+    })
+  })
+
+  describe('cognitive diagnosis — persistence wiring', () => {
+    /** Vin de prueba usado en el mock de getVehicleInfo. */
+    const TEST_VIN = new Vin('WAUZZZ8V5JA123456')
+
+    /** Helper: configura servicio con llmClient exitoso + vehicleRepo. */
+    function createService(vehicleRepo?: VehicleRepository, llmOverrides?: Partial<LlmClientPort>) {
+      const llmClient = mockLlmClient({
+        sendMessage: vi
+          .fn()
+          .mockResolvedValue({ text: cognitiveText, toolCalls: cognitiveToolCalls }),
+        ...llmOverrides,
+      })
+      return new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        llmClient,
+        logger: createMockLogger(),
+        vehicleRepo,
+      })
+    }
+
+    it('upserts vehicle with correct profile converted from VehicleInfo', async () => {
+      const upsertedProfile = new VehicleProfile({
+        id: 42,
+        make: 'Audi',
+        model: 'A3',
+        year: 2018,
+        engineType: 'unknown',
+        vin: TEST_VIN,
+      })
+      const vehicleRepo = createMockVehicleRepo({
+        upsertVehicle: vi.fn().mockResolvedValue(upsertedProfile),
+        createSession: vi.fn().mockResolvedValue(
+          new DiagnosisSession({
+            id: 10,
+            vehicleId: 42,
+            scenarioId: 'audi-a3-idle',
+            startedAt: new Date().toISOString(),
+          }),
+        ),
+      })
+
+      await createService(vehicleRepo).cognitiveDiagnosis({
+        scenarioId: 'audi-a3-idle',
+        userQuery: '¿Por qué tiembla?',
+      })
+
+      expect(vehicleRepo.upsertVehicle).toHaveBeenCalledTimes(1)
+      const profileArg = (vehicleRepo.upsertVehicle as ReturnType<typeof vi.fn>).mock
+        .calls[0][0] as VehicleProfile
+      expect(profileArg).toBeInstanceOf(VehicleProfile)
+      expect(profileArg.id).toBe(0)
+      expect(profileArg.make).toBe('Audi')
+      expect(profileArg.model).toBe('A3')
+      expect(profileArg.year).toBe(2018)
+      expect(profileArg.engineType).toBe('unknown')
+      expect(profileArg.vin).toBeInstanceOf(Vin)
+      expect(profileArg.vin.value).toBe('WAUZZZ8V5JA123456')
+    })
+
+    it('does not call upsert when vehicleRepo is absent', async () => {
+      // No vehicleRepo passed — diagnosis debe completarse sin error
+      const result = await createService(undefined).cognitiveDiagnosis({
+        scenarioId: 'audi-a3-idle',
+        userQuery: '¿Por qué tiembla?',
+      })
+
+      expect(result.diagnosis).toContain('El motor tiembla')
+      expect(result.severity).toBe('high')
+    })
+
+    it('degrades gracefully when upsertVehicle fails', async () => {
+      const logger = createMockLogger()
+      const vehicleRepo = createMockVehicleRepo({
+        upsertVehicle: vi.fn().mockRejectedValue(new Error('DB connection lost')),
+      })
+      const llmClient = mockLlmClient({
+        sendMessage: vi
+          .fn()
+          .mockResolvedValue({ text: cognitiveText, toolCalls: cognitiveToolCalls }),
+      })
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        llmClient,
+        logger,
+        vehicleRepo,
+      })
+
+      const result = await service.cognitiveDiagnosis({
+        scenarioId: 'audi-a3-idle',
+        userQuery: '¿Por qué tiembla?',
+      })
+
+      // El diagnóstico debe completarse sin propagar el error del upsert
+      expect(result.diagnosis).toContain('El motor tiembla')
+      expect(vehicleRepo.upsertVehicle).toHaveBeenCalledTimes(1)
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Failed to upsert vehicle in diagnosis session',
+        { err: expect.any(String) },
+      )
+    })
+
+    it('creates session after upsert success', async () => {
+      const upsertedProfile = new VehicleProfile({
+        id: 42,
+        make: 'Audi',
+        model: 'A3',
+        year: 2018,
+        engineType: 'unknown',
+        vin: TEST_VIN,
+      })
+      const vehicleRepo = createMockVehicleRepo({
+        upsertVehicle: vi.fn().mockResolvedValue(upsertedProfile),
+        createSession: vi.fn().mockResolvedValue(
+          new DiagnosisSession({
+            id: 10,
+            vehicleId: 42,
+            scenarioId: 'audi-a3-idle',
+            startedAt: new Date().toISOString(),
+          }),
+        ),
+      })
+
+      await createService(vehicleRepo).cognitiveDiagnosis({
+        scenarioId: 'audi-a3-idle',
+        userQuery: '¿Por qué tiembla?',
+      })
+
+      expect(vehicleRepo.createSession).toHaveBeenCalledTimes(1)
+      const sessionArg = (vehicleRepo.createSession as ReturnType<typeof vi.fn>).mock
+        .calls[0][0] as DiagnosisSession
+      expect(sessionArg).toBeInstanceOf(DiagnosisSession)
+      expect(sessionArg.vehicleId).toBe(42)
+      expect(sessionArg.scenarioId).toBe('audi-a3-idle')
+      expect(sessionArg.startedAt).toBeDefined()
+    })
+
+    it('calls endSession in finally even on cognitiveDiagnosis error', async () => {
+      const upsertedProfile = new VehicleProfile({
+        id: 42,
+        make: 'Audi',
+        model: 'A3',
+        year: 2018,
+        engineType: 'unknown',
+        vin: TEST_VIN,
+      })
+      const endSessionSpy = vi.fn().mockResolvedValue(undefined)
+      const vehicleRepo = createMockVehicleRepo({
+        upsertVehicle: vi.fn().mockResolvedValue(upsertedProfile),
+        createSession: vi.fn().mockResolvedValue(
+          new DiagnosisSession({
+            id: 10,
+            vehicleId: 42,
+            scenarioId: 'audi-a3-idle',
+            startedAt: new Date().toISOString(),
+          }),
+        ),
+        endSession: endSessionSpy,
+      })
+      const logger = createMockLogger()
+
+      const llmClient = mockLlmClient({
+        sendMessage: vi.fn().mockRejectedValue(new Error('LLM API failure')),
+      })
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        llmClient,
+        logger,
+        vehicleRepo,
+      })
+
+      await expect(
+        service.cognitiveDiagnosis({
+          scenarioId: 'audi-a3-idle',
+          userQuery: '¿Por qué tiembla?',
+        }),
+      ).rejects.toThrow('LLM API failure')
+
+      expect(endSessionSpy).toHaveBeenCalledTimes(1)
+      expect(endSessionSpy).toHaveBeenCalledWith(10)
+    })
+
+    it('does not call endSession if createSession failed', async () => {
+      const upsertedProfile = new VehicleProfile({
+        id: 42,
+        make: 'Audi',
+        model: 'A3',
+        year: 2018,
+        engineType: 'unknown',
+        vin: TEST_VIN,
+      })
+      const endSessionSpy = vi.fn().mockResolvedValue(undefined)
+      const vehicleRepo = createMockVehicleRepo({
+        upsertVehicle: vi.fn().mockResolvedValue(upsertedProfile),
+        createSession: vi.fn().mockRejectedValue(new Error('DB write failed')),
+        endSession: endSessionSpy,
+      })
+      const logger = createMockLogger()
+
+      const llmClient = mockLlmClient({
+        sendMessage: vi
+          .fn()
+          .mockResolvedValue({ text: cognitiveText, toolCalls: cognitiveToolCalls }),
+      })
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        llmClient,
+        logger,
+        vehicleRepo,
+      })
+
+      const result = await service.cognitiveDiagnosis({
+        scenarioId: 'audi-a3-idle',
+        userQuery: '¿Por qué tiembla?',
+      })
+
+      expect(result.diagnosis).toContain('El motor tiembla')
+      expect(endSessionSpy).not.toHaveBeenCalled()
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Failed to create diagnosis session',
+        { err: expect.any(String) },
+      )
+    })
+
+    it('enriches sessionContext with normalized manufacturer and model', async () => {
+      const upsertedProfile = new VehicleProfile({
+        id: 42,
+        make: 'Audi',
+        model: 'A3',
+        year: 2018,
+        engineType: 'unknown',
+        vin: TEST_VIN,
+      })
+      const vehicleRepo = createMockVehicleRepo({
+        upsertVehicle: vi.fn().mockResolvedValue(upsertedProfile),
+        createSession: vi.fn().mockResolvedValue(
+          new DiagnosisSession({
+            id: 10,
+            vehicleId: 42,
+            scenarioId: 'audi-a3-idle',
+            startedAt: new Date().toISOString(),
+          }),
+        ),
+      })
+
+      // LLM mock that invokes read_pid with mode 22 to trigger autoRegisterPid
+      const llmClient = mockLlmClient({
+        sendMessage: vi.fn().mockImplementation(async (_input, handler) => {
+          await handler('read_pid', { mode: '22', pid: '0300' })
+          return { text: cognitiveText, toolCalls: [{ tool: 'read_pid', args: { mode: '22', pid: '0300' }, result: '750' }] }
+        }),
+      })
+
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        llmClient,
+        logger: createMockLogger(),
+        vehicleRepo,
+      })
+
+      await service.cognitiveDiagnosis({
+        scenarioId: 'audi-a3-idle',
+        userQuery: 'test',
+      })
+
+      // Flush fire-and-forget microtasks from autoRegisterPid
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      // Verify that findPidDefinition was called with manufacturer/model from sessionContext
+      expect(vehicleRepo.findPidDefinition).toHaveBeenCalledWith('22', '0300', 'Audi', 'A3')
+      expect(vehicleRepo.insertPidDefinition).toHaveBeenCalledTimes(1)
+      const inserted = (vehicleRepo.insertPidDefinition as ReturnType<typeof vi.fn>).mock.calls[0][0]
+      expect(inserted.manufacturer).toBe('Audi')
+      expect(inserted.model).toBe('A3')
+    })
+
+    it('normalizes manufacturer in sessionContext (e.g., "audi ag" → "Audi")', async () => {
+      const upsertedProfile = new VehicleProfile({
+        id: 42,
+        make: 'Audi',
+        model: 'A3',
+        year: 2018,
+        engineType: 'unknown',
+        vin: TEST_VIN,
+      })
+      const vehicleRepo = createMockVehicleRepo({
+        upsertVehicle: vi.fn().mockResolvedValue(upsertedProfile),
+        createSession: vi.fn().mockResolvedValue(
+          new DiagnosisSession({
+            id: 10,
+            vehicleId: 42,
+            scenarioId: 'audi-a3-idle',
+            startedAt: new Date().toISOString(),
+          }),
+        ),
+      })
+
+      // Override the obd repo for audi-a3-idle to return "Audi AG" as make
+      const repos = createMockObdRepos()
+      vi.mocked(repos.get('audi-a3-idle')!.getVehicleInfo as ReturnType<typeof vi.fn>).mockResolvedValue({
+        make: 'Audi AG',
+        model: 'A3',
+        year: 2018,
+        engineType: 'unknown',
+        vin: TEST_VIN,
+      })
+
+      const llmClient = mockLlmClient({
+        sendMessage: vi.fn().mockImplementation(async (_input, handler) => {
+          await handler('read_pid', { mode: '22', pid: '0300' })
+          return { text: cognitiveText, toolCalls: [{ tool: 'read_pid', args: { mode: '22', pid: '0300' }, result: '750' }] }
+        }),
+      })
+
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: repos,
+        llmClient,
+        logger: createMockLogger(),
+        vehicleRepo,
+      })
+
+      await service.cognitiveDiagnosis({
+        scenarioId: 'audi-a3-idle',
+        userQuery: 'test',
+      })
+
+      // Flush fire-and-forget microtasks
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      // Verify that the normalized manufacturer "Audi" was passed (not "Audi AG")
+      expect(vehicleRepo.findPidDefinition).toHaveBeenCalledWith('22', '0300', 'Audi', 'A3')
+    })
+
+    it('triggers persistPidReading via MCP tool calls when sessionContext is active', async () => {
+      const upsertedProfile = new VehicleProfile({
+        id: 42,
+        make: 'Audi',
+        model: 'A3',
+        year: 2018,
+        engineType: 'unknown',
+        vin: TEST_VIN,
+      })
+      const vehicleRepo = createMockVehicleRepo({
+        upsertVehicle: vi.fn().mockResolvedValue(upsertedProfile),
+        createSession: vi.fn().mockResolvedValue(
+          new DiagnosisSession({
+            id: 10,
+            vehicleId: 42,
+            scenarioId: 'audi-a3-idle',
+            startedAt: new Date().toISOString(),
+          }),
+        ),
+      })
+
+      // LLM mock that actually invokes the tool call handler
+      const llmClient = mockLlmClient({
+        sendMessage: vi.fn().mockImplementation(async (_input, handler) => {
+          // Simulate the LLM making tool calls — invoke the handler for each
+          for (const tc of cognitiveToolCalls) {
+            await handler(tc.tool, tc.args)
+          }
+          return { text: cognitiveText, toolCalls: cognitiveToolCalls }
+        }),
+      })
+
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        llmClient,
+        logger: createMockLogger(),
+        vehicleRepo,
+      })
+
+      await service.cognitiveDiagnosis({
+        scenarioId: 'audi-a3-idle',
+        userQuery: 'test',
+      })
+
+      // Flush fire-and-forget microtasks from persistPidReading
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      // Verify that the MCP's read_pid tool triggered persistence via sessionContext
+      expect(vehicleRepo.insertPidReading).toHaveBeenCalled()
+    })
+
+    it('does not mask original exception when endSession fails in finally', async () => {
+      const upsertedProfile = new VehicleProfile({
+        id: 42,
+        make: 'Audi',
+        model: 'A3',
+        year: 2018,
+        engineType: 'unknown',
+        vin: TEST_VIN,
+      })
+      const endSessionSpy = vi.fn().mockRejectedValue(new Error('endSession failed'))
+      const vehicleRepo = createMockVehicleRepo({
+        upsertVehicle: vi.fn().mockResolvedValue(upsertedProfile),
+        createSession: vi.fn().mockResolvedValue(
+          new DiagnosisSession({
+            id: 10,
+            vehicleId: 42,
+            scenarioId: 'audi-a3-idle',
+            startedAt: new Date().toISOString(),
+          }),
+        ),
+        endSession: endSessionSpy,
+      })
+      const logger = createMockLogger()
+
+      const originalError = new Error('Original diagnosis error')
+      const llmClient = mockLlmClient({
+        sendMessage: vi.fn().mockRejectedValue(originalError),
+      })
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        llmClient,
+        logger,
+        vehicleRepo,
+      })
+
+      // La excepción original debe propagarse, no la de endSession
+      await expect(
+        service.cognitiveDiagnosis({
+          scenarioId: 'audi-a3-idle',
+          userQuery: '¿Por qué tiembla?',
+        }),
+      ).rejects.toThrow('Original diagnosis error')
+
+      expect(endSessionSpy).toHaveBeenCalledTimes(1)
+      expect(logger.warn).toHaveBeenCalledWith('Failed to end diagnosis session', expect.any(Error))
     })
   })
 })

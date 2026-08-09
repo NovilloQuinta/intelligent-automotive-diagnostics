@@ -1,4 +1,4 @@
-import { sqliteTable, integer, real, text } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, integer, real, text, unique } from 'drizzle-orm/sqlite-core'
 
 /** Tabla de vehiculos detectados por VIN (ISO 3779). */
 export const vehicles = sqliteTable('vehicles', {
@@ -41,6 +41,8 @@ export const pidDefinitions = sqliteTable('pid_definitions', {
   pidType: text('pid_type').notNull().default('formula'),
   minValue: real('min_value'),
   maxValue: real('max_value'),
+  manufacturer: text('manufacturer'),
+  model: text('model'),
   confidence: real('confidence').notNull().default(1.0),
   source: text('source').notNull().default('manual'),
   createdAt: text('created_at').notNull().default("datetime('now')"),
@@ -116,3 +118,21 @@ export const logs = sqliteTable('logs', {
   context: text('context'),
   createdAt: text('created_at').notNull().default("datetime('now')"),
 })
+
+/** Catalogo auto-expansivo de definiciones de DTC por fabricante y modelo. */
+export const dtcDefinitions = sqliteTable(
+  'dtc_definitions',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    manufacturer: text('manufacturer').notNull(),
+    model: text('model').notNull(),
+    code: text('code').notNull(),
+    description: text('description'),
+    confidence: real('confidence').notNull().default(0.5),
+    source: text('source').notNull().default('web'),
+    createdAt: text('created_at').notNull().default("datetime('now')"),
+  },
+  (table) => ({
+    unq: unique('dtc_manufacturer_model_code').on(table.manufacturer, table.model, table.code),
+  }),
+)
