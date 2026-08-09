@@ -27,10 +27,12 @@ Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de siste
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
 - **Flujo de ramas**: `develop` es la rama de integración; toda `feat.*`/`fix.*` sale de `develop` y se mergea ahí.
 - **Rama base**: `develop`, limpia y sincronizada con origin.
-- **8 worktrees activos** en `.claude/worktrees/` (trabajo en paralelo; ver `plan-paralelo.md` y `prompt-opencode*.md` en la raíz):
-  - `deployment` (`feat/deployment`) — 2 commits por delante de develop, con `.github/workflows/deploy.yml` sin commitear.
-  - `chore-add-db-migrations` (`chore/add-db-migrations`) — mergeado con develop, migración DB activa.
-  - `chat-ui` (`fix/mechanic-chat-ui`), `coherencia-obd` (`fix/obd-coherence`), `emulator-coherencia` (`fix/emulator-coherent-data`), `fix-telemetria-auth` (`fix/live-telemetry-auth`), `mechanic-chat` (`feat/mechanic-chat`), `obd-modes` (`feat/obd-standard-modes`) — creados desde develop, sin commits propios aún.
+- **2 worktrees activos** en `.claude/worktrees/`:
+  - `deployment` (`feat/deployment`) — +2 ahead, +45 behind develop, con `.github/workflows/deploy.yml` sin commitear.
+  - `review-password-recovery` — detached HEAD en `a7ed44d`, sin cambios, para revisar password recovery.
+- **2 ramas locales pendientes**: `feat/deployment` (worktree activo), `feat/odo-ai-agent` (ya mergeada, worktree por borrar).
+- **8 OpenSpec changes archivados** (2026-08-09): add-admin-management-panel, add-obd-standard-modes, fix-cognitive-diagnosis-ux, fix-emulator-coherent-data, fix-vehicle-identity-and-live-data, add-knowledge-mcp-tools, add-vehicle-autodetect-flow, rebase-ui-autel-sidebar-dtc-badge.
+- **4 OpenSpec changes activos** (sin empezar): add-usb-serial-connection-type, add-diagnosis-history, add-monitor-reset-on-clear-dtc, add-user-profiles.
 - **Deuda `brace-expansion`** (lint UI): sin resolver.
 
 ## REGLAS DE SESION
