@@ -11,6 +11,15 @@ const liveDataRateLimit = rateLimit({
   message: { error: 'Too many live-data requests, please wait.' },
 })
 
+/** 30 peticiones/min para el historial: listado + detalle (misma ventana, mismo limite). */
+const historyRateLimit = rateLimit({
+  windowMs: 60_000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many history requests, please wait.' },
+})
+
 /** Crea un Express Router con las rutas de diagnostico OBD. */
 export function createDiagnosisRoutes(controller: DiagnosisController): Router {
   const router = Router()
@@ -28,6 +37,8 @@ export function createDiagnosisRoutes(controller: DiagnosisController): Router {
   router.get('/pending-dtc', controller.pendingDtc)
   router.get('/permanent-dtc', controller.permanentDtc)
   router.get('/vehicle-status', controller.vehicleStatus)
+  router.get('/diagnosis-history', historyRateLimit, controller.listHistory)
+  router.get('/diagnosis-history/:id', historyRateLimit, controller.getHistoryDetail)
 
   return router
 }

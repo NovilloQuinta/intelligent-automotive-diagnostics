@@ -513,6 +513,102 @@ export const openApiSpec = {
         },
       },
     },
+    '/api/diagnosis-history': {
+      get: {
+        tags: ['Diagnosis'],
+        summary: 'List diagnosis sessions of the authenticated user',
+        description:
+          'Paginated, date-filtered listing of past diagnosis sessions. ' +
+          'All filters are resolved in SQL, never in memory. ' +
+          'Always filtered by the authenticated user (taken from JWT, not query). ' +
+          'The list never includes `resultJson`. Requires authentication.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'from',
+            in: 'query',
+            schema: { type: 'string', format: 'date-time' },
+            description: 'Start date-time in ISO 8601 UTC',
+          },
+          {
+            name: 'to',
+            in: 'query',
+            schema: { type: 'string', format: 'date-time' },
+            description: 'End date-time in ISO 8601 UTC',
+          },
+          {
+            name: 'scenarioId',
+            in: 'query',
+            schema: { type: 'string' },
+            description: 'Filter by scenario ID',
+          },
+          {
+            name: 'severity',
+            in: 'query',
+            schema: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },
+            description: 'Filter by diagnosis severity',
+          },
+          {
+            name: 'limit',
+            in: 'query',
+            schema: { type: 'integer', default: 25, minimum: 1, maximum: 100 },
+            description: 'Page size',
+          },
+          {
+            name: 'offset',
+            in: 'query',
+            schema: { type: 'integer', default: 0, minimum: 0 },
+            description: 'Pagination offset',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Paginated session list (without resultJson)',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DiagnosisSessionList' },
+              },
+            },
+          },
+          '400': { description: 'Invalid query parameters or from > to' },
+          '401': { description: 'Access token required' },
+          '429': { description: 'Too many history requests' },
+        },
+      },
+    },
+    '/api/diagnosis-history/{id}': {
+      get: {
+        tags: ['Diagnosis'],
+        summary: 'Get a specific diagnosis session detail',
+        description:
+          'Returns the full session including `resultJson` (the immutable snapshot). ' +
+          'Returns 404 if the session does not exist OR belongs to another user. ' +
+          'Requires authentication.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'id',
+            in: 'path',
+            required: true,
+            schema: { type: 'integer' },
+            description: 'Session ID',
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Full session detail',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/DiagnosisSessionDetail' },
+              },
+            },
+          },
+          '404': { description: 'Session not found or belongs to another user' },
+          '401': { description: 'Access token required' },
+          '429': { description: 'Too many history requests' },
+        },
+      },
+    },
     '/api/diagnosis': {
       post: {
         tags: ['Diagnosis'],
@@ -1056,6 +1152,57 @@ export const openApiSpec = {
                 distance: { type: 'number', example: 0.12 },
               },
             },
+          },
+        },
+      },
+      DiagnosisSessionList: {
+        type: 'object',
+        properties: {
+          items: {
+            type: 'array',
+            items: { $ref: '#/components/schemas/DiagnosisSessionSummary' },
+          },
+          total: { type: 'integer', example: 42 },
+        },
+      },
+      DiagnosisSessionSummary: {
+        type: 'object',
+        description: 'Summary without resultJson. The full snapshot is only in the detail endpoint.',
+        properties: {
+          id: { type: 'integer', example: 1 },
+          vehicleId: { type: 'integer', nullable: true, example: 1 },
+          scenarioId: { type: 'string', nullable: true, example: 'audi-a3-tdi' },
+          startedAt: { type: 'string', format: 'date-time' },
+          endedAt: { type: 'string', format: 'date-time', nullable: true },
+          severity: {
+            type: 'string',
+            enum: ['low', 'medium', 'high', 'critical'],
+            nullable: true,
+            example: 'high',
+          },
+          dtcCount: { type: 'integer', nullable: true, example: 3 },
+        },
+      },
+      DiagnosisSessionDetail: {
+        type: 'object',
+        description: 'Full session including the immutable result snapshot.',
+        properties: {
+          id: { type: 'integer', example: 1 },
+          vehicleId: { type: 'integer', nullable: true, example: 1 },
+          scenarioId: { type: 'string', nullable: true, example: 'audi-a3-tdi' },
+          startedAt: { type: 'string', format: 'date-time' },
+          endedAt: { type: 'string', format: 'date-time', nullable: true },
+          severity: {
+            type: 'string',
+            enum: ['low', 'medium', 'high', 'critical'],
+            nullable: true,
+            example: 'high',
+          },
+          dtcCount: { type: 'integer', nullable: true, example: 3 },
+          resultJson: {
+            type: 'string',
+            nullable: true,
+            description: 'Immutable snapshot with vehicle identity, DTCs, and LLM verdict.',
           },
         },
       },

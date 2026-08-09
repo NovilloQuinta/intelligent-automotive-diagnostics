@@ -1,4 +1,4 @@
-import { LogOut, ScanLine, Shield } from "lucide-react";
+import { History, LogOut, ScanLine, Shield } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { useClock } from "./useClock";
@@ -96,6 +96,14 @@ export function TopBar({
           onChange={onSelect}
           disabled={loading || scenarios.length === 0}
         />
+        <Link
+          to="/history"
+          className="flex items-center gap-1.5 rounded-md border border-white/10 bg-black/40 px-2.5 py-1.5 text-xs text-muted-foreground transition hover:border-primary/40 hover:text-primary"
+          title="Historial de diagnósticos"
+        >
+          <History className="h-3.5 w-3.5" />
+          Historial
+        </Link>
         {auth.user?.isAdmin && (
           <Link
             to="/admin"

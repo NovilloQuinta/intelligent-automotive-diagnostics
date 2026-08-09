@@ -1,4 +1,4 @@
-import { sqliteTable, integer, real, text, unique } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, integer, real, text, unique, index } from 'drizzle-orm/sqlite-core'
 
 /** Tabla de vehiculos detectados por VIN (ISO 3779). */
 export const vehicles = sqliteTable('vehicles', {
@@ -58,16 +58,29 @@ export const pidReadings = sqliteTable('pid_readings', {
   timestamp: text('timestamp').notNull().default("datetime('now')"),
 })
 
-/** Sesiones de diagnostico vinculadas a un vehiculo y escenario. */
-export const diagnosisSessions = sqliteTable('diagnosis_sessions', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  vehicleId: integer('vehicle_id')
-    .notNull()
-    .references(() => vehicles.id),
-  scenarioId: text('scenario_id'),
-  startedAt: text('started_at').notNull().default("datetime('now')"),
-  endedAt: text('ended_at'),
-})
+/** Sesiones de diagnostico vinculadas a un vehiculo y escenario.
+ *  El resultado se guarda como snapshot immutable (JSON) para preservar
+ *  el informe tal como se genero, independientemente de cambios futuros
+ *  en catalogos, formulas o prompts del LLM.
+ */
+export const diagnosisSessions = sqliteTable(
+  'diagnosis_sessions',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    vehicleId: integer('vehicle_id').references(() => vehicles.id),
+    userId: integer('user_id').references(() => users.id),
+    scenarioId: text('scenario_id'),
+    startedAt: text('started_at').notNull().default("datetime('now')"),
+    endedAt: text('ended_at'),
+    resultJson: text('result_json'),
+    severity: text('severity'),
+    dtcCount: integer('dtc_count'),
+  },
+  (table) => ({
+    userIdStartedAtIdx: index('idx_diagnosis_sessions_user_started')
+      .on(table.userId, table.startedAt),
+  }),
+)
 
 /** Usuarios de la aplicacion (particulares y talleres). */
 export const users = sqliteTable('users', {

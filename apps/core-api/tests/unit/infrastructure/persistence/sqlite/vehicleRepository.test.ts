@@ -72,13 +72,35 @@ describe('SqliteVehicleRepository', () => {
         timestamp TEXT NOT NULL DEFAULT (datetime('now'))
       );
 
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        user_type TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'user',
+        business_name TEXT,
+        tax_id TEXT,
+        address TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        failed_login_attempts INTEGER NOT NULL DEFAULT 0,
+        locked_until TEXT
+      );
+
       CREATE TABLE IF NOT EXISTS diagnosis_sessions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        vehicle_id INTEGER NOT NULL REFERENCES vehicles(id),
+        vehicle_id INTEGER REFERENCES vehicles(id),
+        user_id INTEGER REFERENCES users(id),
         scenario_id TEXT,
         started_at TEXT NOT NULL DEFAULT (datetime('now')),
-        ended_at TEXT
+        ended_at TEXT,
+        result_json TEXT,
+        severity TEXT,
+        dtc_count INTEGER
       );
+
+      CREATE INDEX IF NOT EXISTS idx_diagnosis_sessions_user_started
+        ON diagnosis_sessions (user_id, started_at);
 
       CREATE TABLE IF NOT EXISTS dtc_definitions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -373,22 +395,167 @@ describe('SqliteVehicleRepository', () => {
 
   describe('diagnosisSessions', () => {
     let vehicleId: number
+    const USER_ID = 1
 
     beforeAll(async () => {
       const vehicle = await repo.upsertVehicle(toyotaAuris)
       vehicleId = vehicle.id!
+      // Insert a test user so FK constraint passes
+      const userTable = schema.users
+      await db
+        .insert(userTable)
+        .values({
+          id: USER_ID,
+          username: 'testuser',
+          email: 'test@test.com',
+          passwordHash: 'hash',
+          userType: 'individual',
+        })
+        .onConflictDoNothing()
     })
 
     it('should create and end a diagnosis session', async () => {
       const session = await repo.createSession({
+        id: 0,
         vehicleId,
         scenarioId: 'toyota-auris-hybrid',
+        startedAt: new Date().toISOString(),
       })
 
       expect(session.id).toBeGreaterThan(0)
       expect(session.vehicleId).toBe(vehicleId)
 
-      await repo.endSession(session.id!)
+      await repo.endSession(session.id)
+    })
+
+    it('should create a session with null vehicleId (no FK violation)', async () => {
+      const session = await repo.createSession({
+        id: 0,
+        vehicleId: null,
+        userId: USER_ID,
+        scenarioId: 'direct-connection',
+        startedAt: new Date().toISOString(),
+      })
+
+      expect(session.id).toBeGreaterThan(0)
+      expect(session.vehicleId).toBeNull()
+
+      await repo.endSession(session.id)
+    })
+
+    it('should end a session with resultJson, severity and dtcCount', async () => {
+      const session = await repo.createSession({
+        id: 0,
+        vehicleId,
+        userId: USER_ID,
+        scenarioId: 'toyota-auris-hybrid',
+        startedAt: new Date().toISOString(),
+      })
+
+      await repo.endSession(session.id, {
+        resultJson: '{"dtcs":[],"narrative":"All good"}',
+        severity: 'low',
+        dtcCount: 0,
+      })
+
+      // Verify the session was updated by fetching it back
+      const found = await repo.findSessionById(session.id, USER_ID)
+      expect(found).not.toBeNull()
+      expect(found!.resultJson).toBe('{"dtcs":[],"narrative":"All good"}')
+      expect(found!.severity).toBe('low')
+      expect(found!.dtcCount).toBe(0)
+      expect(found!.endedAt).toBeDefined()
+    })
+
+    it('should find sessions for a user (paginated)', async () => {
+      // Create a few sessions
+      for (let i = 0; i < 3; i++) {
+        const s = await repo.createSession({
+          id: 0,
+          vehicleId: i === 2 ? null : vehicleId,
+          userId: USER_ID,
+          scenarioId: `scenario-${i}`,
+          startedAt: new Date(Date.now() - i * 3600000).toISOString(),
+        })
+        await repo.endSession(s.id, {
+          resultJson: `{"test":${i}}`,
+          severity: i === 0 ? 'high' : 'low',
+          dtcCount: i,
+        })
+      }
+
+      const page = await repo.findSessions({ userId: USER_ID, limit: 10, offset: 0 })
+      expect(page.items.length).toBeGreaterThanOrEqual(3)
+      expect(page.total).toBeGreaterThanOrEqual(3)
+      // should be ordered by startedAt DESC
+      for (let i = 0; i < page.items.length - 1; i++) {
+        expect(page.items[i].startedAt >= page.items[i + 1].startedAt).toBe(true)
+      }
+    })
+
+    it('should filter sessions by severity', async () => {
+      const page = await repo.findSessions({
+        userId: USER_ID,
+        severity: 'high',
+        limit: 10,
+        offset: 0,
+      })
+      expect(page.items.length).toBeGreaterThan(0)
+      for (const s of page.items) {
+        expect(s.severity).toBe('high')
+      }
+    })
+
+    it('should filter sessions by scenarioId', async () => {
+      const page = await repo.findSessions({
+        userId: USER_ID,
+        scenarioId: 'scenario-0',
+        limit: 10,
+        offset: 0,
+      })
+      expect(page.items.length).toBe(1)
+      expect(page.items[0].scenarioId).toBe('scenario-0')
+    })
+
+    it('should paginate correctly (offset + limit)', async () => {
+      const page = await repo.findSessions({ userId: USER_ID, limit: 1, offset: 1 })
+      expect(page.items.length).toBeLessThanOrEqual(1)
+      expect(page.total).toBeGreaterThanOrEqual(3)
+    })
+
+    it('should never return sessions from another userId', async () => {
+      const page = await repo.findSessions({ userId: 999, limit: 10, offset: 0 })
+      expect(page.items).toHaveLength(0)
+      expect(page.total).toBe(0)
+    })
+
+    it('should find a session by id and userId', async () => {
+      const session = await repo.createSession({
+        id: 0,
+        vehicleId,
+        userId: USER_ID,
+        scenarioId: 'find-test',
+        startedAt: new Date().toISOString(),
+      })
+      await repo.endSession(session.id, {
+        resultJson: '{}',
+        severity: 'medium',
+        dtcCount: 1,
+      })
+
+      const found = await repo.findSessionById(session.id, USER_ID)
+      expect(found).not.toBeNull()
+      expect(found!.id).toBe(session.id)
+      expect(found!.scenarioId).toBe('find-test')
+
+      // Wrong user should get null
+      const notFound = await repo.findSessionById(session.id, 999)
+      expect(notFound).toBeNull()
+    })
+
+    it('should return null for non-existent session id', async () => {
+      const result = await repo.findSessionById(99999, USER_ID)
+      expect(result).toBeNull()
     })
   })
 

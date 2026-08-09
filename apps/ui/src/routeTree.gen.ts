@@ -11,12 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAuditRouteImport } from './routes/admin.audit'
 import { Route as AdminKnowledgeRouteImport } from './routes/admin.knowledge'
 import { Route as AdminLogsRouteImport } from './routes/admin.logs'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as HistorySessionIdRouteImport } from './routes/history.$sessionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -26,6 +28,11 @@ const IndexRoute = IndexRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -58,35 +65,46 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AdminRoute,
 } as any)
+const HistorySessionIdRoute = HistorySessionIdRouteImport.update({
+  id: '/$sessionId',
+  path: '/$sessionId',
+  getParentRoute: () => HistoryRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/history': typeof HistoryRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/audit': typeof AdminAuditRoute
   '/admin/knowledge': typeof AdminKnowledgeRoute
   '/admin/logs': typeof AdminLogsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/history/$sessionId': typeof HistorySessionIdRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/history': typeof HistoryRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/audit': typeof AdminAuditRoute
   '/admin/knowledge': typeof AdminKnowledgeRoute
   '/admin/logs': typeof AdminLogsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/history/$sessionId': typeof HistorySessionIdRoute
   '/admin': typeof AdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/history': typeof HistoryRouteWithChildren
   '/login': typeof LoginRoute
   '/admin/audit': typeof AdminAuditRoute
   '/admin/knowledge': typeof AdminKnowledgeRoute
   '/admin/logs': typeof AdminLogsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/history/$sessionId': typeof HistorySessionIdRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -94,36 +112,43 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/history'
     | '/login'
     | '/admin/audit'
     | '/admin/knowledge'
     | '/admin/logs'
     | '/admin/users'
+    | '/history/$sessionId'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/history'
     | '/login'
     | '/admin/audit'
     | '/admin/knowledge'
     | '/admin/logs'
     | '/admin/users'
+    | '/history/$sessionId'
     | '/admin'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/history'
     | '/login'
     | '/admin/audit'
     | '/admin/knowledge'
     | '/admin/logs'
     | '/admin/users'
+    | '/history/$sessionId'
     | '/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  HistoryRoute: typeof HistoryRouteWithChildren
   LoginRoute: typeof LoginRoute
 }
 
@@ -141,6 +166,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -185,6 +217,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/history/$sessionId': {
+      id: '/history/$sessionId'
+      path: '/$sessionId'
+      fullPath: '/history/$sessionId'
+      preLoaderRoute: typeof HistorySessionIdRouteImport
+      parentRoute: typeof HistoryRoute
+    }
   }
 }
 
@@ -206,9 +245,21 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface HistoryRouteChildren {
+  HistorySessionIdRoute: typeof HistorySessionIdRoute
+}
+
+const HistoryRouteChildren: HistoryRouteChildren = {
+  HistorySessionIdRoute: HistorySessionIdRoute,
+}
+
+const HistoryRouteWithChildren =
+  HistoryRoute._addFileChildren(HistoryRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  HistoryRoute: HistoryRouteWithChildren,
   LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport

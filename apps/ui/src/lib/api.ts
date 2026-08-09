@@ -2,6 +2,8 @@ import { ApiHttpError } from "@/lib/api-errors";
 import type {
   AuthTokens,
   AuthUser,
+  DiagnosisHistoryResponse,
+  DiagnosisSessionDetail,
   DiagnosisResponse,
   DtcCode,
   EcuInfo,
@@ -503,6 +505,42 @@ export const api = {
     } catch {
       return { cognitiveDiagnosis: false };
     }
+  },
+
+  // ---- Diagnosis History ----
+
+  /**
+   * GET /api/diagnosis-history?from=&to=&severity=&limit=&offset=
+   * Returns a paginated list of diagnosis sessions for the authenticated user.
+   */
+  async getDiagnosisHistory(
+    params: {
+      readonly from?: string;
+      readonly to?: string;
+      readonly severity?: string;
+      readonly limit?: number;
+      readonly offset?: number;
+    } = {},
+  ): Promise<DiagnosisHistoryResponse> {
+    const qs = buildQuery(
+      params as Record<string, string | number | boolean | undefined>,
+    );
+    const res = await apiFetch(`/api/diagnosis-history${qs}`);
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+    return (await res.json()) as DiagnosisHistoryResponse;
+  },
+
+  /**
+   * GET /api/diagnosis-history/:id
+   * Returns the full session detail including the `resultJson` snapshot.
+   */
+  async getDiagnosisHistoryDetail(
+    id: number,
+  ): Promise<DiagnosisSessionDetail> {
+    const res = await apiFetch(`/api/diagnosis-history/${id}`);
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+    const data = (await res.json()) as { session: DiagnosisSessionDetail };
+    return data.session;
   },
 
   // ---- Admin ----

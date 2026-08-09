@@ -1,9 +1,26 @@
 import type { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
-import type { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
+import type { DiagnosisSession, SessionSeverity } from '@/domain/entities/diagnosisSession.js'
 import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import type { PidReading } from '@/domain/entities/pidReading.js'
 import type { DtcDefinition } from '@/domain/entities/dtcDefinition.js'
+
+/** Resultado de una consulta paginada de sesiones de diagnostico. */
+export interface DiagnosisSessionPage {
+  readonly items: DiagnosisSession[]
+  readonly total: number
+}
+
+/** Filtros para el listado de sesiones de diagnostico. */
+export interface DiagnosisSessionFilter {
+  readonly userId: number
+  readonly from?: string
+  readonly to?: string
+  readonly scenarioId?: string
+  readonly severity?: SessionSeverity
+  readonly limit: number
+  readonly offset: number
+}
 
 /** Contrato para la persistencia del catálogo auto-expansivo de vehículos, ECUs y PIDs. */
 export interface VehicleRepository {
@@ -43,8 +60,18 @@ export interface VehicleRepository {
   /** Inicia una sesión de diagnóstico. */
   createSession(session: DiagnosisSession): Promise<DiagnosisSession>
 
-  /** Finaliza una sesión de diagnóstico. */
-  endSession(sessionId: number): Promise<void>
+  /** Finaliza una sesión de diagnóstico guardando opcionalmente el snapshot del resultado. */
+  endSession(
+    sessionId: number,
+    result?: { resultJson: string; severity: SessionSeverity; dtcCount: number },
+  ): Promise<void>
+
+  /** Lista paginada de sesiones de un usuario con filtros (todos en SQL, nunca en memoria). */
+  findSessions(filter: DiagnosisSessionFilter): Promise<DiagnosisSessionPage>
+
+  /** Busca una sesion concreta por id, solo si pertenece al usuario indicado.
+   *  Retorna null si no existe o si es de otro usuario (mismo codigo de error). */
+  findSessionById(id: number, userId: number): Promise<DiagnosisSession | null>
 
   /** Busca una definición de DTC por fabricante, modelo y código.
    * Retorna null si no existe en el catálogo.

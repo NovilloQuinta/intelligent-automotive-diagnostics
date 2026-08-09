@@ -1014,7 +1014,7 @@ describe('DiagnosisService', () => {
       ).rejects.toThrow('LLM API failure')
 
       expect(endSessionSpy).toHaveBeenCalledTimes(1)
-      expect(endSessionSpy).toHaveBeenCalledWith(10)
+      expect(endSessionSpy).toHaveBeenCalledWith(10, undefined)
     })
 
     it('does not call endSession if createSession failed', async () => {
@@ -1268,7 +1268,7 @@ describe('DiagnosisService', () => {
       ).rejects.toThrow('Original diagnosis error')
 
       expect(endSessionSpy).toHaveBeenCalledTimes(1)
-      expect(logger.warn).toHaveBeenCalledWith('Failed to end diagnosis session', expect.any(Error))
+      expect(logger.warn).toHaveBeenCalledWith('Failed to end diagnosis session with snapshot', expect.any(Error))
     })
   })
 })
