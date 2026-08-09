@@ -14,6 +14,7 @@ export type Scenario = {
   id: string;
   name: string;
   vehicleType: "car" | "motorcycle" | "unknown";
+  connectionType: "wifi" | "usb" | "bluetooth";
   sensorValues: {
     rpm: number;
     coolantTemp: number;

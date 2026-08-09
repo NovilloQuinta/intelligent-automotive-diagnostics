@@ -11,6 +11,7 @@ import { toFormulaEntries } from '@/application/shared/formulaEntries.js'
 import { ALL_SEED_PIDS } from '../persistence/sqlite/seed-pids.js'
 import { dtcDescribe } from '@/domain/dtcCatalog.js'
 
+import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
 import { Elm327ConnectionError, Elm327NoDataError, Elm327ParseError } from './errors.js'
 import {
   formatCommand,
@@ -20,8 +21,6 @@ import {
   parseDtcResponse,
   parseSupportedPidBitmask,
 } from './protocol.js'
-import { createElm327TcpClient } from './tcpTransport.js'
-import type { Elm327TcpConfig } from './tcpTransport.js'
 
 /** Re-export de compatibilidad — errores ELM327 desde {@link ./errors.ts}. */
 export { Elm327ConnectionError, Elm327NoDataError, Elm327ParseError }
@@ -37,22 +36,21 @@ const FREEZE_FRAME_PIDS = ['04', '05', '0C', '0D', '11']
 const MODE_UDS = '22'
 
 /**
- * Adaptador OBD-II sobre TCP a dispositivo ELM327 (Docker, puerto 35000).
+ * Adaptador OBD-II sobre transporte ELM327 (TCP, Serial o Bluetooth).
  *
- * Abre una única conexión TCP persistente en el constructor (con cola FIFO y
- * auto-reconexión con backoff) y la reutiliza para todas las lecturas. Esto
- * evita la saturación del dispositivo que causaban los sockets efímeros (6
- * comandos por diagnóstico, cada uno abriendo y cerrando su propio socket).
+ * Recibe un {@link Elm327Transport} ya construido desde la capa de composición
+ * y lo reutiliza para todas las lecturas. El adaptador solo consume el
+ * transporte; no lo construye ni conoce el medio físico.
  *
  * El constructor dispara `connect()` sin esperar: si falla, la auto-reconexión
- * del transporte restaura el socket en la primera petición.
+ * del transporte restaura la conexión en la primera petición.
  */
 export class Elm327TcpRepository implements ObdRepository {
-  private readonly client: ReturnType<typeof createElm327TcpClient>
+  private readonly client: Elm327Transport
   private readonly pidFormulas: PidFormulaCatalog
 
-  constructor(config: Elm327TcpConfig) {
-    this.client = createElm327TcpClient(config)
+  constructor(transport: Elm327Transport) {
+    this.client = transport
     this.pidFormulas = createPidFormulaCatalog(toFormulaEntries(ALL_SEED_PIDS))
     this.client.connect().catch((err: unknown) => {
       console.error('[Elm327TcpRepository] eager connect failed:', err)

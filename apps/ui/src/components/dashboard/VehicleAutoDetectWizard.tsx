@@ -1,5 +1,6 @@
 import { Bike, Car, RadarIcon, ScanLine, TriangleAlert } from "lucide-react";
 import { COLORS } from "./types";
+import { CONNECTION_TYPE_LABELS } from "./ConnectionTypeIcon";
 import type { Scenario, VehicleInfoResponse } from "./types";
 import type { VehicleAutoDetectStep } from "./useVehicleAutoDetect";
 
@@ -47,6 +48,12 @@ function ConnectionButton({
       </span>
       <span className="flex-1">
         <span className="block text-sm font-semibold">{scenario.name}</span>
+        <span
+          data-testid={`connection-type-${scenario.id}`}
+          className="mono block text-[10px] uppercase tracking-wider text-muted-foreground"
+        >
+          {CONNECTION_TYPE_LABELS[scenario.connectionType]}
+        </span>
         <span className="mono block text-[10px] uppercase tracking-wider text-muted-foreground">
           {make} {model} · {year}
         </span>

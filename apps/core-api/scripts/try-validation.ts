@@ -22,6 +22,7 @@ import { ObdSimulator } from '@/infrastructure/simulation/simulator.js'
 import { ObdSimulatorRepository } from '@/infrastructure/simulation/simulatorAdapter.js'
 import { seedScenarios } from '@/infrastructure/simulation/seedScenarios.js'
 import { Elm327TcpRepository } from '@/infrastructure/elm327/elm327Adapter.js'
+import { createElm327TcpClient } from '@/infrastructure/elm327/tcpTransport.js'
 
 const DEMO_SCENARIO_ID = 'audi-a3-idle'
 
@@ -54,10 +55,11 @@ const dtcUseCase = new ValidateDiscoveredDtcUseCase()
 
 function buildRepo(): ObdRepository {
   if (useTcp) {
-    return new Elm327TcpRepository({
+    const transport = createElm327TcpClient({
       host: process.env.ELM327_HOST ?? 'localhost',
       port: Number(process.env.ELM327_PORT ?? 35000),
     })
+    return new Elm327TcpRepository(transport)
   }
   const scenario = seedScenarios.find((s) => s.id === DEMO_SCENARIO_ID)
   if (!scenario) throw new Error(`escenario ${DEMO_SCENARIO_ID} no encontrado`)

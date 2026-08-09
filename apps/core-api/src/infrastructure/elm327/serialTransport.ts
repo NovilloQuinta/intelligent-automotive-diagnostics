@@ -1,22 +1,23 @@
-import { createConnection } from 'node:net'
-import type { Socket } from 'node:net'
+import { SerialPort } from 'serialport'
 import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
 import { Elm327ConnectionError } from './errors.js'
 
-/** Configuración del transporte TCP al dispositivo ELM327. */
-export interface Elm327TcpConfig {
-  readonly host: string
-  readonly port: number
+/** Configuración del transporte serial al dispositivo ELM327. */
+export interface SerialConfig {
+  /** Path del dispositivo (ej. '/dev/ttyUSB0', '/dev/ttyAMA0'). */
+  readonly path: string
+  /** Baud rate (default 38400 — estándar de fábrica ELM327). */
+  readonly baudRate: number
   /** Timeout por comando en ms (default 3000). */
   readonly timeout?: number
-  /** Reintentos ante fallos de envío del comando (timeout del prompt ">", default 3). Los fallos de conexión los gestiona la auto-reconexión. */
+  /** Reintentos ante fallos de envío del comando (timeout del prompt ">", default 3). */
   readonly maxRetries?: number
   /** Backoff base entre reintentos de envío en ms (default 200). */
   readonly backoffMs?: number
 }
 
-/** Timeout por defecto para comandos TCP (3 segundos). */
-export const DEFAULT_TIMEOUT_MS = 3000
+/** Timeout por defecto para comandos seriales (3 segundos). */
+export const DEFAULT_SERIAL_TIMEOUT_MS = 3000
 
 const DEFAULT_MAX_RETRIES = 3
 const DEFAULT_BACKOFF_MS = 200
@@ -42,8 +43,6 @@ interface ActiveCommand {
   timeoutTimer: ReturnType<typeof setTimeout> | null
 }
 
-// Marca los fallos de socket para que el drainer distinga reconexión (retry sin
-// shift) de timeout de comando (retry con backoff hasta maxRetries, luego shift).
 interface ConnectionError extends Elm327ConnectionError {
   connectionLost?: boolean
 }
@@ -53,21 +52,21 @@ function isConnectionError(err: unknown): err is ConnectionError {
 }
 
 /**
- * Crea un transporte TCP persistente para un dispositivo ELM327 con cola FIFO,
- * mutex de escritura y auto-reconexión con backoff exponencial.
+ * Crea un transporte serial persistente para un dispositivo ELM327 con cola
+ * FIFO, mutex de escritura y auto-reconexión con backoff exponencial.
  *
- * Implementa {@link Elm327Transport} sobre un socket TCP compartido.
+ * Implementa {@link Elm327Transport} sobre un puerto serie.
  *
- * @param config — host, port, timeout por comando y semántica de reintentos
+ * @param config — path, baudRate, timeout por comando y semántica de reintentos
  * @returns Transporte ELM327 con `connect()`, `sendCommand()` y `close()`
  */
-export function createElm327TcpClient(config: Elm327TcpConfig): Elm327Transport {
-  const timeoutMs = config.timeout ?? DEFAULT_TIMEOUT_MS
+export function createElm327SerialClient(config: SerialConfig): Elm327Transport {
+  const timeoutMs = config.timeout ?? DEFAULT_SERIAL_TIMEOUT_MS
   const maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES
   const backoffMs = config.backoffMs ?? DEFAULT_BACKOFF_MS
-  const { host, port } = config
+  const { path, baudRate } = config
 
-  let socket: Socket | null = null
+  let port: SerialPort | null = null
   let reconnectState: 'connected' | 'reconnecting' | 'closed' = 'connected'
   let reconnectAttempt = 0
   let reconnectStartedAt = 0
@@ -88,9 +87,6 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327Transport 
     }
   }
 
-  // Marca el comando en vuelo como conexión perdida y dispara la
-  // auto-reconexión. El flag `connectionLost` permite al drainer
-  // distinguir este fallo de un timeout de comando común.
   function failActiveCommand(message: string): void {
     if (activeCommand === null) return
     const command = activeCommand
@@ -101,11 +97,8 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327Transport 
     command.reject(error)
   }
 
-  // Acumula datos del socket hasta el prompt ">" y resuelve el
-  // comando en vuelo. Ignora tráfico de sockets viejos (target !==
-  // socket) tras una reconexión.
-  function onData(target: Socket, chunk: Buffer): void {
-    if (target !== socket) return
+  function onData(target: SerialPort, chunk: Buffer): void {
+    if (target !== port) return
     if (activeCommand === null) return
     activeCommand.data += chunk.toString()
     if (activeCommand.data.includes('>')) {
@@ -116,39 +109,38 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327Transport 
     }
   }
 
-  function onSocketError(target: Socket, err: Error): void {
-    if (target !== socket) return
-    const code = (err as NodeJS.ErrnoException).code
+  function onPortError(target: SerialPort, err: Error): void {
+    if (target !== port) return
     failActiveCommand(
-      `ELM327 connection error (${code ?? err.message}) on ${host}:${port} — reconnecting`,
+      `ELM327 serial error (${err.message}) on ${path} — reconnecting`,
     )
     scheduleReconnect()
   }
 
-  function onSocketClose(target: Socket): void {
-    if (target !== socket) return
-    failActiveCommand(`ELM327 connection closed on ${host}:${port} — reconnecting`)
+  function onPortClose(target: SerialPort): void {
+    if (target !== port) return
+    failActiveCommand(`ELM327 serial connection closed on ${path} — reconnecting`)
     scheduleReconnect()
   }
 
-  function bindSocketHandlers(target: Socket): void {
-    target.setTimeout(timeoutMs)
-    target.setKeepAlive(true)
-    target.on('data', (chunk) => onData(target, chunk))
-    target.on('error', (err) => onSocketError(target, err))
-    target.on('close', () => onSocketClose(target))
+  function bindPortHandlers(target: SerialPort): void {
+    target.on('data', (chunk: Buffer) => onData(target, chunk))
+    target.on('error', (err: Error) => onPortError(target, err))
+    target.on('close', () => onPortClose(target))
   }
 
   async function connect(): Promise<void> {
-    if (socket !== null || reconnectState === 'closed') return
-    socket = createConnection({ host, port })
-    bindSocketHandlers(socket)
+    if (port !== null || reconnectState === 'closed') return
+    port = new SerialPort({ path, baudRate })
+    bindPortHandlers(port)
   }
 
-  // Backoff exponencial `min(100ms * 2^attempt, 30s)`. El cap total
-  // de 30s se mide desde el primer fallo de la sesión (no por
-  // intento): el estado no sale de 'reconnecting' hasta que un
-  // comando se envía con éxito en `processQueue`.
+  function createPort(): SerialPort {
+    const newPort = new SerialPort({ path, baudRate })
+    bindPortHandlers(newPort)
+    return newPort
+  }
+
   function scheduleReconnect(): void {
     if (reconnectState === 'closed' || reconnectPromise !== null) return
     if (reconnectState !== 'reconnecting') {
@@ -171,61 +163,56 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327Transport 
           resolve()
           return
         }
-        socket = createConnection({ host, port })
-        bindSocketHandlers(socket)
+        port = createPort()
         reconnectPromise = null
         resolve()
       }, delay)
     })
   }
 
-  async function reconnect(): Promise<void> {
+  async function doReconnect(): Promise<void> {
     if (reconnectState === 'closed') return
     if (reconnectPromise === null) scheduleReconnect()
     await reconnectPromise
   }
 
-  // Escribe el comando al socket compartido con timeout.
   function sendCommandOnce(cmd: string): Promise<string> {
     return new Promise<string>((resolve, reject) => {
-      if (socket === null) {
-        reject(new Elm327ConnectionError('ELM327 socket not connected'))
+      if (port === null) {
+        reject(new Elm327ConnectionError('ELM327 serial port not connected'))
         return
       }
-      const target = socket
+      const target = port
       const command: ActiveCommand = { resolve, reject, data: '', timeoutTimer: null }
       activeCommand = command
       command.timeoutTimer = setTimeout(() => {
         if (activeCommand !== command) return
         activeCommand = null
-        socket = null
-        target.destroy()
+        port = null
+        target.close()
         reject(
           new Elm327ConnectionError(
-            `ELM327 timeout (${timeoutMs}ms) after command "${cmd}" on ${host}:${port}`,
+            `ELM327 timeout (${timeoutMs}ms) after command "${cmd}" on ${path}`,
           ),
         )
       }, timeoutMs)
       target.write(`${cmd}\r\n`)
+      void target.drain()
     })
   }
 
-  // Drena la cola FIFO con mutex. Tres ramas de reintento por entrada:
-  //  - conexión perdida → espera reconexión, reenvía el mismo comando (sin shift)
-  //  - timeout de comando  → reintenta con backoff por entrada hasta maxRetries
-  //  - cliente cerrado      → rechaza y hace shift
   async function processQueue(): Promise<void> {
     if (isProcessing) return
     isProcessing = true
     while (commandQueue.length > 0) {
       const entry = commandQueue[0]
       try {
-        if (socket === null) {
+        if (port === null) {
           if (reconnectState === 'closed') {
             throw new Elm327ConnectionError('ELM327 Connection closed')
           }
           if (reconnectState === 'reconnecting') {
-            await reconnect()
+            await doReconnect()
           } else {
             await connect()
           }
@@ -241,7 +228,7 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327Transport 
           entry.reject(err as Error)
           commandQueue.shift()
         } else if (isConnectionError(err)) {
-          await reconnect()
+          await doReconnect()
         } else if (entry.attempts < maxRetries) {
           entry.attempts++
           await sleep(backoffMs * 2 ** entry.attempts)
@@ -261,9 +248,6 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327Transport 
     })
   }
 
-  // `close()` despierta a quien esté esperando la reconexión pendiente
-  // (`reconnectResolve`) para que el drainer no quede colgado con
-  // `isProcessing` en true tras cancelar el timer.
   async function close(): Promise<void> {
     if (reconnectState === 'closed') return
     reconnectState = 'closed'
@@ -276,9 +260,9 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327Transport 
       reconnectResolve = null
     }
     reconnectPromise = null
-    if (socket !== null) {
-      socket.destroy()
-      socket = null
+    if (port !== null) {
+      port.close()
+      port = null
     }
     failActiveCommand('ELM327 Connection closed')
     failQueue(new Elm327ConnectionError('ELM327 Connection closed'))

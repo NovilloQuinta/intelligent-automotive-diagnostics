@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { useClock } from "./useClock";
 import { VehicleSelector } from "./VehicleSelector";
+import { ConnectionTypeIcon } from "./ConnectionTypeIcon";
 import { COLORS } from "./types";
 import type { Scenario } from "./types";
 
@@ -71,11 +72,18 @@ export function TopBar({
       })
     : "--:--:--";
 
+  const selectedScenario = scenarios.find((s) => s.id === selectedId);
+
   return (
     <header className="relative z-10 flex flex-wrap items-center justify-between gap-4 border-b border-white/5 bg-black/40 px-6 py-3 backdrop-blur">
       <Branding />
       <div className="flex flex-wrap items-center gap-4">
         <ConnectionStatus streamOk={streamOk} />
+        {selectedScenario?.connectionType ? (
+          <ConnectionTypeIcon
+            connectionType={selectedScenario.connectionType}
+          />
+        ) : null}
         <div className="mono flex items-center gap-2 rounded-md border border-white/10 bg-black/40 px-3 py-1.5 text-sm">
           <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
             Hora

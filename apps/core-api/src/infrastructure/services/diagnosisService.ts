@@ -57,6 +57,8 @@ export interface ScenarioDescriptor {
   readonly id: string
   readonly name: string
   readonly vehicleType: 'car' | 'motorcycle' | 'unknown'
+  /** Tipo de conexión al dispositivo: WiFi (TCP/IP), USB (serial), o Bluetooth (RFCOMM — futuro). */
+  readonly connectionType: 'wifi' | 'usb' | 'bluetooth'
   readonly sensorValues?: LiveData
   readonly dtcConfig?: DtcCode[]
   readonly vehicleInfo: VehicleInfo
@@ -72,6 +74,26 @@ const TCP_DIRECT_SCENARIO: ScenarioDescriptor = {
   id: 'tcp',
   name: 'ELM327 Direct Connection',
   vehicleType: 'unknown',
+  connectionType: 'wifi',
+  sensorValues: new LiveData({ rpm: 0, coolantTemp: 0, speed: 0, intakeTemp: 0 }),
+  dtcConfig: [],
+  vehicleInfo: new VehicleInfo({
+    make: 'unknown',
+    model: 'unknown',
+    year: 0,
+    engineType: 'unknown',
+    vin: new Vin(FALLBACK_VIN),
+  }),
+  host: '',
+  port: 0,
+}
+
+/** Escenario sintetico expuesto cuando se opera contra un ELM327 USB/serial real. */
+export const SERIAL_DIRECT_SCENARIO: ScenarioDescriptor = {
+  id: 'serial',
+  name: 'ELM327 USB Connection',
+  vehicleType: 'unknown',
+  connectionType: 'usb',
   sensorValues: new LiveData({ rpm: 0, coolantTemp: 0, speed: 0, intakeTemp: 0 }),
   dtcConfig: [],
   vehicleInfo: new VehicleInfo({
@@ -134,6 +156,9 @@ export interface DiagnosisServiceOptions {
   readonly obdRepos?: Map<string, ObdRepository>
   /** Repositorio OBD unico en modo TCP directo (single-vehicle). */
   readonly obdRepo?: ObdRepository
+  /** Escenario sintetico a devolver en `listScenarios()` cuando `obdRepo` está presente.
+   *  Por defecto {@link TCP_DIRECT_SCENARIO}. Usar {@link SERIAL_DIRECT_SCENARIO} para USB. */
+  readonly directScenario?: ScenarioDescriptor
   /** Cliente LLM; ausente deshabilita el diagnostico cognitivo. */
   readonly llmClient?: LlmClientPort
   /** Stack de conocimiento vectorial RAG; ausente deshabilita busqueda/indexado. */
@@ -154,6 +179,7 @@ export class DiagnosisService {
   private readonly scenarios: ScenarioDescriptor[]
   private readonly obdRepos: Map<string, ObdRepository>
   private readonly obdRepo: ObdRepository | undefined
+  private readonly directScenario: ScenarioDescriptor
   private readonly llmClient: LlmClientPort | undefined
   private readonly knowledgeStack: KnowledgeStack | undefined
   private readonly webSearch: WebSearchPort | undefined
@@ -166,6 +192,7 @@ export class DiagnosisService {
     this.scenarios = options.scenarios
     this.obdRepos = options.obdRepos ?? new Map()
     this.obdRepo = options.obdRepo
+    this.directScenario = options.directScenario ?? TCP_DIRECT_SCENARIO
     this.llmClient = options.llmClient
     this.knowledgeStack = options.knowledgeStack
     this.webSearch = options.webSearch
@@ -185,9 +212,9 @@ export class DiagnosisService {
     return this.llmClient !== undefined
   }
 
-  /** Escenarios seleccionables: los del emulador docker, o el sintetico `tcp` en modo directo. */
+  /** Escenarios seleccionables: los del emulador docker, o el sintetico en modo directo. */
   listScenarios(): ScenarioDescriptor[] {
-    if (this.obdRepo) return [TCP_DIRECT_SCENARIO]
+    if (this.obdRepo) return [this.directScenario]
     return this.scenarios
   }
 

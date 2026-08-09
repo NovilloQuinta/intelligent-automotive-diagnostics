@@ -42,10 +42,11 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
-const scenario: Scenario = {
+const scenarioWifi: Scenario = {
   id: "audi-a3",
   name: "Audi A3 1.6 TDI",
   vehicleType: "car",
+  connectionType: "wifi",
   sensorValues: { rpm: 850, coolantTemp: 90, speed: 0, intakeTemp: 35 },
   dtcConfig: [],
   vehicleInfo: {
@@ -57,8 +58,22 @@ const scenario: Scenario = {
   },
 };
 
+const scenarioUsb: Scenario = {
+  ...scenarioWifi,
+  id: "usb",
+  name: "ELM327 USB",
+  connectionType: "usb",
+};
+
+const scenarioBluetooth: Scenario = {
+  ...scenarioWifi,
+  id: "bt",
+  name: "ELM327 Bluetooth",
+  connectionType: "bluetooth",
+};
+
 const baseProps = {
-  scenarios: [scenario],
+  scenarios: [scenarioWifi],
   selectedId: "audi-a3",
   onSelect: vi.fn(),
   loading: false,
@@ -142,5 +157,49 @@ describe("TopBar", () => {
       screen.getByTitle("Panel de administración"),
     ).toBeDefined();
     expect(screen.getByText("Admin")).toBeDefined();
+  });
+
+  it("should show a WiFi icon when the selected scenario has connectionType 'wifi'", () => {
+    render(<TopBar {...baseProps} />);
+
+    expect(screen.getByTestId("connection-wifi")).toBeDefined();
+    expect(screen.queryByTestId("connection-usb")).toBeNull();
+    expect(screen.queryByTestId("connection-bluetooth")).toBeNull();
+  });
+
+  it("should show a USB icon when the selected scenario has connectionType 'usb'", () => {
+    render(
+      <TopBar
+        {...baseProps}
+        scenarios={[scenarioUsb]}
+        selectedId="usb"
+      />,
+    );
+
+    expect(screen.getByTestId("connection-usb")).toBeDefined();
+    expect(screen.queryByTestId("connection-wifi")).toBeNull();
+    expect(screen.queryByTestId("connection-bluetooth")).toBeNull();
+  });
+
+  it("should show a Bluetooth icon when the selected scenario has connectionType 'bluetooth'", () => {
+    render(
+      <TopBar
+        {...baseProps}
+        scenarios={[scenarioBluetooth]}
+        selectedId="bt"
+      />,
+    );
+
+    expect(screen.getByTestId("connection-bluetooth")).toBeDefined();
+    expect(screen.queryByTestId("connection-wifi")).toBeNull();
+    expect(screen.queryByTestId("connection-usb")).toBeNull();
+  });
+
+  it("should not show any connection icon when no scenario is selected", () => {
+    render(<TopBar {...baseProps} selectedId="" />);
+
+    expect(screen.queryByTestId("connection-wifi")).toBeNull();
+    expect(screen.queryByTestId("connection-usb")).toBeNull();
+    expect(screen.queryByTestId("connection-bluetooth")).toBeNull();
   });
 });

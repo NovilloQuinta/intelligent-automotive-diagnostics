@@ -833,11 +833,17 @@ export const openApiSpec = {
       },
       Scenario: {
         type: 'object',
-        required: ['id', 'name', 'vehicleType', 'vehicleInfo'],
+        required: ['id', 'name', 'vehicleType', 'connectionType', 'vehicleInfo'],
         properties: {
           id: { type: 'string', example: 'audi-a3-idle' },
           name: { type: 'string', example: 'Audi A3 al ralenti' },
           vehicleType: { type: 'string', enum: ['car', 'motorcycle'] },
+          connectionType: {
+            type: 'string',
+            enum: ['wifi', 'usb', 'bluetooth'],
+            example: 'wifi',
+            description: 'Tipo de conexión al dispositivo: wifi (TCP/IP), usb (serial), bluetooth (RFCOMM)',
+          },
           sensorValues: { $ref: '#/components/schemas/LiveData' },
           dtcConfig: { type: 'array', items: { $ref: '#/components/schemas/DtcCode' } },
           vehicleInfo: { $ref: '#/components/schemas/VehicleInfo' },

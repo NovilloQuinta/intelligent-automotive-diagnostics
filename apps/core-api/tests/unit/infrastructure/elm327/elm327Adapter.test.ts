@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createConnection } from 'node:net'
+import { createElm327TcpClient } from '@/infrastructure/elm327/tcpTransport.js'
 import {
   Elm327TcpRepository,
   Elm327ConnectionError,
@@ -36,7 +37,8 @@ const HOST = 'localhost'
 const PORT = 35000
 
 function makeRepo(timeout?: number): Elm327TcpRepository {
-  return new Elm327TcpRepository({ host: HOST, port: PORT, timeout, maxRetries: 0 })
+  const transport = createElm327TcpClient({ host: HOST, port: PORT, timeout, maxRetries: 0 })
+  return new Elm327TcpRepository(transport)
 }
 
 function lastSocket(): MockSocket {

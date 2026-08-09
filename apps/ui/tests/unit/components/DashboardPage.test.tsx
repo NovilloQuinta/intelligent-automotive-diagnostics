@@ -121,6 +121,7 @@ const scenario: Scenario = {
   id: "audi-a3",
   name: "Audi A3 1.6 TDI",
   vehicleType: "car",
+  connectionType: "wifi",
   sensorValues: { rpm: 850, coolantTemp: 90, speed: 0, intakeTemp: 35 },
   dtcConfig: [],
   vehicleInfo: {
@@ -697,5 +698,37 @@ describe("DashboardPage", () => {
     expect(screen.getAllByTestId("pid-row")).toHaveLength(5);
     expect(screen.getByText("01 42")).toBeDefined();
     expect(screen.getByText("IA")).toBeDefined();
+  });
+
+  it("should show a USB icon in TopBar when the selected scenario has connectionType 'usb'", () => {
+    mockAuthStatus.value = "authed";
+    const usbScenario: Scenario = {
+      ...scenario,
+      id: "usb",
+      name: "ELM327 USB",
+      connectionType: "usb",
+    };
+    mockUseScenarios.mockReturnValue({
+      scenarios: [usbScenario],
+      selectedId: "usb",
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    });
+    mockUseLiveTelemetry.mockReturnValue({
+      live: {
+        rpm: 850,
+        speed: 0,
+        coolantTemp: 90,
+        intakeTemp: 35,
+        rawData: "41 0C 5A 41 0D 00",
+        ts: 1,
+      },
+      streamOk: true,
+    });
+
+    render(<DashboardPage />);
+
+    expect(screen.getByTestId("connection-usb")).toBeDefined();
+    expect(screen.queryByTestId("connection-wifi")).toBeNull();
   });
 });

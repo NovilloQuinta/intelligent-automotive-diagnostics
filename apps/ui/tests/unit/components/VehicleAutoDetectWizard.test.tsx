@@ -11,6 +11,7 @@ const scenarios: Scenario[] = [
     id: "audi-a3-idle",
     name: "Audi A3 al ralentí",
     vehicleType: "car",
+    connectionType: "wifi",
     sensorValues: { rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 },
     dtcConfig: [],
     vehicleInfo: {
@@ -25,6 +26,7 @@ const scenarios: Scenario[] = [
     id: "kawa-z900",
     name: "Kawasaki Z900",
     vehicleType: "motorcycle",
+    connectionType: "usb",
     sensorValues: { rpm: 4500, coolantTemp: 105, speed: 0, intakeTemp: 28 },
     dtcConfig: [],
     vehicleInfo: {
@@ -89,6 +91,13 @@ describe("VehicleAutoDetectWizard", () => {
       renderWizard({ scenarios: [] });
 
       expect(screen.getByText("No hay conexiones disponibles")).toBeDefined();
+    });
+
+    it("should display the connection type in each ConnectionButton", () => {
+      renderWizard();
+
+      expect(screen.getByTestId("connection-type-audi-a3-idle")).toBeDefined();
+      expect(screen.getByTestId("connection-type-kawa-z900")).toBeDefined();
     });
   });
 

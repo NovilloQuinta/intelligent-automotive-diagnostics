@@ -6,6 +6,8 @@ import { SqliteRefreshTokenStore } from '@/infrastructure/persistence/sqlite/ref
 import { SqliteVehicleRepository } from '@/infrastructure/persistence/sqlite/vehicleRepository.js'
 import { createAuthService } from '@/infrastructure/services/authService.js'
 import { Elm327TcpRepository } from '@/infrastructure/elm327/elm327Adapter.js'
+import { createElm327TcpClient } from '@/infrastructure/elm327/tcpTransport.js'
+import { createElm327SerialClient } from '@/infrastructure/elm327/serialTransport.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import { createAnthropicClient } from '@/infrastructure/llm/anthropicClient.js'
@@ -31,6 +33,7 @@ import { AuthController } from '@/infrastructure/http/controllers/AuthController
 import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 import {
   DiagnosisService,
+  SERIAL_DIRECT_SCENARIO,
   type ScenarioDescriptor,
 } from '@/infrastructure/services/diagnosisService.js'
 import type { AppConfig } from '@/infrastructure/configuration/index.js'
@@ -191,6 +194,7 @@ function toyotaScenario(config: AppConfig): ScenarioDescriptor {
     id: 'toyota',
     name: 'Toyota (Built-in)',
     vehicleType: 'car',
+    connectionType: 'wifi',
     dtcConfig: [],
     vehicleInfo: new VehicleInfo({
       make: 'Toyota',
@@ -209,6 +213,7 @@ function audiScenario(config: AppConfig): ScenarioDescriptor {
     id: 'audi-a3-tdi',
     name: 'Audi A3 2.0 TDI',
     vehicleType: 'car',
+    connectionType: 'wifi',
     vehicleInfo: new VehicleInfo({
       make: 'Audi',
       model: 'A3',
@@ -226,6 +231,7 @@ function kawasakiScenario(config: AppConfig): ScenarioDescriptor {
     id: 'kawasaki-z900',
     name: 'Kawasaki Z900',
     vehicleType: 'motorcycle',
+    connectionType: 'wifi',
     dtcConfig: [],
     vehicleInfo: new VehicleInfo({
       make: 'Kawasaki',
@@ -247,7 +253,8 @@ function createDockerScenarios(config: AppConfig): ScenarioDescriptor[] {
 function createObdRepoMap(scenarios: ScenarioDescriptor[]): Map<string, ObdRepository> {
   const map = new Map<string, ObdRepository>()
   for (const s of scenarios) {
-    map.set(s.id, new Elm327TcpRepository({ host: s.host, port: s.port }))
+    const transport = createElm327TcpClient({ host: s.host, port: s.port })
+    map.set(s.id, new Elm327TcpRepository(transport))
   }
   return map
 }
@@ -396,10 +403,28 @@ function createDiagnosisService(opts: CreateDiagnosisServiceOptions): DiagnosisS
       vehicleRepo,
     })
   }
-  const obdRepo = new Elm327TcpRepository({
+  if (config.OBD_MODE === 'serial') {
+    const transport = createElm327SerialClient({
+      path: config.SERIAL_PORT_PATH,
+      baudRate: config.SERIAL_BAUD_RATE,
+    })
+    const obdRepo = new Elm327TcpRepository(transport)
+    return new DiagnosisService({
+      scenarios: [],
+      obdRepo,
+      directScenario: SERIAL_DIRECT_SCENARIO,
+      llmClient,
+      logger,
+      knowledgeStack,
+      webSearch,
+      vehicleRepo,
+    })
+  }
+  const transport = createElm327TcpClient({
     host: config.ELM327_HOST,
     port: config.ELM327_PORT,
   })
+  const obdRepo = new Elm327TcpRepository(transport)
   return new DiagnosisService({
     scenarios: [],
     obdRepo,
