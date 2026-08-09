@@ -28,8 +28,7 @@ Reglas:
 - Todo agente DEBE escribir en la ruta del worktree (`.claude/worktrees/<nombre>/`),
   NUNCA en el repo principal. Regla 5b.
 - TDD estricto: RED → GREEN → REFACTOR (regla 4).
-- Commits atomicos dentro de la rama. Sin `--no-verify` a menos que GGA falle
-  por strict mode (error conocido).
+- Commits atomicos dentro de la rama.
 - Push frecuente: `git push origin feat/<nombre>`.
 
 ## Fase 3: Merge a develop
@@ -68,6 +67,4 @@ git push origin --delete feat/<nombre>         # delete remoto
 
 - Cambios menores (docs, chore, style) van directo a `develop` sin worktree
   (regla 5). No aplica este ciclo.
-- Si GGA falla por strict mode, usar `git commit --no-verify` y reportar.
-- El worktree se borra tras merge; no acumular worktrees huerfanos.
 - Si el desarrollo se abandona (no se mergea), borrar rama + worktree igual.
