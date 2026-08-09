@@ -39,6 +39,7 @@ La **fuente de verdad** de agentes, skills y comandos está en `.opencode/`
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM
-- **Ultimo paso**: Cambio `add-execute-cognitive-diagnosis` implementado y archivado en OpenSpec. Refactoring post-archivado commiteado (`50c0a5e`): tipos extraidos a `application/ports/cognitiveDiagnosis.port.ts`, shims eliminados, regex JSON mejorado (tolera `---JSON\n` de DeepSeek), schema Zod exportado como `cognitiveDiagnosisJsonSchema`. SYSTEM INSTRUCTIONS & EXECUTIVE PROTOCOL integrado en AGENTS.md, commiteado (`f257ed2`).
-- **Tests**: 404 pasando (29 test files)
-- **CI**: verde — lint, format, test, build, audit
+- **Ultimo paso**: Cambio `add-password-recovery-and-profile` implementado y archivado (ver `AGENTS.md` para el detalle completo). Recuperacion de contraseña por email (SMTP real via IONOS + fallback consola) y perfil de cliente (`/profile`: datos + cambio de contraseña) sobre la rama `claude/client-profile-password-recovery-2fwi91`. Backend: 591 tests pasando. Frontend: 218 tests pasando. `@reviewer`/`@security` en verde.
+- **Anterior**: `add-execute-cognitive-diagnosis` implementado y archivado en OpenSpec. Refactoring post-archivado commiteado (`50c0a5e`): tipos extraidos a `application/ports/cognitiveDiagnosis.port.ts`, shims eliminados, regex JSON mejorado (tolera `---JSON\n` de DeepSeek), schema Zod exportado como `cognitiveDiagnosisJsonSchema`. SYSTEM INSTRUCTIONS & EXECUTIVE PROTOCOL integrado en AGENTS.md, commiteado (`f257ed2`).
+- **Tests**: core-api 591 pasando (55 test files) · ui 218 pasando (30 test files)
+- **CI**: verde — lint (core-api), format, test, build. `lint`(ui)/`test:coverage` rotos por deuda preexistente del entorno (ver `AGENTS.md`)
