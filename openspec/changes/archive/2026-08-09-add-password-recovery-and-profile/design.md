@@ -50,8 +50,15 @@ Sin columna `revoked_at`: la invalidacion de tokens previos al pedir uno nuevo s
 **Elegido**:
 ```ts
 // application/ports/EmailSenderPort.ts
+export interface EmailMessage {
+  readonly to: string
+  readonly subject: string
+  readonly html: string
+  readonly text: string
+}
+
 export interface EmailSenderPort {
-  sendPasswordResetEmail(to: string, resetUrl: string): Promise<void>
+  send(message: EmailMessage): Promise<void>
 }
 ```
 - `infrastructure/email/nodemailerEmailSender.ts`: `createNodemailerEmailSender(config)` usa `nodemailer.createTransport({ host, port, auth: { user, pass } })` (SMTP generico — el usuario tiene un buzon IONOS, pero nada queda hardcodeado a un proveedor: host/puerto/usuario/contraseña vienen de `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`).

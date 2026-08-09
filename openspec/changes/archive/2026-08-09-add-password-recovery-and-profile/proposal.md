@@ -22,7 +22,6 @@ Un usuario que olvida su contraseña no tiene forma de recuperar el acceso a su 
 
 ## Impact
 
-- Nuevo: `apps/core-api/src/domain/value-objects/passwordResetToken.ts` (o similar, si se decide en design.md)
 - Nuevo: `apps/core-api/src/application/ports/EmailSenderPort.ts`
 - Nuevo: `apps/core-api/src/application/ports/PasswordResetTokenRepository.ts`
 - Nuevo: `apps/core-api/src/application/dto/auth/ForgotPasswordInput.ts`, `ResetPasswordInput.ts`

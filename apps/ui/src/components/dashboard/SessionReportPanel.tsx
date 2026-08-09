@@ -550,7 +550,5 @@ function SessionReportPanelLive({
 }) {
   const state = useSessionReport(scenarioId);
 
-  return (
-    <SessionReportContent state={state} vehicleInfo={vehicleInfo} />
-  );
+  return <SessionReportContent state={state} vehicleInfo={vehicleInfo} />;
 }

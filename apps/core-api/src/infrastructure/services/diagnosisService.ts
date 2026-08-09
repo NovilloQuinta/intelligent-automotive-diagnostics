@@ -37,8 +37,13 @@ import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
+import type {
+  DiagnosisSessionFilter,
+  DiagnosisSessionPage,
+} from '@/application/ports/VehicleRepository.js'
 import { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
 import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
+import type { SessionSeverity } from '@/domain/entities/diagnosisSession.js'
 import { ALL_SEED_PIDS } from '@/infrastructure/persistence/sqlite/seed-pids.js'
 import { normalizeManufacturer } from '@/domain/value-objects/manufacturer.js'
 import {
@@ -339,6 +344,34 @@ export class DiagnosisService {
   }
 
   /**
+   * Lista paginada del historial de diagnosticos del usuario autenticado.
+   *
+   * Los filtros se resuelven en SQL; nunca se carga el historial completo en memoria.
+   * `userId` no se acepta por query — se toma del token en el controlador (OWASP A01).
+   * La respuesta del listado no incluye `resultJson` para no saturar la red.
+   *
+   * @throws {Error} Si `vehicleRepo` no esta configurado (nunca en produccion con BD).
+   */
+  async listDiagnosisSessions(filter: DiagnosisSessionFilter): Promise<DiagnosisSessionPage> {
+    if (!this.vehicleRepo) {
+      throw new Error('Vehicle repository not configured')
+    }
+    return this.vehicleRepo.findSessions(filter)
+  }
+
+  /**
+   * Detalle de una sesion de diagnostico, solo si pertenece al usuario indicado.
+   *
+   * @returns La sesion con `resultJson` incluido, o `null` si no existe o es de otro usuario.
+   */
+  async getDiagnosisSession(id: number, userId: number): Promise<DiagnosisSession | null> {
+    if (!this.vehicleRepo) {
+      throw new Error('Vehicle repository not configured')
+    }
+    return this.vehicleRepo.findSessionById(id, userId)
+  }
+
+  /**
    * Identifica el vehiculo activo: VIN del ECU + metadatos del descriptor.
    *
    * En modo Docker, fusiona el VIN leido del emulador con `make`/`model`/`year`/`engineType`
@@ -417,50 +450,11 @@ export class DiagnosisService {
   }
 
   /**
-   * Persiste (upsert) el vehiculo de la sesion si `vehicleRepo` esta configurado.
-   * Best-effort: un fallo aqui no debe bloquear el diagnostico cognitivo, solo se loguea.
-   */
-  private async tryUpsertVehicle(vehicleInfo: VehicleInfo): Promise<number | undefined> {
-    if (!this.vehicleRepo) return undefined
-    try {
-      const profile = this.toVehicleProfile(vehicleInfo)
-      const result = await this.vehicleRepo.upsertVehicle(profile)
-      return result.id
-    } catch (e) {
-      this.logger.warn('Failed to upsert vehicle in diagnosis session', { err: String(e) })
-      return undefined
-    }
-  }
-
-  /**
-   * Abre una sesion de diagnostico para el vehiculo ya persistido.
-   * Best-effort: un fallo aqui no debe bloquear el diagnostico cognitivo, solo se loguea.
-   */
-  private async tryCreateSession(
-    vehicleId: number,
-    scenarioId: string | undefined,
-  ): Promise<number | undefined> {
-    try {
-      const session = await this.vehicleRepo!.createSession(
-        new DiagnosisSession({
-          id: 0,
-          vehicleId,
-          scenarioId,
-          startedAt: new Date().toISOString(),
-        }),
-      )
-      return session.id
-    } catch (e) {
-      this.logger.warn('Failed to create diagnosis session', { err: String(e) })
-      return undefined
-    }
-  }
-
-  /**
    * Ejecuta el diagnostico cognitivo con tool calling sobre el servidor MCP.
    *
    * Persiste el vehiculo al inicio de la sesion (si `vehicleRepo` esta configurado)
    * y registra una sesion de diagnostico con finalizacion garantizada via `try/finally`.
+   * Al cerrar la sesion guarda un snapshot inmutable del resultado.
    *
    * @throws {CognitiveDiagnosisUnavailableError} Si no hay cliente LLM configurado.
    * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
@@ -471,15 +465,27 @@ export class DiagnosisService {
     scenarioId?: string
     userQuery?: string
     conversationHistory?: readonly LlmConversationItem[]
+    userId?: number
   }): Promise<ExecuteCognitiveDiagnosisOutput> {
-    const { scenarioId, userQuery, conversationHistory } = input
+    const { scenarioId, userQuery, conversationHistory, userId } = input
     const repository = this.resolveRepository(scenarioId)
 
     // Leer vehicleInfo una sola vez: se reutiliza en el upsert y en el use case
     const vehicleInfo = await repository.getVehicleInfo()
 
     // --- Persistencia del vehículo (D2, antes de validar LLM) ---
-    const vehicleId = await this.tryUpsertVehicle(vehicleInfo)
+    let vehicleId: number | undefined
+    if (this.vehicleRepo) {
+      try {
+        const profile = this.toVehicleProfile(vehicleInfo)
+        const result = await this.vehicleRepo.upsertVehicle(profile)
+        vehicleId = result.id
+      } catch (e) {
+        this.logger.warn('Failed to upsert vehicle in diagnosis session', {
+          err: e instanceof Error ? e : String(e),
+        })
+      }
+    }
 
     if (!this.llmClient) {
       this.logger.warn('Cognitive diagnosis requested but no LLM client is configured')
@@ -487,8 +493,25 @@ export class DiagnosisService {
     }
 
     // --- Sesión de diagnóstico (D3) ---
-    const sessionId =
-      vehicleId !== undefined ? await this.tryCreateSession(vehicleId, scenarioId) : undefined
+    let sessionId: number | undefined
+    if (vehicleId !== undefined) {
+      try {
+        const session = await this.vehicleRepo!.createSession(
+          new DiagnosisSession({
+            id: 0,
+            vehicleId,
+            userId: userId ?? null,
+            scenarioId,
+            startedAt: new Date().toISOString(),
+          }),
+        )
+        sessionId = session.id
+      } catch (e) {
+        this.logger.warn('Failed to create diagnosis session', {
+          err: e instanceof Error ? e : String(e),
+        })
+      }
+    }
 
     const llmClient = this.llmClient
     const normalizedMake = normalizeManufacturer(vehicleInfo.make)
@@ -516,8 +539,15 @@ export class DiagnosisService {
       return useCase.execute({ userQuery, vehicleContext: vehicleInfo, conversationHistory })
     })()
 
+    let diagnosisResult: ExecuteCognitiveDiagnosisOutput | undefined
+
     try {
-      return await withTimeout(diagnosis, this.cognitiveTimeoutMs, 'Cognitive diagnosis timed out')
+      diagnosisResult = await withTimeout(
+        diagnosis,
+        this.cognitiveTimeoutMs,
+        'Cognitive diagnosis timed out',
+      )
+      return diagnosisResult
     } catch (err) {
       if (err instanceof TimeoutError) {
         throw new CognitiveDiagnosisTimeoutError()
@@ -525,11 +555,65 @@ export class DiagnosisService {
       throw err
     } finally {
       if (sessionId !== undefined) {
-        void this.vehicleRepo!.endSession(sessionId).catch((e) =>
-          this.logger.warn('Failed to end diagnosis session', e),
+        const snapshot = this.buildDiagnosisSnapshot(vehicleInfo, diagnosisResult)
+        void this.vehicleRepo!.endSession(sessionId, snapshot ?? undefined).catch((e) =>
+          this.logger.warn('Failed to end diagnosis session with snapshot', e),
         )
       }
     }
+  }
+
+  /**
+   * Construye el snapshot inmutable del diagnostico para almacenar en `resultJson`.
+   *
+   * Incluye identidad del vehiculo, DTCs extraidos de las tools, freeze frame,
+   * y el veredicto completo del LLM (narrativa, severidad, confianza y recomendaciones).
+   * El snapshot es inmutable: si cambian catalogos, formulas o prompts en el futuro,
+   * este informe conserva lo que el mecanico vio ese dia (ver design.md Decision 1).
+   */
+  private buildDiagnosisSnapshot(
+    vehicleInfo: VehicleInfo,
+    diagnosis?: ExecuteCognitiveDiagnosisOutput,
+  ): { resultJson: string; severity: SessionSeverity; dtcCount: number } | null {
+    if (!diagnosis) return null
+
+    const dtcCount = this.countDtcsFromToolCalls(diagnosis.toolCalls)
+    const severity: SessionSeverity = (diagnosis.severity as SessionSeverity) ?? 'low'
+
+    const snapshot = {
+      vehicle: {
+        vin: vehicleInfo.vin.value,
+        make: vehicleInfo.make,
+        model: vehicleInfo.model,
+        year: vehicleInfo.year,
+        engineType: vehicleInfo.engineType,
+      },
+      diagnosis: {
+        severity: diagnosis.severity,
+        confidence: diagnosis.confidence,
+        narrative: diagnosis.diagnosis,
+        recommendations: diagnosis.recommendations,
+        toolCalls: diagnosis.toolCalls,
+      },
+      timestamp: new Date().toISOString(),
+    }
+
+    return {
+      resultJson: JSON.stringify(snapshot),
+      severity,
+      dtcCount,
+    }
+  }
+
+  /** Cuenta DTCs unicos extraidos de las tool calls `get_dtc_codes`. */
+  private countDtcsFromToolCalls(
+    toolCalls?: ReadonlyArray<{ readonly tool: string; readonly result: string }>,
+  ): number {
+    if (!toolCalls) return 0
+    const dtcToolResult = toolCalls.find((t) => t.tool === 'get_dtc_codes')?.result
+    if (!dtcToolResult) return 0
+    // El resultado es tipo "P0301: Cylinder 1 Misfire, P0420: Catalyst..."
+    return dtcToolResult.split(',').filter((s) => /[A-Z]\d{4}/.test(s.trim())).length
   }
 
   /**

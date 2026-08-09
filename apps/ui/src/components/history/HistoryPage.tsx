@@ -50,7 +50,10 @@ const DATE_SHORTCUT_LABELS: Record<DateShortcut, string> = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function computeDateRange(shortcut: DateShortcut): { from: string; to: string } {
+function computeDateRange(shortcut: DateShortcut): {
+  from: string;
+  to: string;
+} {
   const now = new Date();
   const to = now.toISOString();
   const from = new Date(now);
@@ -82,11 +85,7 @@ function formatDate(iso: string): string {
   });
 }
 
-function hasActiveFilters(
-  from: string,
-  to: string,
-  severity: string,
-): boolean {
+function hasActiveFilters(from: string, to: string, severity: string): boolean {
   return from !== "" || to !== "" || severity !== "all";
 }
 
@@ -120,15 +119,12 @@ export function HistoryPage() {
   const totalPages = Math.max(1, Math.ceil(total / DEFAULT_LIMIT));
   const filtersActive = hasActiveFilters(from, to, severity);
 
-  const handleShortcut = useCallback(
-    (shortcut: DateShortcut) => {
-      const range = computeDateRange(shortcut);
-      setFrom(range.from);
-      setTo(range.to);
-      setPage(1);
-    },
-    [],
-  );
+  const handleShortcut = useCallback((shortcut: DateShortcut) => {
+    const range = computeDateRange(shortcut);
+    setFrom(range.from);
+    setTo(range.to);
+    setPage(1);
+  }, []);
 
   const handleSeverityChange = useCallback((value: string) => {
     setSeverity(value);
@@ -200,10 +196,7 @@ export function HistoryPage() {
         {/* Severity filter */}
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="severity-filter">Severidad</Label>
-          <Select
-            value={severity}
-            onValueChange={handleSeverityChange}
-          >
+          <Select value={severity} onValueChange={handleSeverityChange}>
             <SelectTrigger
               id="severity-filter"
               className="w-[140px]"
@@ -293,9 +286,7 @@ export function HistoryPage() {
                   <TableCell className="font-medium text-foreground/90">
                     {session.vehicleMake} {session.vehicleModel}
                   </TableCell>
-                  <TableCell className="text-sm">
-                    {session.dtcCount}
-                  </TableCell>
+                  <TableCell className="text-sm">{session.dtcCount}</TableCell>
                   <TableCell>
                     <Badge
                       variant="outline"

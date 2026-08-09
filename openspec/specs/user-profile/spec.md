@@ -56,7 +56,7 @@ El sistema SHALL exponer `PATCH /api/profile` (requiere sesion autenticada), que
 
 #### Scenario: Sin campos validos en el body
 - **WHEN** se envia un body vacio `{}`
-- **THEN** el sistema responde `200` con el usuario sin cambios (actualizacion no-op) o `400` si el schema exige al menos un campo — comportamiento exacto a fijar en `design.md`/implementacion, pero en ningun caso SHALL modificar el email
+- **THEN** el sistema responde `200` con el usuario sin cambios (actualizacion no-op) — el schema Zod no exige un minimo de campos, y en ningun caso SHALL modificar el email
 
 #### Scenario: Sin sesion autenticada
 - **WHEN** se envia la peticion sin header `Authorization` valido

@@ -594,9 +594,7 @@ export const api = {
    * GET /api/diagnosis-history/:id
    * Returns the full session detail including the `resultJson` snapshot.
    */
-  async getDiagnosisHistoryDetail(
-    id: number,
-  ): Promise<DiagnosisSessionDetail> {
+  async getDiagnosisHistoryDetail(id: number): Promise<DiagnosisSessionDetail> {
     const res = await apiFetch(`/api/diagnosis-history/${id}`);
     await assertOk(res, GENERIC_ERROR_MESSAGE);
     const data = (await res.json()) as { session: DiagnosisSessionDetail };
