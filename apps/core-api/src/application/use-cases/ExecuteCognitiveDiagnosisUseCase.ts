@@ -27,6 +27,14 @@ const EXPLORATION_INSTRUCTIONS = [
   'Razona la causa raíz cruzando síntomas, DTCs y freeze frame.',
 ]
 
+/** Instrucciones de consulta proactiva del catálogo de conocimiento acumulado antes de leer datos del vehículo. */
+const CATALOG_LOOKUP_INSTRUCTIONS = [
+  'Antes de leer datos del vehículo, consulta el catálogo de conocimiento acumulado para el fabricante y modelo actual:',
+  '- Usa search_similar_diagnoses con los síntomas de la consulta del usuario (si los hay). Si no hay consulta, busca con el fabricante/modelo del vehículo para recuperar diagnósticos previos de este modelo.',
+  '- Usa search_similar_dtcs con el fabricante/modelo para anticipar fallos típicos de esta marca.',
+  '- Si obtienes resultados con distancia < 0.5, considera que son muy relevantes: prioriza las hipótesis que ya funcionaron en casos anteriores.',
+]
+
 /** Instrucciones para indexar PIDs desconocidos (típicamente Mode 22, fabricante) vía index_pid. */
 const PID_LEARNING_INSTRUCTIONS = [
   'Cuando read_pid o get_available_pids devuelvan un PID cuyo significado no reconozcas (frecuente en Mode 22, específico de fabricante), persiste el descubrimiento:',
@@ -35,6 +43,16 @@ const PID_LEARNING_INSTRUCTIONS = [
   '- Incluye manufacturer/model del vehículo actual.',
   '- Si puedes inferir la fórmula de conversión, incluye mode, pid, formula y dataBytes (y opcionalmente minValue/maxValue) para que se valide contra el vehículo conectado.',
   '- Usa web_search para buscar documentación de PIDs propietarios de la marca si hace falta.',
+]
+
+/** Instrucciones para indexar DTCs desconocidos (códigos propietarios de fabricante más allá de los P0XXX/P2XXX/P3XXX estándar) vía index_dtc. */
+const DTC_LEARNING_INSTRUCTIONS = [
+  'Cuando get_dtc_codes devuelva un código DTC cuyo significado no reconozcas (frecuente en fabricantes con códigos propietarios más allá de los P0XXX/P2XXX/P3XXX estándar), persiste el descubrimiento:',
+  '- Busca primero en el catálogo con search_similar_dtcs para ver si ya existe.',
+  '- Si no existe, regístralo con index_dtc: usa source: "web", y embeddedText describiendo el significado probable del código y los síntomas típicamente asociados.',
+  '- Incluye manufacturer/model del vehículo actual.',
+  '- Si el DTC incluye un código alfanumérico (ej. P0301, B1234, U0129), inclúyelo como code.',
+  '- Usa web_search para buscar documentación de DTCs propietarios de la marca si hace falta.',
 ]
 
 /** Instrucciones de estilo de respuesta: concisa, orientada a mecánico, con pasos accionables. */
@@ -59,7 +77,9 @@ const JSON_BLOCK_INSTRUCTIONS = [
 /** Prompt del sistema: pide explorar tools OBD-II, razonar causa raíz y devolver bloque JSON al final. */
 const COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT = [
   ...EXPLORATION_INSTRUCTIONS,
+  ...CATALOG_LOOKUP_INSTRUCTIONS,
   ...PID_LEARNING_INSTRUCTIONS,
+  ...DTC_LEARNING_INSTRUCTIONS,
   ...MECHANIC_STYLE_INSTRUCTIONS,
   ...UNTRUSTED_CONTENT_INSTRUCTIONS,
   ...JSON_BLOCK_INSTRUCTIONS,
