@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  Navigate,
+  useNavigate,
+} from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,6 +29,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Car, Wrench } from "lucide-react";
+import {
+  PASSWORD_REGEX,
+  PasswordStrengthIndicator,
+} from "@/components/auth/PasswordStrength";
 
 // ---------------------------------------------------------------------------
 // Zod schemas
@@ -42,7 +51,7 @@ const registerSchema = z.object({
     .min(8, "Mínimo 8 caracteres")
     .max(128)
     .regex(
-      /^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).*$/,
+      PASSWORD_REGEX,
       "Debe incluir 1 mayúscula, 1 número y 1 carácter especial",
     ),
   userType: z.enum(["individual", "workshop"]),
@@ -53,94 +62,6 @@ const registerSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 type RegisterFormData = z.infer<typeof registerSchema>;
-
-// ---------------------------------------------------------------------------
-// Password strength
-// ---------------------------------------------------------------------------
-
-type StrengthLevel = "none" | "weak" | "medium" | "strong";
-
-const STRENGTH_META: Record<
-  StrengthLevel,
-  { label: string; color: string; pct: number }
-> = {
-  none: { label: "Sin contraseña", color: "bg-border", pct: 0 },
-  weak: { label: "Débil", color: "bg-destructive", pct: 25 },
-  medium: { label: "Moderada", color: "bg-warning", pct: 60 },
-  strong: { label: "Segura", color: "bg-success", pct: 100 },
-};
-
-function computeStrength(password: string): StrengthLevel {
-  if (password.length === 0) return "none";
-  let score = 0;
-  if (password.length >= 8) score++;
-  if (password.length >= 12) score++;
-  if (/[A-Z]/.test(password)) score++;
-  if (/[a-z]/.test(password)) score++;
-  if (/[0-9]/.test(password)) score++;
-  if (/[^A-Za-z0-9]/.test(password)) score++;
-  if (score <= 2) return "weak";
-  if (score <= 4) return "medium";
-  return "strong";
-}
-
-function PasswordStrengthMeter({
-  password,
-}: {
-  password: string;
-}) {
-  const meta = STRENGTH_META[computeStrength(password)];
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex gap-1">
-        {["weak", "medium", "strong"].map((level) => {
-          const lvl = level as StrengthLevel;
-          const cmp = STRENGTH_META[lvl];
-          const filled = meta.pct >= cmp.pct;
-          return (
-            <div
-              key={level}
-              className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
-                filled ? cmp.color : "bg-white/10"
-              }`}
-            />
-          );
-        })}
-      </div>
-      {password.length > 0 && (
-        <p
-          className="text-xs transition-colors duration-300"
-          style={{ color: meta.color.replace("bg-", "") }}
-        >
-          {meta.label}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/** Password requirement item shown below the password field. */
-function PwdReq({
-  met,
-  text,
-}: {
-  met: boolean;
-  text: string;
-}) {
-  return (
-    <li
-      className={`flex items-center gap-1.5 text-[11px] transition-colors ${
-        met ? "text-success" : "text-muted-foreground"
-      }`}
-    >
-      <span className={`text-xs ${met ? "text-success" : "text-muted-foreground/50"}`}>
-        {met ? "●" : "○"}
-      </span>
-      {text}
-    </li>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Required label helper
@@ -308,6 +229,14 @@ function LoginForm({
         {errors.password && (
           <p className="text-xs text-destructive">{errors.password.message}</p>
         )}
+        <div className="text-right">
+          <Link
+            to="/forgot-password"
+            className="text-xs text-muted-foreground underline-offset-2 hover:text-primary hover:underline"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </div>
       </div>
       {serverError && (
         <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -345,14 +274,6 @@ function RegisterForm({
 
   const userType = watch("userType");
   const password = watch("password") ?? "";
-
-  const pwdChecks = {
-    minLength: password.length >= 8,
-    hasUpper: /[A-Z]/.test(password),
-    hasLower: /[a-z]/.test(password),
-    hasNumber: /[0-9]/.test(password),
-    hasSpecial: /[^A-Za-z0-9]/.test(password),
-  };
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -395,19 +316,7 @@ function RegisterForm({
         {errors.password && (
           <p className="text-xs text-destructive">{errors.password.message}</p>
         )}
-        <PasswordStrengthMeter password={password} />
-        {password.length > 0 && (
-          <ul className="space-y-0.5 pl-0.5">
-            <PwdReq met={pwdChecks.minLength} text="Mínimo 8 caracteres" />
-            <PwdReq met={pwdChecks.hasUpper} text="Al menos una mayúscula" />
-            <PwdReq met={pwdChecks.hasLower} text="Al menos una minúscula" />
-            <PwdReq met={pwdChecks.hasNumber} text="Al menos un número" />
-            <PwdReq
-              met={pwdChecks.hasSpecial}
-              text="Al menos un carácter especial"
-            />
-          </ul>
-        )}
+        <PasswordStrengthIndicator password={password} />
       </div>
       <div className="space-y-2">
         <RequiredLabel htmlFor="reg-userType">Tipo de usuario</RequiredLabel>

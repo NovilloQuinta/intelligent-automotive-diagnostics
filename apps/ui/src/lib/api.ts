@@ -1,10 +1,12 @@
 import type {
   AuthTokens,
   AuthUser,
+  ChangePasswordInput,
   DiagnosisResponse,
   LoginInput,
   RegisterInput,
   Scenario,
+  UpdateProfileInput,
 } from "@/components/dashboard/types";
 
 // ---------------------------------------------------------------------------
@@ -305,6 +307,64 @@ export const api = {
     const res = await apiFetch("/api/auth/me");
     if (!res.ok) throw new AuthError();
     return (await res.json()) as AuthUser;
+  },
+
+  /**
+   * POST /api/auth/forgot-password — public endpoint, no token attached.
+   * The backend always responds 200 regardless of whether the email exists
+   * (anti-enumeration). Callers should show a generic success message
+   * unconditionally rather than branching on this promise's outcome.
+   */
+  async forgotPassword(email: string): Promise<void> {
+    const res = await fetch("/api/auth/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    });
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+  },
+
+  /**
+   * POST /api/auth/reset-password — public endpoint, no token attached.
+   * Rejects with a curated message when the token is invalid, expired, or
+   * already used, or when the new password fails validation.
+   */
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+    const res = await fetch("/api/auth/reset-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, newPassword }),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    });
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+  },
+
+  /** PATCH /api/profile — authenticated partial profile update. */
+  async updateProfile(input: UpdateProfileInput): Promise<AuthUser> {
+    const res = await apiFetch("/api/profile", {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
+    return (await res.json()) as AuthUser;
+  },
+
+  /**
+   * POST /api/profile/change-password — authenticated password change.
+   * On success the server revokes all refresh tokens for the user; the
+   * caller is responsible for logging out locally afterwards.
+   */
+  async changePassword(
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
+    const input: ChangePasswordInput = { currentPassword, newPassword };
+    const res = await apiFetch("/api/profile/change-password", {
+      method: "POST",
+      body: JSON.stringify(input),
+    });
+    await assertOk(res, GENERIC_ERROR_MESSAGE);
   },
 
   // ---- Data ----
