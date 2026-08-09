@@ -49,7 +49,7 @@ describe('ExecuteLlmToolCalling', () => {
       .mockResolvedValue(textSingleResponse('Diagnostico completo.'))
     const handler: ToolCallHandler = vi.fn()
     const mockLogger = createMockLogger()
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
 
     const result = await useCase.execute(
       {
@@ -80,7 +80,7 @@ describe('ExecuteLlmToolCalling', () => {
 
     const mockHandler = vi.fn<ToolCallHandler>().mockResolvedValue('RPM value: 800')
     const mockLogger = createMockLogger()
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
 
     const result = await useCase.execute(
       {
@@ -108,6 +108,41 @@ describe('ExecuteLlmToolCalling', () => {
 
   // ── Tool calling: multiples iteraciones ──
 
+  it('should seed conversationHistory from input when provided', async () => {
+    const mockSendSingle = vi
+      .fn<LlmSingleMessageSender>()
+      .mockResolvedValueOnce(textSingleResponse('Diagnostico completo.'))
+
+    const mockHandler = vi.fn<ToolCallHandler>()
+    const mockLogger = createMockLogger()
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
+
+    const priorHistory = [
+      { __type: 'user_message' as const, content: '¿Por qué tiembla el motor?' },
+      { __type: 'raw_response' as const, data: { text: 'Es un fallo de encendido.' } },
+    ]
+
+    await useCase.execute(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: '¿Y eso por qué?',
+        tools: [],
+        conversationHistory: priorHistory,
+      },
+      mockHandler,
+    )
+
+    const callInput = mockSendSingle.mock.calls[0][0]
+    expect(callInput.conversationHistory).toBeDefined()
+    expect(callInput.conversationHistory!.length).toBe(3) // prior 2 + user_message nuevo
+    expect(callInput.conversationHistory![0]).toEqual(priorHistory[0])
+    expect(callInput.conversationHistory![1]).toEqual(priorHistory[1])
+    expect(callInput.conversationHistory![2]).toEqual({
+      __type: 'user_message',
+      content: '¿Y eso por qué?',
+    })
+  })
+
   it('should handle multiple tool calls across iterations', async () => {
     const mockSendSingle = vi
       .fn<LlmSingleMessageSender>()
@@ -126,7 +161,7 @@ describe('ExecuteLlmToolCalling', () => {
       .mockResolvedValueOnce('DTCs: P0101, P0302')
       .mockResolvedValueOnce('VIN: WAUZZZ8X')
     const mockLogger = createMockLogger()
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
 
     const result = await useCase.execute(
       {
@@ -162,7 +197,7 @@ describe('ExecuteLlmToolCalling', () => {
 
     const mockHandler = vi.fn<ToolCallHandler>().mockRejectedValue(new Error('OBD timeout'))
     const mockLogger = createMockLogger()
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
 
     const result = await useCase.execute(
       {
@@ -193,7 +228,7 @@ describe('ExecuteLlmToolCalling', () => {
       .mockResolvedValueOnce(textSingleResponse('Intentare con otra herramienta.'))
 
     const mockLogger = createMockLogger()
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
 
     const result = await useCase.execute(
       {
@@ -223,7 +258,7 @@ describe('ExecuteLlmToolCalling', () => {
     }
     const mockHandler = vi.fn<ToolCallHandler>().mockResolvedValue('RPM: 800')
     const mockLogger = createMockLogger()
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 10, mockLogger)
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
 
     await expect(
       useCase.execute(
@@ -253,7 +288,7 @@ describe('ExecuteLlmToolCalling', () => {
     }
     const mockHandler = vi.fn<ToolCallHandler>().mockResolvedValue('RPM: 800')
     const mockLogger = createMockLogger()
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, 3, mockLogger)
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 3)
 
     await expect(
       useCase.execute(

@@ -11,4 +11,13 @@ export interface VectorStore {
 
   /** Devuelve las coincidencias ordenadas de menor a mayor distancia. */
   query(query: VectorQuery): Promise<VectorMatch[]>
+
+  /** Numero de filas de la tabla. Para visibilidad del catalogo, no para el flujo RAG. */
+  count(): Promise<number>
+
+  /**
+   * Devuelve hasta `limit` filas de metadatos, sin orden por relevancia y sin generar
+   * ningun embedding: es "dame unas cuantas para ver que hay", no una busqueda semantica.
+   */
+  sample(limit: number): Promise<Readonly<Record<string, unknown>>[]>
 }

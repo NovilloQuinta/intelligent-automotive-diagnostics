@@ -4,6 +4,10 @@ import { LlmTimeoutError, LlmApiError } from '@/infrastructure/llm/llmErrors.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
 import type OpenAI from 'openai'
+import type { LoggerPort } from '@/application/ports/LoggerPort.js'
+
+/** Logger de test: el cliente exige un LoggerPort explicito, sin fallback a console. */
+const testLogger: LoggerPort = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 
 /** Mock de la funcion `create` del SDK openai. */
 const mockCreate = vi.fn()
@@ -99,6 +103,7 @@ describe('OpenAiClient', () => {
     vi.clearAllMocks()
     client = createOpenAiClient({
       apiKey: 'test-key',
+      logger: testLogger,
       baseURL: 'https://api.openai.com/v1',
       model: 'gpt-4o',
     })
@@ -297,6 +302,7 @@ describe('OpenAiClient', () => {
   it('should respect configurable maxIterations', async () => {
     const customClient = createOpenAiClient({
       apiKey: 'test-key',
+      logger: testLogger,
       baseURL: 'https://api.openai.com/v1',
       model: 'gpt-4o',
       maxIterations: 3,
@@ -366,6 +372,30 @@ describe('OpenAiClient', () => {
         handler,
       ),
     ).rejects.toThrow(LlmApiError)
+  })
+
+  // ── Escenario: conversationHistory con raw_response { text: ... } (compatible frontend) ──
+
+  it('should handle raw_response with text property from frontend conversation history', async () => {
+    mockCreate.mockResolvedValueOnce(openAiTextResponse('Nueva respuesta del asistente.'))
+
+    await client.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Siguiente pregunta',
+        tools: [],
+        conversationHistory: [{ __type: 'raw_response', data: { text: 'respuesta previa' } }],
+      },
+      handler,
+    )
+
+    const callArgs = mockCreate.mock.calls[0][0] as {
+      messages: Array<{ role: string; content: unknown }>
+    }
+    expect(callArgs.messages).toHaveLength(2) // system + previous response
+    const assistantMsg = callArgs.messages.find((m) => m.role === 'assistant')
+    expect(assistantMsg).toBeDefined()
+    expect(assistantMsg!.content).toBe('respuesta previa')
   })
 
   // ── Escenario: Sanitizacion de errores (no expone mensajes crudos) ──

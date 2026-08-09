@@ -20,12 +20,20 @@ const CONFIG: LanceVectorStoreConfig = {
 }
 
 function makeTable(rows: Record<string, unknown>[] = []) {
-  const query = {
-    limit: vi.fn(() => query),
-    where: vi.fn(() => query),
+  const queryBuilder = {
+    limit: vi.fn(() => queryBuilder),
+    where: vi.fn(() => queryBuilder),
     toArray: vi.fn().mockResolvedValue(rows),
   }
-  return { add: vi.fn().mockResolvedValue(undefined), search: vi.fn(() => query), query }
+  return {
+    add: vi.fn().mockResolvedValue(undefined),
+    search: vi.fn(() => queryBuilder),
+    // `table.query()` (sin vector) es el scan plano que usa `sample()`; devuelve el mismo
+    // builder que `search()` para poder reusar `limit`/`where`/`toArray` en el mock.
+    query: vi.fn(() => queryBuilder),
+    queryBuilder,
+    countRows: vi.fn().mockResolvedValue(rows.length),
+  }
 }
 
 async function makeStore(rows: Record<string, unknown>[] = []) {
@@ -81,8 +89,8 @@ describe('createLanceVectorStore', () => {
       await store.query({ vector: [1, 0, 0], limit: 4 })
 
       expect(table.search).toHaveBeenCalledWith([1, 0, 0])
-      expect(table.query.limit).toHaveBeenCalledWith(4)
-      expect(table.query.where).not.toHaveBeenCalled()
+      expect(table.queryBuilder.limit).toHaveBeenCalledWith(4)
+      expect(table.queryBuilder.where).not.toHaveBeenCalled()
     })
 
     it('traduce la acotacion estructurada a predicado', async () => {
@@ -94,7 +102,9 @@ describe('createLanceVectorStore', () => {
         filter: { manufacturer: 'Audi', model: 'A3' },
       })
 
-      expect(table.query.where).toHaveBeenCalledWith("manufacturer = 'Audi' AND model = 'A3'")
+      expect(table.queryBuilder.where).toHaveBeenCalledWith(
+        "manufacturer = 'Audi' AND model = 'A3'",
+      )
     })
 
     it('acota solo por el campo presente', async () => {
@@ -102,7 +112,7 @@ describe('createLanceVectorStore', () => {
 
       await store.query({ vector: [1, 0, 0], limit: 5, filter: { model: 'Clio' } })
 
-      expect(table.query.where).toHaveBeenCalledWith("model = 'Clio'")
+      expect(table.queryBuilder.where).toHaveBeenCalledWith("model = 'Clio'")
     })
 
     it('ignora una acotacion vacia', async () => {
@@ -110,7 +120,7 @@ describe('createLanceVectorStore', () => {
 
       await store.query({ vector: [1, 0, 0], limit: 5, filter: {} })
 
-      expect(table.query.where).not.toHaveBeenCalled()
+      expect(table.queryBuilder.where).not.toHaveBeenCalled()
     })
 
     it('escapa las comillas simples para que un valor no altere el predicado', async () => {
@@ -122,7 +132,7 @@ describe('createLanceVectorStore', () => {
         filter: { manufacturer: "O'Neil' OR 1=1 --" },
       })
 
-      expect(table.query.where).toHaveBeenCalledWith("manufacturer = 'O''Neil'' OR 1=1 --'")
+      expect(table.queryBuilder.where).toHaveBeenCalledWith("manufacturer = 'O''Neil'' OR 1=1 --'")
     })
 
     it('separa los metadatos de las columnas propias de LanceDB', async () => {
@@ -133,6 +143,37 @@ describe('createLanceVectorStore', () => {
       const matches = await store.query({ vector: [1, 0, 0], limit: 5 })
 
       expect(matches).toEqual([{ metadata: { id: 'a', manufacturer: 'Audi' }, distance: 0.25 }])
+    })
+  })
+
+  describe('count', () => {
+    it('devuelve countRows() de la tabla', async () => {
+      const { store, table } = await makeStore([{ id: 'a' }, { id: 'b' }, { id: 'c' }])
+
+      const total = await store.count()
+
+      expect(total).toBe(3)
+      expect(table.countRows).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('sample', () => {
+    it('escanea la tabla sin vector ni predicado y acota por limit', async () => {
+      const { store, table } = await makeStore([{ id: 'a', manufacturer: 'Audi' }])
+
+      await store.sample(5)
+
+      expect(table.query).toHaveBeenCalledTimes(1)
+      expect(table.search).not.toHaveBeenCalled()
+      expect(table.queryBuilder.limit).toHaveBeenCalledWith(5)
+    })
+
+    it('separa los metadatos de las columnas propias de LanceDB, igual que query()', async () => {
+      const { store } = await makeStore([{ id: 'a', manufacturer: 'Audi', vector: [1, 0, 0] }])
+
+      const rows = await store.sample(5)
+
+      expect(rows).toEqual([{ id: 'a', manufacturer: 'Audi' }])
     })
   })
 })

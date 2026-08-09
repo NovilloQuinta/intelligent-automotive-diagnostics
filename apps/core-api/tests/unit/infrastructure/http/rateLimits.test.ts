@@ -11,8 +11,15 @@ import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
+import type { ObdRepository } from '@/application/ports/ObdRepository.js'
+import type { AdminController } from '@/infrastructure/http/controllers/AdminController.js'
+import type { Request, Response, NextFunction } from 'express'
 
-const mockAuditRepo: AuditLogRepository = { create: async () => {} }
+const mockAuditRepo: AuditLogRepository = {
+  create: async () => {},
+  list: async () => ({ items: [], total: 0 }),
+  stats: async () => ({ byStatusCode: {}, byPath: {} }),
+}
 const mockLogger: LoggerPort = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
 
 const mockAuthController = {
@@ -64,6 +71,37 @@ const mockScenarios: SimulationScenario[] = [
   },
 ]
 
+function createMockRepo(): ObdRepository {
+  return {
+    readPid: vi.fn(async (_mode: string, pid: string) => {
+      if (pid === '0C') return 750
+      if (pid === '05') return 90
+      if (pid === '0D') return 0
+      if (pid === '0F') return 25
+      return 0
+    }),
+    getSupportedPids: vi.fn(async () => []),
+    getFreezeFrame: vi.fn(async () => null),
+    readDtcCodes: vi.fn(async () => [{ code: 'P0301', description: 'Cylinder 1 Misfire' }]),
+    clearDtcCodes: vi.fn(async () => undefined),
+    readPendingDtcCodes: vi.fn(async () => []),
+    readPermanentDtcCodes: vi.fn(async () => []),
+    readPidRaw: vi.fn(async () => []),
+    readVin: vi.fn(async () => 'WAUZZZ8V5JA123456'),
+    getVehicleInfo: vi.fn(async () => ({
+      make: 'Audi',
+      model: 'A3',
+      year: 2018,
+      engineType: '2.0 TFSI',
+      vin: new Vin('WAUZZZ8V5JA123456'),
+    })),
+    setPower: vi.fn(async () => undefined),
+    getEcuInfo: vi.fn(async () => []),
+  } as unknown as ObdRepository
+}
+
+const mockObdRepos = new Map([['audi-a3-idle', createMockRepo()]])
+
 const originalNodeEnv = process.env.NODE_ENV
 
 interface BootedApp {
@@ -71,11 +109,29 @@ interface BootedApp {
   readonly close: () => Promise<void>
 }
 
+/** requireAdmin de prueba: nunca bloquea. El foco de este archivo es el rate limit, no el rol. */
+const noopRequireAdmin = (_req: Request, _res: Response, next: NextFunction): void => next()
+
+/** AdminController de prueba: cada metodo responde 200 sin tocar ningun repositorio. */
+const mockAdminController = {
+  overview: vi.fn((_req: Request, res: Response) => res.status(200).json({})),
+  logs: vi.fn((_req: Request, res: Response) => res.status(200).json({ items: [], total: 0 })),
+  auditLogs: vi.fn((_req: Request, res: Response) => res.status(200).json({ items: [], total: 0 })),
+  users: vi.fn((_req: Request, res: Response) => res.status(200).json({ items: [], total: 0 })),
+  knowledge: vi.fn((_req: Request, res: Response) => res.status(200).json({})),
+  searchKnowledge: vi.fn((_req: Request, res: Response) => res.status(200).json({ results: [] })),
+} as unknown as AdminController
+
 /** Bootea una instancia fresca de la app con limiters activos (NODE_ENV=production). */
 async function bootApp(): Promise<BootedApp> {
   const app = createServer({
     diagnosisController: new DiagnosisController(
-      new DiagnosisService(mockScenarios, undefined, mockLlmClient, mockLogger),
+      new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: mockObdRepos,
+        llmClient: mockLlmClient,
+        logger: mockLogger,
+      }),
       mockLogger,
     ),
     allowedOrigins: 'http://localhost:3000',
@@ -83,6 +139,8 @@ async function bootApp(): Promise<BootedApp> {
     auditRepo: mockAuditRepo,
     logger: mockLogger,
     authController: mockAuthController,
+    adminController: mockAdminController,
+    requireAdmin: noopRequireAdmin,
   })
   const httpServer = await new Promise<Server>((resolve) => {
     const server = app.listen(0, () => resolve(server))
@@ -179,6 +237,40 @@ describe('HTTP server rate limits', () => {
     }
   })
 
+  it('should allow 20 GET /api/freeze-frame requests and return 429 on the 21st', async () => {
+    const { baseUrl, close } = await bootApp()
+    try {
+      const url = `${baseUrl}/api/freeze-frame?scenarioId=audi-a3-idle&dtc=P0301`
+
+      for (let i = 0; i < 20; i += 1) {
+        const res = await fetch(url)
+        expect(res.status).toBe(200)
+      }
+
+      const res = await fetch(url)
+      expect(res.status).toBe(429)
+    } finally {
+      await close()
+    }
+  })
+
+  it('should allow 20 GET /api/ecu-info requests and return 429 on the 21st', async () => {
+    const { baseUrl, close } = await bootApp()
+    try {
+      const url = `${baseUrl}/api/ecu-info?scenarioId=audi-a3-idle`
+
+      for (let i = 0; i < 20; i += 1) {
+        const res = await fetch(url)
+        expect(res.status).toBe(200)
+      }
+
+      const res = await fetch(url)
+      expect(res.status).toBe(429)
+    } finally {
+      await close()
+    }
+  })
+
   it('should return the rate limit error body and ratelimit headers when a 429 is triggered', async () => {
     const { baseUrl, close } = await bootApp()
     try {
@@ -197,6 +289,42 @@ describe('HTTP server rate limits', () => {
         header.toLowerCase().includes('ratelimit'),
       )
       expect(rateLimitHeaders.length).toBeGreaterThan(0)
+    } finally {
+      await close()
+    }
+  })
+
+  it('should allow 30 GET /api/admin/overview requests and return 429 on the 31st', async () => {
+    const { baseUrl, close } = await bootApp()
+    try {
+      const url = `${baseUrl}/api/admin/overview`
+
+      for (let i = 0; i < 30; i += 1) {
+        const res = await fetch(url)
+        expect(res.status).toBe(200)
+      }
+
+      const res = await fetch(url)
+      expect(res.status).toBe(429)
+    } finally {
+      await close()
+    }
+  })
+
+  it('should not let /api/admin exhaustion affect /api/diagnosis, nor vice versa', async () => {
+    const { baseUrl, close } = await bootApp()
+    try {
+      const adminUrl = `${baseUrl}/api/admin/overview`
+      for (let i = 0; i < 30; i += 1) {
+        await fetch(adminUrl)
+      }
+      const exhaustedAdmin = await fetch(adminUrl)
+      expect(exhaustedAdmin.status).toBe(429)
+
+      // El limite de /api/diagnosis (20/min) sigue intacto tras agotar el de /api/admin.
+      const diagnosisBody = { scenarioId: 'audi-a3-idle' }
+      const diagnosisRes = await postJson(baseUrl, '/api/diagnosis', diagnosisBody)
+      expect(diagnosisRes.status).toBe(200)
     } finally {
       await close()
     }

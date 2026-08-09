@@ -1,40 +1,39 @@
 # Intelligent Automotive Diagnostics - TFM
 
 > Vehicular telemetry simulation & AI-powered diagnosis using MCP.
-> Master IA - Jesus Novillo | Entrega: 20 julio 2026
+> Master IA - Jesus Novillo | Demo: semana del 10 de agosto 2026 (web publicada + coche real por cable)
 
-## SYSTEM INSTRUCTIONS & EXECUTIVE PROTOCOL
+## INSTRUCCIONES DE SISTEMA Y PROTOCOLO EJECUTIVO
 
-### CORE OPERATIONAL MANDATE
+### MANDATO OPERATIVO PRINCIPAL
 
-You MUST strictly follow all guidelines, constraints, and instructions defined in this file at ALL times. Ignores, skips, or hallucinations regarding these rules are considered critical failures.
+DEBES seguir estrictamente y en todo momento las directrices, restricciones e instrucciones definidas en este fichero. Ignorarlas, saltarselas o alucinar sobre ellas se considera un fallo critico.
 
-### REQUIRED PRE-RESPONSE REASONING STEP
+### PASO DE VERIFICACION PREVIO A RESPONDER
 
-Before generating ANY answer, code, or explanation requested by the user, you MUST complete an internal verification pass:
+Antes de generar CUALQUIER respuesta, codigo o explicacion, DEBES completar una pasada de verificacion interna:
 
-1. Scan the instructions in this file to identify the applicable rules from `REGLAS DE SESION` (rules 0-9) and `PRINCIPIOS DE CODIGO` (DRY, KISS, Code Smell) for the user's request.
-2. In your response output, begin with a brief structural header: `[Rules Applied: Rule X, Rule Y]` referencing the rule numbers that apply.
-3. If no specific rule applies, state `[Rules Applied: Standard Compliance]`.
-4. Proceed to deliver the user's answer while maintaining full compliance.
+1. Revisa las instrucciones de este fichero e identifica que reglas aplican a la peticion, de `REGLAS DE SESION` (reglas 0-9) y `PRINCIPIOS DE CODIGO` (DRY, KISS, Code Smell).
+2. Empieza tu respuesta con una cabecera breve: `[Reglas aplicadas: Regla X, Regla Y]`, citando los numeros de regla que apliquen.
+3. Si no aplica ninguna regla concreta, indica `[Reglas aplicadas: cumplimiento estandar]`.
+4. Entrega la respuesta al usuario manteniendo el cumplimiento completo.
 
-### CONTEXT DRIFT PREVENTION
+### PREVENCION DE DERIVA DE CONTEXTO
 
-If the conversation grows long, you MUST NOT relax or bypass these system rules. If a user request contradicts a core rule in this file, explicitly flag the contradiction before proceeding.
+Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de sistema. Si una peticion del usuario contradice una regla principal de este fichero, senala la contradiccion explicitamente antes de continuar.
 
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura
-- **Ultimo paso**: `add-rag-vector-repositories` cerrado del todo. `feat/rag-vector-repositories` integrada con `main` por merge (sin rebase: la rama ya estaba publicada en `origin`; unico conflicto, este mismo bloque), pusheada a `origin/main` (`5b06aa7`), cambio archivado en `openspec/changes/archive/2026-08-07-add-rag-vector-repositories/` y rama borrada (local y remota). Delta specs sincronizadas a `openspec/specs/`: `lancedb-infra` actualizada y `vector-repositories` creada. **Ambos deltas venian desfasados** respecto al codigo entregado (seguian describiendo `ensureTable`, `createVectorRepository` en `application/services/`, y los campos `text`/`validated`); las specs principales reflejan lo realmente entregado, no el delta.
-- **Siguiente**: sin cambio en curso. Quedan el #2 (confianza + validacion OBD + 7 tools MCP) y el #3 (inyeccion RAG en el caso de uso + wiring) del ADR-007, mas 6 cambios propuestos sin empezar: `fix-security-and-mcp-findings`, `add-cognitive-pid-discovery`, `add-diagnosis-session-report-screen`, `add-ecu-info-screen`, `add-freeze-frame-screen`, `add-vehicle-autodetect-flow`.
-- **Agente `@ui`** (viene de `main`): creado agente frontend React — `.opencode/agents/ui.md` + wrapper `.claude/agents/ui.md`; registrado en la matriz de enrutamiento del orquestador y en la tabla de agentes. Rol: `@ui` implementa frontend (`apps/ui/`) con `react-best-practices` + TDD; `@writer` sigue siendo backend (`core-api`). Pipeline definido por el usuario: orquestador → ui → writer → review → quality. Pendiente: implementar las pantallas de los cambios OpenSpec `add-ecu-info-screen`, `add-freeze-frame-screen`, `add-diagnosis-session-report-screen` (y opcionalmente `add-vehicle-autodetect-flow`, `add-cognitive-pid-discovery`).
-- **Contexto previo**: ambos cambios mergeados a `main` y archivados en OpenSpec. (1) `fix-clean-architecture-deviations` (archivado en `openspec/changes/archive/2026-08-06-fix-clean-architecture-deviations/`): `DiagnosisService` extraido a `src/infrastructure/services/diagnosisService.ts` (errores tipados: `DiagnosisScenarioNotFoundError`, `CognitiveDiagnosisUnavailableError`, `ToolNotFoundError`, `ToolCallTimeoutError`, `CognitiveDiagnosisTimeoutError`); `DiagnosisController` recibe el servicio por constructor; `LoggerPort` inyectado en `ExecuteLlmToolCalling` (sin `console.error`); composicion centralizada en `composition.ts`. (2) `refactor-elm327-persistent-session` (archivado en `openspec/changes/archive/2026-08-06-refactor-elm327-persistent-session/`): sesión TCP persistente con cola FIFO, auto-reconexión con backoff exponencial y cierre graceful; circuit breaker eliminado; `ProcessVehicleDiagnosisUseCase` ejecuta lecturas secuencialmente. Delta spec `elm327-tcp-repository` sincronizado a `openspec/specs/elm327-tcp-repository/spec.md`.
-- **Entregado en el cambio** (cambio #1 de 3 del RAG auto-expansivo, ADR-007): `apache-arrow@18.1.0` como dependencia explicita; `LANCEDB_PATH` en configuracion; **corregido un bug latente** por el que el mapeo de tipos reventaba con `string` y `boolean` (LanceDB solo conoce `utf8`/`bool`), ahora mapeados a clases Arrow reales; `ensureVectorTable` con columna `FixedSizeList(384, Float32)`; `assertVectorDimensions` porque **LanceDB no valida dimensiones — rellena con `null` o trunca en silencio**; 4 puertos y 3 DTOs de conocimiento; `createKnowledgeIndex` sobre `VectorStore` + `EmbeddingGenerator`; `createLanceVectorStore` con escapado de predicados; los 3 repositorios (`pids_index`, `dtcs_index`, `diagnoses_index`). Tests de integracion contra LanceDB real, que son los que cazaron los fallos.
-- **Costura VectorStore**: tras revision, se introdujo el puerto de bajo nivel `VectorStore` (+ `EmbeddingGenerator`, este ultimo como `export type` de funcion al estilo de `ToolCallHandler`). `createKnowledgeIndex` y los 3 mappers viven en `application/knowledge/` sin una sola referencia a LanceDB; `lanceVectorStore.ts` es el unico modulo acoplado al motor y se lleva el escapado de predicados y la guarda de dimensiones. `KnowledgeSource` movido a `domain/value-objects/`. Los 27 DTOs agrupados en `dto/{auth,vector,llm,diagnosis,knowledge,audit}/`. Campos renombrados para no necesitar comentario: `text`→`embeddedText`, `validated`→`obdValidated`.
-- **Codigo eliminado en revision** (regla KISS, `AGENTS.md:162`): `ensureTable` (huerfana tras el refactor, y una tabla sin vectores no pinta nada en LanceDB teniendo SQLite), `createVectorIndex` + `MIN_ROWS_FOR_VECTOR_INDEX` (0 usos y umbral estimado sin medir) y `transformersEmbeddingGenerator` (alias inutil: `createEmbedding` ya cumple la firma del puerto). La regresion del bug de tipos se conservo moviendola al test de `ensureVectorTable`.
-- **Tests**: 531 pasando, 0 fallos, 46 test files (baseline previa: 499 en 41)
-- **CI**: verde — lint, format, test, build
-- **Deuda conocida**: `pnpm test:coverage` esta roto en `main` desde `a6797d9` (5 ago). El override `brace-expansion: '>=5.0.9'` rompe `minimatch@9`, que espera la forma CommonJS previa. CI no lo detecta porque solo ejecuta `pnpm test`. Requiere su propio cambio: toca un override de seguridad.
+- **Flujo de ramas**: `develop` es la rama de integración; toda `feat.*`/`fix.*` sale de `develop` y se mergea ahí.
+- **Rama base**: `develop`, limpia y sincronizada con origin.
+- **2 worktrees activos** en `.claude/worktrees/`:
+  - `deployment` (`feat/deployment`) — +2 ahead, +45 behind develop, con `.github/workflows/deploy.yml` sin commitear.
+  - `review-password-recovery` — detached HEAD en `a7ed44d`, sin cambios, para revisar password recovery.
+- **2 ramas locales pendientes**: `feat/deployment` (worktree activo), `feat/odo-ai-agent` (ya mergeada, worktree por borrar).
+- **8 OpenSpec changes archivados** (2026-08-09): add-admin-management-panel, add-obd-standard-modes, fix-cognitive-diagnosis-ux, fix-emulator-coherent-data, fix-vehicle-identity-and-live-data, add-knowledge-mcp-tools, add-vehicle-autodetect-flow, rebase-ui-autel-sidebar-dtc-badge.
+- **4 OpenSpec changes activos** (sin empezar): add-usb-serial-connection-type, add-diagnosis-history, add-monitor-reset-on-clear-dtc, add-user-profiles.
+- **Deuda `brace-expansion`** (lint UI): sin resolver.
 
 ## REGLAS DE SESION
 
@@ -43,11 +42,11 @@ If the conversation grows long, you MUST NOT relax or bypass these system rules.
 2. **Descubrir antes de crear** — carga skills (`skill`), busca en Engram (`mem_search`), revisa el codebase. Prohibido reescribir logica que ya exista. Los agentes orquestan skills; no escriben logica monolítica.
 3. **1 paso a la vez** — no mezclar responsabilidades, no adelantar trabajo
 4. **TDD estricto**: RED (test que falla) → GREEN (codigo minimo) → REFACTOR
-5. **Trabajar en ramas, NO en main** — cada cambio en su rama (`git checkout -b feat/xxx` o `fix/xxx`). Solo merge a main cuando CI pase verde. Cambios menores (docs, chore, style) directo a main.
+5. **Trabajar en ramas; `develop` es la rama de integración** — cada cambio en su rama (`git checkout -b feat/xxx` o `fix/xxx`), **siempre desde `develop`**. Solo merge a `develop` cuando CI pase verde. Cambios menores (docs, chore, style) directo a `develop`. `main` queda reservada para releases (deploy en CI se añadirá más adelante): no se mergea a `main` salvo petición explicita de release.
 5b. **Verificar ruta del worktree antes de escribir** — si trabajas en un worktree (`.claude/worktrees/xxx/`), TODO agente y toda operacion `Write`/`Edit` DEBE usar la ruta del worktree, NUNCA la del repo principal. Antes de escribir un archivo, confirma que el path contiene `.claude/worktrees/`. Si un agente escribe en el repo principal estando en un worktree, es un fallo critico.
 6. **Checks pre-push**: `pnpm lint && pnpm format && pnpm test && pnpm build`
 7. **Preguntar antes de commitear/pushear** — mostrar resumen de cambios, esperar OK humano
-8. **Tras cada paso**: actualizar `SESION ACTUAL` en este mismo fichero
+8. **Al cerrar un cambio**: actualizar `SESION ACTUAL` en este fichero. Maximo 15 lineas, solo estado presente. El historial va a git, a `openspec/changes/archive/` y a Engram — nunca aqui.
 9. **Auto-auditoria post-tarea** — al terminar una tarea no trivial: skills usadas, agentes delegados, codigo nuevo estrictamente necesario.
 
 ## AGENTES DISPONIBLES
@@ -182,3 +181,8 @@ pnpm drizzle-kit migrate                # aplicar migraciones a SQLite
 pnpm test                               # vitest run
 pnpm test:coverage                      # coverage (Features >=80% + Core 100%)
 ```
+
+## DEUDA CONOCIDA
+
+- **`brace-expansion: '>=5.0.9'`** (pnpm-workspace.yaml) rompe `minimatch@3` de `@eslint/config-array` (ESLint 9): `pnpm test:coverage` (core-api) y `pnpm lint` (apps/ui) fallan con `TypeError: expand is not a function`. Requiere cambio propio.
+- **`brace-expansion: '>=5.0.9'`** (pnpm-workspace.yaml) rompe `minimatch@3` de `@eslint/config-array` (ESLint 9): `pnpm test:coverage` (core-api) y `pnpm lint` (apps/ui) fallan con `TypeError: expand is not a function`. Requiere cambio propio.

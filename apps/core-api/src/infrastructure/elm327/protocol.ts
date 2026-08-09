@@ -44,6 +44,7 @@ export function stripEcho(raw: string): string {
 export function parseModeResponse(raw: string): number[] {
   const cleaned = stripEcho(raw)
   if (/NO DATA/i.test(cleaned)) throw new Elm327NoDataError(raw)
+  if (/^7F\s/i.test(cleaned)) throw new Elm327ParseError(raw)
   const match = cleaned.match(/4[0-9A-F]\s+[0-9A-F]{2}\s+([0-9A-F]{2}(?:\s+[0-9A-F]{2})*)/i)
   if (!match) throw new Elm327ParseError(raw)
   return parseHexBytes(match[1])
@@ -59,7 +60,7 @@ export function parseMode22Response(raw: string, didLen: number): number[] {
   return didLen > 0 ? bytes.slice(0, didLen) : bytes
 }
 
-/** Mode 09 02: extrae los bytes ASCII del VIN desde líneas `N:` / `0:`..`N:`. */
+/** Mode 09 02: extrae los bytes ASCII del VIN desde líneas `N:` / `0:`..`N:` o formato single-line. */
 export function parseVinResponse(raw: string): number[] {
   const cleaned = stripEcho(raw)
   if (/NO DATA/i.test(cleaned)) throw new Elm327NoDataError(raw)
@@ -69,6 +70,13 @@ export function parseVinResponse(raw: string): number[] {
     if (idx === -1) continue // salta cabecera "014" y líneas sin prefijo
     payload.push(...parseHexBytes(line.slice(idx + 1)))
   }
+  // Single-line response: adaptador devuelve 49 02 01 ... sin prefijos de línea
+  if (payload.length === 0) {
+    const hexMatch = cleaned.match(/49\s*02\s*01\s+((?:[0-9A-F]{2}\s*)+)/i)
+    if (hexMatch) {
+      payload.push(...parseHexBytes(hexMatch[1]))
+    }
+  }
   // Quita el prefijo "49 02 01" (mode + pid + count) de la primera línea si existe
   if (payload.length >= 3 && payload[0] === 0x49 && payload[1] === 0x02 && payload[2] === 0x01) {
     return payload.slice(3)
@@ -76,11 +84,25 @@ export function parseVinResponse(raw: string): number[] {
   return payload
 }
 
-/** Mode 03: extrae pares de 2 bytes (cada par = un DTC). */
-export function parseDtcResponse(raw: string): Array<[number, number]> {
+/**
+ * Extrae pares de 2 bytes (cada par = un DTC) de una respuesta Mode 03, 07 o 0A.
+ *
+ * El header de respuesta es `0x40 + mode`. Por defecto usa Mode 03 (header `43`).
+ * Mode 07 usa header `47` y Mode 0A usa header `4A`.
+ *
+ * @param raw - Respuesta cruda del adaptador ELM327.
+ * @param mode - Modo OBD-II (`'03'`, `'07'`, `'0A'`). Por defecto `'03'`.
+ * @returns Pares de bytes DTC. Array vacio si no hay codigos (`NO DATA`).
+ * @throws {Elm327ParseError} Si la respuesta no contiene el header esperado.
+ */
+export function parseDtcResponse(
+  raw: string,
+  mode: '03' | '07' | '0A' = '03',
+): Array<[number, number]> {
+  const headerByte = (0x40 + Number.parseInt(mode, 16)).toString(16).toUpperCase()
   const cleaned = stripEcho(raw)
   if (/NO DATA/i.test(cleaned)) return []
-  const match = cleaned.match(/43\s+((?:[0-9A-F]{2}\s+)*[0-9A-F]{2})/i)
+  const match = cleaned.match(new RegExp(`${headerByte}\\s+((?:[0-9A-F]{2}\\s+)*[0-9A-F]{2})`, 'i'))
   if (!match) throw new Elm327ParseError(raw)
   const bytes = parseHexBytes(match[1])
   const pairs: Array<[number, number]> = []

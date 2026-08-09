@@ -1,7 +1,7 @@
 ---
 description: Implementa pantallas y componentes React (frontend) siguiendo react-best-practices + TDD + Clean Architecture del proyecto
 mode: subagent
-model: sonnet
+model: deepseek/deepseek-v4-pro
 temperature: 0.1
 permission:
   edit: allow

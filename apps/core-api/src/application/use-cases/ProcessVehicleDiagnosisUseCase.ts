@@ -32,7 +32,7 @@ export class ProcessVehicleDiagnosisUseCase {
     const speed = await this.repo.readPid(MODE_CURRENT_DATA, PID_SPEED)
     const intakeTemp = await this.repo.readPid(MODE_CURRENT_DATA, PID_INTAKE_TEMP)
     const dtcCodes = await this.repo.readDtcCodes()
-    const freezeFrame = await this.repo.getFreezeFrame()
+    const freezeFrame = await this.repo.getFreezeFrame(dtcCodes[0]?.code)
 
     const parsedValues = new LiveData({ rpm, coolantTemp, speed, intakeTemp })
     return new DiagnosisResult({ parsedValues, dtcCodes, freezeFrame })

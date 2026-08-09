@@ -95,7 +95,7 @@ describe('ensureVectorTable — integracion real', () => {
         { name: 'id', type: 'string' },
         { name: 'embeddedText', type: 'string' },
         { name: 'confidence', type: 'float32' },
-        { name: 'obdValidated', type: 'boolean' },
+        { name: 'validated', type: 'boolean' },
       ],
     })
 
@@ -109,7 +109,7 @@ describe('ensureVectorTable — integracion real', () => {
       'id',
       'embeddedText',
       'confidence',
-      'obdValidated',
+      'validated',
     ])
   })
 

@@ -13,6 +13,9 @@ export const PID_SUPPORTED = '00'
 /** PID 02 — Numero de identificacion del vehiculo (VIN). */
 export const PID_VIN = '02'
 
+/** PID 04 — Carga calculada del motor. */
+export const PID_ENGINE_LOAD = '04'
+
 /** PID 05 — Temperatura del refrigerante del motor. */
 export const PID_COOLANT_TEMP = '05'
 
@@ -24,3 +27,18 @@ export const PID_SPEED = '0D'
 
 /** PID 0F — Temperatura del aire de admision. */
 export const PID_INTAKE_TEMP = '0F'
+
+/** PID 11 — Posicion del acelerador. */
+export const PID_THROTTLE_POSITION = '11'
+
+/** PID 42 — Voltaje del modulo de control. */
+export const PID_CONTROL_MODULE_VOLTAGE = '42'
+
+/** Modo 22 — Datos propietarios del fabricante (UDS ReadDataByIdentifier). */
+export const MODE_PROPRIETARY = '22'
+
+/** PID 0300 — Odometro almacenado en la TCU (Toyota). */
+export const PID_ODOMETER_TCU = '0300'
+
+/** PID 0400 — Odometro almacenado en el ECM (Toyota). */
+export const PID_ODOMETER_ECM = '0400'

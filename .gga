@@ -23,10 +23,14 @@
 #   PROVIDER="minimax"
 #   PROVIDER="minimax:MiniMax-M3"
 
-# Se usa `claude` y no `opencode`: opencode solo tiene credencial de DeepSeek guardada,
-# mientras que opencode.json apunta a modelos de Anthropic (sonnet/haiku). Esa combinacion
-# devuelve "Unexpected server error" y bloquea todos los commits.
-PROVIDER="claude"
+# Se usa `opencode:deepseek/deepseek-v4-flash` y no `claude`:
+# - GGA revisa el fichero completo en cada run (una llamada LLM por fichero), lo que
+#   quema el limite de sesion de Claude muy rapido en el hook de pre-commit.
+# - DeepSeek via opencode no cuenta contra la sesion de Claude, que queda solo para
+#   desarrollo. Si se prefiere Claude para una review puntual: GGA_PROVIDER="claude" gga run
+# - No usar opencode sin modelo: opencode.json apunta a modelos de Anthropic (sonnet/haiku)
+#   con solo credencial DeepSeek guardada -> "Unexpected server error".
+PROVIDER="opencode:deepseek/deepseek-v4-flash"
 
 # File patterns to include in review (comma-separated)
 # Default: * (all files)

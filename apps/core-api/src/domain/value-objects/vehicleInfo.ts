@@ -18,8 +18,16 @@ export class VehicleInfo {
   readonly year: number
   readonly engineType: string
   readonly vin: Vin
+  readonly vinStatus: 'read' | 'unsupported' | 'unreadable'
 
-  constructor(params: { make: string; model: string; year: number; engineType: string; vin: Vin }) {
+  constructor(params: {
+    make: string
+    model: string
+    year: number
+    engineType: string
+    vin: Vin
+    vinStatus?: 'read' | 'unsupported' | 'unreadable'
+  }) {
     if (!params.make.trim()) throw new VehicleInfoError('make must not be empty')
     if (!params.model.trim()) throw new VehicleInfoError('model must not be empty')
     if (params.year !== 0 && params.year < MIN_VEHICLE_YEAR)
@@ -32,5 +40,6 @@ export class VehicleInfo {
     this.year = params.year
     this.engineType = params.engineType.trim()
     this.vin = params.vin
+    this.vinStatus = params.vinStatus ?? 'read'
   }
 }

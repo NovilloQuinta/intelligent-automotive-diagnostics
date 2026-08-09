@@ -3,6 +3,10 @@ import { createAnthropicClient } from '@/infrastructure/llm/anthropicClient.js'
 import { LlmTimeoutError, LlmApiError } from '@/infrastructure/llm/llmErrors.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
+import type { LoggerPort } from '@/application/ports/LoggerPort.js'
+
+/** Logger de test: el cliente exige un LoggerPort explicito, sin fallback a console. */
+const testLogger: LoggerPort = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 
 /** Mock de @anthropic-ai/sdk. */
 const mockCreate = vi.fn()
@@ -59,7 +63,7 @@ describe('AnthropicClient', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    client = createAnthropicClient({ apiKey: 'test-key' })
+    client = createAnthropicClient({ apiKey: 'test-key', logger: testLogger })
     handler = vi.fn()
   })
 
@@ -301,6 +305,7 @@ describe('AnthropicClient', () => {
   it('should respect configurable maxIterations', async () => {
     const customClient = createAnthropicClient({
       apiKey: 'test-key',
+      logger: testLogger,
       maxIterations: 3,
     })
 
@@ -349,6 +354,35 @@ describe('AnthropicClient', () => {
         handler,
       ),
     ).rejects.toThrow(LlmTimeoutError)
+  })
+
+  // ── 5.3b: conversationHistory con raw_response { text: ... } (compatible frontend) ──
+
+  it('should handle raw_response with text property from frontend conversation history', async () => {
+    mockCreate.mockResolvedValueOnce(
+      anthropicMessage({
+        content: [textBlock('Nueva respuesta del asistente.')],
+        stop_reason: 'end_turn',
+        model: 'claude-sonnet-4-20250514',
+      }),
+    )
+
+    await client.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Siguiente pregunta',
+        tools: [],
+        conversationHistory: [{ __type: 'raw_response', data: { text: 'respuesta previa' } }],
+      },
+      handler,
+    )
+
+    const callArgs = mockCreate.mock.calls[0][0] as {
+      messages: Array<{ role: string; content: unknown }>
+    }
+    const assistantMsg = callArgs.messages.find((m) => m.role === 'assistant')
+    expect(assistantMsg).toBeDefined()
+    expect(assistantMsg!.content).toBe('respuesta previa')
   })
 
   // ── 5.4: Error de API (4xx/5xx) ──

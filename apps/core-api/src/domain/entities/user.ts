@@ -15,6 +15,7 @@ export class User {
   readonly email: Email
   readonly passwordHash: string
   readonly userType: 'individual' | 'workshop'
+  readonly role: 'user' | 'admin'
   readonly businessName?: string | null
   readonly taxId?: string | null
   readonly address?: string | null
@@ -28,6 +29,7 @@ export class User {
     email: Email
     passwordHash: string
     userType: 'individual' | 'workshop'
+    role?: 'user' | 'admin'
     businessName?: string | null
     taxId?: string | null
     address?: string | null
@@ -43,6 +45,7 @@ export class User {
     this.email = params.email
     this.passwordHash = params.passwordHash
     this.userType = params.userType
+    this.role = params.role ?? 'user'
     this.businessName = params.businessName
     this.taxId = params.taxId
     this.address = params.address
@@ -54,5 +57,10 @@ export class User {
   /** Indica si el usuario es un taller. */
   get isWorkshop(): boolean {
     return this.userType === 'workshop'
+  }
+
+  /** Indica si el usuario tiene privilegios de administrador. */
+  get isAdmin(): boolean {
+    return this.role === 'admin'
   }
 }

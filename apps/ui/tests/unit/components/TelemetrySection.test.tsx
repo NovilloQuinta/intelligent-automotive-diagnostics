@@ -2,8 +2,6 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { TelemetrySection } from "../../../src/components/dashboard/TelemetrySection";
 
-// Stub the animation driver so the gauges' animated numbers stay at their
-// initial targets (deterministic assertions).
 beforeEach(() => {
   vi.stubGlobal("requestAnimationFrame", vi.fn());
   vi.stubGlobal("cancelAnimationFrame", vi.fn());
@@ -18,8 +16,8 @@ const nullValues = { rpm: null, coolant: null, speed: null, intake: null };
 
 const STATUS_VARIANTS = [
   "Diagnosticando…",
-  "Streaming ECU · 2 Hz",
-  "Conectando…",
+  "Transmisión ECU · 1 Hz",
+  "Reconectando…",
   "Sin vehículo",
 ];
 
@@ -38,7 +36,7 @@ describe("TelemetrySection", () => {
         loading={false}
         streamOk={true}
         canDiagnose={true}
-        telemetryStatus="Streaming ECU · 2 Hz"
+        telemetryStatus="Transmisión ECU · 1 Hz"
         onDiagnose={onDiagnose}
       />,
     );
@@ -47,8 +45,8 @@ describe("TelemetrySection", () => {
     expect(screen.getByText("90")).toBeDefined();
     expect(screen.getByText("050")).toBeDefined();
     expect(screen.getByText("35")).toBeDefined();
-    expect(screen.getByText("Live")).toBeDefined();
-    expect(screen.getByText("Streaming ECU · 2 Hz")).toBeDefined();
+    expect(screen.getByText("En Vivo")).toBeDefined();
+    expect(screen.getByText("Transmisión ECU · 1 Hz")).toBeDefined();
     expect(screen.getByText("41 0C 5A")).toBeDefined();
     expect(screen.getByText("Iniciar diagnóstico")).toBeDefined();
   });
@@ -66,11 +64,9 @@ describe("TelemetrySection", () => {
       />,
     );
 
-    // rpm + coolant + intake gauges
     expect(screen.getAllByText("0")).toHaveLength(3);
-    // speed display zero-padded
     expect(screen.getByText("000")).toBeDefined();
-    expect(screen.queryByText("Live")).toBeNull();
+    expect(screen.queryByText("En Vivo")).toBeNull();
     expect(screen.getByText("Sin vehículo")).toBeDefined();
     expect(screen.getByText("Aguardando trama OBD-II…")).toBeDefined();
   });
@@ -83,7 +79,7 @@ describe("TelemetrySection", () => {
         loading={false}
         streamOk={false}
         canDiagnose={false}
-        telemetryStatus="Conectando…"
+        telemetryStatus="Reconectando…"
         onDiagnose={onDiagnose}
       />,
     );
@@ -102,7 +98,7 @@ describe("TelemetrySection", () => {
         loading={false}
         streamOk={false}
         canDiagnose={true}
-        telemetryStatus="Conectando…"
+        telemetryStatus="Reconectando…"
         onDiagnose={onDiagnose}
       />,
     );
@@ -129,9 +125,9 @@ describe("TelemetrySection", () => {
 
     expect(screen.getByText("----")).toBeDefined();
     expect(screen.getByText("---")).toBeDefined();
-    expect(screen.getAllByText("--")).toHaveLength(2); // coolant + intake
-    expect(screen.queryByText("Live")).toBeNull();
-    expect(screen.getAllByText("Diagnosticando…")).toHaveLength(2); // status + button
+    expect(screen.getAllByText("--")).toHaveLength(2);
+    expect(screen.queryByText("En Vivo")).toBeNull();
+    expect(screen.getAllByText("Diagnosticando…")).toHaveLength(2);
   });
 
   it("should keep showing values when loading but they are already available", () => {
@@ -147,7 +143,6 @@ describe("TelemetrySection", () => {
       />,
     );
 
-    // Gauge loading prop is `loading && rpm == null` → false, so numbers stay
     expect(screen.getByText("850")).toBeDefined();
     expect(screen.getByText("90")).toBeDefined();
     expect(screen.getAllByText("Diagnosticando…")).toHaveLength(2);

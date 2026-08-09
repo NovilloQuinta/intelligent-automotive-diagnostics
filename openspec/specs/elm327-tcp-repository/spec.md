@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Adaptador OBD-II sobre TCP que implementa `ObdRepositoryPort` para comunicarse con el emulador ELM327 Docker. El transporte TCP usa una **conexión persistente** (un solo socket compartido para todas las peticiones, con cola de comandos serializada y auto-reconexión con backoff exponencial) en lugar de sockets efímeros por comando. Parseo de respuestas ELM327, aplicación de fórmulas SAE J1979 y VAG Mode 22, decodificación DTC SAE J2012, y extracción dinámica de VehicleInfo desde VIN.
+Adaptador OBD-II sobre TCP que implementa `ObdRepositoryPort` para comunicarse con el emulador ELM327 Docker. El módulo `infrastructure/elm327/` se estructura en módulos SRP: errores (`errors.ts`), utilidades hex (`hexUtils.ts`), gramática del wire protocol (`protocol.ts`), catálogo de fórmulas SAE J1979 + VAG Mode 22 autocontenido (`pidFormulas.ts`), transporte TCP persistente (`tcpTransport.ts`) y el adapter como composition root (`elm327Adapter.ts`). El catálogo de fórmulas se construye desde `ALL_SEED_PIDS` vía `pidDefinitionsToFormulaEntries()` con imports desde `application/ports/` y `application/shared/`.
 
 ## Requirements
 
@@ -64,6 +64,74 @@ El sistema SHALL implementar `Elm327TcpRepository` en `infrastructure/elm327/elm
 - **WHEN** se construye `new Elm327TcpRepository({ host: 'localhost', port: 35000 })`
 - **THEN** el cliente TCP llama a `connect()` inmediatamente
 - **AND** el socket queda abierto y listo para recibir comandos
+
+---
+
+### Requirement: Descomposición SRP del adaptador ELM327
+El sistema SHALL estructurar el módulo `infrastructure/elm327/` en módulos de responsabilidad única: `errors.ts` (errores `Elm327ConnectionError`, `Elm327NoDataError`, `Elm327ParseError`), `hexUtils.ts` (`parseHexBytes`, `bigEndian`), `protocol.ts` (gramática del wire protocol: `formatCommand`, `stripEcho`, `parseModeResponse`, `parseMode22Response`, `parseVinResponse`, `parseDtcResponse`, `parseSupportedPidBitmask`), `pidFormulas.ts` (catálogo de fórmulas + `createPidFormulaCatalog`), `tcpTransport.ts` (config TCP + `createElm327TcpClient`) y `elm327Adapter.ts` como composition root que implementa `Elm327TcpRepository implements ObdRepository` y re-exporta errores y config para compatibilidad de imports. Los 8 métodos públicos del puerto mantienen firma y comportamiento idénticos.
+
+#### Scenario: Adapter como composition root
+- **GIVEN** el módulo `elm327/` refactorizado
+- **WHEN** se inspecciona `elm327Adapter.ts`
+- **THEN** no contiene lógica de transporte TCP, parsing de respuestas ni tablas de fórmulas propias
+- **AND** su constructor cablea `createElm327TcpClient(config)` y `createPidFormulaCatalog()`
+- **AND** los 8 métodos públicos de `ObdRepository` conservan firma idéntica (readPid, getSupportedPids, getFreezeFrame, readDtcCodes, clearDtcCodes, readVin, getVehicleInfo, setPower)
+
+#### Scenario: Re-exports de compatibilidad
+- **GIVEN** el adapter refactorizado
+- **WHEN** un consumidor importa `Elm327ConnectionError`, `Elm327NoDataError`, `Elm327ParseError` o `Elm327TcpConfig` desde `@/infrastructure/elm327/elm327Adapter.js`
+- **THEN** los imports siguen resolviendo (re-exportados desde sus módulos propietarios)
+- **AND** la definición vive únicamente en `errors.ts` y `tcpTransport.ts`
+
+---
+
+### Requirement: Catálogo de fórmulas autocontenido
+El sistema SHALL mantener el catálogo de fórmulas del emulador ELM327 (`STANDARD_MODE_01_FORMULAS` con 16 fórmulas SAE Mode 01 y `VAG_MODE_22_FORMULAS` con 16 DIDs Mode 22) en `pidFormulas.ts` sin importar de `persistence/sqlite/seed-pids.ts`, y SHALL verificar por test que las fórmulas SAE coinciden con `STANDARD_MODE_01_PIDS` (paridad de `formula` + `dataBytes`).
+
+#### Scenario: Módulo sin dependencia de persistencia
+- **GIVEN** `src/infrastructure/elm327/pidFormulas.ts`
+- **WHEN** se inspeccionan sus imports
+- **THEN** no referencia `persistence/sqlite/seed-pids.ts`
+- **AND** `apply(mode, pid, bytes)` devuelve el valor físico vía `evaluatePid` (fórmula conocida) o big-endian (fórmula desconocida/vacía)
+
+#### Scenario: Paridad con el seed de persistencia
+- **GIVEN** `STANDARD_MODE_01_PIDS` en `seed-pids.ts`
+- **WHEN** se ejecuta el test de paridad de `pidFormulas.test.ts`
+- **THEN** para las 16 entradas del catálogo SAE, `formula` y `dataBytes` coinciden con el seed
+- **AND** el test falla si una fórmula o dataBytes diverge (anti-drift)
+
+---
+
+### Requirement: Inyección de catálogo de fórmulas desde nuevas ubicaciones
+El sistema SHALL modificar `Elm327TcpRepository` en `infrastructure/elm327/elm327Adapter.ts` para importar `createPidFormulaCatalog` desde `./pidFormulaCatalog.js`, `PidFormulaCatalog` type desde `@/application/ports/PidFormulaCatalog.js`, y `pidDefinitionsToFormulaEntries` desde `@/application/shared/pidDefinitionsToFormulaEntries.js`. El catálogo se construye en el constructor con `createPidFormulaCatalog(pidDefinitionsToFormulaEntries(ALL_SEED_PIDS))` sin cambios de comportamiento.
+
+#### Scenario: Import de createPidFormulaCatalog desde pidFormulaCatalog.ts
+- **GIVEN** `elm327Adapter.ts` tras el refactor
+- **WHEN** se inspeccionan sus imports
+- **THEN** `createPidFormulaCatalog` se importa desde `./pidFormulaCatalog.js` (no desde `./pidFormulas.js`)
+- **AND** `PidFormulaCatalog` type se importa desde `@/application/ports/PidFormulaCatalog.js`
+- **AND** `pidDefinitionsToFormulaEntries` se importa desde `@/application/shared/pidDefinitionsToFormulaEntries.js`
+
+#### Scenario: Constructor sin cambios de comportamiento
+- **GIVEN** `Elm327TcpRepository` construido con `Elm327TcpConfig`
+- **WHEN** se inspecciona el constructor
+- **THEN** `this.pidFormulas = createPidFormulaCatalog(pidDefinitionsToFormulaEntries(ALL_SEED_PIDS))`
+- **AND** el catálogo resultante tiene el mismo comportamiento que antes del refactor
+
+#### Scenario: readPid Mode 01 RPM sin cambios
+- **GIVEN** `Elm327TcpRepository` construido con las nuevas ubicaciones de imports
+- **WHEN** se invoca `repo.readPid("01", "0C")` con respuesta mock `"41 0C 0C 80"`
+- **THEN** devuelve `800` (misma fórmula `(A*256+B)/4`, mismo comportamiento)
+
+#### Scenario: readPid Mode 22 VAG sin cambios
+- **GIVEN** `Elm327TcpRepository` construido con nuevas ubicaciones
+- **WHEN** se invoca `repo.readPid("22", "1130")` con respuesta mock `"62 11 30 0C 80"`
+- **THEN** devuelve `800` (fórmula desde `VAG_AUDI_MODE_22_PIDS` en seed, mismo comportamiento)
+
+#### Scenario: Los 8 métodos públicos conservan firma
+- **GIVEN** `Elm327TcpRepository` con imports actualizados
+- **WHEN** se inspeccionan sus métodos públicos
+- **THEN** `readPid`, `getSupportedPids`, `getFreezeFrame`, `readDtcCodes`, `clearDtcCodes`, `readVin`, `getVehicleInfo`, `setPower` conservan firma y comportamiento idénticos
 
 ---
 

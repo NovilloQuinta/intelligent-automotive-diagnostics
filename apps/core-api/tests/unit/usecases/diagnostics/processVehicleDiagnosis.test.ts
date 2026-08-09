@@ -22,6 +22,9 @@ function mockRepo(overrides: Partial<ObdRepository> = {}): ObdRepository {
     getFreezeFrame: vi.fn().mockResolvedValue(null),
     readDtcCodes: vi.fn().mockResolvedValue(dtcCodes),
     clearDtcCodes: vi.fn().mockResolvedValue(undefined),
+    readPendingDtcCodes: vi.fn().mockResolvedValue([]),
+    readPermanentDtcCodes: vi.fn().mockResolvedValue([]),
+    readPidRaw: vi.fn().mockResolvedValue([0x0b, 0xb8]),
     readVin: vi.fn().mockResolvedValue('WAUZZZ8V5JA123456'),
     getVehicleInfo: vi.fn().mockResolvedValue({
       make: 'Audi',

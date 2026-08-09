@@ -17,7 +17,9 @@ afterEach(() => {
 describe("RpmGauge", () => {
   // The gauge is the SVG with viewBox 0 0 200 120 (lucide icons have their own SVG)
   function gaugeSvg(container: HTMLElement): SVGSVGElement {
-    return container.querySelector('svg[viewBox="0 0 200 120"]') as SVGSVGElement;
+    return container.querySelector(
+      'svg[viewBox="0 0 200 120"]',
+    ) as SVGSVGElement;
   }
 
   it("should render the SVG arc, ticks and the rounded RPM value when a number is provided", () => {

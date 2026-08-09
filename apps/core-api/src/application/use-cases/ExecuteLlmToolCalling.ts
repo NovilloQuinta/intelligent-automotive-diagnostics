@@ -1,5 +1,4 @@
-import type { LlmMessageInput } from '@/application/dto/llm/LlmMessageInput.js'
-import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
+import type { LlmMessageInput, LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
 import type { LlmResponse } from '@/application/dto/llm/LlmResponse.js'
 import type { LlmSingleResponse } from '@/application/dto/llm/LlmSingleResponse.js'
 import type { ToolCallTrace } from '@/application/dto/llm/ToolCallTrace.js'
@@ -12,8 +11,13 @@ const DEFAULT_MAX_ITERATIONS = 10
 /** Funcion que realiza una sola llamada a la API del LLM. */
 export type LlmSingleMessageSender = (input: LlmMessageInput) => Promise<LlmSingleResponse>
 
-function isToolError(result: string): boolean {
-  return result.startsWith('Unknown tool:') || result.startsWith('Tool execution failed:')
+/**
+ * Resultado de ejecutar una tool: el exito o el fallo viaja en `ok`, nunca en
+ * el texto. Un texto que empiece por «Unknown tool:» es contenido legitimo.
+ */
+interface ToolExecutionResult {
+  readonly ok: boolean
+  readonly text: string
 }
 
 /** Orquesta el bucle de tool calling del LLM. */
@@ -22,8 +26,8 @@ export class ExecuteLlmToolCalling {
 
   constructor(
     private readonly sendSingleMessage: LlmSingleMessageSender,
-    maxIterations: number = DEFAULT_MAX_ITERATIONS,
     private readonly logger: LoggerPort,
+    maxIterations: number = DEFAULT_MAX_ITERATIONS,
   ) {
     this.maxIterations = maxIterations
   }
@@ -33,26 +37,31 @@ export class ExecuteLlmToolCalling {
     args: Record<string, unknown>,
     toolNames: Set<string>,
     handler: ToolCallHandler,
-  ): Promise<string> {
-    if (!toolNames.has(name)) return `Unknown tool: ${name}`
+  ): Promise<ToolExecutionResult> {
+    if (!toolNames.has(name)) return { ok: false, text: `Unknown tool: ${name}` }
     try {
-      return await handler(name, args)
+      return { ok: true, text: await handler(name, args) }
     } catch (error: unknown) {
       this.logger.error(
         `[ExecuteLlmToolCalling] Tool handler error for '${name}': ${
           error instanceof Error ? error.message : String(error)
         }`,
       )
-      return `Tool execution failed: ${name}`
+      return { ok: false, text: `Tool execution failed: ${name}` }
     }
   }
 
+  /**
+   * Ejecuta el bucle de tool calling hasta obtener texto final del LLM.
+   *
+   * @throws {MaxToolCallIterationsError} Si se agotan las iteraciones sin respuesta final.
+   */
   async execute(input: LlmMessageInput, handler: ToolCallHandler): Promise<LlmResponse> {
     const { systemPrompt, userMessage, tools } = input
     const toolNames = new Set(tools.map((t) => t.name))
-    const conversationHistory: LlmConversationItem[] = [
-      { __type: 'user_message', content: userMessage },
-    ]
+    const conversationHistory: LlmConversationItem[] = input.conversationHistory
+      ? [...input.conversationHistory, { __type: 'user_message', content: userMessage }]
+      : [{ __type: 'user_message', content: userMessage }]
     const toolTrace: ToolCallTrace[] = []
 
     for (let iteration = 0; iteration < this.maxIterations; iteration++) {
@@ -70,12 +79,12 @@ export class ExecuteLlmToolCalling {
       const toolResults: LlmConversationItem[] = []
       for (const tc of response.toolCalls) {
         const result = await this.executeToolCall(tc.name, tc.args, toolNames, handler)
-        toolTrace.push({ tool: tc.name, args: tc.args, result })
+        toolTrace.push({ tool: tc.name, args: tc.args, result: result.text })
         toolResults.push({
           __type: 'tool_result',
           toolCallId: tc.id,
-          content: result,
-          isError: isToolError(result),
+          content: result.text,
+          isError: !result.ok,
         })
       }
 

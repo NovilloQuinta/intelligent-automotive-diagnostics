@@ -3,8 +3,9 @@ packages:
 
 allowBuilds:
   '@scarf/scarf': false
-  bcrypt: set this to true or false
-  better-sqlite3: set this to true or false
+  '@serialport/bindings-cpp': true
+  bcrypt: true
+  better-sqlite3: true
   esbuild: true
   onnxruntime-node: true
   png-img: false
@@ -26,7 +27,12 @@ overrides:
   sharp: '>=0.35.0'
   fast-uri: '>=3.1.5'
   ip-address: '>=10.3.1'
-  brace-expansion: '>=5.0.9'
+  # (Sin override de brace-expansion: el ReDoS GHSA-v6h2-p8h4-qcjw ya está
+  # parcheado en cada línea mayor — 1.1.12+, 2.0.2+, etc. — y cada consumidor
+  # (minimatch@3, minimatch@9/10...) resuelve de forma natural su propia
+  # versión parcheada compatible. Forzar todo a la v5 rompía a minimatch@3,
+  # que pide ^1.1.7 y espera la forma de módulo CJS de la v1: "expand is not
+  # a function" en tiempo de ejecución.)
   png-img: '>=3.1.0'
   node-fetch: '>=2.6.7'
   braces: '>=3.0.3'

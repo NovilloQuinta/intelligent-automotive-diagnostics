@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { ObdSimulator } from '@/infrastructure/simulation/simulator.js'
+import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
+import { seedScenarios } from '@/infrastructure/simulation/seedScenarios.js'
 import type { LiveData } from '@/domain/value-objects/liveData.js'
 
 const audiIdleSensorValues: LiveData = {
@@ -140,5 +142,90 @@ describe('ObdSimulator', () => {
     }
     const simulator = new ObdSimulator(scenarioWithFreeze)
     expect(simulator.getFreezeFrame()).toEqual(freeze)
+  })
+
+  it('should return the freeze frame when dtc matches the frame dtcCode', () => {
+    const freeze: FreezeFrame = new FreezeFrame({
+      dtcCode: 'P0301',
+      pidValues: { rpm: 750, speed: 0 },
+    })
+    const scenarioWithFreeze: SimulationScenario = {
+      ...audiIdleScenario,
+      freezeFrame: freeze,
+    }
+    const simulator = new ObdSimulator(scenarioWithFreeze)
+
+    expect(simulator.getFreezeFrame('P0301')).toEqual(freeze)
+  })
+
+  it('should return null when dtc does not match the frame dtcCode', () => {
+    const freeze: FreezeFrame = new FreezeFrame({
+      dtcCode: 'P0301',
+      pidValues: { rpm: 750, speed: 0 },
+    })
+    const scenarioWithFreeze: SimulationScenario = {
+      ...audiIdleScenario,
+      freezeFrame: freeze,
+    }
+    const simulator = new ObdSimulator(scenarioWithFreeze)
+
+    expect(simulator.getFreezeFrame('P0420')).toBeNull()
+  })
+
+  it('getEcus should return ECUs from scenario when defined', () => {
+    const ecu = new EcuInfo({
+      id: 0,
+      vehicleId: 0,
+      name: 'Engine Control Unit',
+      requestAddr: '7E0',
+      responseAddr: '7E8',
+      type: 'ECM',
+      protocol: 'ISO 15765-4 (CAN 11/500)',
+    })
+    const scenarioWithEcus: SimulationScenario = {
+      ...audiIdleScenario,
+      ecus: [ecu],
+    }
+    const simulator = new ObdSimulator(scenarioWithEcus)
+
+    expect(simulator.getEcus()).toEqual([ecu])
+  })
+
+  it('getEcus should return empty array when scenario has no ecus', () => {
+    const simulator = new ObdSimulator(audiIdleScenario)
+
+    expect(simulator.getEcus()).toEqual([])
+  })
+})
+
+describe('ObdSimulator with seed scenarios pidValues', () => {
+  function seedScenario(id: string): SimulationScenario {
+    const scenario = seedScenarios.find((s) => s.id === id)
+    if (!scenario) throw new Error(`Seed scenario ${id} not found`)
+    return scenario
+  }
+
+  const expectations: [string, Record<string, number>][] = [
+    ['audi-a3-idle', { '01 11': 14, '01 04': 18, '01 42': 14.2 }],
+    ['kawa-z900', { '01 11': 52, '01 04': 58, '01 42': 10.9 }],
+  ]
+
+  it.each(expectations)('should read the extra pidValues of %s', (id, values) => {
+    const simulator = new ObdSimulator(seedScenario(id))
+
+    for (const [key, expected] of Object.entries(values)) {
+      const [mode, pid] = key.split(' ')
+      expect(simulator.readPidValue(mode, pid)).toBe(expected)
+    }
+  })
+
+  it.each(expectations)('should list the extra pidValues of %s as supported', (id, values) => {
+    const simulator = new ObdSimulator(seedScenario(id))
+
+    const supported = simulator.getSupportedPids()
+
+    for (const key of Object.keys(values)) {
+      expect(supported).toContain(key)
+    }
   })
 })

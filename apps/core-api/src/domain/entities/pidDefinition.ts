@@ -23,6 +23,8 @@ export class PidDefinition {
   readonly pidType: string
   readonly minValue?: number
   readonly maxValue?: number
+  readonly manufacturer?: string
+  readonly model?: string
   readonly confidence: number
   readonly source: 'auto' | 'llm_guess' | 'manual'
   readonly createdAt?: string
@@ -40,6 +42,8 @@ export class PidDefinition {
     pidType: string
     minValue?: number
     maxValue?: number
+    manufacturer?: string
+    model?: string
     confidence: number
     source: 'auto' | 'llm_guess' | 'manual'
     createdAt?: string
@@ -63,6 +67,8 @@ export class PidDefinition {
     this.pidType = params.pidType
     this.minValue = params.minValue
     this.maxValue = params.maxValue
+    this.manufacturer = params.manufacturer
+    this.model = params.model
     this.confidence = params.confidence
     this.source = params.source
     this.createdAt = params.createdAt

@@ -41,7 +41,7 @@ function LiveBadge({
         className="mono text-[10px] font-bold uppercase tracking-widest"
         style={{ color: COLORS.accent }}
       >
-        Live
+        En Vivo
       </span>
     </span>
   );
@@ -60,7 +60,7 @@ export function TelemetrySection({
   const { rpm, coolant, speed, intake } = values;
   return (
     <section
-      className={`panel relative flex flex-col overflow-hidden p-4 md:p-5 ${loading ? "scanning" : ""}`}
+      className={`panel relative flex flex-col self-start overflow-hidden p-4 md:p-5 ${loading ? "scanning" : ""}`}
     >
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -75,7 +75,7 @@ export function TelemetrySection({
         </div>
       </div>
       <div
-        className={`relative grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2 ${loading ? "scan-sweep" : ""}`}
+        className={`relative grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 ${loading ? "scan-sweep" : ""}`}
       >
         <RpmGauge value={rpm} loading={loading && rpm == null} />
         <CoolantBar value={coolant} loading={loading && coolant == null} />

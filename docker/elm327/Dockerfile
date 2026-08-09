@@ -6,8 +6,12 @@ RUN pip install --no-cache-dir --upgrade pip "setuptools<67" wheel && \
 WORKDIR /app
 
 COPY docker/elm327/run_audi.py .
+COPY docker/elm327/run_kawasaki.py .
+COPY docker/elm327/run_toyota.py .
 COPY docker/elm327/scenarios/ ./scenarios/
 
-EXPOSE 35000
+EXPOSE 35000 35001
 
-CMD ["sh", "-c", "tail -f /dev/null | exec python run_audi.py"]
+ENV SCENARIO_SCRIPT=run_audi.py
+
+CMD sh -c "tail -f /dev/null | exec python ${SCENARIO_SCRIPT}"

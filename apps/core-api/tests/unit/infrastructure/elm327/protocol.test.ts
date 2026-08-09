@@ -61,6 +61,15 @@ describe('protocol', () => {
     it('should throw Elm327ParseError on invalid input', () => {
       expect(() => parseModeResponse('ZZ ZZ ZZ')).toThrow(Elm327ParseError)
     })
+
+    it('should NOT treat 0x7F data byte as negative response code', () => {
+      // PID 01 byte B = 0x7F es un valor legitimo (SAE J1979: compression + all common tests)
+      expect(() => parseModeResponse('41 01 83 7F FF FF')).not.toThrow()
+    })
+
+    it('should throw Elm327ParseError on genuine negative response 7F at start', () => {
+      expect(() => parseModeResponse('7F 01 11')).toThrow(Elm327ParseError)
+    })
   })
 
   describe('parseMode22Response', () => {
@@ -94,14 +103,39 @@ describe('protocol', () => {
       expect(bytes.length).toBe(17)
     })
 
+    it('should parse single-line Audi VIN → 17 ASCII bytes after stripping 49 02 01 prefix', () => {
+      const raw = '09 02\r49 02 01 57 41 55 5A 5A 5A 38 56 35 4A 41 31 32 33 34 35 36 \r\r>'
+      const bytes = parseVinResponse(raw)
+      // WAUZZZ8V5JA123456
+      expect(bytes).toEqual([
+        0x57, 0x41, 0x55, 0x5a, 0x5a, 0x5a, 0x38, 0x56, 0x35, 0x4a, 0x41, 0x31, 0x32, 0x33, 0x34,
+        0x35, 0x36,
+      ])
+      expect(bytes.length).toBe(17)
+    })
+
     it('should throw Elm327NoDataError on "NO DATA"', () => {
       expect(() => parseVinResponse('NO DATA')).toThrow(Elm327NoDataError)
     })
   })
 
   describe('parseDtcResponse', () => {
-    it('should parse "43 03 01 04 01" → [[0x03,0x01],[0x04,0x01]]', () => {
+    it('should parse "43 03 01 04 01" → [[0x03,0x01],[0x04,0x01]] (default Mode 03)', () => {
       expect(parseDtcResponse('43 03 01 04 01')).toEqual([
+        [0x03, 0x01],
+        [0x04, 0x01],
+      ])
+    })
+
+    it('should parse "47 03 01 04 01" → [[0x03,0x01],[0x04,0x01]] (Mode 07, header 47)', () => {
+      expect(parseDtcResponse('47 03 01 04 01', '07')).toEqual([
+        [0x03, 0x01],
+        [0x04, 0x01],
+      ])
+    })
+
+    it('should parse "4A 03 01 04 01" → [[0x03,0x01],[0x04,0x01]] (Mode 0A, header 4A)', () => {
+      expect(parseDtcResponse('4A 03 01 04 01', '0A')).toEqual([
         [0x03, 0x01],
         [0x04, 0x01],
       ])
@@ -113,6 +147,10 @@ describe('protocol', () => {
 
     it('should throw Elm327ParseError on "CAN ERROR"', () => {
       expect(() => parseDtcResponse('CAN ERROR')).toThrow(Elm327ParseError)
+    })
+
+    it('should throw Elm327ParseError when header does not match mode (Mode 03 with 47 header)', () => {
+      expect(() => parseDtcResponse('47 03 01 04 01', '03')).toThrow(Elm327ParseError)
     })
   })
 

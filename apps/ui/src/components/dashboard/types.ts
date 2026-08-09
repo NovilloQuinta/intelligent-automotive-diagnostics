@@ -13,14 +13,15 @@ import type {
 export type Scenario = {
   id: string;
   name: string;
-  vehicleType: "car" | "motorcycle";
+  vehicleType: "car" | "motorcycle" | "unknown";
+  connectionType: "wifi" | "usb" | "bluetooth";
   sensorValues: {
     rpm: number;
     coolantTemp: number;
     speed: number;
     intakeTemp: number;
   };
-  dtcConfig: { code: string; description: string }[];
+  dtcConfig: DtcCode[];
   vehicleInfo: {
     make: string;
     model: string;
@@ -41,7 +42,7 @@ export type DiagnosisResponse = {
     speed: number;
     intakeTemp: number;
   };
-  dtcCodes: { code: string; description: string }[];
+  dtcCodes: DtcCode[];
   diagnosisText: string;
   severity: Severity;
 };
@@ -54,6 +55,39 @@ export type TelemetrySnapshot = {
   intakeTemp: number;
   rawData: string;
   ts: number;
+};
+
+/** OBD-II freeze frame snapshot as returned by GET /api/freeze-frame. */
+export type FreezeFrame = {
+  dtcCode: string;
+  pidValues: Record<string, number>;
+};
+
+/** ECU info as returned by GET /api/ecu-info. */
+export type EcuInfo = {
+  id: number;
+  vehicleId: number;
+  name: string;
+  requestAddr: string;
+  responseAddr: string;
+  type: string;
+  protocol: string;
+  discoveredAt?: string;
+};
+
+/**
+ * Identified vehicle as returned by GET /api/vehicle-info. The decoded fields
+ * are null when the VIN is not decodable (noisy ELM327 read, placeholder VIN).
+ */
+export type VehicleInfoResponse = {
+  vin: string;
+  make: string;
+  model: string;
+  year: number;
+  engineType: string;
+  manufacturer: string | null;
+  region: { country: string; region: string } | null;
+  modelYearDecoded: number | null;
 };
 
 // ---------------------------------------------------------------------------
@@ -75,6 +109,8 @@ export type AuthUser = {
   address?: string | null;
   createdAt: string;
   isWorkshop: boolean;
+  role: "user" | "admin";
+  isAdmin: boolean;
 };
 
 export type LoginInput = {
@@ -112,6 +148,31 @@ export type UpdateProfileInput = Partial<{
   businessName: string;
   taxId: string;
 }>;
+
+// ---------------------------------------------------------------------------
+// DTC / vehicle status types
+// ---------------------------------------------------------------------------
+
+/** OBD-II Diagnostic Trouble Code. */
+export type DtcCode = {
+  code: string;
+  description: string;
+};
+
+/** Emission monitor readiness status. */
+export type MonitorStatus = {
+  name: string;
+  supported: boolean;
+  completed: boolean;
+};
+
+/** Vehicle status as returned by GET /api/vehicle-status. */
+export type VehicleStatusOutput = {
+  milOn: boolean;
+  dtcCount: number;
+  engineType: "spark" | "compression";
+  monitors: MonitorStatus[];
+};
 
 // ---------------------------------------------------------------------------
 // Visual constants

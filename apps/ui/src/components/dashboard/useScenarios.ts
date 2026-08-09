@@ -1,39 +1,30 @@
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import type { Scenario } from "./types";
 
-/** Fetches available vehicle scenarios from the real backend via the authenticated API. */
-export function useScenarios() {
-  const [scenarios, setScenarios] = useState<Scenario[]>([]);
-  const [selectedId, setSelectedId] = useState<string>("");
-  const [error, setError] = useState<string | null>(null);
+/** Los escenarios de simulación apenas cambian; se refrescan cada 30s. */
+const SCENARIOS_STALE_MS = 30_000;
 
-  useEffect(() => {
-    let mounted = true;
-    api
-      .getScenarios()
-      .then((data) => {
-        if (!mounted) return;
-        setScenarios(data);
-        if (data.length && !selectedId) setSelectedId(data[0].id);
-      })
-      .catch((e: unknown) => {
-        if (!mounted) return;
-        const msg = e instanceof Error ? e.message : "Error de red";
-        setError(msg);
-        toast.error(msg);
-      });
-    return () => {
-      mounted = false;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+export function useScenarios() {
+  const { data: scenarios = [], error } = useQuery<Scenario[]>({
+    queryKey: ["scenarios"],
+    queryFn: () => api.getScenarios(),
+    staleTime: SCENARIOS_STALE_MS,
+  });
+
+  const [selectedId, setSelectedId] = useState("");
+
+  const scenariosError = error
+    ? error instanceof Error
+      ? error.message
+      : "Error de red"
+    : null;
 
   return {
     scenarios,
     selectedId,
     setSelectedId,
-    scenariosError: error,
+    scenariosError,
   };
 }

@@ -16,6 +16,7 @@ function createTestDb() {
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       user_type TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'user',
       business_name TEXT,
       tax_id TEXT,
       address TEXT,

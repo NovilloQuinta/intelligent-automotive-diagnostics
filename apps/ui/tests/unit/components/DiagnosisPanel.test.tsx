@@ -15,19 +15,28 @@ describe("DiagnosisPanel", () => {
 
     expect(screen.getByText("Diagnóstico IA")).toBeDefined();
     expect(
-      screen.getByText("Sin datos. Ejecuta un diagnóstico para obtener el informe."),
+      screen.getByText(
+        "Sin datos. Ejecuta un diagnóstico para obtener el informe.",
+      ),
     ).toBeDefined();
     expect(screen.queryByText("MEDIA")).toBeNull();
   });
 
   it("should render the loading message while loading, even when empty", () => {
     render(
-      <DiagnosisPanel text={null} severity={null} empty={true} loading={true} />,
+      <DiagnosisPanel
+        text={null}
+        severity={null}
+        empty={true}
+        loading={true}
+      />,
     );
 
     expect(screen.getByText("Analizando datos OBD-II con IA…")).toBeDefined();
     expect(
-      screen.queryByText("Sin datos. Ejecuta un diagnóstico para obtener el informe."),
+      screen.queryByText(
+        "Sin datos. Ejecuta un diagnóstico para obtener el informe.",
+      ),
     ).toBeNull();
   });
 
@@ -41,7 +50,9 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    expect(screen.getByText("Fallo de encendido en el cilindro 1.")).toBeDefined();
+    expect(
+      screen.getByText("Fallo de encendido en el cilindro 1."),
+    ).toBeDefined();
     expect(screen.getByText("ALTA")).toBeDefined();
     expect(container.querySelector(".lucide-triangle-alert")).not.toBeNull();
   });
@@ -56,7 +67,9 @@ describe("DiagnosisPanel", () => {
       />,
     );
 
-    expect(screen.queryByText("Fallo de encendido en el cilindro 1.")).toBeNull();
+    expect(
+      screen.queryByText("Fallo de encendido en el cilindro 1."),
+    ).toBeNull();
     expect(screen.queryByText("ALTA")).toBeNull();
   });
 
@@ -71,6 +84,8 @@ describe("DiagnosisPanel", () => {
     );
 
     expect(screen.getByText("Analizando datos OBD-II con IA…")).toBeDefined();
-    expect(screen.queryByText("Fallo de encendido en el cilindro 1.")).toBeNull();
+    expect(
+      screen.queryByText("Fallo de encendido en el cilindro 1."),
+    ).toBeNull();
   });
 });

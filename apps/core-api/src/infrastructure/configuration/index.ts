@@ -5,9 +5,17 @@ const configSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   DB_PATH: z.string().default('data/diagnostics.db'),
   LANCEDB_PATH: z.string().min(1).default('data/lancedb'),
-  OBD_MODE: z.enum(['sync', 'tcp']).default('sync'),
+  OBD_MODE: z.enum(['docker', 'tcp', 'serial']).default('docker'),
   ELM327_HOST: z.string().default('localhost'),
   ELM327_PORT: z.coerce.number().int().positive().default(35000),
+  ELM327_AUDI_HOST: z.string().default('localhost'),
+  ELM327_AUDI_PORT: z.coerce.number().int().positive().default(35000),
+  ELM327_KAWASAKI_HOST: z.string().default('localhost'),
+  ELM327_KAWASAKI_PORT: z.coerce.number().int().positive().default(35001),
+  ELM327_TOYOTA_HOST: z.string().default('localhost'),
+  ELM327_TOYOTA_PORT: z.coerce.number().int().positive().default(35002),
+  SERIAL_PORT_PATH: z.string().default('/dev/ttyUSB0'),
+  SERIAL_BAUD_RATE: z.coerce.number().int().positive().default(38400),
   ALLOWED_ORIGINS: z.string().default('http://localhost:5173,http://localhost:4173'),
   ACCESS_TOKEN_SECRET: z.string().min(1).default('dev-access-secret'),
   REFRESH_TOKEN_SECRET: z.string().min(1).default('dev-refresh-secret'),
@@ -24,6 +32,9 @@ const configSchema = z.object({
   SMTP_FROM: z.string().default('no-reply@localhost'),
   APP_BASE_URL: z.string().default('http://localhost:5173'),
   PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().positive().default(60),
+  WEB_SEARCH_API_KEY: z.string().optional(),
+  ADMIN_EMAIL: z.string().optional(),
+  ADMIN_PASSWORD: z.string().optional(),
 })
 
 /** Configuracion tipada de la aplicacion validada desde variables de entorno. */

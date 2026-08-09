@@ -196,4 +196,9 @@ export class Vin {
   toString(): string {
     return this.value
   }
+
+  /** Serializes as the raw VIN string so JSON APIs return a string, not `{ value: ... }`. */
+  toJSON(): string {
+    return this.value
+  }
 }

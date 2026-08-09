@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { EventEmitter } from 'node:events'
-import { createAuditLogger } from '@/infrastructure/http/middleware/audit-logger.middleware.js'
+import {
+  createAuditLogger,
+  isExcludedFromAudit,
+} from '@/infrastructure/http/middleware/audit-logger.middleware.js'
 import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.js'
 
 function createMockRes() {
@@ -97,5 +100,64 @@ describe('createAuditLogger', () => {
     })
 
     consoleSpy.mockRestore()
+  })
+
+  describe('exclusion of /api/admin/*', () => {
+    it('should not call repository.create for a request under /api/admin', async () => {
+      const req = createMockReq({ path: '/api/admin/logs' })
+      const res = createMockRes()
+      const next = vi.fn()
+
+      middleware(req as never, res as never, next)
+      res.emit('finish')
+
+      expect(next).toHaveBeenCalled()
+      // Da tiempo a que un fire-and-forget indebido se resolviera si existiera.
+      await new Promise((resolve) => setTimeout(resolve, 10))
+      expect(mockRepo.create).not.toHaveBeenCalled()
+    })
+
+    it('should still audit routes that are not under /api/admin', async () => {
+      const req = createMockReq({ path: '/api/scenarios' })
+      const res = createMockRes()
+      const next = vi.fn()
+
+      middleware(req as never, res as never, next)
+      res.emit('finish')
+
+      await vi.waitFor(() => {
+        expect(mockRepo.create).toHaveBeenCalledTimes(1)
+      })
+    })
+
+    it('should exclude by originalUrl when a mounted sub-router rewrote req.path (Express mount semantics)', async () => {
+      // Express reescribe req.path/req.url a la ruta relativa al montaje mientras la
+      // peticion esta dentro de un sub-router (aqui, '/api/admin'); si la respuesta se
+      // envia sin volver a "desenrollar" ese estado, req.path en 'finish' queda como
+      // '/overview', no '/api/admin/overview'. req.originalUrl si conserva la ruta completa.
+      const req = createMockReq({ path: '/overview', originalUrl: '/api/admin/overview' })
+      const res = createMockRes()
+      const next = vi.fn()
+
+      middleware(req as never, res as never, next)
+      res.emit('finish')
+
+      await new Promise((resolve) => setTimeout(resolve, 10))
+      expect(mockRepo.create).not.toHaveBeenCalled()
+    })
+  })
+})
+
+describe('isExcludedFromAudit', () => {
+  it('should exclude any path under /api/admin', () => {
+    expect(isExcludedFromAudit('/api/admin')).toBe(true)
+    expect(isExcludedFromAudit('/api/admin/logs')).toBe(true)
+    expect(isExcludedFromAudit('/api/admin/knowledge/search')).toBe(true)
+  })
+
+  it('should not exclude other paths, including ones that merely start similarly', () => {
+    expect(isExcludedFromAudit('/api/scenarios')).toBe(false)
+    expect(isExcludedFromAudit('/api/administration')).toBe(false)
+    expect(isExcludedFromAudit('/api/auth/login')).toBe(false)
   })
 })

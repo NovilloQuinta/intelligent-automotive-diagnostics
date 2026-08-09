@@ -1,7 +1,7 @@
 ---
 description: Revisa código contra buenas prácticas TypeScript, TSDoc, Clean Architecture y seguridad OWASP. Solo lectura.
 mode: subagent
-model: haiku
+model: deepseek/deepseek-v4-pro
 temperature: 0.1
 permission:
   edit: deny

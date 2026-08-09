@@ -12,18 +12,26 @@ import { createAuthMiddleware } from '@/infrastructure/http/middleware/auth.midd
 import { createAuthRoutes } from '@/infrastructure/http/routes/auth.routes.js'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
 import { createProfileRoutes } from '@/infrastructure/http/routes/profile.routes.js'
+import { createAdminRoutes } from '@/infrastructure/http/routes/admin.routes.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 import type { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 import type { ProfileController } from '@/infrastructure/http/controllers/ProfileController.js'
+import type { AdminController } from '@/infrastructure/http/controllers/AdminController.js'
+import type { RequestHandler } from 'express'
 
 /** Dependencias del servidor Express. */
 export interface ServerDependencies {
   readonly rateLimit?: Partial<RateLimiterConfig>
+  readonly adminRateLimit?: Partial<RateLimiterConfig>
   readonly auditRepo: AuditLogRepository
   readonly authController: AuthController
   readonly diagnosisController: DiagnosisController
   readonly profileController?: ProfileController
+  /** `undefined` en tests que no ejercitan `/api/admin` (evita cablear el stack completo). */
+  readonly adminController?: AdminController
+  /** Construido en `composition.ts` con `createRequireAdmin(userRepo)`. */
+  readonly requireAdmin?: RequestHandler
   readonly accessTokenSecret?: string
   readonly allowedOrigins: string
   readonly nodeEnv: string
@@ -118,29 +126,20 @@ function mountErrorHandler(app: express.Application, logger: LoggerPort): void {
   )
 }
 
-/** Crea y devuelve la instancia de Express con todas las rutas montadas. */
-export function createServer(deps: ServerDependencies): express.Application {
-  const app = express()
-
-  // Confiar en el proxy inverso para obtener IPs reales
-  app.set('trust proxy', 1)
-
-  // X-Request-Id: header de correlacion para trazabilidad
+/** Propaga un `x-request-id` por peticion para poder correlacionar trazas. */
+function applyRequestId(app: express.Application): void {
   app.use((req, _res, next) => {
     req.headers['x-request-id'] = req.headers['x-request-id'] ?? randomUUID()
     next()
   })
+}
 
-  applyBaseMiddleware(app, deps)
-  applyCors(app, deps.allowedOrigins)
-
-  // Archivos estaticos (security.txt, etc.)
-  app.use(express.static('public'))
-
-  const authMiddleware = deps.accessTokenSecret
-    ? createAuthMiddleware(deps.accessTokenSecret)
-    : undefined
-
+/** Monta las rutas de autenticacion con sus limites por operacion. */
+function mountAuthRoutes(
+  app: express.Application,
+  deps: ServerDependencies,
+  authMiddleware: express.RequestHandler | undefined,
+): void {
   const loginLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 5 })
   const refreshLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 10 })
   // Rate limit dedicado para forgot-password: mas estricto que login (evita abuso del envio de email)
@@ -157,20 +156,79 @@ export function createServer(deps: ServerDependencies): express.Application {
       forgotPasswordLimiter,
     ),
   )
+}
 
+/**
+ * Los endpoints de diagnostico consultan el vehiculo o el LLM, asi que llevan
+ * limites mas estrictos que el global. El cognitivo es el mas caro de todos.
+ */
+function applyDiagnosisRateLimits(app: express.Application): void {
+  const diagnosisLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 20 })
+  const cognitiveLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 5 })
+  const clearDtcLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 5 })
+
+  app.use('/api/diagnosis', diagnosisLimiter)
+  app.use('/api/freeze-frame', diagnosisLimiter)
+  app.use('/api/ecu-info', diagnosisLimiter)
+  app.use('/api/pending-dtc', diagnosisLimiter)
+  app.use('/api/permanent-dtc', diagnosisLimiter)
+  app.use('/api/vehicle-status', diagnosisLimiter)
+  app.use('/api/mcp/cognitive-diagnosis', cognitiveLimiter)
+  app.use('/api/clear-dtc', clearDtcLimiter)
+}
+
+/**
+ * Rate limiter propio de `/api/admin`, independiente del resto de la API (Requirement
+ * "Todas las rutas de administracion exigen rol admin y limitan tasa"). Un operador
+ * navegando el panel no debe agotar el limite de `/api/diagnosis` ni de `/api/auth`, y
+ * viceversa.
+ */
+function applyAdminRateLimits(
+  app: express.Application,
+  config: Partial<RateLimiterConfig> | undefined,
+): void {
+  app.use('/api/admin', createRateLimiter(config ?? { windowMinutes: 1, maxRequests: 30 }))
+}
+
+/**
+ * Monta `/api/admin` con el orden exigido por `design.md` (Decision 6):
+ * `authMiddleware` (ya global en este punto) -> `requireAdmin` -> rate limiter -> controlador.
+ * Sin `adminController`/`requireAdmin` no se monta nada, para no exponer rutas a medio cablear.
+ */
+function mountAdminRoutes(app: express.Application, deps: ServerDependencies): void {
+  if (!deps.adminController || !deps.requireAdmin) return
+
+  app.use('/api/admin', deps.requireAdmin)
+  applyAdminRateLimits(app, deps.adminRateLimit)
+  app.use('/api/admin', createAdminRoutes(deps.adminController))
+}
+
+/** Crea y devuelve la instancia de Express con todas las rutas montadas. */
+export function createServer(deps: ServerDependencies): express.Application {
+  const app = express()
+
+  // Sin esto express ve la IP del proxy, no la del cliente, y el rate limit
+  // acabaria contando todo el trafico como si viniera de un unico origen.
+  app.set('trust proxy', 1)
+
+  applyRequestId(app)
+  applyBaseMiddleware(app, deps)
+  applyCors(app, deps.allowedOrigins)
+  app.use(express.static('public'))
+
+  const authMiddleware = deps.accessTokenSecret
+    ? createAuthMiddleware(deps.accessTokenSecret)
+    : undefined
+
+  mountAuthRoutes(app, deps, authMiddleware)
   mountInfoRoutes(app, deps.nodeEnv)
 
+  // A partir de aqui todo requiere token: se monta antes que las rutas de diagnostico.
   if (authMiddleware) {
     app.use(authMiddleware)
   }
 
-  // Rate limits para endpoints sensibles de diagnostico
-  const diagnosisLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 20 })
-  const cognitiveLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 5 })
-
-  app.use('/api/diagnosis', diagnosisLimiter)
-  app.use('/api/mcp/cognitive-diagnosis', cognitiveLimiter)
-
+  applyDiagnosisRateLimits(app)
   app.use('/api', createDiagnosisRoutes(deps.diagnosisController))
 
   if (deps.profileController) {
@@ -178,6 +236,8 @@ export function createServer(deps: ServerDependencies): express.Application {
     const changePasswordLimiter = createRateLimiter({ windowMinutes: 15, maxRequests: 5 })
     app.use('/api/profile', createProfileRoutes(deps.profileController, changePasswordLimiter))
   }
+
+  mountAdminRoutes(app, deps)
 
   mountErrorHandler(app, deps.logger)
 

@@ -246,9 +246,7 @@ describe("api", () => {
       });
       vi.stubGlobal("fetch", mockFetch);
 
-      await expect(api.getScenarios()).rejects.toThrow(
-        GENERIC_ERROR_MESSAGE,
-      );
+      await expect(api.getScenarios()).rejects.toThrow(GENERIC_ERROR_MESSAGE);
       // Only the original call happened — no refresh was attempted
       expect(mockFetch).toHaveBeenCalledTimes(1);
     });
@@ -504,6 +502,29 @@ describe("api", () => {
       });
     });
 
+    it("sends conversation history when provided", async () => {
+      setStoredTokens();
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({ ok: true, json: async () => cognitive });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const historyItem = {
+        __type: "user_message" as const,
+        content: "¿Por qué tiembla?",
+      };
+      await api.getCognitiveDiagnosis("audi-a3-idle", "¿Y eso por qué?", [
+        historyItem,
+      ]);
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(init.body as string)).toEqual({
+        scenarioId: "audi-a3-idle",
+        query: "¿Y eso por qué?",
+        history: [historyItem],
+      });
+    });
+
     it("throws the generic message on a 503, never the raw server error", async () => {
       setStoredTokens();
       vi.stubGlobal(
@@ -515,9 +536,9 @@ describe("api", () => {
         }),
       );
 
-      await expect(
-        api.getCognitiveDiagnosis("audi-a3-idle"),
-      ).rejects.toThrow(GENERIC_ERROR_MESSAGE);
+      await expect(api.getCognitiveDiagnosis("audi-a3-idle")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
     });
 
     it("throws the generic message on a 503 even when the error body is unreadable", async () => {
@@ -533,9 +554,263 @@ describe("api", () => {
         }),
       );
 
-      await expect(
-        api.getCognitiveDiagnosis("audi-a3-idle"),
-      ).rejects.toThrow(GENERIC_ERROR_MESSAGE);
+      await expect(api.getCognitiveDiagnosis("audi-a3-idle")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // getFreezeFrame
+  // -----------------------------------------------------------------------
+
+  describe("getFreezeFrame", () => {
+    it("GETs /api/freeze-frame with scenarioId and dtc and returns the frame", async () => {
+      setStoredTokens();
+      const frame = { dtcCode: "P0301", pidValues: { "0C": 850 } };
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ freezeFrame: frame }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getFreezeFrame("audi-a3-idle", "P0301");
+
+      expect(result).toEqual(frame);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/freeze-frame?scenarioId=audi-a3-idle&dtc=P0301");
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+
+    it("GETs without the dtc param when omitted", async () => {
+      setStoredTokens();
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ freezeFrame: null }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getFreezeFrame("audi-a3-idle");
+
+      expect(result).toBeNull();
+      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(url).toBe("/api/freeze-frame?scenarioId=audi-a3-idle");
+    });
+
+    it("returns null when the backend reports no freeze frame for the code", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ freezeFrame: null }),
+        }),
+      );
+
+      const result = await api.getFreezeFrame("audi-a3-idle", "P0420");
+
+      expect(result).toBeNull();
+    });
+
+    it("throws the generic message on a 500, never the raw server error", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: "OBD exploded" }),
+        }),
+      );
+
+      await expect(api.getFreezeFrame("audi-a3-idle", "P0301")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // getLiveData
+  // -----------------------------------------------------------------------
+
+  describe("getLiveData", () => {
+    it("GETs /api/live-data con el token, que es lo que faltaba", async () => {
+      setStoredTokens();
+      const live = { rpm: 770, coolantTemp: 90, speed: 0, intakeTemp: 35 };
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => live,
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getLiveData("audi-a3-tdi");
+
+      expect(result).toEqual(live);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/live-data?scenarioId=audi-a3-tdi");
+      // El endpoint exige autenticacion: sin esta cabecera responde 401 y los
+      // gauges no muestran ni un valor.
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+
+    it("propaga los null de cada PID sin convertirlos", async () => {
+      setStoredTokens();
+      const live = { rpm: null, coolantTemp: 90, speed: null, intakeTemp: 35 };
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({ ok: true, json: async () => live }),
+      );
+
+      await expect(api.getLiveData("audi-a3-tdi")).resolves.toEqual(live);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // getEcuInfo
+  // -----------------------------------------------------------------------
+
+  describe("getEcuInfo", () => {
+    it("GETs /api/ecu-info with scenarioId and returns the ECU list", async () => {
+      setStoredTokens();
+      const ecus = [
+        {
+          id: 1,
+          vehicleId: 1,
+          name: "Engine Control Module",
+          requestAddr: "7E0",
+          responseAddr: "7E8",
+          type: "engine",
+          protocol: "ISO 15765-4",
+        },
+      ];
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ecus }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getEcuInfo("audi-a3-idle");
+
+      expect(result).toEqual(ecus);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/ecu-info?scenarioId=audi-a3-idle");
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+
+    it("returns an empty list when the vehicle reports no ECUs", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ ecus: [] }),
+        }),
+      );
+
+      const result = await api.getEcuInfo("audi-a3-idle");
+
+      expect(result).toEqual([]);
+    });
+
+    it("encodes the scenarioId in the query string", async () => {
+      setStoredTokens();
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ecus: [] }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      await api.getEcuInfo("audi a3/idle&x");
+
+      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(url).toBe("/api/ecu-info?scenarioId=audi%20a3%2Fidle%26x");
+    });
+
+    it("throws the generic message on a 500, never the raw server error", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: "CAN bus exploded" }),
+        }),
+      );
+
+      await expect(api.getEcuInfo("audi-a3-idle")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // getVehicleInfo
+  // -----------------------------------------------------------------------
+
+  describe("getVehicleInfo", () => {
+    const vehicle = {
+      vin: "WAUZZZ8V5JA123456",
+      make: "Audi",
+      model: "A3",
+      year: 2018,
+      engineType: "2.0 TFSI",
+      manufacturer: "Audi",
+      region: { country: "Germany", region: "Europe" },
+      modelYearDecoded: 2018,
+    };
+
+    it("GETs /api/vehicle-info with the scenarioId and returns the vehicle", async () => {
+      setStoredTokens();
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => vehicle,
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getVehicleInfo("audi-a3-idle");
+
+      expect(result).toEqual(vehicle);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/vehicle-info?scenarioId=audi-a3-idle");
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+
+    it("encodes the scenarioId in the query string", async () => {
+      setStoredTokens();
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => vehicle,
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      await api.getVehicleInfo("audi a3/idle&x");
+
+      const [url] = mockFetch.mock.calls[0] as [string];
+      expect(url).toBe("/api/vehicle-info?scenarioId=audi%20a3%2Fidle%26x");
+    });
+
+    it("throws the curated message when the scenario does not exist", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 404,
+          json: async () => ({ error: "Scenario not found" }),
+        }),
+      );
+
+      await expect(api.getVehicleInfo("no-existe")).rejects.toThrow(
+        "Scenario not found",
+      );
     });
   });
 
@@ -581,6 +856,227 @@ describe("api", () => {
       await expect(api.getCapabilities()).resolves.toEqual({
         cognitiveDiagnosis: false,
       });
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // getPendingDtc
+  // -----------------------------------------------------------------------
+
+  describe("getPendingDtc", () => {
+    it("GETs /api/pending-dtc with scenarioId and returns dtcCodes", async () => {
+      setStoredTokens();
+      const dtcCodes = [
+        { code: "P0301", description: "Cilindro 1: fallo de encendido" },
+      ];
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ dtcCodes }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getPendingDtc("audi-a3-idle");
+
+      expect(result).toEqual({ dtcCodes });
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/pending-dtc?scenarioId=audi-a3-idle");
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+
+    it("returns empty dtcCodes when no pending codes exist", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ dtcCodes: [] }),
+        }),
+      );
+
+      const result = await api.getPendingDtc("audi-a3-idle");
+      expect(result).toEqual({ dtcCodes: [] });
+    });
+
+    it("throws the generic message on a 500", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: "OBD timeout" }),
+        }),
+      );
+
+      await expect(api.getPendingDtc("audi-a3-idle")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // getPermanentDtc
+  // -----------------------------------------------------------------------
+
+  describe("getPermanentDtc", () => {
+    it("GETs /api/permanent-dtc with scenarioId and returns dtcCodes", async () => {
+      setStoredTokens();
+      const dtcCodes = [
+        { code: "P0420", description: "Eficiencia del catalizador" },
+      ];
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ dtcCodes }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getPermanentDtc("audi-a3-idle");
+
+      expect(result).toEqual({ dtcCodes });
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/permanent-dtc?scenarioId=audi-a3-idle");
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+
+    it("returns empty dtcCodes when no permanent codes exist", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ dtcCodes: [] }),
+        }),
+      );
+
+      const result = await api.getPermanentDtc("audi-a3-idle");
+      expect(result).toEqual({ dtcCodes: [] });
+    });
+
+    it("throws the generic message on a 500", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: "OBD timeout" }),
+        }),
+      );
+
+      await expect(api.getPermanentDtc("audi-a3-idle")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // clearDtc
+  // -----------------------------------------------------------------------
+
+  describe("clearDtc", () => {
+    it("POSTs /api/clear-dtc with scenarioId and returns cleared: true", async () => {
+      setStoredTokens();
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ cleared: true }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.clearDtc("audi-a3-idle");
+
+      expect(result).toEqual({ cleared: true });
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/clear-dtc");
+      expect(init.method).toBe("POST");
+      expect(JSON.parse(init.body as string)).toEqual({
+        scenarioId: "audi-a3-idle",
+      });
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+
+    it("returns cleared: false when the backend reports failure", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ cleared: false }),
+        }),
+      );
+
+      const result = await api.clearDtc("audi-a3-idle");
+      expect(result).toEqual({ cleared: false });
+    });
+
+    it("throws the generic message on a 500", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: "OBD timeout" }),
+        }),
+      );
+
+      await expect(api.clearDtc("audi-a3-idle")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // getVehicleStatus
+  // -----------------------------------------------------------------------
+
+  describe("getVehicleStatus", () => {
+    const vehicleStatus = {
+      milOn: true,
+      dtcCount: 2,
+      monitorStatuses: [
+        { name: "Catalyst", isSupported: true, isReady: false },
+        { name: "O2 Sensor", isSupported: true, isReady: true },
+      ],
+    };
+
+    it("GETs /api/vehicle-status with scenarioId and returns the status", async () => {
+      setStoredTokens();
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => vehicleStatus,
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getVehicleStatus("audi-a3-idle");
+
+      expect(result).toEqual(vehicleStatus);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/vehicle-status?scenarioId=audi-a3-idle");
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+
+    it("throws the generic message on a 500", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: "OBD timeout" }),
+        }),
+      );
+
+      await expect(api.getVehicleStatus("audi-a3-idle")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
     });
   });
 
@@ -684,6 +1180,248 @@ describe("api", () => {
       } finally {
         vi.unstubAllGlobals();
       }
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // admin
+  // -----------------------------------------------------------------------
+
+  describe("admin", () => {
+    const overview: Record<string, unknown> = {
+      userStats: { byUserType: { individual: 3, workshop: 1 }, byRole: { user: 3, admin: 1 } },
+      recentErrorCount: 5,
+      httpRequestsByPathApprox: { "/api/scenarios": 42, "/api/diagnosis": 15 },
+    };
+
+    const logs: Record<string, unknown>[] = [
+      { id: 1, level: "error", message: "DB timeout", context: null, createdAt: "2026-01-01" },
+    ];
+
+    const auditLogs: Record<string, unknown>[] = [
+      { id: 1, method: "POST", path: "/api/diagnosis", statusCode: 200, ip: null, userAgent: null, durationMs: 45, userId: 1, createdAt: "2026-01-01" },
+    ];
+
+    const users: Record<string, unknown>[] = [
+      { id: 1, username: "admin", email: "a@b.com", userType: "individual", role: "admin", businessName: null, taxId: null, address: null, createdAt: "2026-01-01", failedLoginAttempts: 0, lockedUntil: null, isWorkshop: false, isAdmin: true },
+    ];
+
+    const knowledgeStats: Record<string, unknown> = {
+      pids: { count: 120, sample: [] },
+      dtcs: { count: 80, sample: [] },
+      diagnoses: { count: 45, sample: [] },
+    };
+
+    const knowledgeSearchResponse: Record<string, unknown> = {
+      results: [{ entry: { code: "P0301" }, distance: 0.12 }],
+    };
+
+    // -------------------------------------------------------------------
+    // overview
+    // -------------------------------------------------------------------
+
+    describe("overview", () => {
+      it("GETs /api/admin/overview and returns AdminOverview", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => overview,
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        const result = await api.admin.overview();
+
+        expect(result).toEqual(overview);
+        const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+        expect(url).toBe("/api/admin/overview");
+        expect(init.method).toBeUndefined();
+        expect(init.headers).toMatchObject({ Authorization: "Bearer access-abc" });
+      });
+
+      it("throws the generic message on a 500", async () => {
+        setStoredTokens();
+        vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) }));
+        await expect(api.admin.overview()).rejects.toThrow(GENERIC_ERROR_MESSAGE);
+      });
+    });
+
+    // -------------------------------------------------------------------
+    // logs
+    // -------------------------------------------------------------------
+
+    describe("logs", () => {
+      it("GETs /api/admin/logs with query params and returns Paginated<AdminLog>", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ items: logs, total: 1 }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        const result = await api.admin.logs({ level: "error", page: 1, pageSize: 10 });
+
+        expect(result).toEqual({ items: logs, total: 1 });
+        const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+        expect(url).toBe("/api/admin/logs?level=error&page=1&pageSize=10");
+        expect(init.method).toBeUndefined();
+      });
+
+      it("omits undefined filter values from query params", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ items: logs, total: 1 }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await api.admin.logs({});
+
+        const [url] = mockFetch.mock.calls[0] as [string];
+        expect(url).toBe("/api/admin/logs");
+      });
+
+      it("encodes filter values properly", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ items: [], total: 0 }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await api.admin.logs({ q: "error & timeout", from: "2026-01-01T00:00:00Z" });
+
+        const [url] = mockFetch.mock.calls[0] as [string];
+        expect(url).toContain("q=error+%26+timeout");
+      });
+    });
+
+    // -------------------------------------------------------------------
+    // auditLogs
+    // -------------------------------------------------------------------
+
+    describe("auditLogs", () => {
+      it("GETs /api/admin/audit-logs with filter params", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ items: auditLogs, total: 1 }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        const result = await api.admin.auditLogs({ statusCode: 200, path: "/api/diagnosis" });
+
+        expect(result).toEqual({ items: auditLogs, total: 1 });
+        const [url] = mockFetch.mock.calls[0] as [string];
+        expect(url).toContain("statusCode=200");
+        expect(url).toContain("path=%2Fapi%2Fdiagnosis");
+      });
+
+      it("omits undefined filter values", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ items: [], total: 0 }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await api.admin.auditLogs({});
+
+        const [url] = mockFetch.mock.calls[0] as [string];
+        expect(url).toBe("/api/admin/audit-logs");
+      });
+    });
+
+    // -------------------------------------------------------------------
+    // users
+    // -------------------------------------------------------------------
+
+    describe("users", () => {
+      it("GETs /api/admin/users with filter params", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ items: users, total: 1 }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        const result = await api.admin.users({ q: "admin", page: 1, pageSize: 20 });
+
+        expect(result).toEqual({ items: users, total: 1 });
+        const [url] = mockFetch.mock.calls[0] as [string];
+        expect(url).toBe("/api/admin/users?q=admin&page=1&pageSize=20");
+      });
+
+      it("omits undefined filter values", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ items: [], total: 0 }),
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await api.admin.users({});
+
+        const [url] = mockFetch.mock.calls[0] as [string];
+        expect(url).toBe("/api/admin/users");
+      });
+    });
+
+    // -------------------------------------------------------------------
+    // knowledgeStats
+    // -------------------------------------------------------------------
+
+    describe("knowledgeStats", () => {
+      it("GETs /api/admin/knowledge and returns AdminKnowledgeStats", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => knowledgeStats,
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        const result = await api.admin.knowledgeStats();
+
+        expect(result).toEqual(knowledgeStats);
+        const [url] = mockFetch.mock.calls[0] as [string];
+        expect(url).toBe("/api/admin/knowledge");
+      });
+    });
+
+    // -------------------------------------------------------------------
+    // knowledgeSearch
+    // -------------------------------------------------------------------
+
+    describe("knowledgeSearch", () => {
+      it("POSTs /api/admin/knowledge/search and returns KnowledgeSearchResponse", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => knowledgeSearchResponse,
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        const result = await api.admin.knowledgeSearch({ text: "P0301", index: "dtcs" });
+
+        expect(result).toEqual(knowledgeSearchResponse);
+        const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+        expect(url).toBe("/api/admin/knowledge/search");
+        expect(init.method).toBe("POST");
+        expect(JSON.parse(init.body as string)).toEqual({ text: "P0301", index: "dtcs" });
+      });
+
+      it("includes optional limit when provided", async () => {
+        setStoredTokens();
+        const mockFetch = vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => knowledgeSearchResponse,
+        });
+        vi.stubGlobal("fetch", mockFetch);
+
+        await api.admin.knowledgeSearch({ text: "P0301", index: "dtcs", limit: 5 });
+
+        const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+        expect(JSON.parse(init.body as string)).toEqual({ text: "P0301", index: "dtcs", limit: 5 });
+      });
     });
   });
 
