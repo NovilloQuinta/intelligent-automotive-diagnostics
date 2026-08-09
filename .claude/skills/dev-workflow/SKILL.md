@@ -29,7 +29,8 @@ Reglas:
   NUNCA en el repo principal. Regla 5b.
 - TDD estricto: RED → GREEN → REFACTOR (regla 4).
 - Commits atomicos dentro de la rama. Si GGA falla 2 veces seguidas, forzar con
-  `git commit --no-verify` y reportar los errores para corregirlos.
+  `git commit --no-verify` y documentar los errores en `docs/gga-pending-errors.md`
+  para corregirlos despues.
 - Push frecuente: `git push origin feat/<nombre>`.
 
 ## Fase 3: Merge a develop
