@@ -18,6 +18,8 @@ const mockAuthController = {
   refresh: vi.fn(),
   me: vi.fn(),
   logout: vi.fn(),
+  forgotPassword: vi.fn(),
+  resetPassword: vi.fn(),
 } as unknown as AuthController
 
 const mockScenarios: SimulationScenario[] = [

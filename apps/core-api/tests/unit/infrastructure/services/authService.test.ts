@@ -8,6 +8,7 @@ describe('authService', () => {
     saveRefreshToken: vi.fn().mockResolvedValue(undefined),
     findRefreshToken: vi.fn(),
     revokeRefreshToken: vi.fn().mockResolvedValue(undefined),
+    revokeAllForUser: vi.fn().mockResolvedValue(undefined),
   }
 
   const service = createAuthService({

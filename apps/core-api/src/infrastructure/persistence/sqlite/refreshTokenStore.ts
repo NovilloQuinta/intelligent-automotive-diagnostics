@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import * as schema from './schema.js'
 import type { DiagnosticsDb } from './db.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
@@ -32,5 +32,12 @@ export class SqliteRefreshTokenStore implements RefreshTokenRepository {
       .update(schema.refreshTokens)
       .set({ revokedAt: new Date().toISOString() })
       .where(eq(schema.refreshTokens.tokenHash, tokenHash))
+  }
+
+  async revokeAllForUser(userId: number): Promise<void> {
+    await this.db
+      .update(schema.refreshTokens)
+      .set({ revokedAt: new Date().toISOString() })
+      .where(and(eq(schema.refreshTokens.userId, userId), isNull(schema.refreshTokens.revokedAt)))
   }
 }

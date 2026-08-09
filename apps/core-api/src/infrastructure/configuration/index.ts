@@ -16,6 +16,14 @@ const configSchema = z.object({
   LLM_API_KEY: z.string().optional(),
   LLM_BASE_URL: z.string().optional(),
   LLM_MODEL: z.string().optional(),
+  SMTP_HOST: z.string().optional(),
+  SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_SECURE: z.preprocess((v) => v === 'true' || v === true, z.boolean()).default(false),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  SMTP_FROM: z.string().default('no-reply@localhost'),
+  APP_BASE_URL: z.string().default('http://localhost:5173'),
+  PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().positive().default(60),
 })
 
 /** Configuracion tipada de la aplicacion validada desde variables de entorno. */

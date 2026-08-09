@@ -31,6 +31,12 @@ const mockAuthController = {
   logout: vi.fn(async (_req: Request, res: Response) => {
     res.status(200).json({ success: true })
   }),
+  forgotPassword: vi.fn(async (_req: Request, res: Response) => {
+    res.status(200).json({ message: 'If that email exists, a reset link has been sent.' })
+  }),
+  resetPassword: vi.fn(async (_req: Request, res: Response) => {
+    res.status(400).json({ error: 'Invalid or expired token' })
+  }),
 } as unknown as AuthController
 
 const mockLlmClient: LlmClientPort = {

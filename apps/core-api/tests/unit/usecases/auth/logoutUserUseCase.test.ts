@@ -8,6 +8,7 @@ function createTokenStore(): RefreshTokenRepository {
     saveRefreshToken: vi.fn().mockResolvedValue(undefined),
     findRefreshToken: vi.fn().mockResolvedValue(null),
     revokeRefreshToken: vi.fn().mockResolvedValue(undefined),
+    revokeAllForUser: vi.fn().mockResolvedValue(undefined),
   }
 }
 

@@ -3,7 +3,11 @@ import { getDb } from '@/infrastructure/persistence/sqlite/db.js'
 import { createServer } from '@/infrastructure/http/server.js'
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
 import { SqliteRefreshTokenStore } from '@/infrastructure/persistence/sqlite/refreshTokenStore.js'
+import { SqlitePasswordResetTokenRepository } from '@/infrastructure/persistence/sqlite/passwordResetTokenRepository.js'
 import { createAuthService } from '@/infrastructure/services/authService.js'
+import { createNodemailerEmailSender } from '@/infrastructure/email/nodemailerEmailSender.js'
+import { createConsoleEmailSender } from '@/infrastructure/email/consoleEmailSender.js'
+import type { EmailSenderPort } from '@/application/ports/EmailSenderPort.js'
 import { Elm327TcpRepository } from '@/infrastructure/elm327/elm327Adapter.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import { createAnthropicClient } from '@/infrastructure/llm/anthropicClient.js'
@@ -18,7 +22,12 @@ import { LoginUserUseCase } from '@/application/use-cases/LoginUserUseCase.js'
 import { RefreshTokenUseCase } from '@/application/use-cases/RefreshTokenUseCase.js'
 import { GetCurrentUserUseCase } from '@/application/use-cases/GetCurrentUserUseCase.js'
 import { LogoutUserUseCase } from '@/application/use-cases/LogoutUserUseCase.js'
+import { ForgotPasswordUseCase } from '@/application/use-cases/ForgotPasswordUseCase.js'
+import { ResetPasswordUseCase } from '@/application/use-cases/ResetPasswordUseCase.js'
+import { ChangePasswordUseCase } from '@/application/use-cases/ChangePasswordUseCase.js'
+import { UpdateProfileUseCase } from '@/application/use-cases/UpdateProfileUseCase.js'
 import { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
+import { ProfileController } from '@/infrastructure/http/controllers/ProfileController.js'
 import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 import type { AppConfig } from '@/infrastructure/configuration/index.js'
@@ -48,6 +57,7 @@ interface PersistenceRepositories {
   readonly auditRepo: SqliteAuditLogRepository
   readonly userRepo: SqliteUserRepository
   readonly tokenStore: SqliteRefreshTokenStore
+  readonly passwordResetTokenRepo: SqlitePasswordResetTokenRepository
 }
 
 /** Crea los repositorios SQLite y devuelve la conexion compartida. */
@@ -58,7 +68,26 @@ function createPersistenceRepositories(config: AppConfig): PersistenceRepositori
     auditRepo: new SqliteAuditLogRepository(db),
     userRepo: new SqliteUserRepository(db),
     tokenStore: new SqliteRefreshTokenStore(db),
+    passwordResetTokenRepo: new SqlitePasswordResetTokenRepository(db),
   }
+}
+
+/**
+ * Crea el adapter de envio de email segun la configuracion: nodemailer real via SMTP
+ * si hay `SMTP_HOST` configurado, o el fallback de consola en dev/CI.
+ */
+function createEmailSender(config: AppConfig, logger: LoggerPort): EmailSenderPort {
+  if (config.SMTP_HOST) {
+    return createNodemailerEmailSender({
+      host: config.SMTP_HOST,
+      port: config.SMTP_PORT,
+      secure: config.SMTP_SECURE,
+      user: config.SMTP_USER,
+      pass: config.SMTP_PASS,
+      from: config.SMTP_FROM,
+    })
+  }
+  return createConsoleEmailSender(logger)
 }
 
 interface AuthStack {
@@ -68,12 +97,15 @@ interface AuthStack {
   readonly refreshUseCase: RefreshTokenUseCase
   readonly getCurrentUserUseCase: GetCurrentUserUseCase
   readonly logoutUseCase: LogoutUserUseCase
+  readonly forgotPasswordUseCase: ForgotPasswordUseCase
+  readonly resetPasswordUseCase: ResetPasswordUseCase
 }
 
 /** Crea el servicio de autenticacion y sus casos de uso. */
 function createAuthStack(
   config: AppConfig,
-  repos: Pick<PersistenceRepositories, 'userRepo' | 'tokenStore'>,
+  repos: Pick<PersistenceRepositories, 'userRepo' | 'tokenStore' | 'passwordResetTokenRepo'>,
+  emailSender: EmailSenderPort,
   logger: LoggerPort,
 ): AuthStack {
   const authService = createAuthService({
@@ -90,6 +122,46 @@ function createAuthStack(
     refreshUseCase: new RefreshTokenUseCase(authService, logger),
     getCurrentUserUseCase: new GetCurrentUserUseCase(repos.userRepo),
     logoutUseCase: new LogoutUserUseCase(repos.tokenStore, logger),
+    forgotPasswordUseCase: new ForgotPasswordUseCase(
+      repos.userRepo,
+      repos.passwordResetTokenRepo,
+      emailSender,
+      { ttlMinutes: config.PASSWORD_RESET_TTL_MINUTES, appBaseUrl: config.APP_BASE_URL },
+      logger,
+    ),
+    resetPasswordUseCase: new ResetPasswordUseCase(
+      repos.passwordResetTokenRepo,
+      repos.userRepo,
+      authService,
+      repos.tokenStore,
+      logger,
+    ),
+  }
+}
+
+interface ProfileStack {
+  readonly changePasswordUseCase: ChangePasswordUseCase
+  readonly updateProfileUseCase: UpdateProfileUseCase
+  readonly profileController: ProfileController
+}
+
+/** Crea los casos de uso y el controlador de perfil autenticado. */
+function createProfileStack(
+  repos: Pick<PersistenceRepositories, 'userRepo' | 'tokenStore'>,
+  authService: ReturnType<typeof createAuthService>,
+  logger: LoggerPort,
+): ProfileStack {
+  const changePasswordUseCase = new ChangePasswordUseCase(
+    repos.userRepo,
+    authService,
+    repos.tokenStore,
+    logger,
+  )
+  const updateProfileUseCase = new UpdateProfileUseCase(repos.userRepo, logger)
+  return {
+    changePasswordUseCase,
+    updateProfileUseCase,
+    profileController: new ProfileController(changePasswordUseCase, updateProfileUseCase),
   }
 }
 
@@ -101,16 +173,27 @@ function createObdRepository(config: AppConfig): ObdRepository | undefined {
 
 /** Composition Root: cablea todas las dependencias y devuelve la app Express configurada. */
 export function buildApp(config: AppConfig): Application {
-  const { db, auditRepo, userRepo, tokenStore } = createPersistenceRepositories(config)
+  const { db, auditRepo, userRepo, tokenStore, passwordResetTokenRepo } =
+    createPersistenceRepositories(config)
   const logger = new Logger(config.NODE_ENV, db)
-  const auth = createAuthStack(config, { userRepo, tokenStore }, logger)
+  const emailSender = createEmailSender(config, logger)
+  const auth = createAuthStack(
+    config,
+    { userRepo, tokenStore, passwordResetTokenRepo },
+    emailSender,
+    logger,
+  )
   const authController = new AuthController(
     auth.registerUseCase,
     auth.loginUseCase,
     auth.refreshUseCase,
     auth.getCurrentUserUseCase,
     auth.logoutUseCase,
+    auth.forgotPasswordUseCase,
+    auth.resetPasswordUseCase,
   )
+
+  const profile = createProfileStack({ userRepo, tokenStore }, auth.authService, logger)
 
   const obdRepo = createObdRepository(config)
   const llmClient = createLlmClient(config, logger)
@@ -125,6 +208,7 @@ export function buildApp(config: AppConfig): Application {
   return createServer({
     authController,
     diagnosisController,
+    profileController: profile.profileController,
     auditRepo,
     logger,
     allowedOrigins: config.ALLOWED_ORIGINS,

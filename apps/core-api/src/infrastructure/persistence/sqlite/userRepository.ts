@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, eq, ne } from 'drizzle-orm'
 
 const MAX_FAILED_ATTEMPTS = 5
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000
@@ -56,5 +56,33 @@ export class SqliteUserRepository implements UserRepository {
       .update(schema.users)
       .set({ failedLoginAttempts: 0, lockedUntil: null })
       .where(eq(schema.users.id, userId))
+  }
+
+  async updatePassword(userId: number, passwordHash: string): Promise<void> {
+    await this.db.update(schema.users).set({ passwordHash }).where(eq(schema.users.id, userId))
+  }
+
+  async updateProfile(
+    userId: number,
+    patch: Partial<Pick<User, 'username' | 'address' | 'businessName' | 'taxId'>>,
+  ): Promise<User> {
+    await this.db.update(schema.users).set(patch).where(eq(schema.users.id, userId))
+
+    const updated = await this.findById(userId)
+    if (!updated) {
+      throw new Error(`User ${userId} not found after update`)
+    }
+    return updated
+  }
+
+  async existsByUsername(username: string, excludeUserId?: number): Promise<boolean> {
+    const conditions =
+      excludeUserId === undefined
+        ? eq(schema.users.username, username)
+        : and(eq(schema.users.username, username), ne(schema.users.id, excludeUserId))
+
+    const rows = await this.db.select().from(schema.users).where(conditions).limit(1)
+
+    return rows.length > 0
   }
 }

@@ -11,9 +11,11 @@ import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.
 import { createAuthMiddleware } from '@/infrastructure/http/middleware/auth.middleware.js'
 import { createAuthRoutes } from '@/infrastructure/http/routes/auth.routes.js'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
+import { createProfileRoutes } from '@/infrastructure/http/routes/profile.routes.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 import type { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
+import type { ProfileController } from '@/infrastructure/http/controllers/ProfileController.js'
 
 /** Dependencias del servidor Express. */
 export interface ServerDependencies {
@@ -21,6 +23,7 @@ export interface ServerDependencies {
   readonly auditRepo: AuditLogRepository
   readonly authController: AuthController
   readonly diagnosisController: DiagnosisController
+  readonly profileController?: ProfileController
   readonly accessTokenSecret?: string
   readonly allowedOrigins: string
   readonly nodeEnv: string
@@ -140,11 +143,19 @@ export function createServer(deps: ServerDependencies): express.Application {
 
   const loginLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 5 })
   const refreshLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 10 })
+  // Rate limit dedicado para forgot-password: mas estricto que login (evita abuso del envio de email)
+  const forgotPasswordLimiter = createRateLimiter({ windowMinutes: 15, maxRequests: 5 })
 
   app.use('/api/auth', createRateLimiter({ windowMinutes: 15, maxRequests: 20 }))
   app.use(
     '/api/auth',
-    createAuthRoutes(deps.authController, authMiddleware, loginLimiter, refreshLimiter),
+    createAuthRoutes(
+      deps.authController,
+      authMiddleware,
+      loginLimiter,
+      refreshLimiter,
+      forgotPasswordLimiter,
+    ),
   )
 
   mountInfoRoutes(app, deps.nodeEnv)
@@ -161,6 +172,12 @@ export function createServer(deps: ServerDependencies): express.Application {
   app.use('/api/mcp/cognitive-diagnosis', cognitiveLimiter)
 
   app.use('/api', createDiagnosisRoutes(deps.diagnosisController))
+
+  if (deps.profileController) {
+    // Rate limit dedicado para change-password: protege contra fuerza bruta con un access token robado
+    const changePasswordLimiter = createRateLimiter({ windowMinutes: 15, maxRequests: 5 })
+    app.use('/api/profile', createProfileRoutes(deps.profileController, changePasswordLimiter))
+  }
 
   mountErrorHandler(app, deps.logger)
 
