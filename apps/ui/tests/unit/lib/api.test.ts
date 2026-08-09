@@ -792,6 +792,190 @@ describe("api", () => {
   });
 
   // -----------------------------------------------------------------------
+  // forgotPassword (public, no apiFetch)
+  // -----------------------------------------------------------------------
+
+  describe("forgotPassword", () => {
+    it("posts the email and resolves on 200", async () => {
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+      vi.stubGlobal("fetch", mockFetch);
+
+      await expect(api.forgotPassword("a@b.com")).resolves.toBeUndefined();
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/auth/forgot-password");
+      expect(init.method).toBe("POST");
+      expect(init.headers).not.toHaveProperty("Authorization");
+      expect(JSON.parse(init.body as string)).toEqual({ email: "a@b.com" });
+    });
+
+    it("throws the generic message on a 500", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          json: async () => ({ error: "boom" }),
+        }),
+      );
+
+      await expect(api.forgotPassword("a@b.com")).rejects.toThrow(
+        GENERIC_ERROR_MESSAGE,
+      );
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // resetPassword (public, no apiFetch)
+  // -----------------------------------------------------------------------
+
+  describe("resetPassword", () => {
+    it("posts the token and new password and resolves on 200", async () => {
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({ ok: true, json: async () => ({}) });
+      vi.stubGlobal("fetch", mockFetch);
+
+      await expect(
+        api.resetPassword("raw-token", "Password123!"),
+      ).resolves.toBeUndefined();
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/auth/reset-password");
+      expect(init.method).toBe("POST");
+      expect(JSON.parse(init.body as string)).toEqual({
+        token: "raw-token",
+        newPassword: "Password123!",
+      });
+    });
+
+    it("throws the curated error message on a 400 (invalid/expired token)", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 400,
+          json: async () => ({ error: "Invalid or expired token" }),
+        }),
+      );
+
+      await expect(
+        api.resetPassword("bad-token", "Password123!"),
+      ).rejects.toThrow("Invalid or expired token");
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // updateProfile (authenticated, via apiFetch)
+  // -----------------------------------------------------------------------
+
+  describe("updateProfile", () => {
+    it("sends a PATCH with the Bearer token and returns the updated user", async () => {
+      setStoredTokens();
+      const updated = { ...MOCK_USER, username: "juan2" };
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => updated,
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.updateProfile({ username: "juan2" });
+
+      expect(result).toEqual(updated);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/profile");
+      expect(init.method).toBe("PATCH");
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+      expect(JSON.parse(init.body as string)).toEqual({
+        username: "juan2",
+      });
+    });
+
+    it("throws the curated error message on a 409 (username taken)", async () => {
+      setStoredTokens();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 409,
+          json: async () => ({ error: "Username already taken" }),
+        }),
+      );
+
+      await expect(
+        api.updateProfile({ username: "taken" }),
+      ).rejects.toThrow("Username already taken");
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // changePassword (authenticated, via apiFetch)
+  // -----------------------------------------------------------------------
+
+  describe("changePassword", () => {
+    it("sends currentPassword/newPassword with the Bearer token", async () => {
+      setStoredTokens();
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({}),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      await expect(
+        api.changePassword("OldPass123!", "NewPass456!"),
+      ).resolves.toBeUndefined();
+
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/profile/change-password");
+      expect(init.method).toBe("POST");
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+      expect(JSON.parse(init.body as string)).toEqual({
+        currentPassword: "OldPass123!",
+        newPassword: "NewPass456!",
+      });
+    });
+
+    it("throws the curated error message on a 401 (wrong current password)", async () => {
+      setStoredTokens();
+      // A wrong-current-password 401 is indistinguishable from an expired
+      // access token at the transport level, so apiFetch's automatic
+      // refresh-and-retry kicks in first (the access token itself is
+      // valid). The retried request gets the same 401 body — that's what
+      // assertOk ultimately surfaces to the caller.
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+          json: async () => ({ error: "Incorrect current password" }),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            accessToken: "new-access",
+            refreshToken: "new-refresh",
+          }),
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 401,
+          json: async () => ({ error: "Incorrect current password" }),
+        });
+      vi.stubGlobal("fetch", mockFetch);
+
+      await expect(
+        api.changePassword("wrong", "NewPass456!"),
+      ).rejects.toThrow("Incorrect current password");
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // assertOk — shared response error handling
   // -----------------------------------------------------------------------
 

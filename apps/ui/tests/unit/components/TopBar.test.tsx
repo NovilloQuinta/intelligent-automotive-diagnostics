@@ -3,6 +3,14 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { TopBar } from "../../../src/components/dashboard/TopBar";
 import type { Scenario } from "../../../src/components/dashboard/types";
 
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ to, children, ...props }: { to: string; children: React.ReactNode }) => (
+    <a href={to} {...props}>
+      {children}
+    </a>
+  ),
+}));
+
 // useClock is timing-based (interval) and covered by its own test file;
 // here we stub it for deterministic clock assertions.
 const { mockClockNow, mockOnLogout } = vi.hoisted(() => ({
@@ -59,6 +67,13 @@ describe("TopBar", () => {
     fireEvent.click(screen.getByTitle("Cerrar sesión"));
 
     expect(mockOnLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it("should render a link to /profile", () => {
+    render(<TopBar {...baseProps} />);
+
+    const link = screen.getByTitle("Mi perfil");
+    expect(link.getAttribute("href")).toBe("/profile");
   });
 
   it("should disable the vehicle selector while loading", () => {

@@ -26,6 +26,7 @@ type AuthState = {
   login: (input: LoginInput) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 };
 
 // ---------------------------------------------------------------------------
@@ -116,9 +117,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus("anonymous");
   }, []);
 
+  /**
+   * Refetches the current user via GET /api/auth/me and updates the cached
+   * user. Used after profile edits so the UI reflects the persisted state.
+   * On failure, the previously cached user is left untouched — the caller
+   * decides how to surface the error (e.g. a toast).
+   */
+  const refreshUser = useCallback(async () => {
+    const u = await api.getMe();
+    setUser(u);
+  }, []);
+
   const value = useMemo<AuthState>(
-    () => ({ status, user, login, register, logout }),
-    [status, user, login, register, logout],
+    () => ({ status, user, login, register, logout, refreshUser }),
+    [status, user, login, register, logout, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

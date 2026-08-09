@@ -10,6 +10,11 @@ vi.mock("@tanstack/react-router", () => ({
   }),
   Navigate: ({ to }: { to: string }) => `<navigate data-to="${to}" data-testid="navigate" />` as unknown as JSX.Element,
   useNavigate: () => vi.fn(),
+  Link: ({ to, children, ...props }: { to: string; children: React.ReactNode }) => (
+    <a href={to} {...props}>
+      {children}
+    </a>
+  ),
 }));
 
 vi.mock("../../../src/lib/auth-context", () => ({
@@ -157,6 +162,12 @@ describe("AuthPage", () => {
       ).toBeDefined();
     });
     expect(register).not.toHaveBeenCalled();
+  });
+
+  it("renders a link to /forgot-password on the login form", () => {
+    render(<AuthPage />);
+    const link = screen.getByText("¿Olvidaste tu contraseña?");
+    expect(link.closest("a")?.getAttribute("href")).toBe("/forgot-password");
   });
 
   it("toggles password visibility on login and register forms", async () => {

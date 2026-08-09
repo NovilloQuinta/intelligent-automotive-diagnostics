@@ -1,4 +1,5 @@
-import { LogOut, ScanLine } from "lucide-react";
+import { LogOut, ScanLine, User } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useClock } from "./useClock";
 import { VehicleSelector } from "./VehicleSelector";
 import { COLORS } from "./types";
@@ -84,6 +85,13 @@ export function TopBar({
           onChange={onSelect}
           disabled={loading || scenarios.length === 0}
         />
+        <Link
+          to="/profile"
+          className="flex items-center gap-1.5 rounded-md border border-white/10 bg-black/40 px-2.5 py-1.5 text-xs text-muted-foreground transition hover:border-primary/40 hover:text-primary"
+          title="Mi perfil"
+        >
+          <User className="h-3.5 w-3.5" />
+        </Link>
         <button
           onClick={onLogout}
           className="flex items-center gap-1.5 rounded-md border border-white/10 bg-black/40 px-2.5 py-1.5 text-xs text-muted-foreground transition hover:border-destructive/40 hover:text-destructive"

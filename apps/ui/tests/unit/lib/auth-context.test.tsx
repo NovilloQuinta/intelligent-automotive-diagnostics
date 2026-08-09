@@ -280,4 +280,57 @@ describe("AuthProvider", () => {
       "useAuth() must be used inside <AuthProvider>",
     );
   });
+
+  describe("refreshUser", () => {
+    it("refetches the current user via api.getMe and updates the cached user", async () => {
+      localStorage.setItem("iad.accessToken", "tok");
+      localStorage.setItem("iad.refreshToken", "rtok");
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({ ok: true, json: async () => MOCK_USER }),
+      );
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+      await waitFor(() => {
+        expect(result.current.status).toBe("authed");
+      });
+
+      const UPDATED_USER: AuthUser = { ...MOCK_USER, username: "juan2" };
+      const getMeSpy = vi
+        .spyOn(api, "getMe")
+        .mockResolvedValueOnce(UPDATED_USER);
+
+      await act(async () => {
+        await result.current.refreshUser();
+      });
+
+      expect(getMeSpy).toHaveBeenCalledTimes(1);
+      expect(result.current.user).toMatchObject(UPDATED_USER);
+      expect(result.current.status).toBe("authed");
+    });
+
+    it("propagates errors from api.getMe without clearing the cached user", async () => {
+      localStorage.setItem("iad.accessToken", "tok");
+      localStorage.setItem("iad.refreshToken", "rtok");
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({ ok: true, json: async () => MOCK_USER }),
+      );
+
+      const { result } = renderHook(() => useAuth(), { wrapper });
+      await waitFor(() => {
+        expect(result.current.status).toBe("authed");
+      });
+
+      vi.spyOn(api, "getMe").mockRejectedValueOnce(new Error("boom"));
+
+      await act(async () => {
+        await expect(result.current.refreshUser()).rejects.toThrow("boom");
+      });
+
+      // The previously cached user is left untouched on failure
+      expect(result.current.user).toMatchObject(MOCK_USER);
+      expect(result.current.status).toBe("authed");
+    });
+  });
 });

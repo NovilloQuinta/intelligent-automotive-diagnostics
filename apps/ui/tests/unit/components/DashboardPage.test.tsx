@@ -25,6 +25,11 @@ vi.mock("@tanstack/react-router", () => {
     Navigate: ({ to, replace }: { to: string; replace?: boolean }) => (
       <div data-testid="navigate" data-to={to} data-replace={String(replace)} />
     ),
+    Link: ({ to, children, ...props }: { to: string; children: React.ReactNode }) => (
+      <a href={to} {...props}>
+        {children}
+      </a>
+    ),
   };
 });
 

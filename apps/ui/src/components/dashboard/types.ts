@@ -92,6 +92,27 @@ export type RegisterInput = {
   address?: string;
 };
 
+export type ForgotPasswordInput = {
+  email: string;
+};
+
+export type ResetPasswordInput = {
+  token: string;
+  newPassword: string;
+};
+
+export type ChangePasswordInput = {
+  currentPassword: string;
+  newPassword: string;
+};
+
+export type UpdateProfileInput = Partial<{
+  username: string;
+  address: string;
+  businessName: string;
+  taxId: string;
+}>;
+
 // ---------------------------------------------------------------------------
 // Visual constants
 // ---------------------------------------------------------------------------
