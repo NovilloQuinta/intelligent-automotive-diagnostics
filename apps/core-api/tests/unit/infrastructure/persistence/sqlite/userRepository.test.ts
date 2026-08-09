@@ -148,4 +148,81 @@ describe('SqliteUserRepository', () => {
       expect(user!.email.value).toBe('byid@example.com')
     })
   })
+
+  describe('updatePassword', () => {
+    it('actualiza el passwordHash del usuario', async () => {
+      const created = await repo.create({
+        ...mockUser,
+        username: 'pwduser',
+        email: new Email('pwduser@example.com'),
+      })
+
+      await repo.updatePassword(created.id, '$2b$12$newhashvalue')
+
+      const updated = await repo.findById(created.id)
+      expect(updated!.passwordHash).toBe('$2b$12$newhashvalue')
+    })
+  })
+
+  describe('updateProfile', () => {
+    it('actualiza parcialmente username/address/businessName/taxId', async () => {
+      const created = await repo.create({
+        ...mockUser,
+        username: 'profileuser',
+        email: new Email('profileuser@example.com'),
+      })
+
+      const updated = await repo.updateProfile(created.id, {
+        username: 'renameduser',
+        address: 'Nueva direccion 42',
+      })
+
+      expect(updated.username).toBe('renameduser')
+      expect(updated.address).toBe('Nueva direccion 42')
+      expect(updated.email.value).toBe('profileuser@example.com')
+    })
+
+    it('deja intactos los campos no incluidos en el patch', async () => {
+      const created = await repo.create({
+        ...mockWorkshop,
+        username: 'tallerprofile',
+        email: new Email('tallerprofile@example.com'),
+      })
+
+      const updated = await repo.updateProfile(created.id, { address: 'Otra calle 1' })
+
+      expect(updated.businessName).toBe('Talleres AutoFix')
+      expect(updated.taxId).toBe('B12345678')
+      expect(updated.address).toBe('Otra calle 1')
+    })
+  })
+
+  describe('existsByUsername', () => {
+    it('devuelve false si el username no existe', async () => {
+      const exists = await repo.existsByUsername('nadieusaesto')
+      expect(exists).toBe(false)
+    })
+
+    it('devuelve true si el username existe', async () => {
+      await repo.create({
+        ...mockUser,
+        username: 'existente',
+        email: new Email('existente@example.com'),
+      })
+
+      const exists = await repo.existsByUsername('existente')
+      expect(exists).toBe(true)
+    })
+
+    it('excluye el propio userId al comprobar unicidad', async () => {
+      const created = await repo.create({
+        ...mockUser,
+        username: 'propio',
+        email: new Email('propio@example.com'),
+      })
+
+      const exists = await repo.existsByUsername('propio', created.id)
+      expect(exists).toBe(false)
+    })
+  })
 })

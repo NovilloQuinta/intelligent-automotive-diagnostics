@@ -17,4 +17,16 @@ export interface UserRepository {
 
   /** Resetea el contador de intentos fallidos tras login exitoso. */
   resetFailedLogins(userId: number): Promise<void>
+
+  /** Actualiza el hash de contraseña de un usuario. */
+  updatePassword(userId: number, passwordHash: string): Promise<void>
+
+  /** Actualiza parcialmente los datos de perfil de un usuario (nunca el email). */
+  updateProfile(
+    userId: number,
+    patch: Partial<Pick<User, 'username' | 'address' | 'businessName' | 'taxId'>>,
+  ): Promise<User>
+
+  /** Indica si ya existe un usuario con ese username, opcionalmente excluyendo un userId. */
+  existsByUsername(username: string, excludeUserId?: number): Promise<boolean>
 }

@@ -94,6 +94,18 @@ export const refreshTokens = sqliteTable('refresh_tokens', {
   revokedAt: text('revoked_at'),
 })
 
+/** Tokens de reseteo de contraseña, un solo uso, hasheados (SHA-256), con TTL. */
+export const passwordResetTokens = sqliteTable('password_reset_tokens', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: text('expires_at').notNull(),
+  createdAt: text('created_at').notNull().default("datetime('now')"),
+  usedAt: text('used_at'),
+})
+
 /** Registro de auditoria de peticiones HTTP para trazabilidad (OWASP A09). */
 export const auditLogs = sqliteTable('audit_logs', {
   id: integer('id').primaryKey({ autoIncrement: true }),

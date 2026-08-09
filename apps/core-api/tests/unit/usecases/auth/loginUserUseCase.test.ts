@@ -37,6 +37,9 @@ function createMocks(
     create: vi.fn().mockResolvedValue(USER),
     incrementFailedLogin: vi.fn().mockResolvedValue(undefined),
     resetFailedLogins: vi.fn().mockResolvedValue(undefined),
+    updatePassword: vi.fn().mockResolvedValue(undefined),
+    updateProfile: vi.fn().mockResolvedValue(USER),
+    existsByUsername: vi.fn().mockResolvedValue(false),
     ...overrides.userRepo,
   }
 
@@ -59,6 +62,7 @@ function createMocks(
     saveRefreshToken: vi.fn().mockResolvedValue(undefined),
     findRefreshToken: vi.fn().mockResolvedValue(null),
     revokeRefreshToken: vi.fn().mockResolvedValue(undefined),
+    revokeAllForUser: vi.fn().mockResolvedValue(undefined),
   }
 
   return { userRepo, authService, tokenStore }

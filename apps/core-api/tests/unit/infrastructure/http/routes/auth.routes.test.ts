@@ -8,18 +8,24 @@ import { LoginUserUseCase } from '@/application/use-cases/LoginUserUseCase.js'
 import { RefreshTokenUseCase } from '@/application/use-cases/RefreshTokenUseCase.js'
 import { GetCurrentUserUseCase } from '@/application/use-cases/GetCurrentUserUseCase.js'
 import { LogoutUserUseCase } from '@/application/use-cases/LogoutUserUseCase.js'
+import { ForgotPasswordUseCase } from '@/application/use-cases/ForgotPasswordUseCase.js'
+import { ResetPasswordUseCase } from '@/application/use-cases/ResetPasswordUseCase.js'
 import { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 import { createAuthMiddleware } from '@/infrastructure/http/middleware/auth.middleware.js'
 import { hashToken } from '@/application/shared/hashToken.js'
 import type { UserRepository } from '@/application/ports/UserRepository.js'
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
+import type { PasswordResetTokenRepository } from '@/application/ports/PasswordResetTokenRepository.js'
+import type { EmailSenderPort } from '@/application/ports/EmailSenderPort.js'
 
 function createMocks(
   overrides: {
     userRepo?: Partial<UserRepository>
     authService?: Partial<AuthServicePort>
     tokenStore?: Partial<RefreshTokenRepository>
+    tokenRepo?: Partial<PasswordResetTokenRepository>
+    emailSender?: Partial<EmailSenderPort>
   } = {},
 ) {
   const userRepo: UserRepository = {
@@ -38,6 +44,9 @@ function createMocks(
     }),
     incrementFailedLogin: vi.fn().mockResolvedValue(undefined),
     resetFailedLogins: vi.fn().mockResolvedValue(undefined),
+    updatePassword: vi.fn().mockResolvedValue(undefined),
+    updateProfile: vi.fn().mockResolvedValue(undefined),
+    existsByUsername: vi.fn().mockResolvedValue(false),
     ...overrides.userRepo,
   }
 
@@ -60,10 +69,24 @@ function createMocks(
     saveRefreshToken: vi.fn().mockResolvedValue(undefined),
     findRefreshToken: vi.fn().mockResolvedValue(null),
     revokeRefreshToken: vi.fn().mockResolvedValue(undefined),
+    revokeAllForUser: vi.fn().mockResolvedValue(undefined),
     ...overrides.tokenStore,
   }
 
-  return { userRepo, authService, tokenStore }
+  const tokenRepo: PasswordResetTokenRepository = {
+    save: vi.fn().mockResolvedValue(undefined),
+    findByTokenHash: vi.fn().mockResolvedValue(null),
+    markUsed: vi.fn().mockResolvedValue(undefined),
+    invalidateAllForUser: vi.fn().mockResolvedValue(undefined),
+    ...overrides.tokenRepo,
+  }
+
+  const emailSender: EmailSenderPort = {
+    send: vi.fn().mockResolvedValue(undefined),
+    ...overrides.emailSender,
+  }
+
+  return { userRepo, authService, tokenStore, tokenRepo, emailSender }
 }
 
 function createTestApp(
@@ -71,22 +94,36 @@ function createTestApp(
     userRepo?: Partial<UserRepository>
     authService?: Partial<AuthServicePort>
     tokenStore?: Partial<RefreshTokenRepository>
+    tokenRepo?: Partial<PasswordResetTokenRepository>
+    emailSender?: Partial<EmailSenderPort>
     accessTokenSecret?: string
   } = {},
 ) {
-  const { userRepo, authService, tokenStore } = createMocks(overrides)
+  const { userRepo, authService, tokenStore, tokenRepo, emailSender } = createMocks(overrides)
 
   const registerUseCase = new RegisterUserUseCase(userRepo, authService, tokenStore)
   const loginUseCase = new LoginUserUseCase(userRepo, authService, tokenStore)
   const refreshUseCase = new RefreshTokenUseCase(authService)
   const getCurrentUserUseCase = new GetCurrentUserUseCase(userRepo)
   const logoutUseCase = new LogoutUserUseCase(tokenStore)
+  const forgotPasswordUseCase = new ForgotPasswordUseCase(userRepo, tokenRepo, emailSender, {
+    ttlMinutes: 60,
+    appBaseUrl: 'http://localhost:5173',
+  })
+  const resetPasswordUseCase = new ResetPasswordUseCase(
+    tokenRepo,
+    userRepo,
+    authService,
+    tokenStore,
+  )
   const controller = new AuthController(
     registerUseCase,
     loginUseCase,
     refreshUseCase,
     getCurrentUserUseCase,
     logoutUseCase,
+    forgotPasswordUseCase,
+    resetPasswordUseCase,
   )
 
   const app = express()
@@ -96,7 +133,7 @@ function createTestApp(
     : undefined
   app.use('/api/auth', createAuthRoutes(controller, requireAuth))
 
-  return { app, userRepo, authService, tokenStore }
+  return { app, userRepo, authService, tokenStore, tokenRepo, emailSender }
 }
 
 describe('authRoutes', () => {
@@ -314,6 +351,96 @@ describe('authRoutes', () => {
         .post('/api/auth/refresh')
         .send({ refreshToken: 'refresh-token-xyz' })
       expect(refreshRes.status).toBe(401)
+    })
+  })
+
+  describe('POST /api/auth/forgot-password', () => {
+    it('should always return 200 with a generic message when the email exists', async () => {
+      const { app, tokenRepo, emailSender } = createTestApp({
+        userRepo: {
+          findByEmail: vi.fn().mockResolvedValue({
+            id: 1,
+            username: 'juan',
+            email: 'juan@mail.com',
+            passwordHash: '$2b$12$hashed',
+            userType: 'individual',
+          }),
+        },
+      })
+
+      const res = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'juan@mail.com' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.message).toBeDefined()
+      expect(tokenRepo.save).toHaveBeenCalled()
+      expect(emailSender.send).toHaveBeenCalled()
+    })
+
+    it('should always return 200 with the same generic message when the email does not exist', async () => {
+      const { app, tokenRepo } = createTestApp()
+
+      const res = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'noexiste@mail.com' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.message).toBeDefined()
+      expect(tokenRepo.save).not.toHaveBeenCalled()
+    })
+
+    it('should return 400 when validation fails', async () => {
+      const { app } = createTestApp()
+
+      const res = await request(app).post('/api/auth/forgot-password').send({ email: 'invalid' })
+
+      expect(res.status).toBe(400)
+    })
+  })
+
+  describe('POST /api/auth/reset-password', () => {
+    it('should return 200 and reset the password for a valid token', async () => {
+      const { app } = createTestApp({
+        tokenRepo: {
+          findByTokenHash: vi.fn().mockResolvedValue({
+            id: 1,
+            userId: 1,
+            tokenHash: hashToken('valid-reset-token'),
+            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+            createdAt: new Date().toISOString(),
+            usedAt: null,
+          }),
+        },
+      })
+
+      const res = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: 'valid-reset-token', newPassword: 'NewPass1!' })
+
+      expect(res.status).toBe(200)
+    })
+
+    it('should return 400 for an invalid or expired token', async () => {
+      const { app } = createTestApp({
+        tokenRepo: { findByTokenHash: vi.fn().mockResolvedValue(null) },
+      })
+
+      const res = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: 'bad-token', newPassword: 'NewPass1!' })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('should return 400 when the new password is weak', async () => {
+      const { app } = createTestApp()
+
+      const res = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: 'some-token', newPassword: 'weak' })
+
+      expect(res.status).toBe(400)
     })
   })
 })

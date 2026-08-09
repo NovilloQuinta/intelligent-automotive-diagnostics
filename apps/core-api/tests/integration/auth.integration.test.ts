@@ -5,12 +5,18 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { createServer } from '@/infrastructure/http/server.js'
 import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
+import type { EmailSenderPort, EmailMessage } from '@/application/ports/EmailSenderPort.js'
 import { RegisterUserUseCase } from '@/application/use-cases/RegisterUserUseCase.js'
 import { LoginUserUseCase } from '@/application/use-cases/LoginUserUseCase.js'
 import { RefreshTokenUseCase } from '@/application/use-cases/RefreshTokenUseCase.js'
 import { GetCurrentUserUseCase } from '@/application/use-cases/GetCurrentUserUseCase.js'
 import { LogoutUserUseCase } from '@/application/use-cases/LogoutUserUseCase.js'
+import { ForgotPasswordUseCase } from '@/application/use-cases/ForgotPasswordUseCase.js'
+import { ResetPasswordUseCase } from '@/application/use-cases/ResetPasswordUseCase.js'
+import { ChangePasswordUseCase } from '@/application/use-cases/ChangePasswordUseCase.js'
+import { UpdateProfileUseCase } from '@/application/use-cases/UpdateProfileUseCase.js'
 import { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
+import { ProfileController } from '@/infrastructure/http/controllers/ProfileController.js'
 import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 
@@ -18,13 +24,33 @@ const mockAuditRepo: AuditLogRepository = { create: async () => {} }
 const mockLogger: LoggerPort = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
 import { SqliteRefreshTokenStore } from '@/infrastructure/persistence/sqlite/refreshTokenStore.js'
+import { SqlitePasswordResetTokenRepository } from '@/infrastructure/persistence/sqlite/passwordResetTokenRepository.js'
 import { createAuthService } from '@/infrastructure/services/authService.js'
 
 const ACCESS_SECRET = 'integration-access-secret'
 const REFRESH_SECRET = 'integration-refresh-secret'
+const APP_BASE_URL = 'http://localhost:5173'
+
+/** Double de EmailSenderPort que captura el ultimo mensaje enviado (en vez de tocar SMTP real). */
+class CapturingEmailSender implements EmailSenderPort {
+  public lastMessage: EmailMessage | null = null
+
+  async send(message: EmailMessage): Promise<void> {
+    this.lastMessage = message
+  }
+
+  /** Extrae el token de reseteo del link contenido en el ultimo email enviado. */
+  extractResetToken(): string {
+    if (!this.lastMessage) throw new Error('No email was sent')
+    const match = this.lastMessage.html.match(/token=([^"&<\s]+)/)
+    if (!match) throw new Error('No reset token found in email')
+    return match[1]
+  }
+}
 
 describe('Auth integration', () => {
   let app: ReturnType<typeof createServer>
+  let emailSender: CapturingEmailSender
 
   beforeAll(() => {
     const sqlite = new Database(':memory:')
@@ -52,11 +78,20 @@ describe('Auth integration', () => {
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         revoked_at TEXT
       );
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id),
+        token_hash TEXT NOT NULL UNIQUE,
+        expires_at TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        used_at TEXT
+      );
     `)
 
     const db = drizzle(sqlite)
     const userRepo = new SqliteUserRepository(db)
     const tokenStore = new SqliteRefreshTokenStore(db)
+    const passwordResetTokenRepo = new SqlitePasswordResetTokenRepository(db)
     const authService = createAuthService({
       accessTokenSecret: ACCESS_SECRET,
       refreshTokenSecret: REFRESH_SECRET,
@@ -64,6 +99,7 @@ describe('Auth integration', () => {
       refreshTokenExpiresIn: '7d',
       tokenStore,
     })
+    emailSender = new CapturingEmailSender()
 
     const authController = new AuthController(
       new RegisterUserUseCase(userRepo, authService, tokenStore),
@@ -71,6 +107,16 @@ describe('Auth integration', () => {
       new RefreshTokenUseCase(authService),
       new GetCurrentUserUseCase(userRepo),
       new LogoutUserUseCase(tokenStore),
+      new ForgotPasswordUseCase(userRepo, passwordResetTokenRepo, emailSender, {
+        ttlMinutes: 60,
+        appBaseUrl: APP_BASE_URL,
+      }),
+      new ResetPasswordUseCase(passwordResetTokenRepo, userRepo, authService, tokenStore),
+    )
+
+    const profileController = new ProfileController(
+      new ChangePasswordUseCase(userRepo, authService, tokenStore),
+      new UpdateProfileUseCase(userRepo),
     )
 
     app = createServer({
@@ -78,6 +124,7 @@ describe('Auth integration', () => {
         new DiagnosisService([], undefined, undefined, mockLogger),
         mockLogger,
       ),
+      profileController,
       rateLimit: { windowMinutes: 60, maxRequests: 1000 },
       authController,
       accessTokenSecret: ACCESS_SECRET,
@@ -271,6 +318,175 @@ describe('Auth integration', () => {
 
     it('should return 400 when refreshToken is missing', async () => {
       await request(app).post('/api/auth/logout').send({}).expect(400)
+    })
+  })
+
+  describe('Password reset flow', () => {
+    it('full flow: forgot -> capture token -> reset -> old refresh token invalid -> login with new password', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({
+          username: 'resetuser',
+          email: 'reset@test.com',
+          password: 'OldPass1!',
+          userType: 'individual',
+        })
+        .expect(201)
+
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'reset@test.com', password: 'OldPass1!' })
+        .expect(200)
+      const oldRefreshToken = loginRes.body.refreshToken
+
+      const forgotRes = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'reset@test.com' })
+        .expect(200)
+      expect(forgotRes.body.message).toBeDefined()
+
+      const token = emailSender.extractResetToken()
+
+      await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token, newPassword: 'NewPass1!' })
+        .expect(200)
+
+      await request(app)
+        .post('/api/auth/refresh')
+        .send({ refreshToken: oldRefreshToken })
+        .expect(401)
+
+      await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'reset@test.com', password: 'OldPass1!' })
+        .expect(401)
+
+      await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'reset@test.com', password: 'NewPass1!' })
+        .expect(200)
+    })
+
+    it('should return the same generic 200 message for an existing and a non-existing email', async () => {
+      const existing = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'reset@test.com' })
+        .expect(200)
+      const nonExisting = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'doesnotexist@test.com' })
+        .expect(200)
+
+      expect(existing.body.message).toBe(nonExisting.body.message)
+    })
+
+    it('should return 400 for an invalid token', async () => {
+      await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: 'not-a-real-token', newPassword: 'NewPass1!' })
+        .expect(400)
+    })
+
+    it('should return 400 when reusing an already-used token (single-use)', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({
+          username: 'reuseuser',
+          email: 'reuse@test.com',
+          password: 'OldPass1!',
+          userType: 'individual',
+        })
+        .expect(201)
+
+      await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'reuse@test.com' })
+        .expect(200)
+      const token = emailSender.extractResetToken()
+
+      await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token, newPassword: 'NewPass1!' })
+        .expect(200)
+
+      await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token, newPassword: 'AnotherPass1!' })
+        .expect(400)
+    })
+  })
+
+  describe('Profile flow', () => {
+    it('full flow: login -> PATCH /api/profile -> change-password -> old refresh token invalid -> login with new password', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({
+          username: 'profileflow',
+          email: 'profileflow@test.com',
+          password: 'OldPass1!',
+          userType: 'individual',
+        })
+        .expect(201)
+
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'profileflow@test.com', password: 'OldPass1!' })
+        .expect(200)
+      const { accessToken, refreshToken: oldRefreshToken } = loginRes.body
+
+      const patchRes = await request(app)
+        .patch('/api/profile')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ address: 'Nueva direccion 1' })
+        .expect(200)
+      expect(patchRes.body.address).toBe('Nueva direccion 1')
+      expect(patchRes.body).not.toHaveProperty('passwordHash')
+
+      await request(app)
+        .patch('/api/profile')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ username: 'juan' })
+        .expect(409)
+
+      await request(app)
+        .patch('/api/profile')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ email: 'other@test.com' })
+        .expect(400)
+
+      await request(app)
+        .post('/api/profile/change-password')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ currentPassword: 'OldPass1!', newPassword: 'NewPass1!' })
+        .expect(200)
+
+      await request(app)
+        .post('/api/auth/refresh')
+        .send({ refreshToken: oldRefreshToken })
+        .expect(401)
+
+      await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'profileflow@test.com', password: 'NewPass1!' })
+        .expect(200)
+    })
+
+    it('should return 401 for change-password with an incorrect current password', async () => {
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'profileflow@test.com', password: 'NewPass1!' })
+        .expect(200)
+
+      await request(app)
+        .post('/api/profile/change-password')
+        .set('Authorization', `Bearer ${loginRes.body.accessToken}`)
+        .send({ currentPassword: 'WrongPass1!', newPassword: 'AnotherPass1!' })
+        .expect(401)
+    })
+
+    it('should return 401 for PATCH /api/profile without a token', async () => {
+      await request(app).patch('/api/profile').send({ address: 'x' }).expect(401)
     })
   })
 })

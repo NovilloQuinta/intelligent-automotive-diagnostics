@@ -10,6 +10,7 @@ export function createAuthRoutes(
   requireAuth?: RequestHandler,
   loginRateLimit?: RequestHandler,
   refreshRateLimit?: RequestHandler,
+  forgotPasswordRateLimit?: RequestHandler,
 ): Router {
   const router = Router()
 
@@ -23,6 +24,11 @@ export function createAuthRoutes(
     router.get('/me', requireAuth, controller.me)
   }
   router.post('/logout', controller.logout)
+  router.post(
+    '/forgot-password',
+    ...([forgotPasswordRateLimit, controller.forgotPassword].filter(Boolean) as RequestHandler[]),
+  )
+  router.post('/reset-password', controller.resetPassword)
 
   return router
 }

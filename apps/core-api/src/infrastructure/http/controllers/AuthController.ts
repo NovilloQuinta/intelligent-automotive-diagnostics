@@ -14,6 +14,13 @@ import {
   UserNotFoundError,
 } from '@/application/use-cases/GetCurrentUserUseCase.js'
 import { LogoutUserUseCase } from '@/application/use-cases/LogoutUserUseCase.js'
+import { ForgotPasswordUseCase } from '@/application/use-cases/ForgotPasswordUseCase.js'
+import {
+  ResetPasswordUseCase,
+  InvalidOrExpiredTokenError,
+} from '@/application/use-cases/ResetPasswordUseCase.js'
+
+const GENERIC_FORGOT_PASSWORD_MESSAGE = 'If that email exists, a reset link has been sent.'
 
 /** Controlador HTTP para los endpoints de autenticacion. */
 export class AuthController {
@@ -23,6 +30,8 @@ export class AuthController {
     private readonly refreshToken: RefreshTokenUseCase,
     private readonly getCurrentUser: GetCurrentUserUseCase,
     private readonly logoutUser: LogoutUserUseCase,
+    private readonly forgotPasswordUseCase: ForgotPasswordUseCase,
+    private readonly resetPasswordUseCase: ResetPasswordUseCase,
   ) {}
 
   register = async (req: Request, res: Response): Promise<void> => {
@@ -96,6 +105,40 @@ export class AuthController {
     } catch (err) {
       if (err instanceof ZodError) {
         res.status(400).json({ error: 'Validation failed', details: err.issues })
+        return
+      }
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  }
+
+  /**
+   * Solicita un reseteo de contraseña. Responde siempre con el mismo mensaje generico
+   * (anti-enumeracion de usuarios), independientemente de si el email existe o no.
+   */
+  forgotPassword = async (req: Request, res: Response): Promise<void> => {
+    try {
+      await this.forgotPasswordUseCase.execute(req.body)
+      res.status(200).json({ message: GENERIC_FORGOT_PASSWORD_MESSAGE })
+    } catch (err) {
+      if (err instanceof ZodError) {
+        res.status(400).json({ error: 'Validation failed', details: err.issues })
+        return
+      }
+      res.status(500).json({ error: 'Internal server error' })
+    }
+  }
+
+  resetPassword = async (req: Request, res: Response): Promise<void> => {
+    try {
+      await this.resetPasswordUseCase.execute(req.body)
+      res.status(200).json({ success: true })
+    } catch (err) {
+      if (err instanceof ZodError) {
+        res.status(400).json({ error: 'Validation failed', details: err.issues })
+        return
+      }
+      if (err instanceof InvalidOrExpiredTokenError) {
+        res.status(400).json({ error: err.message })
         return
       }
       res.status(500).json({ error: 'Internal server error' })
