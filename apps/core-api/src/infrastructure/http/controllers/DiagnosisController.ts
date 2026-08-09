@@ -35,17 +35,28 @@ const requiredScenarioId = z.string().min(1, 'scenarioId is required')
 /** scenarioId opcional: modo TCP directo, donde solo hay un vehiculo conectado. */
 const optionalScenarioId = z.string().min(1).optional()
 
-const DiagnosisBodySchema = z.object({ scenarioId: requiredScenarioId })
-const DiagnosisBodyTcpSchema = z.object({ scenarioId: optionalScenarioId })
+/**
+ * Crea el par docker/tcp de esquemas Zod para un endpoint, aplicando
+ * `scenarioId` requerido u opcional segun el modo de conexion.
+ */
+function scenarioSchemas<T extends Record<string, z.ZodTypeAny>>(
+  extra: T,
+): { docker: z.ZodObject<{ scenarioId: z.ZodString } & T>; tcp: z.ZodObject<{ scenarioId: z.ZodOptional<z.ZodString> } & T> } {
+  return {
+    docker: z.object({ scenarioId: requiredScenarioId, ...extra }),
+    tcp: z.object({ scenarioId: optionalScenarioId, ...extra }),
+  }
+}
 
-const McpToolBodySchema = z.object({
-  scenarioId: requiredScenarioId,
-  args: z.record(z.unknown()).default({}),
-})
-const McpToolBodyTcpSchema = z.object({
-  scenarioId: optionalScenarioId,
-  args: z.record(z.unknown()).default({}),
-})
+const {
+  docker: DiagnosisBodySchema,
+  tcp: DiagnosisBodyTcpSchema,
+} = scenarioSchemas({})
+
+const {
+  docker: McpToolBodySchema,
+  tcp: McpToolBodyTcpSchema,
+} = scenarioSchemas({ args: z.record(z.unknown()).default({}) })
 
 const McpToolParamsSchema = z.object({
   toolName: z.string().min(1),
@@ -62,70 +73,53 @@ const LlmConversationItemSchema = z.discriminatedUnion('__type', [
   }),
 ])
 
-const CognitiveDiagnosisBodySchema = z.object({
-  scenarioId: requiredScenarioId,
+const {
+  docker: CognitiveDiagnosisBodySchema,
+  tcp: CognitiveDiagnosisBodyTcpSchema,
+} = scenarioSchemas({
   query: z.string().optional(),
   history: z.array(LlmConversationItemSchema).optional(),
 })
-const CognitiveDiagnosisBodyTcpSchema = z.object({
-  scenarioId: optionalScenarioId,
-  query: z.string().optional(),
-  history: z.array(LlmConversationItemSchema).optional(),
-})
 
-const FreezeFrameQuerySchema = z.object({
-  scenarioId: requiredScenarioId,
-  dtc: z.string().optional(),
-})
-const FreezeFrameQueryTcpSchema = z.object({
-  scenarioId: optionalScenarioId,
-  dtc: z.string().optional(),
-})
+const {
+  docker: FreezeFrameQuerySchema,
+  tcp: FreezeFrameQueryTcpSchema,
+} = scenarioSchemas({ dtc: z.string().optional() })
 
-const EcuInfoQuerySchema = z.object({
-  scenarioId: requiredScenarioId,
-})
-const EcuInfoQueryTcpSchema = z.object({
-  scenarioId: optionalScenarioId,
-})
+const {
+  docker: EcuInfoQuerySchema,
+  tcp: EcuInfoQueryTcpSchema,
+} = scenarioSchemas({})
 
-const VehicleInfoQuerySchema = z.object({
-  scenarioId: requiredScenarioId,
-})
-const VehicleInfoQueryTcpSchema = z.object({
-  scenarioId: optionalScenarioId,
-})
+const {
+  docker: VehicleInfoQuerySchema,
+  tcp: VehicleInfoQueryTcpSchema,
+} = scenarioSchemas({})
 
-const LiveDataQuerySchema = z.object({
-  scenarioId: requiredScenarioId,
-})
-const LiveDataQueryTcpSchema = z.object({
-  scenarioId: optionalScenarioId,
-})
+const {
+  docker: LiveDataQuerySchema,
+  tcp: LiveDataQueryTcpSchema,
+} = scenarioSchemas({})
 
-const ClearDtcBodySchema = z.object({ scenarioId: requiredScenarioId })
-const ClearDtcBodyTcpSchema = z.object({ scenarioId: optionalScenarioId })
+const {
+  docker: ClearDtcBodySchema,
+  tcp: ClearDtcBodyTcpSchema,
+} = scenarioSchemas({})
 
-const PendingDtcQuerySchema = z.object({
-  scenarioId: requiredScenarioId,
-})
-const PendingDtcQueryTcpSchema = z.object({
-  scenarioId: optionalScenarioId,
-})
+const {
+  docker: PendingDtcQuerySchema,
+  tcp: PendingDtcQueryTcpSchema,
+} = scenarioSchemas({})
 
-const PermanentDtcQuerySchema = z.object({
-  scenarioId: requiredScenarioId,
-})
-const PermanentDtcQueryTcpSchema = z.object({
-  scenarioId: optionalScenarioId,
-})
+const {
+  docker: PermanentDtcQuerySchema,
+  tcp: PermanentDtcQueryTcpSchema,
+} = scenarioSchemas({})
 
-const VehicleStatusQuerySchema = z.object({
-  scenarioId: requiredScenarioId,
-})
-const VehicleStatusQueryTcpSchema = z.object({
-  scenarioId: optionalScenarioId,
-})
+const {
+  docker: VehicleStatusQuerySchema,
+  tcp: VehicleStatusQueryTcpSchema,
+} = scenarioSchemas({})
 
 /** Controlador HTTP para los endpoints de diagnostico OBD. */
 export class DiagnosisController {

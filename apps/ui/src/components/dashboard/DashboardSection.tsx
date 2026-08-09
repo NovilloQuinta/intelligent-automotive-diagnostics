@@ -9,18 +9,15 @@ import { SessionReportPanel } from "./SessionReportPanel";
 import { VehicleStatusPanel } from "./VehicleStatusPanel";
 import type { SidebarSection } from "@/components/layout/Sidebar";
 import type { CognitiveDiagnosisError } from "./useCognitiveDiagnosis";
-import type { EcuInfo } from "./types";
+import type { EcuInfo, Scenario } from "./types";
 import type { PidRow } from "./pidCatalog";
 import type { ConversationItem } from "@/lib/api";
-import type {
-  DiagnosisResponse,
-  ScenarioDescriptor,
-} from "./types";
+import type { DiagnosisResponse } from "./types";
 
 export interface DashboardSectionProps {
   readonly activeSection: SidebarSection;
   readonly selectedId: string | null;
-  readonly selectedScenario: ScenarioDescriptor | null;
+  readonly selectedScenario: Scenario | null;
   readonly rpm: number | null;
   readonly coolant: number | null;
   readonly speed: number | null;
@@ -37,7 +34,7 @@ export interface DashboardSectionProps {
   readonly cognitiveConversationHistory: ConversationItem[];
   readonly cognitiveLoading: boolean;
   readonly cognitiveError: CognitiveDiagnosisError | null;
-  readonly cognitivePidRows: PidRow[];
+  readonly cognitivePidRows: PidRow[] | null;
   readonly cognitiveAvailable: boolean;
   readonly ecus: EcuInfo[] | null;
   readonly ecusLoading: boolean;
@@ -105,7 +102,7 @@ export function DashboardSection({
     case "dtc":
       return (
         <DtcPanel
-          codes={dtcCodes}
+          codes={dtcCodes as import("./types").DtcCode[] | null}
           severity={result?.severity ?? null}
           empty={!result && !loading}
           selectedCode={selectedDtc}
@@ -114,14 +111,14 @@ export function DashboardSection({
         />
       );
     case "freeze-frame":
-      return <FreezeFramePanel scenarioId={selectedId} dtc={selectedDtc} />;
+      return <FreezeFramePanel scenarioId={selectedId!} dtc={selectedDtc} />;
     case "ecu":
       return (
         <EcuInfoPanel
           ecus={ecus ?? []}
           loading={ecusLoading}
           error={ecusError}
-          selectedId={selectedId}
+          selectedId={selectedId!}
         />
       );
     case "diagnosis":
@@ -154,15 +151,10 @@ export function DashboardSection({
       );
     case "report":
       return (
-        <div>
-          <h2 className="mb-4 text-lg font-bold uppercase tracking-wider text-foreground/90">
-            Informe de Sesión de Diagnóstico
-          </h2>
-          <SessionReportPanel
-            scenarioId={selectedId}
-            vehicleInfo={selectedScenario?.vehicleInfo}
-          />
-        </div>
+        <SessionReportPanel
+          scenarioId={selectedId!}
+          vehicleInfo={selectedScenario?.vehicleInfo}
+        />
       );
     default:
       return null;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Navigate } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth-context";
 import { useScenarios } from "./useScenarios";
@@ -33,19 +33,22 @@ export function DashboardPage() {
     useState<SidebarSection>("live-data");
   const wizard = useVehicleAutoDetect();
 
-  useEffect(() => {
-    setSelectedDtc(null);
-  }, [selectedId]);
+  const autoDiagnoseRef = useRef({ runDiagnosis, cognitiveDiagnosis, reset: cognitive.reset, trigger: cognitive.trigger })
+  autoDiagnoseRef.current = { runDiagnosis, cognitiveDiagnosis, reset: cognitive.reset, trigger: cognitive.trigger }
 
   useEffect(() => {
-    if (!selectedId) return;
-    cognitive.reset();
+    setSelectedDtc(null)
+  }, [selectedId])
+
+  useEffect(() => {
+    if (!selectedId) return
+    const { runDiagnosis: run, cognitiveDiagnosis: cog, reset, trigger: trig } = autoDiagnoseRef.current
+    reset()
     void (async () => {
-      await runDiagnosis();
-      if (cognitiveDiagnosis) void cognitive.trigger();
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedId]);
+      await run()
+      if (cog) void trig()
+    })()
+  }, [selectedId])
 
   /**
    * El diagnóstico cognitivo se dispara tras el determinista y sin `await`: la
