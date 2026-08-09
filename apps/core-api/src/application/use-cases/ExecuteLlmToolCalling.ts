@@ -42,12 +42,12 @@ export class ExecuteLlmToolCalling {
     try {
       return { ok: true, text: await handler(name, args) }
     } catch (error: unknown) {
-      this.logger.error(
-        `[ExecuteLlmToolCalling] Tool handler error for '${name}': ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-      )
-      return { ok: false, text: `Tool execution failed: ${name}` }
+      const message = error instanceof Error ? error.message : String(error)
+      const stack = error instanceof Error ? error.stack : undefined
+      this.logger.error(`[ExecuteLlmToolCalling] Tool handler error for '${name}': ${message}`, {
+        stack,
+      })
+      return { ok: false, text: `Tool execution failed: ${name} — ${message}` }
     }
   }
 

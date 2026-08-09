@@ -159,11 +159,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
       conditions = sql`${conditions} AND ${schema.pidDefinitions.model} = ${model}`
     }
 
-    const rows = await this.db
-      .select()
-      .from(schema.pidDefinitions)
-      .where(conditions)
-      .limit(1)
+    const rows = await this.db.select().from(schema.pidDefinitions).where(conditions).limit(1)
 
     if (rows.length === 0) return null
 
@@ -295,10 +291,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
         .orderBy(desc(schema.diagnosisSessions.startedAt))
         .limit(filter.limit)
         .offset(filter.offset),
-      this.db
-        .select({ total: count() })
-        .from(schema.diagnosisSessions)
-        .where(where),
+      this.db.select({ total: count() }).from(schema.diagnosisSessions).where(where),
     ])
 
     return {
@@ -324,12 +317,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
     const rows = await this.db
       .select()
       .from(schema.diagnosisSessions)
-      .where(
-        and(
-          eq(schema.diagnosisSessions.id, id),
-          eq(schema.diagnosisSessions.userId, userId),
-        ),
-      )
+      .where(and(eq(schema.diagnosisSessions.id, id), eq(schema.diagnosisSessions.userId, userId)))
       .limit(1)
 
     if (rows.length === 0) return null
@@ -376,9 +364,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
     }
   }
 
-  async upsertDtcDefinition(
-    dtc: Omit<DtcDefinition, 'id' | 'createdAt'>,
-  ): Promise<DtcDefinition> {
+  async upsertDtcDefinition(dtc: Omit<DtcDefinition, 'id' | 'createdAt'>): Promise<DtcDefinition> {
     const existing = await this.findDtcDefinition(dtc.manufacturer, dtc.model, dtc.code)
     if (existing) return existing
 

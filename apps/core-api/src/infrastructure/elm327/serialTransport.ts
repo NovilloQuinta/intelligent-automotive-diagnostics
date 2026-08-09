@@ -2,6 +2,8 @@ import { SerialPort } from 'serialport'
 import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
 import { Elm327ConnectionError } from './errors.js'
 
+const CONNECTION_CLOSED_MESSAGE = 'ELM327 Connection closed'
+
 /** Configuración del transporte serial al dispositivo ELM327. */
 export interface SerialConfig {
   /** Path del dispositivo (ej. '/dev/ttyUSB0', '/dev/ttyAMA0'). */
@@ -111,9 +113,7 @@ export function createElm327SerialClient(config: SerialConfig): Elm327Transport 
 
   function onPortError(target: SerialPort, err: Error): void {
     if (target !== port) return
-    failActiveCommand(
-      `ELM327 serial error (${err.message}) on ${path} — reconnecting`,
-    )
+    failActiveCommand(`ELM327 serial error (${err.message}) on ${path} — reconnecting`)
     scheduleReconnect()
   }
 
@@ -209,7 +209,7 @@ export function createElm327SerialClient(config: SerialConfig): Elm327Transport 
       try {
         if (port === null) {
           if (reconnectState === 'closed') {
-            throw new Elm327ConnectionError('ELM327 Connection closed')
+            throw new Elm327ConnectionError(CONNECTION_CLOSED_MESSAGE)
           }
           if (reconnectState === 'reconnecting') {
             await doReconnect()
@@ -264,8 +264,8 @@ export function createElm327SerialClient(config: SerialConfig): Elm327Transport 
       port.close()
       port = null
     }
-    failActiveCommand('ELM327 Connection closed')
-    failQueue(new Elm327ConnectionError('ELM327 Connection closed'))
+    failActiveCommand(CONNECTION_CLOSED_MESSAGE)
+    failQueue(new Elm327ConnectionError(CONNECTION_CLOSED_MESSAGE))
   }
 
   return { connect, sendCommand, close }

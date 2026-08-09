@@ -938,7 +938,8 @@ export const openApiSpec = {
             type: 'string',
             enum: ['wifi', 'usb', 'bluetooth'],
             example: 'wifi',
-            description: 'Tipo de conexión al dispositivo: wifi (TCP/IP), usb (serial), bluetooth (RFCOMM)',
+            description:
+              'Tipo de conexión al dispositivo: wifi (TCP/IP), usb (serial), bluetooth (RFCOMM)',
           },
           sensorValues: { $ref: '#/components/schemas/LiveData' },
           dtcConfig: { type: 'array', items: { $ref: '#/components/schemas/DtcCode' } },
@@ -1167,7 +1168,8 @@ export const openApiSpec = {
       },
       DiagnosisSessionSummary: {
         type: 'object',
-        description: 'Summary without resultJson. The full snapshot is only in the detail endpoint.',
+        description:
+          'Summary without resultJson. The full snapshot is only in the detail endpoint.',
         properties: {
           id: { type: 'integer', example: 1 },
           vehicleId: { type: 'integer', nullable: true, example: 1 },

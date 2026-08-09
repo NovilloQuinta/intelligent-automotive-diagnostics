@@ -2,12 +2,14 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { Bool, Float32, Int32, Utf8 } from 'apache-arrow'
 import type { Schema } from 'apache-arrow'
 
-const { mockConnect, mockTableNames, mockCreateEmptyTable, mockOpenTable } = vi.hoisted(() => ({
-  mockConnect: vi.fn(),
-  mockTableNames: vi.fn(),
-  mockCreateEmptyTable: vi.fn(),
-  mockOpenTable: vi.fn(),
-}))
+const { mockConnect, mockTableNames, mockCreateEmptyTable, mockOpenTable, mockDropTable } =
+  vi.hoisted(() => ({
+    mockConnect: vi.fn(),
+    mockTableNames: vi.fn(),
+    mockCreateEmptyTable: vi.fn(),
+    mockOpenTable: vi.fn(),
+    mockDropTable: vi.fn(),
+  }))
 
 vi.mock('@lancedb/lancedb', () => ({
   connect: mockConnect,
@@ -52,6 +54,7 @@ describe('ensureVectorTable', () => {
     tableNames: mockTableNames,
     createEmptyTable: mockCreateEmptyTable,
     openTable: mockOpenTable,
+    dropTable: mockDropTable,
   }
 
   beforeEach(() => {
@@ -87,13 +90,19 @@ describe('ensureVectorTable', () => {
 
   it('reabre la tabla existente sin recrearla (idempotencia)', async () => {
     mockTableNames.mockResolvedValue(['test_table'])
-    mockOpenTable.mockResolvedValue({ name: 'test_table' })
+    mockOpenTable.mockResolvedValue({
+      name: 'test_table',
+      schema: vi.fn().mockResolvedValue({
+        fields: [{ name: 'vector' }, { name: 'id' }],
+      }),
+    })
 
     const result = await ensureVectorTable(mockDb, 'test_table', {
       dimensions: 384,
       columns: [{ name: 'id', type: 'string' }],
     })
 
+    expect(mockDropTable).not.toHaveBeenCalled()
     expect(mockCreateEmptyTable).not.toHaveBeenCalled()
     expect(mockOpenTable).toHaveBeenCalledWith('test_table')
     expect(result).toBeDefined()

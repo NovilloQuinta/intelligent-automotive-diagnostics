@@ -77,8 +77,10 @@ export const diagnosisSessions = sqliteTable(
     dtcCount: integer('dtc_count'),
   },
   (table) => ({
-    userIdStartedAtIdx: index('idx_diagnosis_sessions_user_started')
-      .on(table.userId, table.startedAt),
+    userIdStartedAtIdx: index('idx_diagnosis_sessions_user_started').on(
+      table.userId,
+      table.startedAt,
+    ),
   }),
 )
 

@@ -1,7 +1,7 @@
 import { connect } from '@lancedb/lancedb'
 import type { Connection } from '@lancedb/lancedb'
 import type { Table } from '@lancedb/lancedb'
-import { Bool, Field, FixedSizeList, Float32, Int32, Schema, Utf8 } from 'apache-arrow'
+import { Bool, Field, FixedSizeList, Float32, Float64, Int32, Int64, Int8, Int16, Schema, Utf8 } from 'apache-arrow'
 import type { DataType } from 'apache-arrow'
 import { z } from 'zod'
 
@@ -71,12 +71,81 @@ export function assertVectorDimensions(vector: readonly number[], dimensions: nu
 }
 
 /**
+ * Valor por defecto para una columna nueva durante la migracion de schema.
+ *
+ * LanceDB no soporta `ALTER COLUMN`. La unica migracion viable es leer todas
+ * las filas de la tabla vieja, anadir las columnas nuevas con su valor por
+ * defecto, crear una tabla nueva con el schema actualizado e insertar todo.
+ * Los vectores no se recalculan: ya estan almacenados.
+ */
+function defaultValueForField(field: Field): unknown {
+  const type = field.type
+  if (type instanceof Float32 || type instanceof Float64) return 0.0
+  if (type instanceof Int8 || type instanceof Int16 || type instanceof Int32 || type instanceof Int64) return 0
+  if (type instanceof Utf8) return ''
+  if (type instanceof Bool) return false
+  if (type instanceof FixedSizeList) return []
+  return null
+}
+
+/**
+ * Migra los datos de una tabla con schema antiguo a una nueva con el schema
+ * esperado. Lee todas las filas, anade valores por defecto en las columnas
+ * nuevas, crea la tabla destino e inserta todo de una vez.
+ *
+ * Los vectores de embedding se conservan tal cual: no se recalculan.
+ */
+async function migrateTable(
+  db: LanceDbSchemaOps,
+  name: string,
+  oldTable: Table,
+  oldFields: Set<string>,
+  expectedSchema: Schema,
+): Promise<Table> {
+  const newFields = expectedSchema.fields.map((f) => f.name)
+  const addedColumns = newFields.filter((f) => !oldFields.has(f))
+  const removedColumns = [...oldFields].filter((f) => !newFields.includes(f))
+
+  console.warn(
+    `[lancedb] Migrating '${name}': +[${addedColumns.join(', ') || 'none'}] ` +
+      `-[${removedColumns.join(', ') || 'none'}]. Reading existing rows...`,
+  )
+
+  const oldRows = (await oldTable.query().toArray()) as Record<string, unknown>[]
+  console.warn(`[lancedb] Read ${oldRows.length} rows from '${name}'.`)
+
+  const migratedRows = oldRows.map((row) => {
+    const newRow: Record<string, unknown> = {}
+    for (const field of expectedSchema.fields) {
+      const colName = field.name
+      if (colName in row) {
+        newRow[colName] = row[colName]
+      } else {
+        newRow[colName] = defaultValueForField(field)
+      }
+    }
+    return newRow
+  })
+
+  await db.dropTable(name)
+  const newTable = await db.createEmptyTable(name, expectedSchema)
+
+  if (migratedRows.length > 0) {
+    await newTable.add(migratedRows)
+  }
+
+  console.warn(`[lancedb] Migration complete: ${migratedRows.length} rows preserved.`)
+  return newTable
+}
+
+/**
  * Abre la tabla si existe o la crea. Garantiza idempotencia.
  *
  * Si la tabla ya existe pero su schema no coincide con las columnas esperadas
- * (ej. falta la columna `confidence` anadida en una migracion), la dropea y
- * recrea desde cero. LanceDB no soporta `ALTER COLUMN`: la unica migracion
- * viable es drop + recreate.
+ * (ej. falta la columna `confidence` anadida en una migracion), migra los
+ * datos existentes a la tabla nueva sin perderlos. LanceDB no soporta
+ * `ALTER COLUMN`: la unica migracion viable es leer, dropear, recrear e
+ * insertar todo.
  */
 async function openOrCreate(
   db: LanceDbSchemaOps,
@@ -95,14 +164,10 @@ async function openOrCreate(
   const actualFields = new Set(actualSchema.fields.map((f) => f.name))
   const expectedFields = expectedSchema.fields.map((f) => f.name)
   const missing = expectedFields.filter((f) => !actualFields.has(f))
+  const extra = [...actualFields].filter((f) => !expectedFields.includes(f))
 
-  if (missing.length > 0) {
-    console.warn(
-      `[lancedb] Table '${name}' schema mismatch: missing columns [${missing.join(', ')}]. ` +
-        'Dropping and recreating table.',
-    )
-    await db.dropTable(name)
-    return db.createEmptyTable(name, expectedSchema)
+  if (missing.length > 0 || extra.length > 0) {
+    return migrateTable(db, name, table, actualFields, expectedSchema)
   }
 
   return table

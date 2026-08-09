@@ -13,9 +13,13 @@ import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
 describe('Elm327Transport interface', () => {
   it('should accept objects with connect, sendCommand, and close methods', () => {
     const mockTransport: Elm327Transport = {
-      connect: async () => { /* no-op */ },
+      connect: async () => {
+        /* no-op */
+      },
       sendCommand: async (_cmd: string) => 'OK\r\r>',
-      close: async () => { /* no-op */ },
+      close: async () => {
+        /* no-op */
+      },
     }
 
     expect(typeof mockTransport.connect).toBe('function')
@@ -25,9 +29,13 @@ describe('Elm327Transport interface', () => {
 
   it('connect() should return Promise<void>', async () => {
     const transport: Elm327Transport = {
-      connect: async () => { /* no-op */ },
+      connect: async () => {
+        /* no-op */
+      },
       sendCommand: async (_cmd: string) => 'OK\r\r>',
-      close: async () => { /* no-op */ },
+      close: async () => {
+        /* no-op */
+      },
     }
 
     const result = transport.connect()
@@ -37,9 +45,13 @@ describe('Elm327Transport interface', () => {
 
   it('sendCommand() should return Promise<string>', async () => {
     const transport: Elm327Transport = {
-      connect: async () => { /* no-op */ },
+      connect: async () => {
+        /* no-op */
+      },
       sendCommand: async (_cmd: string) => 'AT\rOK\r\r>',
-      close: async () => { /* no-op */ },
+      close: async () => {
+        /* no-op */
+      },
     }
 
     const result = transport.sendCommand('AT')
@@ -49,9 +61,13 @@ describe('Elm327Transport interface', () => {
 
   it('close() should return Promise<void>', async () => {
     const transport: Elm327Transport = {
-      connect: async () => { /* no-op */ },
+      connect: async () => {
+        /* no-op */
+      },
       sendCommand: async (_cmd: string) => 'OK\r\r>',
-      close: async () => { /* no-op */ },
+      close: async () => {
+        /* no-op */
+      },
     }
 
     const result = transport.close()

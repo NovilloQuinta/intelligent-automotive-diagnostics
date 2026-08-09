@@ -43,22 +43,21 @@ const optionalScenarioId = z.string().min(1).optional()
  */
 function scenarioSchemas<T extends Record<string, z.ZodTypeAny>>(
   extra: T,
-): { docker: z.ZodObject<{ scenarioId: z.ZodString } & T>; tcp: z.ZodObject<{ scenarioId: z.ZodOptional<z.ZodString> } & T> } {
+): {
+  docker: z.ZodObject<{ scenarioId: z.ZodString } & T>
+  tcp: z.ZodObject<{ scenarioId: z.ZodOptional<z.ZodString> } & T>
+} {
   return {
     docker: z.object({ scenarioId: requiredScenarioId, ...extra }),
     tcp: z.object({ scenarioId: optionalScenarioId, ...extra }),
   }
 }
 
-const {
-  docker: DiagnosisBodySchema,
-  tcp: DiagnosisBodyTcpSchema,
-} = scenarioSchemas({})
+const { docker: DiagnosisBodySchema, tcp: DiagnosisBodyTcpSchema } = scenarioSchemas({})
 
-const {
-  docker: McpToolBodySchema,
-  tcp: McpToolBodyTcpSchema,
-} = scenarioSchemas({ args: z.record(z.unknown()).default({}) })
+const { docker: McpToolBodySchema, tcp: McpToolBodyTcpSchema } = scenarioSchemas({
+  args: z.record(z.unknown()).default({}),
+})
 
 const McpToolParamsSchema = z.object({
   toolName: z.string().min(1),
@@ -75,53 +74,29 @@ const LlmConversationItemSchema = z.discriminatedUnion('__type', [
   }),
 ])
 
-const {
-  docker: CognitiveDiagnosisBodySchema,
-  tcp: CognitiveDiagnosisBodyTcpSchema,
-} = scenarioSchemas({
-  query: z.string().optional(),
-  history: z.array(LlmConversationItemSchema).optional(),
+const { docker: CognitiveDiagnosisBodySchema, tcp: CognitiveDiagnosisBodyTcpSchema } =
+  scenarioSchemas({
+    query: z.string().optional(),
+    history: z.array(LlmConversationItemSchema).optional(),
+  })
+
+const { docker: FreezeFrameQuerySchema, tcp: FreezeFrameQueryTcpSchema } = scenarioSchemas({
+  dtc: z.string().optional(),
 })
 
-const {
-  docker: FreezeFrameQuerySchema,
-  tcp: FreezeFrameQueryTcpSchema,
-} = scenarioSchemas({ dtc: z.string().optional() })
+const { docker: EcuInfoQuerySchema, tcp: EcuInfoQueryTcpSchema } = scenarioSchemas({})
 
-const {
-  docker: EcuInfoQuerySchema,
-  tcp: EcuInfoQueryTcpSchema,
-} = scenarioSchemas({})
+const { docker: VehicleInfoQuerySchema, tcp: VehicleInfoQueryTcpSchema } = scenarioSchemas({})
 
-const {
-  docker: VehicleInfoQuerySchema,
-  tcp: VehicleInfoQueryTcpSchema,
-} = scenarioSchemas({})
+const { docker: LiveDataQuerySchema, tcp: LiveDataQueryTcpSchema } = scenarioSchemas({})
 
-const {
-  docker: LiveDataQuerySchema,
-  tcp: LiveDataQueryTcpSchema,
-} = scenarioSchemas({})
+const { docker: ClearDtcBodySchema, tcp: ClearDtcBodyTcpSchema } = scenarioSchemas({})
 
-const {
-  docker: ClearDtcBodySchema,
-  tcp: ClearDtcBodyTcpSchema,
-} = scenarioSchemas({})
+const { docker: PendingDtcQuerySchema, tcp: PendingDtcQueryTcpSchema } = scenarioSchemas({})
 
-const {
-  docker: PendingDtcQuerySchema,
-  tcp: PendingDtcQueryTcpSchema,
-} = scenarioSchemas({})
+const { docker: PermanentDtcQuerySchema, tcp: PermanentDtcQueryTcpSchema } = scenarioSchemas({})
 
-const {
-  docker: PermanentDtcQuerySchema,
-  tcp: PermanentDtcQueryTcpSchema,
-} = scenarioSchemas({})
-
-const {
-  docker: VehicleStatusQuerySchema,
-  tcp: VehicleStatusQueryTcpSchema,
-} = scenarioSchemas({})
+const { docker: VehicleStatusQuerySchema, tcp: VehicleStatusQueryTcpSchema } = scenarioSchemas({})
 
 /** Filtros de listado del historial — todos opcionales,
  *  `userId` nunca viaja en query (se toma del token). */

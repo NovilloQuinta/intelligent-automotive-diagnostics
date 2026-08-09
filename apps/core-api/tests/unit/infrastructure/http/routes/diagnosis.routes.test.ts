@@ -151,10 +151,7 @@ function createServiceStub(overrides: Partial<ServiceStub> = {}): DiagnosisServi
   } as unknown as DiagnosisService
 }
 
-function createApp(
-  service: DiagnosisService = createServiceStub(),
-  options?: { userId?: number },
-) {
+function createApp(service: DiagnosisService = createServiceStub(), options?: { userId?: number }) {
   const app = express()
   app.use(express.json())
   if (options?.userId !== undefined) {

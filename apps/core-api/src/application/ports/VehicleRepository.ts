@@ -76,7 +76,11 @@ export interface VehicleRepository {
   /** Busca una definición de DTC por fabricante, modelo y código.
    * Retorna null si no existe en el catálogo.
    */
-  findDtcDefinition(manufacturer: string, model: string, code: string): Promise<DtcDefinition | null>
+  findDtcDefinition(
+    manufacturer: string,
+    model: string,
+    code: string,
+  ): Promise<DtcDefinition | null>
 
   /** Inserta una definición de DTC o devuelve la existente si ya existe
    * (por clave única manufacturer + model + code).

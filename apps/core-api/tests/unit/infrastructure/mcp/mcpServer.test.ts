@@ -919,9 +919,7 @@ describe('McpServer', () => {
 
     it('does not persist DTCs without manufacturer/model in sessionContext', async () => {
       const repo = mockObdRepo({
-        readDtcCodes: vi.fn().mockResolvedValue([
-          { code: 'P0301', description: 'Misfire' },
-        ]),
+        readDtcCodes: vi.fn().mockResolvedValue([{ code: 'P0301', description: 'Misfire' }]),
       })
       const vRepo = mockVehicleRepo()
       // sessionContext with only sessionId/vehicleId, no manufacturer/model

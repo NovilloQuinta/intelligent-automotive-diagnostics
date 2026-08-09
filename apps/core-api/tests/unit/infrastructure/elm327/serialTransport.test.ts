@@ -139,7 +139,12 @@ describe('createElm327SerialClient', () => {
 
   it('timeout de comando (3s sin ">") rechaza con Elm327ConnectionError y cierra el puerto', async () => {
     vi.useFakeTimers()
-    const client = createClient({ path: '/dev/ttyUSB0', baudRate: 38400, timeout: 3000, maxRetries: 0 })
+    const client = createClient({
+      path: '/dev/ttyUSB0',
+      baudRate: 38400,
+      timeout: 3000,
+      maxRetries: 0,
+    })
     await client.connect()
     const port = lastPort()
 

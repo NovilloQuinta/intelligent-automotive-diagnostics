@@ -932,7 +932,7 @@ describe('DiagnosisService', () => {
       expect(vehicleRepo.upsertVehicle).toHaveBeenCalledTimes(1)
       expect(logger.warn).toHaveBeenCalledWith(
         'Failed to upsert vehicle in diagnosis session',
-        { err: expect.any(String) },
+        expect.objectContaining({ err: expect.any(Error) }),
       )
     })
 
@@ -1056,7 +1056,7 @@ describe('DiagnosisService', () => {
       expect(endSessionSpy).not.toHaveBeenCalled()
       expect(logger.warn).toHaveBeenCalledWith(
         'Failed to create diagnosis session',
-        { err: expect.any(String) },
+        expect.objectContaining({ err: expect.any(Error) }),
       )
     })
 
@@ -1085,7 +1085,10 @@ describe('DiagnosisService', () => {
       const llmClient = mockLlmClient({
         sendMessage: vi.fn().mockImplementation(async (_input, handler) => {
           await handler('read_pid', { mode: '22', pid: '0300' })
-          return { text: cognitiveText, toolCalls: [{ tool: 'read_pid', args: { mode: '22', pid: '0300' }, result: '750' }] }
+          return {
+            text: cognitiveText,
+            toolCalls: [{ tool: 'read_pid', args: { mode: '22', pid: '0300' }, result: '750' }],
+          }
         }),
       })
 
@@ -1108,7 +1111,8 @@ describe('DiagnosisService', () => {
       // Verify that findPidDefinition was called with manufacturer/model from sessionContext
       expect(vehicleRepo.findPidDefinition).toHaveBeenCalledWith('22', '0300', 'Audi', 'A3')
       expect(vehicleRepo.insertPidDefinition).toHaveBeenCalledTimes(1)
-      const inserted = (vehicleRepo.insertPidDefinition as ReturnType<typeof vi.fn>).mock.calls[0][0]
+      const inserted = (vehicleRepo.insertPidDefinition as ReturnType<typeof vi.fn>).mock
+        .calls[0][0]
       expect(inserted.manufacturer).toBe('Audi')
       expect(inserted.model).toBe('A3')
     })
@@ -1136,7 +1140,9 @@ describe('DiagnosisService', () => {
 
       // Override the obd repo for audi-a3-idle to return "Audi AG" as make
       const repos = createMockObdRepos()
-      vi.mocked(repos.get('audi-a3-idle')!.getVehicleInfo as ReturnType<typeof vi.fn>).mockResolvedValue({
+      vi.mocked(
+        repos.get('audi-a3-idle')!.getVehicleInfo as ReturnType<typeof vi.fn>,
+      ).mockResolvedValue({
         make: 'Audi AG',
         model: 'A3',
         year: 2018,
@@ -1147,7 +1153,10 @@ describe('DiagnosisService', () => {
       const llmClient = mockLlmClient({
         sendMessage: vi.fn().mockImplementation(async (_input, handler) => {
           await handler('read_pid', { mode: '22', pid: '0300' })
-          return { text: cognitiveText, toolCalls: [{ tool: 'read_pid', args: { mode: '22', pid: '0300' }, result: '750' }] }
+          return {
+            text: cognitiveText,
+            toolCalls: [{ tool: 'read_pid', args: { mode: '22', pid: '0300' }, result: '750' }],
+          }
         }),
       })
 
@@ -1268,7 +1277,10 @@ describe('DiagnosisService', () => {
       ).rejects.toThrow('Original diagnosis error')
 
       expect(endSessionSpy).toHaveBeenCalledTimes(1)
-      expect(logger.warn).toHaveBeenCalledWith('Failed to end diagnosis session with snapshot', expect.any(Error))
+      expect(logger.warn).toHaveBeenCalledWith(
+        'Failed to end diagnosis session with snapshot',
+        expect.any(Error),
+      )
     })
   })
 })

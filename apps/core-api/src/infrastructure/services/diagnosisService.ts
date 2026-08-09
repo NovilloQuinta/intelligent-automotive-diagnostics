@@ -364,10 +364,7 @@ export class DiagnosisService {
    *
    * @returns La sesion con `resultJson` incluido, o `null` si no existe o es de otro usuario.
    */
-  async getDiagnosisSession(
-    id: number,
-    userId: number,
-  ): Promise<DiagnosisSession | null> {
+  async getDiagnosisSession(id: number, userId: number): Promise<DiagnosisSession | null> {
     if (!this.vehicleRepo) {
       throw new Error('Vehicle repository not configured')
     }
@@ -484,7 +481,9 @@ export class DiagnosisService {
         const result = await this.vehicleRepo.upsertVehicle(profile)
         vehicleId = result.id
       } catch (e) {
-        this.logger.warn('Failed to upsert vehicle in diagnosis session', { err: String(e) })
+        this.logger.warn('Failed to upsert vehicle in diagnosis session', {
+          err: e instanceof Error ? e : String(e),
+        })
       }
     }
 
@@ -508,7 +507,9 @@ export class DiagnosisService {
         )
         sessionId = session.id
       } catch (e) {
-        this.logger.warn('Failed to create diagnosis session', { err: String(e) })
+        this.logger.warn('Failed to create diagnosis session', {
+          err: e instanceof Error ? e : String(e),
+        })
       }
     }
 
@@ -541,7 +542,11 @@ export class DiagnosisService {
     let diagnosisResult: ExecuteCognitiveDiagnosisOutput | undefined
 
     try {
-      diagnosisResult = await withTimeout(diagnosis, this.cognitiveTimeoutMs, 'Cognitive diagnosis timed out')
+      diagnosisResult = await withTimeout(
+        diagnosis,
+        this.cognitiveTimeoutMs,
+        'Cognitive diagnosis timed out',
+      )
       return diagnosisResult
     } catch (err) {
       if (err instanceof TimeoutError) {
@@ -551,9 +556,9 @@ export class DiagnosisService {
     } finally {
       if (sessionId !== undefined) {
         const snapshot = this.buildDiagnosisSnapshot(vehicleInfo, diagnosisResult)
-        void this.vehicleRepo!
-          .endSession(sessionId, snapshot ?? undefined)
-          .catch((e) => this.logger.warn('Failed to end diagnosis session with snapshot', e))
+        void this.vehicleRepo!.endSession(sessionId, snapshot ?? undefined).catch((e) =>
+          this.logger.warn('Failed to end diagnosis session with snapshot', e),
+        )
       }
     }
   }
