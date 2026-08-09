@@ -50,20 +50,20 @@
 
 ## 5. UI: tipo de conexion en el Scenario
 
-- [ ] 5.1 Añadir `connectionType: 'wifi' | 'usb' | 'bluetooth'` al tipo `Scenario` en `apps/ui/src/components/dashboard/types.ts`
-- [ ] 5.2 RED: test — `TopBar` muestra icono WiFi cuando `scenario.connectionType === 'wifi'`
-- [ ] 5.3 RED: test — `TopBar` muestra icono USB cuando `scenario.connectionType === 'usb'`
-- [ ] 5.4 RED: test — `TopBar` muestra icono Bluetooth cuando `scenario.connectionType === 'bluetooth'`
-- [ ] 5.5 GREEN: implementar `ConnectionTypeIcon` en `TopBar.tsx` (al lado de `ConnectionStatus`)
-- [ ] 5.6 RED: test — `VehicleAutoDetectWizard` muestra `connectionType` en `ConnectionButton`
-- [ ] 5.7 GREEN: `ConnectionButton` muestra tipo de conexión debajo del nombre
-- [ ] 5.8 REFACTOR: extraer `ConnectionTypeIcon` a componente compartido si se usa en dos sitios
+- [x] 5.1 Añadir `connectionType: 'wifi' | 'usb' | 'bluetooth'` al tipo `Scenario` en `apps/ui/src/components/dashboard/types.ts`
+- [x] 5.2 RED: test — `TopBar` muestra icono WiFi cuando `scenario.connectionType === 'wifi'`
+- [x] 5.3 RED: test — `TopBar` muestra icono USB cuando `scenario.connectionType === 'usb'`
+- [x] 5.4 RED: test — `TopBar` muestra icono Bluetooth cuando `scenario.connectionType === 'bluetooth'`
+- [x] 5.5 GREEN: implementar `ConnectionTypeIcon` en `TopBar.tsx` (al lado de `ConnectionStatus`)
+- [x] 5.6 RED: test — `VehicleAutoDetectWizard` muestra `connectionType` en `ConnectionButton`
+- [x] 5.7 GREEN: `ConnectionButton` muestra tipo de conexión debajo del nombre
+- [x] 5.8 REFACTOR: extraer `ConnectionTypeIcon` a componente compartido si se usa en dos sitios
 
 ## 6. UI: end-to-end
 
-- [ ] 6.1 RED: test — `DashboardPage` con escenario `usb` muestra icono USB en TopBar y wizard
-- [ ] 6.2 GREEN: integración
-- [ ] 6.3 REFACTOR: suite en verde
+- [x] 6.1 RED: test — `DashboardPage` con escenario `usb` muestra icono USB en TopBar y wizard
+- [x] 6.2 GREEN: integración
+- [x] 6.3 REFACTOR: suite en verde
 
 ## 7. Verificacion manual
 

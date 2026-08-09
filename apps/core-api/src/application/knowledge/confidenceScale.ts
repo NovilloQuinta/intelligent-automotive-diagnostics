@@ -89,9 +89,10 @@ export function markValidated<TEntry extends ValidatableEntry>(entry: TEntry): T
 /**
  * Suma un bonus a la confianza saturando en {@link MAX_CONFIDENCE}.
  *
- * Preparada para el escalado por reutilizacion exitosa del ADR-007 §4, que **todavia no se
- * invoca desde ningun flujo**: el sistema no tiene señal de "el diagnostico acerto" porque no
- * hay feedback del mecanico. Conectarla queda fuera del alcance de este cambio.
+ * Infraestructura preparada para el escalado por reutilizacion exitosa del ADR-007 §4.
+ * **No se invoca desde ningun flujo todavia:** el sistema carece de la señal "el diagnostico
+ * acerto". Conectarla requiere un mecanismo de feedback explicito del mecanico (boton "¿Te
+ * ayudo este diagnostico?" en la UI), fuera del alcance actual.
  */
 export function boostConfidence(current: number, bonus: number): number {
   return Math.min(MAX_CONFIDENCE, current + bonus)

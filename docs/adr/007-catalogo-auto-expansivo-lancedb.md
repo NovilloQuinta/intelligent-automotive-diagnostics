@@ -1,7 +1,8 @@
 # ADR 007: Catálogo Auto-Expansivo con Búsqueda Vectorial (LanceDB)
 
-**Estado:** Propuesto
+**Estado:** Implementado
 **Fecha:** 2026-07-26
+**Actualizado:** 2026-08-09 — system prompt completado con DTC learning + catalog lookup proactivo. Pendiente de cablear: boostConfidence (+0.2 por reuso) requiere feedback del mecánico; SQLite relacional (vehicles, pid_readings, diagnosis_sessions) sin cablear.
 **Contexto:** El sistema debe aprender nuevos PIDs, DTCs y patrones de diagnóstico a medida que se conectan vehículos de distintos fabricantes.
 
 ---
@@ -48,6 +49,8 @@ Cada entrada se compone de `text` (texto para el embedding) + metadatos para fil
 | **Web search** (LLM busca en internet) | 0.3 | 0.7 |
 | **Mecánico** (aporta manualmente) | 0.8 | 0.9 |
 | **Diagnóstico previo** (PID fue clave en un caso anterior) | 0.5 | +0.2 cada uso exitoso |
+
+> **Nota (2026-08-09):** `boostConfidence` y `SUCCESSFUL_REUSE_BONUS = 0.2` están implementados y testeados como funciones puras, pero **no se invocan desde ningún flujo**. El sistema carece de la señal "el diagnóstico acertó". Conectarlo requiere un mecanismo de feedback explícito del mecánico (botón "¿Te ayudó este diagnóstico?" en la UI).
 
 La validación OBD usa la fórmula y el rango `[minValue, maxValue]` ya definidos en `PidDefinition`:
 1. Leer el PID vía OBD (`readPid`).
