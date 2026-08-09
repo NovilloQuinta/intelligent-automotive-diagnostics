@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from 'vitest'
-import crypto from 'node:crypto'
 import { ExecuteCognitiveDiagnosisUseCase } from '@/application/use-cases/ExecuteCognitiveDiagnosisUseCase.js'
 import type {
   LlmClientPort,
@@ -465,8 +464,6 @@ describe('executeCognitiveDiagnosis', () => {
   })
 
   it('should index the resolved case when diagnosisIndex is present', async () => {
-    vi.spyOn(crypto, 'randomUUID').mockReturnValue('test-uuid')
-
     const llmText = 'Narrativa del diagnóstico'
     const toolCalls: ToolCallTrace[] = [
       { tool: 'read_pid', args: { mode: '01', pid: '0C' }, result: '750' },
@@ -491,7 +488,8 @@ describe('executeCognitiveDiagnosis', () => {
     expect(index.index).toHaveBeenCalledTimes(1)
     const entry = (index.index as ReturnType<typeof vi.fn>).mock
       .calls[0][0] as DiagnosisKnowledgeEntry
-    expect(entry.id).toBe('test-uuid')
+    expect(typeof entry.id).toBe('string')
+    expect(entry.id.length).toBeGreaterThan(0)
     expect(entry.embeddedText).toBe(llmText)
     expect(entry.manufacturer).toBe('Audi')
     expect(entry.model).toBe('A3')
@@ -524,8 +522,6 @@ describe('executeCognitiveDiagnosis', () => {
   })
 
   it('should log a warning and still return result when diagnosisIndex.index rejects', async () => {
-    vi.spyOn(crypto, 'randomUUID').mockReturnValue('test-uuid')
-
     const llmText = 'Narrativa del diagnóstico'
     const llmClient = mockLlmClient({
       sendMessage: vi.fn().mockResolvedValue(cognitiveResponse(llmText)),

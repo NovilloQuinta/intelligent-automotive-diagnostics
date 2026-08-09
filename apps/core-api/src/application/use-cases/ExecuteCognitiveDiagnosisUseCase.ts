@@ -16,8 +16,6 @@ import type { ToolCallTrace } from '@/application/dto/llm/ToolCallTrace.js'
 import { DEFAULT_SEARCH_LIMIT } from '@/application/knowledge/createKnowledgeIndex.js'
 import { derivePidObservations } from '@/application/services/pidObservationEnricher.js'
 import { READ_PID_TOOL } from '@/application/shared/mcpToolNames.js'
-import crypto from 'node:crypto'
-
 /** Instrucciones de exploración de herramientas OBD-II y razonamiento de causa raíz. */
 const EXPLORATION_INSTRUCTIONS = [
   'Eres un diagnosticador automotriz experto con acceso a herramientas OBD-II en tiempo real.',
@@ -115,7 +113,7 @@ function toDiagnosisEntry(
   vehicleContext: VehicleInfo | undefined,
 ): DiagnosisKnowledgeEntry {
   return {
-    id: crypto.randomUUID(),
+    id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
     embeddedText: text,
     manufacturer: vehicleContext?.make ?? UNKNOWN_VALUE,
     model: vehicleContext?.model ?? UNKNOWN_VALUE,

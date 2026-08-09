@@ -10,15 +10,7 @@ import { useCapabilities } from "./useCapabilities";
 import { useCognitiveDiagnosis } from "./useCognitiveDiagnosis";
 import { useEcuInfo } from "./useEcuInfo";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { TelemetrySection } from "./TelemetrySection";
-import { DtcPanel } from "./DtcPanel";
-import { FreezeFramePanel } from "./FreezeFramePanel";
-import { EcuInfoPanel } from "./EcuInfoPanel";
-import { DiagnosisPanel } from "./DiagnosisPanel";
-import { PidsTable } from "./PidsTable";
-import { VehicleStatusPanel } from "./VehicleStatusPanel";
-import { MechanicChat } from "./MechanicChat";
-import { SessionReportPanel } from "./SessionReportPanel";
+import { DashboardSection } from "./DashboardSection";
 import type { SidebarSection } from "@/components/layout/Sidebar";
 
 export function DashboardPage() {
@@ -132,100 +124,6 @@ export function DashboardPage() {
     );
   }
 
-  const renderSection = () => {
-    switch (activeSection) {
-      case "vehicle":
-        return <VehicleStatusPanel scenarioId={selectedId} />;
-      case "live-data":
-        return (
-          <div className="space-y-6">
-            <TelemetrySection
-              values={{ rpm, coolant, speed, intake }}
-              rawSummary={rawSummary}
-              loading={loading}
-              streamOk={streamOk}
-              canDiagnose={!!selectedId}
-              telemetryStatus={
-                streamOk ? "Transmisión ECU · 1 Hz" : "Reconectando…"
-              }
-              onDiagnose={handleDiagnose}
-            />
-            <PidsTable
-              parsedValues={result?.parsedValues ?? null}
-              empty={!result && !loading}
-              aiRows={cognitive.pidRows}
-              aiLoading={cognitive.loading}
-              aiError={cognitive.error}
-            />
-          </div>
-        );
-      case "dtc":
-        return (
-          <DtcPanel
-            codes={dtcCodes}
-            severity={result?.severity ?? null}
-            empty={!result && !loading}
-            selectedCode={selectedDtc}
-            onSelect={handleDtcSelect}
-            scenarioId={selectedId || ""}
-          />
-        );
-      case "freeze-frame":
-        return <FreezeFramePanel scenarioId={selectedId} dtc={selectedDtc} />;
-      case "ecu":
-        return (
-          <EcuInfoPanel
-            ecus={ecus}
-            loading={ecusLoading}
-            error={ecusError}
-            selectedId={selectedId}
-          />
-        );
-      case "diagnosis":
-        return (
-          <DiagnosisPanel
-            text={result?.diagnosisText ?? null}
-            severity={result?.severity ?? null}
-            empty={!result && !loading}
-            loading={loading}
-          />
-        );
-      case "chat":
-        if (!cognitiveDiagnosis) {
-          return (
-            <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-              El diagnóstico cognitivo no está disponible en este entorno.
-            </div>
-          );
-        }
-        return (
-          <MechanicChat
-            diagnosisText={cognitive.diagnosisText}
-            severity={cognitive.severity}
-            confidence={cognitive.confidence}
-            conversationHistory={cognitive.conversationHistory}
-            loading={cognitive.loading}
-            error={cognitive.error}
-            onSend={handleChatSend}
-          />
-        );
-      case "report":
-        return (
-          <div>
-            <h2 className="mb-4 text-lg font-bold uppercase tracking-wider text-foreground/90">
-              Informe de Sesión de Diagnóstico
-            </h2>
-            <SessionReportPanel
-              scenarioId={selectedId}
-              vehicleInfo={selectedScenario?.vehicleInfo}
-            />
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
   return (
     <DashboardLayout
       activeSection={activeSection}
@@ -243,7 +141,35 @@ export function DashboardPage() {
           {scenariosError}
         </div>
       )}
-      {renderSection()}
+      <DashboardSection
+        activeSection={activeSection}
+        selectedId={selectedId}
+        selectedScenario={selectedScenario}
+        rpm={rpm}
+        coolant={coolant}
+        speed={speed}
+        intake={intake}
+        rawSummary={rawSummary}
+        loading={loading}
+        streamOk={streamOk}
+        result={result}
+        dtcCodes={dtcCodes}
+        selectedDtc={selectedDtc}
+        cognitiveDiagnosisText={cognitive.diagnosisText}
+        cognitiveSeverity={cognitive.severity}
+        cognitiveConfidence={cognitive.confidence}
+        cognitiveConversationHistory={cognitive.conversationHistory}
+        cognitiveLoading={cognitive.loading}
+        cognitiveError={cognitive.error}
+        cognitivePidRows={cognitive.pidRows}
+        cognitiveAvailable={!!cognitiveDiagnosis}
+        ecus={ecus}
+        ecusLoading={ecusLoading}
+        ecusError={ecusError}
+        onDiagnose={handleDiagnose}
+        onDtcSelect={handleDtcSelect}
+        onChatSend={handleChatSend}
+      />
     </DashboardLayout>
   );
 }

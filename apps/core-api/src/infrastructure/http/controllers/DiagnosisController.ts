@@ -24,7 +24,8 @@ const ERROR_MESSAGES = {
   emptyToolResult: 'Tool returned no content',
   cognitiveTimedOut: 'Cognitive diagnosis timed out',
   cognitiveUnavailable: 'Cognitive diagnosis is not available',
-  cognitiveTooManySteps: 'El diagnóstico necesitó demasiados pasos. Prueba con una pregunta más concreta.',
+  cognitiveTooManySteps:
+    'El diagnóstico necesitó demasiados pasos. Prueba con una pregunta más concreta.',
   internalError: 'Internal server error',
 } as const
 

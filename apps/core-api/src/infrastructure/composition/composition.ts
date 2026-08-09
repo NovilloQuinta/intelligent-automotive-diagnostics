@@ -186,53 +186,61 @@ export async function seedAdminUser(
  * tiempo real del emulador via `GET /api/live-data` y `GET /api/dtc-codes`.
  * No se hardcodean valores que el emulador ya provee.
  */
+function toyotaScenario(config: AppConfig): ScenarioDescriptor {
+  return {
+    id: 'toyota',
+    name: 'Toyota (Built-in)',
+    vehicleType: 'car',
+    dtcConfig: [],
+    vehicleInfo: new VehicleInfo({
+      make: 'Toyota',
+      model: 'Auris Hybrid',
+      year: 2016,
+      engineType: '1.8L Hybrid',
+      vin: new Vin('JTDKN3DU60A123456'),
+    }),
+    host: config.ELM327_TOYOTA_HOST,
+    port: config.ELM327_TOYOTA_PORT,
+  }
+}
+
+function audiScenario(config: AppConfig): ScenarioDescriptor {
+  return {
+    id: 'audi-a3-tdi',
+    name: 'Audi A3 2.0 TDI',
+    vehicleType: 'car',
+    vehicleInfo: new VehicleInfo({
+      make: 'Audi',
+      model: 'A3',
+      year: 2018,
+      engineType: '2.0 TDI',
+      vin: new Vin('WAUZZZ8V5JA123456'),
+    }),
+    host: config.ELM327_AUDI_HOST,
+    port: config.ELM327_AUDI_PORT,
+  }
+}
+
+function kawasakiScenario(config: AppConfig): ScenarioDescriptor {
+  return {
+    id: 'kawasaki-z900',
+    name: 'Kawasaki Z900',
+    vehicleType: 'motorcycle',
+    dtcConfig: [],
+    vehicleInfo: new VehicleInfo({
+      make: 'Kawasaki',
+      model: 'Z900',
+      year: 2020,
+      engineType: '948cc Inline-4',
+      vin: new Vin('JKAZR2A1XLA000111'),
+    }),
+    host: config.ELM327_KAWASAKI_HOST,
+    port: config.ELM327_KAWASAKI_PORT,
+  }
+}
+
 function createDockerScenarios(config: AppConfig): ScenarioDescriptor[] {
-  return [
-    {
-      id: 'toyota',
-      name: 'Toyota (Built-in)',
-      vehicleType: 'car',
-      dtcConfig: [],
-      vehicleInfo: new VehicleInfo({
-        make: 'Toyota',
-        model: 'Auris Hybrid',
-        year: 2016,
-        engineType: '1.8L Hybrid',
-        vin: new Vin('JTDKN3DU60A123456'),
-      }),
-      host: config.ELM327_TOYOTA_HOST,
-      port: config.ELM327_TOYOTA_PORT,
-    },
-    {
-      id: 'audi-a3-tdi',
-      name: 'Audi A3 2.0 TDI',
-      vehicleType: 'car',
-      vehicleInfo: new VehicleInfo({
-        make: 'Audi',
-        model: 'A3',
-        year: 2018,
-        engineType: '2.0 TDI',
-        vin: new Vin('WAUZZZ8V5JA123456'),
-      }),
-      host: config.ELM327_AUDI_HOST,
-      port: config.ELM327_AUDI_PORT,
-    },
-    {
-      id: 'kawasaki-z900',
-      name: 'Kawasaki Z900',
-      vehicleType: 'motorcycle',
-      dtcConfig: [],
-      vehicleInfo: new VehicleInfo({
-        make: 'Kawasaki',
-        model: 'Z900',
-        year: 2020,
-        engineType: '948cc Inline-4',
-        vin: new Vin('JKAZR2A1XLA000111'),
-      }),
-      host: config.ELM327_KAWASAKI_HOST,
-      port: config.ELM327_KAWASAKI_PORT,
-    },
-  ]
+  return [toyotaScenario(config), audiScenario(config), kawasakiScenario(config)]
 }
 
 /** Mapa scenarioId → ObdRepository creado a partir de los descriptores de escenarios. */
@@ -339,7 +347,14 @@ export async function buildApp(config: AppConfig): Promise<Application> {
   const llmClient = createLlmClient(config, logger)
   const knowledgeStack = await createKnowledgeStack(config, logger)
   const webSearch = createWebSearchPort(config)
-  const diagnosisService = createDiagnosisService(config, llmClient, knowledgeStack, webSearch, vehicleRepo, logger)
+  const diagnosisService = createDiagnosisService({
+    config,
+    llmClient,
+    knowledgeStack,
+    webSearch,
+    vehicleRepo,
+    logger,
+  })
   const diagnosisController = new DiagnosisController(diagnosisService, logger)
   const adminController = createAdminController({ userRepo, logRepo, auditRepo }, knowledgeStack)
 
@@ -356,23 +371,42 @@ export async function buildApp(config: AppConfig): Promise<Application> {
   })
 }
 
+interface CreateDiagnosisServiceOptions {
+  readonly config: AppConfig
+  readonly llmClient: LlmClientPort | undefined
+  readonly knowledgeStack: KnowledgeStack | undefined
+  readonly webSearch: WebSearchPort | undefined
+  readonly vehicleRepo: VehicleRepository
+  readonly logger: LoggerPort
+}
+
 /** Crea el servicio de diagnostico con el repositorio OBD adecuado segun el modo. */
-function createDiagnosisService(
-  config: AppConfig,
-  llmClient: LlmClientPort | undefined,
-  knowledgeStack: KnowledgeStack | undefined,
-  webSearch: WebSearchPort | undefined,
-  vehicleRepo: VehicleRepository,
-  logger: LoggerPort,
-): DiagnosisService {
+function createDiagnosisService(opts: CreateDiagnosisServiceOptions): DiagnosisService {
+  const { config, llmClient, knowledgeStack, webSearch, vehicleRepo, logger } = opts
   if (config.OBD_MODE === 'docker') {
     const scenarios = createDockerScenarios(config)
     const obdRepos = createObdRepoMap(scenarios)
-    return new DiagnosisService({ scenarios, obdRepos, llmClient, logger, knowledgeStack, webSearch, vehicleRepo })
+    return new DiagnosisService({
+      scenarios,
+      obdRepos,
+      llmClient,
+      logger,
+      knowledgeStack,
+      webSearch,
+      vehicleRepo,
+    })
   }
   const obdRepo = new Elm327TcpRepository({
     host: config.ELM327_HOST,
     port: config.ELM327_PORT,
   })
-  return new DiagnosisService({ scenarios: [], obdRepo, llmClient, logger, knowledgeStack, webSearch, vehicleRepo })
+  return new DiagnosisService({
+    scenarios: [],
+    obdRepo,
+    llmClient,
+    logger,
+    knowledgeStack,
+    webSearch,
+    vehicleRepo,
+  })
 }

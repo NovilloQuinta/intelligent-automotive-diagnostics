@@ -385,7 +385,7 @@ export class DiagnosisService {
     }
     const llmClient = this.llmClient
     const repository = this.resolveRepository(scenarioId)
-    const mcp = createMcpServer(repository, this.vehicleRepo, this.knowledgeStack, this.webSearch)
+    const mcp = this.getMcpServer(scenarioId)
     const tools = mcp.listTools()
     const handler: ToolCallHandler = async (name, args) => {
       const result = await mcp.callTool(name, args)
@@ -427,8 +427,7 @@ export class DiagnosisService {
     scenarioId?: string,
     args?: Record<string, unknown>,
   ): Promise<string> {
-    const repository = this.resolveRepository(scenarioId)
-    const mcp = createMcpServer(repository, this.vehicleRepo, this.knowledgeStack, this.webSearch)
+    const mcp = this.getMcpServer(scenarioId)
     let result: ToolCallResult
     try {
       result = await withTimeout(
@@ -459,6 +458,11 @@ export class DiagnosisService {
     const first = result.content[0]
     if (!first) throw new EmptyToolResultError(toolName)
     return first.text
+  }
+
+  private getMcpServer(scenarioId?: string) {
+    const repository = this.resolveRepository(scenarioId)
+    return createMcpServer(repository, this.vehicleRepo, this.knowledgeStack, this.webSearch)
   }
 
   private resolveRepository(scenarioId?: string): ObdRepository {

@@ -79,7 +79,7 @@ export function MechanicChat({
             if (item.__type === "user_message" && item.content) {
               return (
                 <div
-                  key={i}
+                  key={`user-${i}`}
                   className="self-end rounded-lg bg-primary/20 px-3 py-1.5 text-sm text-foreground/90 max-w-[80%]"
                 >
                   {item.content}
@@ -99,7 +99,7 @@ export function MechanicChat({
               const isLastItem = i === conversationHistory.length - 1;
               return (
                 <div
-                  key={i}
+                  key={`resp-${i}`}
                   className="self-start rounded-lg bg-white/5 px-3 py-1.5 text-sm text-foreground/80 max-w-[80%]"
                 >
                   {isLastItem && (severity || confidence !== null) && (

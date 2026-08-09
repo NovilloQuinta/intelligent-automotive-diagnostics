@@ -128,11 +128,7 @@ const AUTO_DISCOVERY_FORMULA = '(A*256+B)'
 const AUTO_DISCOVERY_DATA_BYTES = 2
 const AUTO_DISCOVERY_CONFIDENCE = 0.3
 
-function autoRegisterPid(
-  vehicleRepo: VehicleRepository,
-  modeStr: string,
-  pidStr: string,
-): void {
+function autoRegisterPid(vehicleRepo: VehicleRepository, modeStr: string, pidStr: string): void {
   void vehicleRepo
     .findPidDefinition(modeStr, pidStr)
     .then((existing) => {
@@ -234,14 +230,18 @@ function handleGetAvailablePids(
     // 2. Mostrar PIDs Mode 22 conocidos del catálogo (propietarios, sin descubrimiento estándar)
     const mode22Pids = ALL_SEED_PIDS.filter((p) => p.pidCode.mode === '22')
     for (const p of mode22Pids) {
-      lines.push(`${p.pidCode.mode} ${p.pidCode.pid}: ${p.name} (${p.formula.toString()}) [${p.unit ?? ''}]`)
+      lines.push(
+        `${p.pidCode.mode} ${p.pidCode.pid}: ${p.name} (${p.formula.toString()}) [${p.unit ?? ''}]`,
+      )
     }
 
     // 3. Consultar BD: PIDs almacenados por vehículo
     if (vehicleRepo && vehicleId != null) {
       const stored = await vehicleRepo.findPidsByVehicle(vehicleId as number)
       for (const p of stored) {
-        lines.push(`${p.pidCode.mode} ${p.pidCode.pid}: ${p.name} (${p.formula.toString()}) [${p.unit ?? ''}]`)
+        lines.push(
+          `${p.pidCode.mode} ${p.pidCode.pid}: ${p.name} (${p.formula.toString()}) [${p.unit ?? ''}]`,
+        )
       }
     }
 
