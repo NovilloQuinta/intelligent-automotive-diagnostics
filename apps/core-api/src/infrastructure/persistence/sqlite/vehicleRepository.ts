@@ -1,12 +1,17 @@
-import { eq, sql } from 'drizzle-orm'
+import { eq, and, sql, desc, gte, lte, count } from 'drizzle-orm'
 import * as schema from './schema.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { Formula } from '@/domain/value-objects/formula.js'
 import { PidCode } from '@/domain/value-objects/pidCode.js'
 import type { DiagnosticsDb } from './db.js'
-import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
+import type {
+  VehicleRepository,
+  DiagnosisSessionFilter,
+  DiagnosisSessionPage,
+} from '@/application/ports/VehicleRepository.js'
 import type { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
 import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
+import type { SessionSeverity } from '@/domain/entities/diagnosisSession.js'
 import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import type { PidReading } from '@/domain/entities/pidReading.js'
@@ -154,11 +159,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
       conditions = sql`${conditions} AND ${schema.pidDefinitions.model} = ${model}`
     }
 
-    const rows = await this.db
-      .select()
-      .from(schema.pidDefinitions)
-      .where(conditions)
-      .limit(1)
+    const rows = await this.db.select().from(schema.pidDefinitions).where(conditions).limit(1)
 
     if (rows.length === 0) return null
 
@@ -230,7 +231,8 @@ export class SqliteVehicleRepository implements VehicleRepository {
     const result = await this.db
       .insert(schema.diagnosisSessions)
       .values({
-        vehicleId: session.vehicleId,
+        vehicleId: session.vehicleId as number | null,
+        userId: session.userId as number | null,
         scenarioId: session.scenarioId ?? null,
         startedAt: new Date().toISOString(),
       })
@@ -239,16 +241,99 @@ export class SqliteVehicleRepository implements VehicleRepository {
     return new DiagnosisSession({
       id: result[0].id,
       vehicleId: session.vehicleId,
+      userId: session.userId,
       scenarioId: session.scenarioId,
       startedAt: new Date().toISOString(),
     })
   }
 
-  async endSession(sessionId: number): Promise<void> {
+  async endSession(
+    sessionId: number,
+    result?: { resultJson: string; severity: SessionSeverity; dtcCount: number },
+  ): Promise<void> {
+    const updates: Record<string, unknown> = { endedAt: new Date().toISOString() }
+    if (result) {
+      updates.resultJson = result.resultJson
+      updates.severity = result.severity
+      updates.dtcCount = result.dtcCount
+    }
     await this.db
       .update(schema.diagnosisSessions)
-      .set({ endedAt: new Date().toISOString() })
+      .set(updates)
       .where(eq(schema.diagnosisSessions.id, sessionId))
+  }
+
+  async findSessions(filter: DiagnosisSessionFilter): Promise<DiagnosisSessionPage> {
+    const conditions: ReturnType<typeof and>[] = [
+      eq(schema.diagnosisSessions.userId, filter.userId),
+    ]
+
+    if (filter.from) {
+      conditions.push(gte(schema.diagnosisSessions.startedAt, filter.from))
+    }
+    if (filter.to) {
+      conditions.push(lte(schema.diagnosisSessions.startedAt, filter.to))
+    }
+    if (filter.scenarioId) {
+      conditions.push(eq(schema.diagnosisSessions.scenarioId, filter.scenarioId))
+    }
+    if (filter.severity) {
+      conditions.push(eq(schema.diagnosisSessions.severity, filter.severity))
+    }
+
+    const where = and(...conditions)
+
+    const [items, totalResult] = await Promise.all([
+      this.db
+        .select()
+        .from(schema.diagnosisSessions)
+        .where(where)
+        .orderBy(desc(schema.diagnosisSessions.startedAt))
+        .limit(filter.limit)
+        .offset(filter.offset),
+      this.db.select({ total: count() }).from(schema.diagnosisSessions).where(where),
+    ])
+
+    return {
+      items: items.map(
+        (r) =>
+          new DiagnosisSession({
+            id: r.id,
+            vehicleId: r.vehicleId,
+            userId: r.userId,
+            scenarioId: r.scenarioId ?? undefined,
+            startedAt: r.startedAt,
+            endedAt: r.endedAt ?? undefined,
+            resultJson: r.resultJson ?? undefined,
+            severity: (r.severity as SessionSeverity) ?? undefined,
+            dtcCount: r.dtcCount ?? undefined,
+          }),
+      ),
+      total: totalResult[0]?.total ?? 0,
+    }
+  }
+
+  async findSessionById(id: number, userId: number): Promise<DiagnosisSession | null> {
+    const rows = await this.db
+      .select()
+      .from(schema.diagnosisSessions)
+      .where(and(eq(schema.diagnosisSessions.id, id), eq(schema.diagnosisSessions.userId, userId)))
+      .limit(1)
+
+    if (rows.length === 0) return null
+
+    const r = rows[0]
+    return new DiagnosisSession({
+      id: r.id,
+      vehicleId: r.vehicleId,
+      userId: r.userId,
+      scenarioId: r.scenarioId ?? undefined,
+      startedAt: r.startedAt,
+      endedAt: r.endedAt ?? undefined,
+      resultJson: r.resultJson ?? undefined,
+      severity: (r.severity as SessionSeverity) ?? undefined,
+      dtcCount: r.dtcCount ?? undefined,
+    })
   }
 
   async findDtcDefinition(
@@ -279,9 +364,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
     }
   }
 
-  async upsertDtcDefinition(
-    dtc: Omit<DtcDefinition, 'id' | 'createdAt'>,
-  ): Promise<DtcDefinition> {
+  async upsertDtcDefinition(dtc: Omit<DtcDefinition, 'id' | 'createdAt'>): Promise<DtcDefinition> {
     const existing = await this.findDtcDefinition(dtc.manufacturer, dtc.model, dtc.code)
     if (existing) return existing
 

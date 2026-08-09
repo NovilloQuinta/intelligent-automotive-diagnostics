@@ -122,14 +122,19 @@ function categorizeError(err: unknown): ToolErrorCategory {
   return 'server_error'
 }
 
-/** Envuelve un handler para convertir excepciones en errores de ejecución MCP categorizados. */
+/** Envuelve un handler para convertir excepciones en errores de ejecucion MCP categorizados. */
 function withErrorHandling(handler: ToolHandler): ToolHandler {
   return async (args) => {
     try {
       return await handler(args)
     } catch (err) {
+      const category = categorizeError(err)
       const message = err instanceof Error ? err.message : 'Unknown error'
-      return errorText(`[${categorizeError(err)}] ${message}`)
+      const stack = err instanceof Error ? err.stack : undefined
+      if (stack) {
+        console.error(`[MCP tool error] ${category}: ${message}\n${stack}`)
+      }
+      return errorText(`[${category}] ${message}`)
     }
   }
 }
@@ -234,7 +239,11 @@ async function persistEcus(
 ): Promise<void> {
   await Promise.all(
     ecus.map(async (ecu) => {
-      const existing = await vehicleRepo.findEcuByAddress(vehicleId, ecu.requestAddr, ecu.responseAddr)
+      const existing = await vehicleRepo.findEcuByAddress(
+        vehicleId,
+        ecu.requestAddr,
+        ecu.responseAddr,
+      )
       if (existing?.id) {
         await vehicleRepo.updateEcuDiscoveredAt(existing.id)
       } else {

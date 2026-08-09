@@ -400,4 +400,75 @@ describe("SessionReportPanel", () => {
       screen.getByText("Información del vehículo no disponible"),
     ).toBeDefined();
   });
+
+  // ------------------------------------------------------------------
+  // 12. Snapshot mode — no network requests (6.1)
+  // ------------------------------------------------------------------
+
+  it("should not call useSessionReport when snapshot is provided", () => {
+    const snapshot: SessionReportState = setState({
+      deterministic: sampleDeterministic,
+      ecus: sampleEcus,
+    });
+
+    // Clear mock first to verify it's NOT called
+    mockUseSessionReport.mockClear();
+
+    render(
+      <SessionReportPanel
+        snapshot={snapshot}
+        vehicleInfo={sampleVehicleInfo}
+      />,
+    );
+
+    // The mock should NOT have been called
+    expect(mockUseSessionReport).not.toHaveBeenCalled();
+    // But the data should render
+    expect(screen.getByText("Diagnóstico Determinista")).toBeDefined();
+    expect(screen.getByText("P0301")).toBeDefined();
+    expect(screen.getByText("Engine Control Unit")).toBeDefined();
+  });
+
+  // ------------------------------------------------------------------
+  // 13. Without snapshot — behaves as today (6.3)
+  // ------------------------------------------------------------------
+
+  it("should call useSessionReport when snapshot is not provided (live mode)", () => {
+    mockUseSessionReport.mockReturnValue(
+      setState({ deterministic: sampleDeterministic }),
+    );
+
+    render(
+      <SessionReportPanel
+        scenarioId="audi-a3-idle"
+        vehicleInfo={sampleVehicleInfo}
+      />,
+    );
+
+    expect(mockUseSessionReport).toHaveBeenCalledWith("audi-a3-idle");
+    expect(screen.getByText("Diagnóstico Determinista")).toBeDefined();
+  });
+
+  // ------------------------------------------------------------------
+  // 14. Historical report shows generation date (6.4)
+  // ------------------------------------------------------------------
+
+  it("should display generation date when generatedAt prop is provided", () => {
+    const snapshot: SessionReportState = setState({
+      deterministic: sampleDeterministic,
+    });
+
+    render(
+      <SessionReportPanel
+        snapshot={snapshot}
+        vehicleInfo={sampleVehicleInfo}
+        generatedAt="2026-08-09T10:30:00.000Z"
+      />,
+    );
+
+    // Should show the generation date
+    expect(
+      screen.getByText(/generado el 9 de agosto de 2026/i),
+    ).toBeDefined();
+  });
 });

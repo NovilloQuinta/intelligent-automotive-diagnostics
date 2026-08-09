@@ -17,6 +17,7 @@ import {
 } from '@/infrastructure/services/errors.js'
 import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
 import { Vin } from '@/domain/value-objects/vin.js'
+import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
 import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { ToolCallTrace } from '@/application/ports/LlmClientPort.js'
@@ -114,6 +115,8 @@ type ServiceStub = Pick<
   | 'clearDtcCodes'
   | 'readPendingDtcCodes'
   | 'readPermanentDtcCodes'
+  | 'listDiagnosisSessions'
+  | 'getDiagnosisSession'
 >
 
 /** Stub de DiagnosisService: el controlador solo consume su superficie publica. */
@@ -142,13 +145,21 @@ function createServiceStub(overrides: Partial<ServiceStub> = {}): DiagnosisServi
     readPermanentDtcCodes: vi.fn(async () => [
       { code: 'P0401', description: 'EGR Flow Insufficient' },
     ]),
+    listDiagnosisSessions: vi.fn(async () => ({ items: [], total: 0 })),
+    getDiagnosisSession: vi.fn(async () => null),
     ...overrides,
   } as unknown as DiagnosisService
 }
 
-function createApp(service: DiagnosisService = createServiceStub()) {
+function createApp(service: DiagnosisService = createServiceStub(), options?: { userId?: number }) {
   const app = express()
   app.use(express.json())
+  if (options?.userId !== undefined) {
+    app.use((req, _res, next) => {
+      req.userId = options.userId
+      next()
+    })
+  }
   const router = createDiagnosisRoutes(new DiagnosisController(service, mockLogger))
   app.use('/api', router)
   return { app, service }
@@ -857,6 +868,167 @@ describe('diagnosisRoutes', () => {
 
       expect(res.status).toBe(422)
       expect(res.body.error).toMatch(/demasiados pasos/i)
+    })
+  })
+
+  describe('GET /api/diagnosis-history', () => {
+    const mockSessions = [
+      new DiagnosisSession({
+        id: 1,
+        vehicleId: 1,
+        userId: 42,
+        scenarioId: 'audi-a3-tdi',
+        startedAt: '2026-08-01T10:00:00Z',
+        endedAt: '2026-08-01T10:01:00Z',
+        severity: 'high',
+        dtcCount: 3,
+      }),
+      new DiagnosisSession({
+        id: 2,
+        vehicleId: null,
+        userId: 42,
+        scenarioId: 'direct-connection',
+        startedAt: '2026-08-02T10:00:00Z',
+        endedAt: '2026-08-02T10:01:00Z',
+        severity: 'low',
+        dtcCount: 0,
+      }),
+    ]
+
+    it('should return 401 without auth', async () => {
+      const { app } = createApp()
+      const res = await request(app).get('/api/diagnosis-history')
+
+      expect(res.status).toBe(401)
+    })
+
+    it('should return paginated sessions for the authenticated user', async () => {
+      const service = createServiceStub({
+        listDiagnosisSessions: vi.fn(async () => ({ items: mockSessions, total: 2 })),
+      })
+      const { app } = createApp(service, { userId: 42 })
+      const res = await request(app).get('/api/diagnosis-history?limit=25&offset=0')
+
+      expect(res.status).toBe(200)
+      expect(res.body.items).toHaveLength(2)
+      expect(res.body.total).toBe(2)
+      // resultJson should NOT be in list response
+      expect(res.body.items[0]).not.toHaveProperty('resultJson')
+      expect(service.listDiagnosisSessions).toHaveBeenCalledWith({
+        userId: 42,
+        from: undefined,
+        to: undefined,
+        scenarioId: undefined,
+        severity: undefined,
+        limit: 25,
+        offset: 0,
+      })
+    })
+
+    it('should return 400 when from is after to', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service, { userId: 42 })
+      const res = await request(app)
+        .get('/api/diagnosis-history')
+        .query({ from: '2026-08-05', to: '2026-08-01' })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('from must be before to')
+      expect(service.listDiagnosisSessions).not.toHaveBeenCalled()
+    })
+
+    it('should pass filter params to the service', async () => {
+      const service = createServiceStub({
+        listDiagnosisSessions: vi.fn(async () => ({ items: [], total: 0 })),
+      })
+      const { app } = createApp(service, { userId: 42 })
+      const res = await request(app)
+        .get('/api/diagnosis-history')
+        .query({ severity: 'high', scenarioId: 'audi-a3-tdi', limit: 10, offset: 5 })
+
+      expect(res.status).toBe(200)
+      expect(service.listDiagnosisSessions).toHaveBeenCalledWith({
+        userId: 42,
+        from: undefined,
+        to: undefined,
+        scenarioId: 'audi-a3-tdi',
+        severity: 'high',
+        limit: 10,
+        offset: 5,
+      })
+    })
+
+    it('should return 400 for invalid limit', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service, { userId: 42 })
+      const res = await request(app).get('/api/diagnosis-history').query({ limit: 999 })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid request body')
+    })
+  })
+
+  describe('GET /api/diagnosis-history/:id', () => {
+    const mockSession = new DiagnosisSession({
+      id: 1,
+      vehicleId: 1,
+      userId: 42,
+      scenarioId: 'audi-a3-tdi',
+      startedAt: '2026-08-01T10:00:00Z',
+      endedAt: '2026-08-01T10:01:00Z',
+      severity: 'high',
+      dtcCount: 3,
+      resultJson: '{"vehicle":{"vin":"WAUZZZ8V5JA123456"}}',
+    })
+
+    it('should return 401 without auth', async () => {
+      const { app } = createApp()
+      const res = await request(app).get('/api/diagnosis-history/1')
+
+      expect(res.status).toBe(401)
+    })
+
+    it('should return session detail for the authenticated user', async () => {
+      const service = createServiceStub({
+        getDiagnosisSession: vi.fn(async () => mockSession),
+      })
+      const { app } = createApp(service, { userId: 42 })
+      const res = await request(app).get('/api/diagnosis-history/1')
+
+      expect(res.status).toBe(200)
+      expect(res.body.id).toBe(1)
+      expect(res.body.resultJson).toBe('{"vehicle":{"vin":"WAUZZZ8V5JA123456"}}')
+      expect(service.getDiagnosisSession).toHaveBeenCalledWith(1, 42)
+    })
+
+    it('should return 404 for another user session', async () => {
+      const service = createServiceStub({
+        getDiagnosisSession: vi.fn(async () => null),
+      })
+      const { app } = createApp(service, { userId: 42 })
+      const res = await request(app).get('/api/diagnosis-history/999')
+
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe('Diagnosis session not found')
+    })
+
+    it('should return 404 for non-existent session', async () => {
+      const service = createServiceStub({
+        getDiagnosisSession: vi.fn(async () => null),
+      })
+      const { app } = createApp(service, { userId: 42 })
+      const res = await request(app).get('/api/diagnosis-history/99999')
+
+      expect(res.status).toBe(404)
+    })
+
+    it('should return 400 for non-numeric id', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service, { userId: 42 })
+      const res = await request(app).get('/api/diagnosis-history/abc')
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid request body')
     })
   })
 })

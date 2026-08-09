@@ -244,3 +244,29 @@ export type SeverityMeta = {
     | typeof Info
     | typeof ShieldAlert;
 };
+
+// ---------------------------------------------------------------------------
+// Diagnosis history types — keep in sync with GET /api/diagnosis-history
+// ---------------------------------------------------------------------------
+
+/** Session summary as returned by the diagnosis history list endpoint. */
+export type DiagnosisSession = {
+  readonly id: number;
+  readonly scenarioId: string | null;
+  readonly vehicleMake: string;
+  readonly vehicleModel: string;
+  readonly dtcCount: number;
+  readonly severity: string;
+  readonly startedAt: string;
+};
+
+/** Paginated response from GET /api/diagnosis-history. */
+export type DiagnosisHistoryResponse = {
+  readonly sessions: DiagnosisSession[];
+  readonly total: number;
+};
+
+/** Session detail as returned by GET /api/diagnosis-history/:id. */
+export type DiagnosisSessionDetail = DiagnosisSession & {
+  readonly resultJson: string;
+};

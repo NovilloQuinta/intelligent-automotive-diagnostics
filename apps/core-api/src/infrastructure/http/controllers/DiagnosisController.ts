@@ -27,6 +27,8 @@ const ERROR_MESSAGES = {
   cognitiveTooManySteps:
     'El diagnóstico necesitó demasiados pasos. Prueba con una pregunta más concreta.',
   internalError: 'Internal server error',
+  invalidDateRange: 'from must be before to',
+  sessionNotFound: 'Diagnosis session not found',
 } as const
 
 /** scenarioId obligatorio: modo simulacion, donde hay que elegir escenario. */
@@ -41,22 +43,21 @@ const optionalScenarioId = z.string().min(1).optional()
  */
 function scenarioSchemas<T extends Record<string, z.ZodTypeAny>>(
   extra: T,
-): { docker: z.ZodObject<{ scenarioId: z.ZodString } & T>; tcp: z.ZodObject<{ scenarioId: z.ZodOptional<z.ZodString> } & T> } {
+): {
+  docker: z.ZodObject<{ scenarioId: z.ZodString } & T>
+  tcp: z.ZodObject<{ scenarioId: z.ZodOptional<z.ZodString> } & T>
+} {
   return {
     docker: z.object({ scenarioId: requiredScenarioId, ...extra }),
     tcp: z.object({ scenarioId: optionalScenarioId, ...extra }),
   }
 }
 
-const {
-  docker: DiagnosisBodySchema,
-  tcp: DiagnosisBodyTcpSchema,
-} = scenarioSchemas({})
+const { docker: DiagnosisBodySchema, tcp: DiagnosisBodyTcpSchema } = scenarioSchemas({})
 
-const {
-  docker: McpToolBodySchema,
-  tcp: McpToolBodyTcpSchema,
-} = scenarioSchemas({ args: z.record(z.unknown()).default({}) })
+const { docker: McpToolBodySchema, tcp: McpToolBodyTcpSchema } = scenarioSchemas({
+  args: z.record(z.unknown()).default({}),
+})
 
 const McpToolParamsSchema = z.object({
   toolName: z.string().min(1),
@@ -73,53 +74,45 @@ const LlmConversationItemSchema = z.discriminatedUnion('__type', [
   }),
 ])
 
-const {
-  docker: CognitiveDiagnosisBodySchema,
-  tcp: CognitiveDiagnosisBodyTcpSchema,
-} = scenarioSchemas({
-  query: z.string().optional(),
-  history: z.array(LlmConversationItemSchema).optional(),
+const { docker: CognitiveDiagnosisBodySchema, tcp: CognitiveDiagnosisBodyTcpSchema } =
+  scenarioSchemas({
+    query: z.string().optional(),
+    history: z.array(LlmConversationItemSchema).optional(),
+  })
+
+const { docker: FreezeFrameQuerySchema, tcp: FreezeFrameQueryTcpSchema } = scenarioSchemas({
+  dtc: z.string().optional(),
 })
 
-const {
-  docker: FreezeFrameQuerySchema,
-  tcp: FreezeFrameQueryTcpSchema,
-} = scenarioSchemas({ dtc: z.string().optional() })
+const { docker: EcuInfoQuerySchema, tcp: EcuInfoQueryTcpSchema } = scenarioSchemas({})
 
-const {
-  docker: EcuInfoQuerySchema,
-  tcp: EcuInfoQueryTcpSchema,
-} = scenarioSchemas({})
+const { docker: VehicleInfoQuerySchema, tcp: VehicleInfoQueryTcpSchema } = scenarioSchemas({})
 
-const {
-  docker: VehicleInfoQuerySchema,
-  tcp: VehicleInfoQueryTcpSchema,
-} = scenarioSchemas({})
+const { docker: LiveDataQuerySchema, tcp: LiveDataQueryTcpSchema } = scenarioSchemas({})
 
-const {
-  docker: LiveDataQuerySchema,
-  tcp: LiveDataQueryTcpSchema,
-} = scenarioSchemas({})
+const { docker: ClearDtcBodySchema, tcp: ClearDtcBodyTcpSchema } = scenarioSchemas({})
 
-const {
-  docker: ClearDtcBodySchema,
-  tcp: ClearDtcBodyTcpSchema,
-} = scenarioSchemas({})
+const { docker: PendingDtcQuerySchema, tcp: PendingDtcQueryTcpSchema } = scenarioSchemas({})
 
-const {
-  docker: PendingDtcQuerySchema,
-  tcp: PendingDtcQueryTcpSchema,
-} = scenarioSchemas({})
+const { docker: PermanentDtcQuerySchema, tcp: PermanentDtcQueryTcpSchema } = scenarioSchemas({})
 
-const {
-  docker: PermanentDtcQuerySchema,
-  tcp: PermanentDtcQueryTcpSchema,
-} = scenarioSchemas({})
+const { docker: VehicleStatusQuerySchema, tcp: VehicleStatusQueryTcpSchema } = scenarioSchemas({})
 
-const {
-  docker: VehicleStatusQuerySchema,
-  tcp: VehicleStatusQueryTcpSchema,
-} = scenarioSchemas({})
+/** Filtros de listado del historial — todos opcionales,
+ *  `userId` nunca viaja en query (se toma del token). */
+const DiagnosisHistoryQuerySchema = z.object({
+  from: z.string().optional(),
+  to: z.string().optional(),
+  scenarioId: z.string().optional(),
+  severity: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+  offset: z.coerce.number().int().min(0).default(0),
+})
+
+/** Parametro de ruta para GET /api/diagnosis-history/:id */
+const DiagnosisSessionIdSchema = z.object({
+  id: z.coerce.number().int().min(1),
+})
 
 /** Controlador HTTP para los endpoints de diagnostico OBD. */
 export class DiagnosisController {
@@ -203,6 +196,7 @@ export class DiagnosisController {
         scenarioId: parsed.data.scenarioId,
         userQuery: parsed.data.query,
         conversationHistory: parsed.data.history as readonly LlmConversationItem[] | undefined,
+        userId: req.userId,
       })
       res.status(200).json(result)
     } catch (err) {
@@ -351,6 +345,91 @@ export class DiagnosisController {
     } catch (err) {
       if (this.respondIfCommonError(err, res)) return
       this.respondUnexpected(err, res, 'Vehicle status fetch failed')
+    }
+  }
+
+  /** GET /api/diagnosis-history — listado paginado de sesiones del usuario autenticado. */
+  listHistory = async (req: Request, res: Response): Promise<void> => {
+    const parsed = DiagnosisHistoryQuerySchema.safeParse(req.query)
+    if (!parsed.success) {
+      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
+      return
+    }
+
+    const { from, to, scenarioId, severity, limit, offset } = parsed.data
+
+    if (from && to && from > to) {
+      res.status(400).json({ error: ERROR_MESSAGES.invalidDateRange })
+      return
+    }
+
+    const userId = req.userId
+    if (!userId) {
+      res.status(401).json({ error: 'Access token required' })
+      return
+    }
+
+    try {
+      const page = await this.service.listDiagnosisSessions({
+        userId,
+        from,
+        to,
+        scenarioId,
+        severity,
+        limit,
+        offset,
+      })
+
+      // No incluir resultJson en el listado
+      const items = page.items.map((s) => ({
+        id: s.id,
+        vehicleId: s.vehicleId,
+        scenarioId: s.scenarioId,
+        startedAt: s.startedAt,
+        endedAt: s.endedAt,
+        severity: s.severity,
+        dtcCount: s.dtcCount,
+      }))
+
+      res.status(200).json({ items, total: page.total })
+    } catch (err) {
+      this.respondUnexpected(err, res, 'Diagnosis history fetch failed')
+    }
+  }
+
+  /** GET /api/diagnosis-history/:id — detalle de una sesion concreta. */
+  getHistoryDetail = async (req: Request<{ id: string }>, res: Response): Promise<void> => {
+    const parsed = DiagnosisSessionIdSchema.safeParse(req.params)
+    if (!parsed.success) {
+      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
+      return
+    }
+
+    const userId = req.userId
+    if (!userId) {
+      res.status(401).json({ error: 'Access token required' })
+      return
+    }
+
+    try {
+      const session = await this.service.getDiagnosisSession(parsed.data.id, userId)
+      if (!session) {
+        res.status(404).json({ error: ERROR_MESSAGES.sessionNotFound })
+        return
+      }
+
+      res.status(200).json({
+        id: session.id,
+        vehicleId: session.vehicleId,
+        scenarioId: session.scenarioId,
+        startedAt: session.startedAt,
+        endedAt: session.endedAt,
+        severity: session.severity,
+        dtcCount: session.dtcCount,
+        resultJson: session.resultJson ?? null,
+      })
+    } catch (err) {
+      this.respondUnexpected(err, res, 'Diagnosis session detail fetch failed')
     }
   }
 

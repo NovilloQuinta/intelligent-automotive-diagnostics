@@ -41,18 +41,36 @@ export class Logger implements LoggerPort {
   }
 
   /**
+   * Convierte valores `Error` del contexto en objetos serializables con `message`,
+   * `stack` y `name`. `JSON.stringify` ignora propiedades no enumerables de `Error`
+   * (como `.stack` en V8); sin este paso el contexto de error se guarda como `{}`.
+   */
+  private serializeContext(context: Record<string, unknown>): Record<string, unknown> {
+    const result: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(context)) {
+      if (value instanceof Error) {
+        result[key] = { message: value.message, stack: value.stack, name: value.name }
+      } else {
+        result[key] = value
+      }
+    }
+    return result
+  }
+
+  /**
    * `createdAt` se fija aqui explicitamente, no se deja al `default` de `schema.ts`: ese
    * default es la cadena literal `"datetime('now')"`, no una expresion SQL — omitir el
    * campo dejaria ese texto literal en vez de una fecha real, y el panel de administracion
    * (`GET /api/admin/logs`) filtra y ordena por esta columna.
    */
   private saveToDb(level: string, message: string, context?: Record<string, unknown>): void {
+    const safeContext = context ? this.serializeContext(context) : undefined
     this.db
       .insert(schema.logs)
       .values({
         level,
         message,
-        context: context ? JSON.stringify(context) : null,
+        context: safeContext ? JSON.stringify(safeContext) : null,
         createdAt: new Date().toISOString(),
       })
       .execute()

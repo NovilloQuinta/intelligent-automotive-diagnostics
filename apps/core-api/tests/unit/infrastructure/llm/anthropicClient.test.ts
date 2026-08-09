@@ -227,7 +227,7 @@ describe('AnthropicClient', () => {
 
     expect(mockCreate).toHaveBeenCalledTimes(2)
     expect(result.toolCalls).toHaveLength(1)
-    expect(result.toolCalls[0].result).toBe('Tool execution failed: read_pid')
+    expect(result.toolCalls[0].result).toBe('Tool execution failed: read_pid — OBD timeout')
     expect(result.text).toContain('No pude leer el PID')
   })
 

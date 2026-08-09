@@ -42,8 +42,12 @@ const ANIM_DELAY_LIST_MS = 50;
 // ---------------------------------------------------------------------------
 
 interface SessionReportPanelProps {
-  readonly scenarioId: string;
+  readonly scenarioId?: string;
   readonly vehicleInfo?: Scenario["vehicleInfo"];
+  /** Pre-computed report state to render without network requests (history mode). */
+  readonly snapshot?: SessionReportState;
+  /** ISO timestamp of when the report was originally generated. Displayed in the header. */
+  readonly generatedAt?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -74,8 +78,10 @@ function cognitiveSeverityBadge(sev: string): { label: string; color: string } {
 
 function ReportHeader({
   vehicleInfo,
+  generatedAt,
 }: {
   readonly vehicleInfo?: Scenario["vehicleInfo"];
+  readonly generatedAt?: string;
 }) {
   if (!vehicleInfo) {
     return (
@@ -85,11 +91,21 @@ function ReportHeader({
     );
   }
 
-  const dateStr = new Date().toLocaleDateString("es-ES", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const isHistorical = !!generatedAt;
+
+  const dateStr = isHistorical
+    ? new Date(generatedAt!).toLocaleDateString("es-ES", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : new Date().toLocaleDateString("es-ES", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-4">
@@ -106,7 +122,13 @@ function ReportHeader({
         <span className="mono text-xs text-muted-foreground">
           VIN: {vehicleInfo.vin}
         </span>
-        <span className="text-xs text-muted-foreground">{dateStr}</span>
+        {isHistorical ? (
+          <span className="text-xs text-primary/80">
+            Informe generado el {dateStr}
+          </span>
+        ) : (
+          <span className="text-xs text-muted-foreground">{dateStr}</span>
+        )}
       </div>
     </div>
   );
@@ -452,32 +474,83 @@ function SectionEmpty({ text }: { readonly text: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Main component
+// Internal: renders the report from a given state (live or snapshot)
 // ---------------------------------------------------------------------------
 
-/**
- * Full-session report panel that aggregates deterministic OBD-II diagnosis,
- * ECU discovery, freeze frame snapshots, and optional cognitive AI analysis for
- * a given scenario.
- */
-export function SessionReportPanel({
-  scenarioId,
-  vehicleInfo,
-}: SessionReportPanelProps) {
-  const state = useSessionReport(scenarioId);
+interface SessionReportContentProps {
+  readonly state: SessionReportState;
+  readonly vehicleInfo?: Scenario["vehicleInfo"];
+  readonly generatedAt?: string;
+}
 
+function SessionReportContent({
+  state,
+  vehicleInfo,
+  generatedAt,
+}: SessionReportContentProps) {
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-bold uppercase tracking-wider text-foreground/90">
         Informe de Sesión de Diagnóstico
       </h2>
       <div className="panel p-5">
-        <ReportHeader vehicleInfo={vehicleInfo} />
+        <ReportHeader vehicleInfo={vehicleInfo} generatedAt={generatedAt} />
       </div>
       <DeterministicSection state={state} />
       <EcuSection state={state} />
       <FreezeFrameSection state={state} />
       <CognitiveSection state={state} />
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main component — decides between live fetching and snapshot rendering
+// ---------------------------------------------------------------------------
+
+/**
+ * Full-session report panel that aggregates deterministic OBD-II diagnosis,
+ * ECU discovery, freeze frame snapshots, and optional cognitive AI analysis.
+ *
+ * In **live mode** (no `snapshot` prop), it calls `useSessionReport(scenarioId)`
+ * to fetch data from the backend in parallel.
+ *
+ * In **history mode** (`snapshot` prop provided), it renders directly from the
+ * pre-saved state without making any network requests.
+ */
+export function SessionReportPanel(props: SessionReportPanelProps) {
+  const { scenarioId, vehicleInfo, snapshot, generatedAt } = props;
+
+  // History mode — render directly from snapshot (no network calls)
+  if (snapshot) {
+    return (
+      <SessionReportContent
+        state={snapshot}
+        vehicleInfo={vehicleInfo}
+        generatedAt={generatedAt}
+      />
+    );
+  }
+
+  // Live mode — fetch data via hook
+  return (
+    <SessionReportPanelLive
+      scenarioId={scenarioId!}
+      vehicleInfo={vehicleInfo}
+    />
+  );
+}
+
+function SessionReportPanelLive({
+  scenarioId,
+  vehicleInfo,
+}: {
+  readonly scenarioId: string;
+  readonly vehicleInfo?: Scenario["vehicleInfo"];
+}) {
+  const state = useSessionReport(scenarioId);
+
+  return (
+    <SessionReportContent state={state} vehicleInfo={vehicleInfo} />
   );
 }

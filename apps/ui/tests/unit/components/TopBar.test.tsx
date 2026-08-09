@@ -217,4 +217,13 @@ describe("TopBar", () => {
     expect(screen.queryByTestId("connection-usb")).toBeNull();
     expect(screen.queryByTestId("connection-bluetooth")).toBeNull();
   });
+
+  it("should show the Historial button for all authenticated users", () => {
+    render(<TopBar {...baseProps} />);
+
+    expect(
+      screen.getByTitle("Historial de diagnósticos"),
+    ).toBeDefined();
+    expect(screen.getByText("Historial")).toBeDefined();
+  });
 });
