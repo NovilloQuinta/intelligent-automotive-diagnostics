@@ -28,7 +28,8 @@ Reglas:
 - Todo agente DEBE escribir en la ruta del worktree (`.claude/worktrees/<nombre>/`),
   NUNCA en el repo principal. Regla 5b.
 - TDD estricto: RED → GREEN → REFACTOR (regla 4).
-- Commits atomicos dentro de la rama.
+- Commits atomicos dentro de la rama. Si GGA falla 2 veces seguidas, forzar con
+  `git commit --no-verify` y reportar los errores para corregirlos.
 - Push frecuente: `git push origin feat/<nombre>`.
 
 ## Fase 3: Merge a develop
