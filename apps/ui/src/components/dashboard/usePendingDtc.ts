@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import type { DtcCode } from "./types";
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+import type { DtcCode } from './types'
 
 export function usePendingDtc(scenarioId: string) {
   const {
@@ -9,15 +9,15 @@ export function usePendingDtc(scenarioId: string) {
     error,
     refetch,
   } = useQuery<{ dtcCodes: DtcCode[] }>({
-    queryKey: ["pending-dtc", scenarioId],
+    queryKey: ['pending-dtc', scenarioId],
     queryFn: () => api.getPendingDtc(scenarioId),
     enabled: scenarioId.length > 0,
-  });
+  })
 
   return {
     loading,
     dtcCodes: data.dtcCodes,
     error: error instanceof Error ? error.message : null,
     refetch,
-  };
+  }
 }

@@ -1,43 +1,38 @@
-import { Bike, Car, RadarIcon, ScanLine, TriangleAlert } from "lucide-react";
-import { COLORS } from "./types";
-import { CONNECTION_TYPE_LABELS } from "./ConnectionTypeIcon";
-import type { Scenario, VehicleInfoResponse } from "./types";
-import type { VehicleAutoDetectStep } from "./useVehicleAutoDetect";
+import { Bike, Car, RadarIcon, ScanLine, TriangleAlert } from 'lucide-react'
+import { COLORS } from './types'
+import { CONNECTION_TYPE_LABELS } from './ConnectionTypeIcon'
+import type { Scenario, VehicleInfoResponse } from './types'
+import type { VehicleAutoDetectStep } from './useVehicleAutoDetect'
 
 /** Orden de los pasos visibles del wizard (`done` ya no muestra wizard). */
 const STEP_LABELS: { key: VehicleAutoDetectStep; label: string }[] = [
-  { key: "selecting", label: "Conexión" },
-  { key: "detecting", label: "Lectura VIN" },
-  { key: "confirming", label: "Confirmación" },
-];
+  { key: 'selecting', label: 'Conexión' },
+  { key: 'detecting', label: 'Lectura VIN' },
+  { key: 'confirming', label: 'Confirmación' },
+]
 
 function StepIndicator({ step }: { step: VehicleAutoDetectStep }) {
-  const currentIndex = STEP_LABELS.findIndex((s) => s.key === step);
+  const currentIndex = STEP_LABELS.findIndex((s) => s.key === step)
   return (
     <ol className="mono flex items-center gap-3 text-[10px] uppercase tracking-[0.2em]">
       {STEP_LABELS.map((s, i) => (
-        <li
-          key={s.key}
-          className={
-            i <= currentIndex ? "text-primary" : "text-muted-foreground/60"
-          }
-        >
+        <li key={s.key} className={i <= currentIndex ? 'text-primary' : 'text-muted-foreground/60'}>
           {i + 1}. {s.label}
         </li>
       ))}
     </ol>
-  );
+  )
 }
 
 function ConnectionButton({
   scenario,
   onSelect,
 }: {
-  scenario: Scenario;
-  onSelect: (id: string) => void;
+  scenario: Scenario
+  onSelect: (id: string) => void
 }) {
-  const Icon = scenario.vehicleType === "motorcycle" ? Bike : Car;
-  const { make, model, year } = scenario.vehicleInfo;
+  const Icon = scenario.vehicleType === 'motorcycle' ? Bike : Car
+  const { make, model, year } = scenario.vehicleInfo
   return (
     <button
       onClick={() => onSelect(scenario.id)}
@@ -60,22 +55,22 @@ function ConnectionButton({
       </span>
       <ScanLine className="h-4 w-4 text-muted-foreground" />
     </button>
-  );
+  )
 }
 
 function SelectingStep({
   scenarios,
   onSelect,
 }: {
-  scenarios: Scenario[];
-  onSelect: (id: string) => void;
+  scenarios: Scenario[]
+  onSelect: (id: string) => void
 }) {
   if (scenarios.length === 0) {
     return (
       <p className="rounded-lg border border-white/10 bg-black/40 px-4 py-6 text-center text-sm text-muted-foreground">
         No hay conexiones disponibles
       </p>
-    );
+    )
   }
   return (
     <div className="space-y-2">
@@ -83,7 +78,7 @@ function SelectingStep({
         <ConnectionButton key={s.id} scenario={s} onSelect={onSelect} />
       ))}
     </div>
-  );
+  )
 }
 
 function DetectingStep({
@@ -91,9 +86,9 @@ function DetectingStep({
   onRetry,
   onBack,
 }: {
-  error: string | null;
-  onRetry: () => void;
-  onBack: () => void;
+  error: string | null
+  onRetry: () => void
+  onBack: () => void
 }) {
   if (error) {
     return (
@@ -115,7 +110,7 @@ function DetectingStep({
           </button>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -129,7 +124,7 @@ function DetectingStep({
         Leyendo VIN · Modo 09 PID 02
       </p>
     </div>
-  );
+  )
 }
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -140,7 +135,7 @@ function Field({ label, value }: { label: string; value: string }) {
       </div>
       <div className="text-sm font-semibold">{value}</div>
     </div>
-  );
+  )
 }
 
 function ConfirmingStep({
@@ -149,23 +144,19 @@ function ConfirmingStep({
   onConfirm,
   onBack,
 }: {
-  vehicle: VehicleInfoResponse;
-  scenarioId: string;
-  onConfirm: (scenarioId: string) => void;
-  onBack: () => void;
+  vehicle: VehicleInfoResponse
+  scenarioId: string
+  onConfirm: (scenarioId: string) => void
+  onBack: () => void
 }) {
-  const decoded =
-    vehicle.manufacturer ?? vehicle.region ?? vehicle.modelYearDecoded;
+  const decoded = vehicle.manufacturer ?? vehicle.region ?? vehicle.modelYearDecoded
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-3">
         <div className="mono text-[10px] uppercase tracking-widest text-muted-foreground">
           VIN leído
         </div>
-        <div
-          className="mono text-lg font-bold tracking-[0.15em]"
-          style={{ color: COLORS.accent }}
-        >
+        <div className="mono text-lg font-bold tracking-[0.15em]" style={{ color: COLORS.accent }}>
           {vehicle.vin}
         </div>
       </div>
@@ -183,22 +174,14 @@ function ConfirmingStep({
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-          <Field label="Fabricante (WMI)" value={vehicle.manufacturer ?? "—"} />
+          <Field label="Fabricante (WMI)" value={vehicle.manufacturer ?? '—'} />
           <Field
             label="Origen"
-            value={
-              vehicle.region
-                ? `${vehicle.region.country} · ${vehicle.region.region}`
-                : "—"
-            }
+            value={vehicle.region ? `${vehicle.region.country} · ${vehicle.region.region}` : '—'}
           />
           <Field
             label="Año de modelo"
-            value={
-              vehicle.modelYearDecoded === null
-                ? "—"
-                : String(vehicle.modelYearDecoded)
-            }
+            value={vehicle.modelYearDecoded === null ? '—' : String(vehicle.modelYearDecoded)}
           />
         </div>
       )}
@@ -218,20 +201,20 @@ function ConfirmingStep({
         </button>
       </div>
     </div>
-  );
+  )
 }
 
 type Props = {
-  scenarios: Scenario[];
-  step: VehicleAutoDetectStep;
-  scenarioId: string;
-  vehicle: VehicleInfoResponse | null;
-  error: string | null;
-  onSelect: (id: string) => void;
-  onRetry: () => void;
-  onBack: () => void;
-  onConfirm: (scenarioId: string) => void;
-};
+  scenarios: Scenario[]
+  step: VehicleAutoDetectStep
+  scenarioId: string
+  vehicle: VehicleInfoResponse | null
+  error: string | null
+  onSelect: (id: string) => void
+  onRetry: () => void
+  onBack: () => void
+  onConfirm: (scenarioId: string) => void
+}
 
 /**
  * Full-screen vehicle identification wizard: pick a connection, read and
@@ -259,13 +242,9 @@ export function VehicleAutoDetectWizard({
           <StepIndicator step={step} />
         </header>
 
-        {step === "selecting" && (
-          <SelectingStep scenarios={scenarios} onSelect={onSelect} />
-        )}
-        {step === "detecting" && (
-          <DetectingStep error={error} onRetry={onRetry} onBack={onBack} />
-        )}
-        {step === "confirming" && vehicle && (
+        {step === 'selecting' && <SelectingStep scenarios={scenarios} onSelect={onSelect} />}
+        {step === 'detecting' && <DetectingStep error={error} onRetry={onRetry} onBack={onBack} />}
+        {step === 'confirming' && vehicle && (
           <ConfirmingStep
             vehicle={vehicle}
             scenarioId={scenarioId}
@@ -275,5 +254,5 @@ export function VehicleAutoDetectWizard({
         )}
       </section>
     </main>
-  );
+  )
 }

@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import type { EcuInfo } from "./types";
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+import type { EcuInfo } from './types'
 
 export function useEcuInfo(selectedId: string | null) {
   const {
@@ -8,14 +8,14 @@ export function useEcuInfo(selectedId: string | null) {
     isLoading: loading,
     error,
   } = useQuery<EcuInfo[]>({
-    queryKey: ["ecu-info", selectedId],
+    queryKey: ['ecu-info', selectedId],
     queryFn: () => api.getEcuInfo(selectedId!),
     enabled: !!selectedId,
-  });
+  })
 
   return {
     loading,
     ecus,
     error: error instanceof Error ? error.message : null,
-  };
+  }
 }

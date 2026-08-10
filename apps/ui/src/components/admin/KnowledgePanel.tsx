@@ -1,52 +1,52 @@
-import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { ApiHttpError } from "@/lib/api-errors";
+import { useState } from 'react'
+import { useQuery, useMutation } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+import { ApiHttpError } from '@/lib/api-errors'
 import type {
   AdminKnowledgeStats,
   KnowledgeIndexName,
   KnowledgeSearchInput,
   KnowledgeSearchResponse,
-} from "@/components/admin/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+} from '@/components/admin/types'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
+} from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 
-const HTTP_SERVICE_UNAVAILABLE = 503;
+const HTTP_SERVICE_UNAVAILABLE = 503
 
 const INDEX_OPTIONS: { value: KnowledgeIndexName; label: string }[] = [
-  { value: "pids", label: "PIDs" },
-  { value: "dtcs", label: "DTCs" },
-  { value: "diagnoses", label: "Diagnoses" },
-];
+  { value: 'pids', label: 'PIDs' },
+  { value: 'dtcs', label: 'DTCs' },
+  { value: 'diagnoses', label: 'Diagnoses' },
+]
 
 const INDEX_LABELS: Record<KnowledgeIndexName, string> = {
-  pids: "PIDs",
-  dtcs: "DTCs",
-  diagnoses: "Diagnoses",
-};
+  pids: 'PIDs',
+  dtcs: 'DTCs',
+  diagnoses: 'Diagnoses',
+}
 
 export function KnowledgePanel() {
-  const [searchText, setSearchText] = useState("");
-  const [searchIndex, setSearchIndex] = useState<KnowledgeIndexName>("pids");
+  const [searchText, setSearchText] = useState('')
+  const [searchIndex, setSearchIndex] = useState<KnowledgeIndexName>('pids')
 
   const {
     data: stats,
     isLoading: statsLoading,
     isError: statsError,
   } = useQuery<AdminKnowledgeStats>({
-    queryKey: ["admin", "knowledge"],
+    queryKey: ['admin', 'knowledge'],
     queryFn: () => api.admin.knowledgeStats(),
-  });
+  })
 
   const {
     mutate,
@@ -57,25 +57,23 @@ export function KnowledgePanel() {
     reset: resetSearch,
   } = useMutation<KnowledgeSearchResponse, Error, KnowledgeSearchInput>({
     mutationFn: (input) => api.admin.knowledgeSearch(input),
-  });
+  })
 
   const is503 =
     searchError &&
     searchErrorObj instanceof ApiHttpError &&
-    searchErrorObj.status === HTTP_SERVICE_UNAVAILABLE;
+    searchErrorObj.status === HTTP_SERVICE_UNAVAILABLE
 
   function handleSearch() {
-    if (!searchText.trim()) return;
-    mutate({ text: searchText.trim(), index: searchIndex, limit: 10 });
+    if (!searchText.trim()) return
+    mutate({ text: searchText.trim(), index: searchIndex, limit: 10 })
   }
 
   return (
     <div className="space-y-6">
       {/* ---- Stats ---- */}
       <div>
-        <h2 className="text-lg font-semibold mb-3">
-          Estadísticas del catálogo
-        </h2>
+        <h2 className="text-lg font-semibold mb-3">Estadísticas del catálogo</h2>
         {statsLoading ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -95,20 +93,18 @@ export function KnowledgePanel() {
           </div>
         ) : stats ? (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {(
-              Object.entries(stats) as [KnowledgeIndexName, { count: number }][]
-            ).map(([key, value]) => (
-              <Card key={key}>
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium">
-                    {INDEX_LABELS[key]}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold">{value.count}</p>
-                </CardContent>
-              </Card>
-            ))}
+            {(Object.entries(stats) as [KnowledgeIndexName, { count: number }][]).map(
+              ([key, value]) => (
+                <Card key={key}>
+                  <CardHeader>
+                    <CardTitle className="text-sm font-medium">{INDEX_LABELS[key]}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-2xl font-bold">{value.count}</p>
+                  </CardContent>
+                </Card>
+              ),
+            )}
           </div>
         ) : null}
       </div>
@@ -122,11 +118,11 @@ export function KnowledgePanel() {
               placeholder="Texto a buscar..."
               value={searchText}
               onChange={(e) => {
-                setSearchText(e.target.value);
-                resetSearch();
+                setSearchText(e.target.value)
+                resetSearch()
               }}
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleSearch();
+                if (e.key === 'Enter') handleSearch()
               }}
             />
           </div>
@@ -145,10 +141,7 @@ export function KnowledgePanel() {
               ))}
             </SelectContent>
           </Select>
-          <Button
-            onClick={handleSearch}
-            disabled={searchPending || !searchText.trim()}
-          >
+          <Button onClick={handleSearch} disabled={searchPending || !searchText.trim()}>
             Buscar
           </Button>
         </div>
@@ -160,7 +153,7 @@ export function KnowledgePanel() {
           </div>
         ) : searchError && !is503 ? (
           <div className="rounded-md border border-destructive p-4 text-destructive">
-            Error en la búsqueda: {searchErrorObj?.message ?? "Desconocido"}
+            Error en la búsqueda: {searchErrorObj?.message ?? 'Desconocido'}
           </div>
         ) : searchPending ? (
           <div className="space-y-2">
@@ -189,5 +182,5 @@ export function KnowledgePanel() {
         ) : null}
       </div>
     </div>
-  );
+  )
 }

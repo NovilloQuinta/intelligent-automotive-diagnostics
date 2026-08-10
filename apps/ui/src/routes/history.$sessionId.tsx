@@ -1,17 +1,18 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { SessionReportPanel } from "@/components/dashboard/SessionReportPanel";
-import { useDiagnosisHistoryDetail } from "@/components/history/useDiagnosisHistoryDetail";
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { ArrowLeft, Loader2 } from 'lucide-react'
+import { SessionReportPanel } from '@/components/dashboard/SessionReportPanel'
+import { useDiagnosisHistoryDetail } from '@/components/history/useDiagnosisHistoryDetail'
 
-export const Route = createFileRoute("/history/$sessionId")({
+export const Route = createFileRoute('/history/$sessionId')({
   component: HistoryDetailRoute,
-});
+})
 
 function HistoryDetailRoute() {
-  const { sessionId } = Route.useParams();
-  const id = Number(sessionId);
-  const { session, reportState, isLoading, isError, error } =
-    useDiagnosisHistoryDetail(Number.isNaN(id) ? 0 : id);
+  const { sessionId } = Route.useParams()
+  const id = Number(sessionId)
+  const { session, reportState, isLoading, isError, error } = useDiagnosisHistoryDetail(
+    Number.isNaN(id) ? 0 : id,
+  )
 
   if (Number.isNaN(id)) {
     return (
@@ -21,7 +22,7 @@ function HistoryDetailRoute() {
           ID de sesión inválido
         </div>
       </div>
-    );
+    )
   }
 
   if (isLoading) {
@@ -30,12 +31,10 @@ function HistoryDetailRoute() {
         <BackLink />
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          <span className="ml-3 text-sm text-muted-foreground">
-            Cargando informe…
-          </span>
+          <span className="ml-3 text-sm text-muted-foreground">Cargando informe…</span>
         </div>
       </div>
-    );
+    )
   }
 
   if (isError || !session) {
@@ -43,10 +42,10 @@ function HistoryDetailRoute() {
       <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
         <BackLink />
         <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          Error al cargar el informe: {error?.message ?? "Desconocido"}
+          Error al cargar el informe: {error?.message ?? 'Desconocido'}
         </div>
       </div>
-    );
+    )
   }
 
   if (!reportState) {
@@ -57,16 +56,16 @@ function HistoryDetailRoute() {
           Los datos del informe no están disponibles o están dañados.
         </div>
       </div>
-    );
+    )
   }
 
   const vehicleInfo = {
     make: session.vehicleMake,
     model: session.vehicleModel,
     year: 0,
-    engineType: "",
-    vin: session.scenarioId ?? "",
-  };
+    engineType: '',
+    vin: session.scenarioId ?? '',
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
@@ -77,7 +76,7 @@ function HistoryDetailRoute() {
         generatedAt={session.startedAt}
       />
     </div>
-  );
+  )
 }
 
 function BackLink() {
@@ -89,5 +88,5 @@ function BackLink() {
       <ArrowLeft className="h-4 w-4" />
       Volver al historial
     </Link>
-  );
+  )
 }

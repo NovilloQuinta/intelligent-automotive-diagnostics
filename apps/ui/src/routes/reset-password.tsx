@@ -1,25 +1,16 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
-import { useState } from "react";
-import { api } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { PasswordInput } from "@/components/ui/password-input";
-import { Label } from "@/components/ui/label";
-import { Car, ShieldAlert } from "lucide-react";
-import {
-  PASSWORD_REGEX,
-  PasswordStrengthIndicator,
-} from "@/components/auth/PasswordStrength";
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'sonner'
+import { useState } from 'react'
+import { api } from '@/lib/api'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { PasswordInput } from '@/components/ui/password-input'
+import { Label } from '@/components/ui/label'
+import { Car, ShieldAlert } from 'lucide-react'
+import { PASSWORD_REGEX, PasswordStrengthIndicator } from '@/components/auth/PasswordStrength'
 
 // ---------------------------------------------------------------------------
 // Zod schema
@@ -29,20 +20,17 @@ const resetPasswordSchema = z
   .object({
     newPassword: z
       .string()
-      .min(8, "Mínimo 8 caracteres")
+      .min(8, 'Mínimo 8 caracteres')
       .max(128)
-      .regex(
-        PASSWORD_REGEX,
-        "Debe incluir 1 mayúscula, 1 número y 1 carácter especial",
-      ),
-    confirmPassword: z.string().min(1, "Confirma la nueva contraseña"),
+      .regex(PASSWORD_REGEX, 'Debe incluir 1 mayúscula, 1 número y 1 carácter especial'),
+    confirmPassword: z.string().min(1, 'Confirma la nueva contraseña'),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Las contraseñas no coinciden",
-    path: ["confirmPassword"],
-  });
+    message: 'Las contraseñas no coinciden',
+    path: ['confirmPassword'],
+  })
 
-type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
+type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>
 
 // ---------------------------------------------------------------------------
 // Search params
@@ -50,25 +38,25 @@ type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 const searchSchema = z.object({
   token: z.string().optional(),
-});
+})
 
 // ---------------------------------------------------------------------------
 // Route
 // ---------------------------------------------------------------------------
 
-export const Route = createFileRoute("/reset-password")({
+export const Route = createFileRoute('/reset-password')({
   validateSearch: searchSchema,
   component: ResetPasswordPage,
-});
+})
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 function ResetPasswordPage() {
-  const { token } = Route.useSearch();
-  const navigate = useNavigate();
-  const [serverError, setServerError] = useState<string | null>(null);
+  const { token } = Route.useSearch()
+  const navigate = useNavigate()
+  const [serverError, setServerError] = useState<string | null>(null)
 
   const {
     register,
@@ -77,23 +65,21 @@ function ResetPasswordPage() {
     formState: { errors, isSubmitting },
   } = useForm<ResetPasswordFormData>({
     resolver: zodResolver(resetPasswordSchema),
-  });
+  })
 
-  const newPassword = watch("newPassword") ?? "";
+  const newPassword = watch('newPassword') ?? ''
 
   const onSubmit = async (data: ResetPasswordFormData) => {
-    if (!token) return;
+    if (!token) return
     try {
-      setServerError(null);
-      await api.resetPassword(token, data.newPassword);
-      toast.success("Contraseña restablecida. Ya puedes iniciar sesión.");
-      navigate({ to: "/login" });
+      setServerError(null)
+      await api.resetPassword(token, data.newPassword)
+      toast.success('Contraseña restablecida. Ya puedes iniciar sesión.')
+      navigate({ to: '/login' })
     } catch (e) {
-      setServerError(
-        e instanceof Error ? e.message : "Error al restablecer la contraseña",
-      );
+      setServerError(e instanceof Error ? e.message : 'Error al restablecer la contraseña')
     }
-  };
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#0d1117] px-4">
@@ -114,8 +100,7 @@ function ResetPasswordPage() {
                 <ShieldAlert className="h-6 w-6 text-destructive" />
               </div>
               <p className="text-sm text-muted-foreground">
-                El enlace no es válido o le falta el token de recuperación.
-                Solicita uno nuevo.
+                El enlace no es válido o le falta el token de recuperación. Solicita uno nuevo.
               </p>
               <Link
                 to="/forgot-password"
@@ -132,29 +117,23 @@ function ResetPasswordPage() {
                   id="reset-newPassword"
                   placeholder="Mínimo 8 caracteres"
                   autoComplete="new-password"
-                  {...register("newPassword")}
+                  {...register('newPassword')}
                 />
                 {errors.newPassword && (
-                  <p className="text-xs text-destructive">
-                    {errors.newPassword.message}
-                  </p>
+                  <p className="text-xs text-destructive">{errors.newPassword.message}</p>
                 )}
                 <PasswordStrengthIndicator password={newPassword} />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="reset-confirmPassword">
-                  Confirmar contraseña
-                </Label>
+                <Label htmlFor="reset-confirmPassword">Confirmar contraseña</Label>
                 <PasswordInput
                   id="reset-confirmPassword"
                   placeholder="Repite la contraseña"
                   autoComplete="new-password"
-                  {...register("confirmPassword")}
+                  {...register('confirmPassword')}
                 />
                 {errors.confirmPassword && (
-                  <p className="text-xs text-destructive">
-                    {errors.confirmPassword.message}
-                  </p>
+                  <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
                 )}
               </div>
               {serverError && (
@@ -163,12 +142,12 @@ function ResetPasswordPage() {
                 </div>
               )}
               <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? "Restableciendo…" : "Restablecer contraseña"}
+                {isSubmitting ? 'Restableciendo…' : 'Restablecer contraseña'}
               </Button>
             </form>
           )}
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

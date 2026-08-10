@@ -1,4 +1,4 @@
-import { Cpu, Loader2 } from "lucide-react";
+import { Cpu } from 'lucide-react'
 import {
   Table,
   TableHeader,
@@ -6,47 +6,15 @@ import {
   TableRow,
   TableHead,
   TableCell,
-} from "@/components/ui/table";
-import type { EcuInfo } from "./types";
+} from '@/components/ui/table'
+import type { EcuInfo } from './types'
+import { PanelState } from './PanelState'
 
 type Props = {
-  ecus: EcuInfo[];
-  loading: boolean;
-  error: string | null;
-  selectedId: string | null;
-};
-
-function EmptySelection() {
-  return (
-    <div className="flex h-full min-h-[120px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
-      <span>Selecciona un vehículo para ver sus ECUs</span>
-    </div>
-  );
-}
-
-function LoadingState() {
-  return (
-    <div className="flex h-full min-h-[120px] items-center justify-center gap-2 px-4 text-sm text-muted-foreground">
-      <Loader2 className="h-4 w-4 animate-spin" />
-      <span>Cargando ECUs…</span>
-    </div>
-  );
-}
-
-function EmptyEcus() {
-  return (
-    <div className="flex h-full min-h-[120px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
-      <span>Sin ECUs descubiertas</span>
-    </div>
-  );
-}
-
-function ErrorState({ message }: { message: string }) {
-  return (
-    <div className="flex h-full min-h-[120px] items-center justify-center px-4 text-center text-sm text-destructive">
-      <span>{message}</span>
-    </div>
-  );
+  ecus: EcuInfo[]
+  loading: boolean
+  error: string | null
+  selectedId: string | null
 }
 
 export function EcuTable({ ecus }: { ecus: EcuInfo[] }) {
@@ -75,12 +43,8 @@ export function EcuTable({ ecus }: { ecus: EcuInfo[] }) {
             className="fade-up border-white/5 hover:bg-white/[0.02]"
             style={{ animationDelay: `${i * 60}ms` }}
           >
-            <TableCell className="text-xs font-bold text-foreground/90">
-              {ecu.name}
-            </TableCell>
-            <TableCell className="text-xs text-foreground/70">
-              {ecu.type}
-            </TableCell>
+            <TableCell className="text-xs font-bold text-foreground/90">{ecu.name}</TableCell>
+            <TableCell className="text-xs text-foreground/70">{ecu.type}</TableCell>
             <TableCell className="mono text-xs text-foreground/80">
               {ecu.requestAddr} → {ecu.responseAddr}
             </TableCell>
@@ -91,7 +55,7 @@ export function EcuTable({ ecus }: { ecus: EcuInfo[] }) {
         ))}
       </TableBody>
     </Table>
-  );
+  )
 }
 
 export function EcuInfoPanel({ ecus, loading, error, selectedId }: Props) {
@@ -100,23 +64,21 @@ export function EcuInfoPanel({ ecus, loading, error, selectedId }: Props) {
       <div className="mb-3 flex items-center justify-between border-b border-white/5 pb-3">
         <div className="flex items-center gap-2">
           <Cpu className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold uppercase tracking-[0.15em]">
-            Unidades de Control
-          </h3>
+          <h3 className="text-sm font-semibold uppercase tracking-[0.15em]">Unidades de Control</h3>
         </div>
-        <span className="mono text-[10px] text-muted-foreground">
-          {selectedId ?? "—"}
-        </span>
+        <span className="mono text-[10px] text-muted-foreground">{selectedId ?? '—'}</span>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
-        {!selectedId && <EmptySelection />}
-        {selectedId && loading && <LoadingState />}
-        {selectedId && !loading && error && <ErrorState message={error} />}
-        {selectedId && !loading && !error && ecus.length === 0 && <EmptyEcus />}
-        {selectedId && !loading && !error && ecus.length > 0 && (
-          <EcuTable ecus={ecus} />
+        {!selectedId && (
+          <PanelState state="empty" message="Selecciona un vehículo para ver sus ECUs" />
         )}
+        {selectedId && loading && <PanelState state="loading" message="Cargando ECUs…" />}
+        {selectedId && !loading && error && <PanelState state="error" message={error} />}
+        {selectedId && !loading && !error && ecus.length === 0 && (
+          <PanelState state="empty" message="Sin ECUs descubiertas" />
+        )}
+        {selectedId && !loading && !error && ecus.length > 0 && <EcuTable ecus={ecus} />}
       </div>
     </div>
-  );
+  )
 }

@@ -1,25 +1,25 @@
-import type { ReactNode } from "react";
-import { Sidebar, type SidebarSection } from "./Sidebar";
-import { TopBar } from "@/components/dashboard/TopBar";
-import type { Scenario } from "@/components/dashboard/types";
+import type { ReactNode } from 'react'
+import { Sidebar, type SidebarSection } from './Sidebar'
+import { TopBar } from '@/components/dashboard/TopBar'
+import type { Scenario } from '@/components/dashboard/types'
 
 /** Estado del stream de telemetría en vivo del vehículo seleccionado. */
 interface TelemetryStatus {
-  readonly loading: boolean;
-  readonly streamOk: boolean;
+  readonly loading: boolean
+  readonly streamOk: boolean
 }
 
 interface DashboardLayoutProps {
-  readonly children: ReactNode;
-  readonly activeSection: SidebarSection;
-  readonly onSectionChange: (section: SidebarSection) => void;
-  readonly dtcCount?: number;
-  readonly hasDiagnosis?: boolean;
-  readonly scenarios: Scenario[];
-  readonly selectedId: string;
-  readonly onSelectVehicle: (id: string) => void;
-  readonly telemetry: TelemetryStatus;
-  readonly onLogout: () => void;
+  readonly children: ReactNode
+  readonly activeSection: SidebarSection
+  readonly onSectionChange: (section: SidebarSection) => void
+  readonly dtcCount?: number
+  readonly hasDiagnosis?: boolean
+  readonly scenarios: Scenario[]
+  readonly selectedId: string
+  readonly onSelectVehicle: (id: string) => void
+  readonly telemetry: TelemetryStatus
+  readonly onLogout: () => void
 }
 
 export function DashboardLayout({
@@ -63,5 +63,5 @@ export function DashboardLayout({
         </div>
       </footer>
     </div>
-  );
+  )
 }

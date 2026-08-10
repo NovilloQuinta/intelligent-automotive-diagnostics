@@ -6,5 +6,5 @@
  * useScenarios, useSessionReport).
  */
 export function extractErrorMessage(e: unknown, fallback: string): string {
-  return e instanceof Error ? e.message : fallback;
+  return e instanceof Error ? e.message : fallback
 }

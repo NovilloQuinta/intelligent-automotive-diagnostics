@@ -1,9 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { UsersTable } from "@/components/admin/UsersTable";
+import { createFileRoute } from '@tanstack/react-router'
+import { UsersTable } from '@/components/admin/UsersTable'
 
-export const Route = createFileRoute("/admin/users")({
+export const Route = createFileRoute('/admin/users')({
   component: AdminUsers,
-});
+})
 
 function AdminUsers() {
   return (
@@ -11,5 +11,5 @@ function AdminUsers() {
       <h1 className="mb-4 text-xl font-bold">Usuarios</h1>
       <UsersTable />
     </div>
-  );
+  )
 }

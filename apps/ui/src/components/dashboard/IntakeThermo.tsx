@@ -1,20 +1,14 @@
-import { Thermometer } from "lucide-react";
-import { useAnimatedNumber } from "./useAnimatedNumber";
-import { GAUGE, GRADIENTS } from "./types";
-import { clampPct } from "@/lib/utils";
+import { Thermometer } from 'lucide-react'
+import { useAnimatedNumber } from './useAnimatedNumber'
+import { GAUGE, GRADIENTS } from './types'
+import { clampPct } from '@/lib/utils'
 
 /** Horizontal bar showing intake air temperature with warning threshold. */
-export function IntakeThermo({
-  value,
-  loading,
-}: {
-  value: number | null;
-  loading: boolean;
-}) {
-  const display = useAnimatedNumber(value);
-  const v = value ?? 0;
-  const pct = clampPct(display / GAUGE.INTAKE_MAX);
-  const warn = v > GAUGE.INTAKE_WARN;
+export function IntakeThermo({ value, loading }: { value: number | null; loading: boolean }) {
+  const display = useAnimatedNumber(value)
+  const v = value ?? 0
+  const pct = clampPct(display / GAUGE.INTAKE_MAX)
+  const warn = v > GAUGE.INTAKE_WARN
 
   return (
     <div
@@ -42,15 +36,13 @@ export function IntakeThermo({
         </div>
         <div className="flex items-baseline justify-between">
           <span
-            className={`mono text-4xl font-bold leading-none ${warn ? "text-primary" : "text-foreground"}`}
+            className={`mono text-4xl font-bold leading-none ${warn ? 'text-primary' : 'text-foreground'}`}
           >
-            {loading ? "--" : Math.round(display)}
+            {loading ? '--' : Math.round(display)}
           </span>
-          <span className="mono text-[10px] text-muted-foreground">
-            0 — {GAUGE.INTAKE_MAX}°C
-          </span>
+          <span className="mono text-[10px] text-muted-foreground">0 — {GAUGE.INTAKE_MAX}°C</span>
         </div>
       </div>
     </div>
-  );
+  )
 }

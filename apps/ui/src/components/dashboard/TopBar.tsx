@@ -1,13 +1,13 @@
-import { History, LogOut, ScanLine, Shield, User } from "lucide-react";
-import { Link } from "@tanstack/react-router";
-import { useAuth } from "@/lib/auth-context";
-import { useClock } from "./useClock";
-import { VehicleSelector } from "./VehicleSelector";
-import { ConnectionTypeIcon } from "./ConnectionTypeIcon";
-import { COLORS } from "./types";
-import type { Scenario } from "./types";
+import { History, LogOut, ScanLine, Shield, User } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { useAuth } from '@/lib/auth-context'
+import { useClock } from './useClock'
+import { VehicleSelector } from './VehicleSelector'
+import { ConnectionTypeIcon } from './ConnectionTypeIcon'
+import { COLORS } from './types'
+import type { Scenario } from './types'
 
-const DEFAULT_LOCALE = "es-ES";
+const DEFAULT_LOCALE = 'es-ES'
 
 function Branding() {
   return (
@@ -17,41 +17,40 @@ function Branding() {
       </div>
       <div>
         <div className="text-[15px] font-bold leading-tight tracking-tight">
-          Intelligent Automotive{" "}
-          <span className="text-primary">Diagnostics</span>
+          Intelligent Automotive <span className="text-primary">Diagnostics</span>
         </div>
         <div className="mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
           Herramienta OBD-II · Diagnóstico Asistido por IA
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 function ConnectionStatus({ streamOk }: { streamOk: boolean }) {
   return (
     <div className="flex items-center gap-2 rounded-md border border-white/10 bg-black/40 px-3 py-1.5">
       <span
-        className={`led-dot h-2 w-2 rounded-full ${streamOk ? "" : "opacity-30"}`}
+        className={`led-dot h-2 w-2 rounded-full ${streamOk ? '' : 'opacity-30'}`}
         style={{ background: streamOk ? COLORS.accent : COLORS.destructive }}
       />
       <span
         className="mono text-[11px] font-semibold uppercase tracking-widest"
         style={{ color: streamOk ? COLORS.accent : COLORS.destructive }}
       >
-        {streamOk ? "Conectado" : "Sin conexión"}
+        {streamOk ? 'Conectado' : 'Sin conexión'}
       </span>
     </div>
-  );
+  )
 }
 
 interface TopBarProps {
-  scenarios: Scenario[];
-  selectedId: string;
-  onSelect: (id: string) => void;
-  loading: boolean;
-  streamOk: boolean;
-  onLogout: () => void;
+  scenarios: Scenario[]
+  selectedId: string
+  onSelect: (id: string) => void
+  loading: boolean
+  streamOk: boolean
+  onLogout: () => void
 }
 
 export function TopBar({
@@ -62,17 +61,17 @@ export function TopBar({
   streamOk,
   onLogout,
 }: TopBarProps) {
-  const auth = useAuth();
-  const now = useClock();
+  const auth = useAuth()
+  const now = useClock()
   const timeStr = now
     ? now.toLocaleTimeString(DEFAULT_LOCALE, {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
       })
-    : "--:--:--";
+    : '--:--:--'
 
-  const selectedScenario = scenarios.find((s) => s.id === selectedId);
+  const selectedScenario = scenarios.find((s) => s.id === selectedId)
 
   return (
     <header className="relative z-10 flex flex-wrap items-center justify-between gap-4 border-b border-white/5 bg-black/40 px-6 py-3 backdrop-blur">
@@ -80,14 +79,10 @@ export function TopBar({
       <div className="flex flex-wrap items-center gap-4">
         <ConnectionStatus streamOk={streamOk} />
         {selectedScenario?.connectionType ? (
-          <ConnectionTypeIcon
-            connectionType={selectedScenario.connectionType}
-          />
+          <ConnectionTypeIcon connectionType={selectedScenario.connectionType} />
         ) : null}
         <div className="mono flex items-center gap-2 rounded-md border border-white/10 bg-black/40 px-3 py-1.5 text-sm">
-          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
-            Hora
-          </span>
+          <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Hora</span>
           <span className="tabular-nums">{timeStr}</span>
         </div>
         <VehicleSelector
@@ -130,5 +125,5 @@ export function TopBar({
         </button>
       </div>
     </header>
-  );
+  )
 }

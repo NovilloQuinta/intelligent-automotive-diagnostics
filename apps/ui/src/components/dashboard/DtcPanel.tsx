@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { CheckCircle2, CircuitBoard, Trash2 } from "lucide-react";
-import { toast } from "sonner";
-import type { DiagnosisResponse, DtcCode, Severity } from "./types";
-import { COLORS, DTC_COLORS, SVG_STROKES } from "./types";
-import { severityMeta } from "./severityMeta";
-import { usePendingDtc } from "./usePendingDtc";
-import { usePermanentDtc } from "./usePermanentDtc";
-import { useClearDtc } from "./useClearDtc";
+import { useState } from 'react'
+import { CheckCircle2, CircuitBoard, Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
+import type { DiagnosisResponse, DtcCode, Severity } from './types'
+import { COLORS, DTC_COLORS, SVG_STROKES } from './types'
+import { severityMeta } from './severityMeta'
+import { usePendingDtc } from './usePendingDtc'
+import { usePermanentDtc } from './usePermanentDtc'
+import { useClearDtc } from './useClearDtc'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,20 +17,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from '@/components/ui/alert-dialog'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
-const DEFAULT_SEVERITY: Severity = "medium";
+const DEFAULT_SEVERITY: Severity = 'medium'
 
 interface Props {
-  codes: DiagnosisResponse["dtcCodes"] | null;
-  severity: Severity | null;
-  empty: boolean;
-  selectedCode: string | null;
-  onSelect: (code: string) => void;
-  scenarioId: string;
+  codes: DiagnosisResponse['dtcCodes'] | null
+  severity: Severity | null
+  empty: boolean
+  selectedCode: string | null
+  onSelect: (code: string) => void
+  scenarioId: string
   /** Re-ejecuta el diagnóstico determinista (refresca la pestaña "Almacenadas") tras borrar averías. */
-  onDiagnose?: () => void;
+  onDiagnose?: () => void
 }
 
 function EmptyPrompt() {
@@ -38,7 +38,7 @@ function EmptyPrompt() {
     <div className="flex h-full min-h-[120px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
       <span>Selecciona un vehículo y pulsa INICIAR DIAGNÓSTICO</span>
     </div>
-  );
+  )
 }
 
 function NoCodesMessage() {
@@ -51,15 +51,10 @@ function NoCodesMessage() {
         color: COLORS.accentMuted,
       }}
     >
-      <CheckCircle2
-        className="h-5 w-5 shrink-0"
-        style={{ color: COLORS.accent }}
-      />
-      <span>
-        Ningún código de error — el vehículo no presenta fallos registrados.
-      </span>
+      <CheckCircle2 className="h-5 w-5 shrink-0" style={{ color: COLORS.accent }} />
+      <span>Ningún código de error — el vehículo no presenta fallos registrados.</span>
     </div>
-  );
+  )
 }
 
 function CodeList({
@@ -68,23 +63,23 @@ function CodeList({
   selectedCode,
   onSelect,
 }: {
-  codes: DtcCode[];
-  severity: Severity | null;
-  selectedCode: string | null;
-  onSelect: (code: string) => void;
+  codes: DtcCode[]
+  severity: Severity | null
+  selectedCode: string | null
+  onSelect: (code: string) => void
 }) {
-  const meta = severityMeta(severity ?? DEFAULT_SEVERITY);
+  const meta = severityMeta(severity ?? DEFAULT_SEVERITY)
   return (
     <ul className="space-y-2">
       {codes.map((c, i) => {
-        const selected = c.code === selectedCode;
+        const selected = c.code === selectedCode
         return (
           <li
             key={c.code}
             className={`fade-up flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
               selected
-                ? "border-primary/60 bg-primary/10"
-                : "border-white/5 bg-black/30 hover:bg-white/[0.03]"
+                ? 'border-primary/60 bg-primary/10'
+                : 'border-white/5 bg-black/30 hover:bg-white/[0.03]'
             }`}
             style={{ animationDelay: `${i * 60}ms` }}
             onClick={() => onSelect(c.code)}
@@ -95,53 +90,42 @@ function CodeList({
               style={{
                 background: COLORS.primary,
                 color: COLORS.background,
-                boxShadow: selected ? SVG_STROKES.dtcGlow : "none",
+                boxShadow: selected ? SVG_STROKES.dtcGlow : 'none',
               }}
             >
               {c.code}
             </span>
-            <span className="flex-1 text-sm text-foreground/90">
-              {c.description}
-            </span>
-            <meta.icon
-              className="h-4 w-4 shrink-0"
-              style={{ color: meta.color }}
-            />
+            <span className="flex-1 text-sm text-foreground/90">{c.description}</span>
+            <meta.icon className="h-4 w-4 shrink-0" style={{ color: meta.color }} />
           </li>
-        );
+        )
       })}
     </ul>
-  );
+  )
 }
 
-function ClearDtcDialog({
-  scenarioId,
-  onCleared,
-}: {
-  scenarioId: string;
-  onCleared: () => void;
-}) {
-  const { clearDtc, loading } = useClearDtc();
-  const [open, setOpen] = useState(false);
+function ClearDtcDialog({ scenarioId, onCleared }: { scenarioId: string; onCleared: () => void }) {
+  const { clearDtc, loading } = useClearDtc()
+  const [open, setOpen] = useState(false)
 
   const handleConfirm = async () => {
     try {
-      const cleared = await clearDtc(scenarioId);
+      const cleared = await clearDtc(scenarioId)
       if (cleared) {
-        toast.success("Averías borradas", {
+        toast.success('Averías borradas', {
           description:
-            "Los códigos y freeze frames han sido eliminados. Los monitores de emisiones se han reiniciado.",
-        });
-        onCleared();
+            'Los códigos y freeze frames han sido eliminados. Los monitores de emisiones se han reiniciado.',
+        })
+        onCleared()
       } else {
-        toast.error("No se pudieron borrar las averías");
+        toast.error('No se pudieron borrar las averías')
       }
     } catch {
-      toast.error("Error al borrar las averías");
+      toast.error('Error al borrar las averías')
     } finally {
-      setOpen(false);
+      setOpen(false)
     }
-  };
+  }
 
   return (
     <AlertDialog open={open} onOpenChange={setOpen}>
@@ -155,8 +139,8 @@ function ClearDtcDialog({
         <AlertDialogHeader>
           <AlertDialogTitle>Borrar averías</AlertDialogTitle>
           <AlertDialogDescription>
-            Se borrarán las averías y sus freeze frames. Los monitores de
-            emisiones se reiniciarán. Las averías permanentes no se borran.
+            Se borrarán las averías y sus freeze frames. Los monitores de emisiones se reiniciarán.
+            Las averías permanentes no se borran.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -166,12 +150,12 @@ function ClearDtcDialog({
             disabled={loading}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
-            {loading ? "Borrando..." : "Confirmar"}
+            {loading ? 'Borrando...' : 'Confirmar'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
-  );
+  )
 }
 
 export function DtcPanel({
@@ -183,32 +167,29 @@ export function DtcPanel({
   scenarioId,
   onDiagnose,
 }: Props) {
-  const { dtcCodes: pendingCodes, refetch: refetchPending } = usePendingDtc(
-    empty ? "" : scenarioId,
-  );
-  const { dtcCodes: permanentCodes, refetch: refetchPermanent } =
-    usePermanentDtc(empty ? "" : scenarioId);
-  const storedCodes = codes ?? [];
+  const { dtcCodes: pendingCodes, refetch: refetchPending } = usePendingDtc(empty ? '' : scenarioId)
+  const { dtcCodes: permanentCodes, refetch: refetchPermanent } = usePermanentDtc(
+    empty ? '' : scenarioId,
+  )
+  const storedCodes = codes ?? []
 
   const handleCleared = () => {
-    void refetchPending();
-    void refetchPermanent();
-    onDiagnose?.();
-  };
+    void refetchPending()
+    void refetchPermanent()
+    onDiagnose?.()
+  }
 
   return (
     <div className="flex min-h-0 flex-col">
       <div className="mb-3 flex items-center justify-between border-b border-white/5 pb-3">
         <div className="flex items-center gap-2">
           <CircuitBoard className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold uppercase tracking-[0.15em]">
-            Códigos de Avería
-          </h3>
+          <h3 className="text-sm font-semibold uppercase tracking-[0.15em]">Códigos de Avería</h3>
         </div>
         <span className="mono text-[10px] text-muted-foreground">
           {storedCodes.length > 0
-            ? `${storedCodes.length} registrado${storedCodes.length === 1 ? "" : "s"}`
-            : "—"}
+            ? `${storedCodes.length} registrado${storedCodes.length === 1 ? '' : 's'}`
+            : '—'}
         </span>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
@@ -244,13 +225,10 @@ export function DtcPanel({
               </TabsContent>
               <TabsContent value="pending">
                 <p className="mb-3 text-[10px] leading-relaxed text-muted-foreground">
-                  Averías detectadas durante el ciclo de conducción actual (Modo
-                  07)
+                  Averías detectadas durante el ciclo de conducción actual (Modo 07)
                 </p>
                 {pendingCodes.length === 0 ? (
-                  <p className="py-4 text-center text-xs text-muted-foreground/60">
-                    Ninguna
-                  </p>
+                  <p className="py-4 text-center text-xs text-muted-foreground/60">Ninguna</p>
                 ) : (
                   <CodeList
                     codes={pendingCodes}
@@ -262,13 +240,10 @@ export function DtcPanel({
               </TabsContent>
               <TabsContent value="permanent">
                 <p className="mb-3 text-[10px] leading-relaxed text-muted-foreground">
-                  Averías que requieren reparación y no pueden borrarse con
-                  escáner (Modo 0A)
+                  Averías que requieren reparación y no pueden borrarse con escáner (Modo 0A)
                 </p>
                 {permanentCodes.length === 0 ? (
-                  <p className="py-4 text-center text-xs text-muted-foreground/60">
-                    Ninguna
-                  </p>
+                  <p className="py-4 text-center text-xs text-muted-foreground/60">Ninguna</p>
                 ) : (
                   <CodeList
                     codes={permanentCodes}
@@ -280,14 +255,11 @@ export function DtcPanel({
               </TabsContent>
             </Tabs>
             <div className="flex justify-end pt-4">
-              <ClearDtcDialog
-                scenarioId={scenarioId}
-                onCleared={handleCleared}
-              />
+              <ClearDtcDialog scenarioId={scenarioId} onCleared={handleCleared} />
             </div>
           </>
         )}
       </div>
     </div>
-  );
+  )
 }

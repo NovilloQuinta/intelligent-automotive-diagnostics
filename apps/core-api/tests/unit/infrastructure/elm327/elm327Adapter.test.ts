@@ -256,6 +256,28 @@ describe('Elm327TcpRepository', () => {
     })
   })
 
+  it('getFreezeFrame: trata dtc vacío como UNKNOWN', async () => {
+    const repo = makeRepo(100)
+    const promise = repo.getFreezeFrame('')
+
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(1))
+    respond(RESPONSES['02 04'])
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(2))
+    respond('NO DATA\r\r>')
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(3))
+    respond('NO DATA\r\r>')
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(4))
+    respond('NO DATA\r\r>')
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(5))
+    respond('NO DATA\r\r>')
+
+    const frame = await promise
+    expect(frame).toEqual({
+      dtcCode: 'UNKNOWN',
+      pidValues: { '04': 18.03921568627451 },
+    })
+  })
+
   it('getFreezeFrame: devuelve null si ningun PID responde', async () => {
     const repo = makeRepo(100)
     const promise = repo.getFreezeFrame('P0401')

@@ -2,14 +2,18 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { DataTableFilters } from "../../../../src/components/admin/DataTableFilters";
 
-const BASE_PROPS = {
-  onSearchChange: vi.fn(),
-  onDateRangeChange: vi.fn(),
+const BASE_PAGINATION = {
   page: 1,
   pageSize: 20,
   total: 100,
   onPageChange: vi.fn(),
   onPageSizeChange: vi.fn(),
+};
+
+const BASE_PROPS = {
+  onSearchChange: vi.fn(),
+  onDateRangeChange: vi.fn(),
+  pagination: BASE_PAGINATION,
 };
 
 describe("DataTableFilters", () => {
@@ -63,10 +67,7 @@ describe("DataTableFilters", () => {
     render(
       <DataTableFilters
         {...BASE_PROPS}
-        page={1}
-        pageSize={10}
-        total={50}
-        onPageChange={onPageChange}
+        pagination={{ page: 1, pageSize: 10, total: 50, onPageChange, onPageSizeChange: vi.fn() }}
       />,
     );
 
@@ -84,7 +85,7 @@ describe("DataTableFilters", () => {
     render(
       <DataTableFilters
         {...BASE_PROPS}
-        total={0}
+        pagination={{ ...BASE_PAGINATION, total: 0 }}
         onSearchChange={onSearchChange}
       />,
     );

@@ -1,11 +1,8 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import type {
-  AdminUsersFilter,
-  Paginated,
-  AdminUser,
-} from "@/components/admin/types";
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+import { formatDateTime } from '@/lib/format'
+import type { AdminUsersFilter, Paginated, AdminUser } from '@/components/admin/types'
 import {
   Table,
   TableBody,
@@ -13,23 +10,19 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { DataTableFilters } from "@/components/admin/DataTableFilters";
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
+import { DataTableFilters } from '@/components/admin/DataTableFilters'
 
-const PAGE_SIZE = 20;
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString("es-ES");
-}
+const PAGE_SIZE = 20
 
 export function UsersTable() {
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(PAGE_SIZE);
-  const [q, setQ] = useState("");
-  const [from, setFrom] = useState<string | undefined>(undefined);
-  const [to, setTo] = useState<string | undefined>(undefined);
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(PAGE_SIZE)
+  const [q, setQ] = useState('')
+  const [from, setFrom] = useState<string | undefined>(undefined)
+  const [to, setTo] = useState<string | undefined>(undefined)
 
   const filters: AdminUsersFilter = {
     page,
@@ -37,15 +30,15 @@ export function UsersTable() {
     q: q || undefined,
     from,
     to,
-  };
+  }
 
   const { data, isLoading, isError, error } = useQuery<Paginated<AdminUser>>({
-    queryKey: ["admin", "users", filters],
+    queryKey: ['admin', 'users', filters],
     queryFn: () => api.admin.users(filters),
-  });
+  })
 
-  const total = data?.total ?? 0;
-  const items = data?.items ?? [];
+  const total = data?.total ?? 0
+  const items = data?.items ?? []
 
   return (
     <div className="space-y-4">
@@ -53,25 +46,27 @@ export function UsersTable() {
         searchPlaceholder="Buscar por email o username..."
         onSearchChange={setQ}
         onDateRangeChange={(range) => {
-          setFrom(range.from);
-          setTo(range.to);
-          setPage(1);
+          setFrom(range.from)
+          setTo(range.to)
+          setPage(1)
         }}
         dateRange={{ from, to }}
-        dateShortcuts={["today", "7d", "30d"]}
-        page={page}
-        pageSize={pageSize}
-        total={total}
-        onPageChange={setPage}
-        onPageSizeChange={(size) => {
-          setPageSize(size);
-          setPage(1);
+        dateShortcuts={['today', '7d', '30d']}
+        pagination={{
+          page,
+          pageSize,
+          total,
+          onPageChange: setPage,
+          onPageSizeChange: (size) => {
+            setPageSize(size)
+            setPage(1)
+          },
         }}
       />
 
       {isError && (
         <div className="rounded-md border border-destructive p-4 text-destructive">
-          Error al cargar usuarios: {(error as Error)?.message ?? "Desconocido"}
+          Error al cargar usuarios: {(error as Error)?.message ?? 'Desconocido'}
         </div>
       )}
 
@@ -108,10 +103,7 @@ export function UsersTable() {
             ))
           ) : items.length === 0 && !isError ? (
             <TableRow>
-              <TableCell
-                colSpan={5}
-                className="text-center text-muted-foreground"
-              >
+              <TableCell colSpan={5} className="text-center text-muted-foreground">
                 Sin resultados
               </TableCell>
             </TableRow>
@@ -121,23 +113,17 @@ export function UsersTable() {
                 <TableCell className="font-medium">{user.email}</TableCell>
                 <TableCell>{user.username}</TableCell>
                 <TableCell>
-                  <Badge
-                    variant={
-                      user.userType === "workshop" ? "secondary" : "default"
-                    }
-                  >
+                  <Badge variant={user.userType === 'workshop' ? 'secondary' : 'default'}>
                     {user.userType}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant={user.role === "admin" ? "destructive" : "outline"}
-                  >
+                  <Badge variant={user.role === 'admin' ? 'destructive' : 'outline'}>
                     {user.role}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-xs text-muted-foreground">
-                  {formatDate(user.createdAt)}
+                  {formatDateTime(user.createdAt)}
                 </TableCell>
               </TableRow>
             ))
@@ -145,5 +131,5 @@ export function UsersTable() {
         </TableBody>
       </Table>
     </div>
-  );
+  )
 }

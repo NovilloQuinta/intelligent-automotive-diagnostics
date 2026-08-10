@@ -6,40 +6,36 @@ import {
   useMemo,
   useState,
   type ReactNode,
-} from "react";
-import { api, AuthError } from "@/lib/api";
-import type {
-  AuthUser,
-  LoginInput,
-  RegisterInput,
-} from "@/components/dashboard/types";
+} from 'react'
+import { api, AuthError } from '@/lib/api'
+import type { AuthUser, LoginInput, RegisterInput } from '@/components/dashboard/types'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
-type AuthStatus = "loading" | "authed" | "anonymous";
+type AuthStatus = 'loading' | 'authed' | 'anonymous'
 
 type AuthState = {
-  status: AuthStatus;
-  user: AuthUser | null;
-  login: (input: LoginInput) => Promise<void>;
-  register: (input: RegisterInput) => Promise<void>;
-  logout: () => Promise<void>;
-  refreshUser: () => Promise<void>;
-};
+  status: AuthStatus
+  user: AuthUser | null
+  login: (input: LoginInput) => Promise<void>
+  register: (input: RegisterInput) => Promise<void>
+  logout: () => Promise<void>
+  refreshUser: () => Promise<void>
+}
 
 // ---------------------------------------------------------------------------
 // Context
 // ---------------------------------------------------------------------------
 
-const AuthContext = createContext<AuthState | null>(null);
+const AuthContext = createContext<AuthState | null>(null)
 
 /** Hook to access the current auth state. Must be used inside AuthProvider. */
 export function useAuth(): AuthState {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth() must be used inside <AuthProvider>");
-  return ctx;
+  const ctx = useContext(AuthContext)
+  if (!ctx) throw new Error('useAuth() must be used inside <AuthProvider>')
+  return ctx
 }
 
 // ---------------------------------------------------------------------------
@@ -52,70 +48,70 @@ export function useAuth(): AuthState {
  * The user object is never persisted locally — /me is the single source of truth.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus>("loading");
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [status, setStatus] = useState<AuthStatus>('loading')
+  const [user, setUser] = useState<AuthUser | null>(null)
 
   // Bootstrap: validate existing tokens on mount
   useEffect(() => {
     if (!api.hasTokens()) {
-      setStatus("anonymous");
-      return;
+      setStatus('anonymous')
+      return
     }
 
-    let cancelled = false;
+    let cancelled = false
     api
       .getMe()
       .then((u) => {
         if (!cancelled) {
-          setUser(u);
-          setStatus("authed");
+          setUser(u)
+          setStatus('authed')
         }
       })
       .catch(() => {
         // /me failed — tokens are invalid or the server is unreachable.
         // No stored-user fallback: go anonymous.
         if (!cancelled) {
-          void api.logout();
-          setStatus("anonymous");
+          void api.logout()
+          setStatus('anonymous')
         }
-      });
+      })
     return () => {
-      cancelled = true;
-    };
-  }, []);
+      cancelled = true
+    }
+  }, [])
 
   const login = useCallback(async (input: LoginInput) => {
-    await api.login(input);
+    await api.login(input)
     try {
-      const u = await api.getMe();
-      setUser(u);
-      setStatus("authed");
+      const u = await api.getMe()
+      setUser(u)
+      setStatus('authed')
     } catch {
       // No user without /me — never fall back to a stale stored user.
-      setUser(null);
-      setStatus("anonymous");
+      setUser(null)
+      setStatus('anonymous')
     }
-  }, []);
+  }, [])
 
   const register = useCallback(async (input: RegisterInput) => {
     try {
-      const result = await api.register(input);
-      setUser(result.user);
-      setStatus("authed");
+      const result = await api.register(input)
+      setUser(result.user)
+      setStatus('authed')
     } catch (error) {
       // A failed registration leaves the user signed out — re-throw so the
       // caller (e.g. the register form) can surface the error message.
-      setUser(null);
-      setStatus("anonymous");
-      throw error;
+      setUser(null)
+      setStatus('anonymous')
+      throw error
     }
-  }, []);
+  }, [])
 
   const logout = useCallback(async () => {
-    await api.logout();
-    setUser(null);
-    setStatus("anonymous");
-  }, []);
+    await api.logout()
+    setUser(null)
+    setStatus('anonymous')
+  }, [])
 
   /**
    * Refetches the current user via GET /api/auth/me and updates the cached
@@ -124,14 +120,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    * decides how to surface the error (e.g. a toast).
    */
   const refreshUser = useCallback(async () => {
-    const u = await api.getMe();
-    setUser(u);
-  }, []);
+    const u = await api.getMe()
+    setUser(u)
+  }, [])
 
   const value = useMemo<AuthState>(
     () => ({ status, user, login, register, logout, refreshUser }),
     [status, user, login, register, logout, refreshUser],
-  );
+  )
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

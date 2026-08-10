@@ -1,25 +1,25 @@
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import type { DiagnosisSession } from "@/components/dashboard/types";
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+import type { DiagnosisSession } from '@/components/dashboard/types'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 export interface DiagnosisHistoryFilters {
-  readonly from?: string;
-  readonly to?: string;
-  readonly severity?: string;
-  readonly limit: number;
-  readonly offset: number;
+  readonly from?: string
+  readonly to?: string
+  readonly severity?: string
+  readonly limit: number
+  readonly offset: number
 }
 
 export interface DiagnosisHistoryState {
-  readonly sessions: DiagnosisSession[];
-  readonly total: number;
-  readonly isLoading: boolean;
-  readonly isError: boolean;
-  readonly error: Error | null;
+  readonly sessions: DiagnosisSession[]
+  readonly total: number
+  readonly isLoading: boolean
+  readonly isError: boolean
+  readonly error: Error | null
 }
 
 // ---------------------------------------------------------------------------
@@ -31,17 +31,15 @@ export interface DiagnosisHistoryState {
  * Filters are passed as query key dependencies so TanStack Query
  * automatically refetches when they change.
  */
-export function useDiagnosisHistory(
-  filters: DiagnosisHistoryFilters,
-): DiagnosisHistoryState {
+export function useDiagnosisHistory(filters: DiagnosisHistoryFilters): DiagnosisHistoryState {
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["diagnosis-history", filters],
+    queryKey: ['diagnosis-history', filters],
     queryFn: () => api.getDiagnosisHistory(filters),
     select: (response) => ({
       sessions: response.sessions,
       total: response.total,
     }),
-  });
+  })
 
   return {
     sessions: data?.sessions ?? [],
@@ -49,5 +47,5 @@ export function useDiagnosisHistory(
     isLoading,
     isError,
     error: error instanceof Error ? error : null,
-  };
+  }
 }

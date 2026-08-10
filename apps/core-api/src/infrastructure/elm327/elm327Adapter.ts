@@ -103,7 +103,7 @@ export class Elm327TcpRepository implements ObdRepository {
     }
     if (Object.keys(pidValues).length === 0) return null
     return new FreezeFrame({
-      dtcCode: dtc ?? UNKNOWN_FREEZE_FRAME_DTC,
+      dtcCode: dtc && dtc.trim() !== '' ? dtc : UNKNOWN_FREEZE_FRAME_DTC,
       pidValues,
     })
   }

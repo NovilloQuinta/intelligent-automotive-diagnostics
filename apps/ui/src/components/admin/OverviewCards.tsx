@@ -1,13 +1,13 @@
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 
 export function OverviewCards() {
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["admin", "overview"],
+    queryKey: ['admin', 'overview'],
     queryFn: () => api.admin.overview(),
-  });
+  })
 
   if (isLoading) {
     return (
@@ -23,35 +23,30 @@ export function OverviewCards() {
           </Card>
         ))}
       </div>
-    );
+    )
   }
 
   if (isError) {
     return (
       <div className="rounded-md border border-destructive p-4 text-destructive">
-        Error al cargar resumen: {(error as Error)?.message ?? "Desconocido"}
+        Error al cargar resumen: {(error as Error)?.message ?? 'Desconocido'}
       </div>
-    );
+    )
   }
 
   if (!data) {
-    return null;
+    return null
   }
 
-  const totalUsers = Object.values(data.userStats.byUserType).reduce(
-    (sum, count) => sum + count,
-    0,
-  );
+  const totalUsers = Object.values(data.userStats.byUserType).reduce((sum, count) => sum + count, 0)
 
-  const requestsEntries = Object.entries(data.httpRequestsByPathApprox);
+  const requestsEntries = Object.entries(data.httpRequestsByPathApprox)
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            Usuarios totales
-          </CardTitle>
+          <CardTitle className="text-sm font-medium">Usuarios totales</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-2xl font-bold">{totalUsers}</p>
@@ -60,23 +55,16 @@ export function OverviewCards() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            Usuarios por tipo
-          </CardTitle>
+          <CardTitle className="text-sm font-medium">Usuarios por tipo</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-1 text-sm">
             <p>
-              Individual:{" "}
-              <span className="font-bold">
-                {data.userStats.byUserType.individual ?? 0}
-              </span>
+              Individual:{' '}
+              <span className="font-bold">{data.userStats.byUserType.individual ?? 0}</span>
             </p>
             <p>
-              Workshop:{" "}
-              <span className="font-bold">
-                {data.userStats.byUserType.workshop ?? 0}
-              </span>
+              Workshop: <span className="font-bold">{data.userStats.byUserType.workshop ?? 0}</span>
             </p>
           </div>
         </CardContent>
@@ -84,23 +72,15 @@ export function OverviewCards() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            Usuarios por rol
-          </CardTitle>
+          <CardTitle className="text-sm font-medium">Usuarios por rol</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-1 text-sm">
             <p>
-              User:{" "}
-              <span className="font-bold">
-                {data.userStats.byRole.user ?? 0}
-              </span>
+              User: <span className="font-bold">{data.userStats.byRole.user ?? 0}</span>
             </p>
             <p>
-              Admin:{" "}
-              <span className="font-bold">
-                {data.userStats.byRole.admin ?? 0}
-              </span>
+              Admin: <span className="font-bold">{data.userStats.byRole.admin ?? 0}</span>
             </p>
           </div>
         </CardContent>
@@ -118,9 +98,7 @@ export function OverviewCards() {
       {/* HTTP requests — approximation, NOT "diagnósticos" */}
       <Card className="sm:col-span-2 lg:col-span-4">
         <CardHeader>
-          <CardTitle className="text-sm font-medium">
-            Peticiones HTTP (aproximación)
-          </CardTitle>
+          <CardTitle className="text-sm font-medium">Peticiones HTTP (aproximación)</CardTitle>
         </CardHeader>
         <CardContent>
           {requestsEntries.length === 0 ? (
@@ -141,5 +119,5 @@ export function OverviewCards() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

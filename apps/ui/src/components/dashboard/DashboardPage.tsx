@@ -1,69 +1,63 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Navigate } from "@tanstack/react-router";
-import { useAuth } from "@/lib/auth-context";
-import { useScenarios } from "./useScenarios";
-import { useVehicleAutoDetect } from "./useVehicleAutoDetect";
-import { VehicleAutoDetectWizard } from "./VehicleAutoDetectWizard";
-import { useLiveTelemetry } from "./useLiveTelemetry";
-import { useDiagnosis } from "./useDiagnosis";
-import { useCapabilities } from "./useCapabilities";
-import { useCognitiveDiagnosis } from "./useCognitiveDiagnosis";
-import { useEcuInfo } from "./useEcuInfo";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { DashboardSection } from "./DashboardSection";
-import type { SidebarSection } from "@/components/layout/Sidebar";
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Navigate } from '@tanstack/react-router'
+import { useAuth } from '@/lib/auth-context'
+import { useScenarios } from './useScenarios'
+import { useVehicleAutoDetect } from './useVehicleAutoDetect'
+import { VehicleAutoDetectWizard } from './VehicleAutoDetectWizard'
+import { useLiveTelemetry } from './useLiveTelemetry'
+import { useDiagnosis } from './useDiagnosis'
+import { useCapabilities } from './useCapabilities'
+import { useCognitiveDiagnosis } from './useCognitiveDiagnosis'
+import { useEcuInfo } from './useEcuInfo'
+import { DashboardLayout } from '@/components/layout/DashboardLayout'
+import { DashboardSection } from './DashboardSection'
+import type { SidebarSection } from '@/components/layout/Sidebar'
 
 export function DashboardPage() {
-  const auth = useAuth();
+  const auth = useAuth()
 
-  const { scenarios, selectedId, setSelectedId, scenariosError } =
-    useScenarios();
-  const selectedScenario = scenarios.find((s) => s.id === selectedId) ?? null;
-  const { live, streamOk } = useLiveTelemetry(selectedId);
-  const { loading, result, runDiagnosis } = useDiagnosis(selectedId);
-  const { cognitiveDiagnosis } = useCapabilities();
-  const cognitive = useCognitiveDiagnosis(selectedId);
-  const {
-    ecus,
-    loading: ecusLoading,
-    error: ecusError,
-  } = useEcuInfo(selectedId);
-  const [selectedDtc, setSelectedDtc] = useState<string | null>(null);
-  const [activeSection, setActiveSection] =
-    useState<SidebarSection>("live-data");
-  const wizard = useVehicleAutoDetect();
+  const { scenarios, selectedId, setSelectedId, scenariosError } = useScenarios()
+  const selectedScenario = scenarios.find((s) => s.id === selectedId) ?? null
+  const { live, streamOk } = useLiveTelemetry(selectedId)
+  const { loading, result, runDiagnosis } = useDiagnosis(selectedId)
+  const { cognitiveDiagnosis } = useCapabilities()
+  const cognitive = useCognitiveDiagnosis(selectedId)
+  const { ecus, loading: ecusLoading, error: ecusError } = useEcuInfo(selectedId)
+  const [selectedDtc, setSelectedDtc] = useState<string | null>(null)
+  const [activeSection, setActiveSection] = useState<SidebarSection>('live-data')
+  const wizard = useVehicleAutoDetect()
 
   const autoDiagnoseRef = useRef({
     runDiagnosis,
     cognitiveDiagnosis,
     reset: cognitive.reset,
     trigger: cognitive.trigger,
-  });
+  })
   autoDiagnoseRef.current = {
     runDiagnosis,
     cognitiveDiagnosis,
     reset: cognitive.reset,
     trigger: cognitive.trigger,
-  };
+  }
 
   useEffect(() => {
-    setSelectedDtc(null);
-  }, [selectedId]);
+    setSelectedDtc(null)
+  }, [selectedId])
 
   useEffect(() => {
-    if (!selectedId) return;
+    if (!selectedId) return
     const {
       runDiagnosis: run,
       cognitiveDiagnosis: cog,
       reset,
       trigger: trig,
-    } = autoDiagnoseRef.current;
-    reset();
+    } = autoDiagnoseRef.current
+    reset()
     void (async () => {
-      await run();
-      if (cog) void trig();
-    })();
-  }, [selectedId]);
+      await run()
+      if (cog) void trig()
+    })()
+  }, [selectedId])
 
   /**
    * El diagnóstico cognitivo se dispara tras el determinista y sin `await`: la
@@ -71,45 +65,45 @@ export function DashboardPage() {
    * severidad, DTCs ni de los 4 PIDs fijos.
    */
   const handleDiagnose = useCallback(async () => {
-    cognitive.reset();
-    await runDiagnosis();
-    if (cognitiveDiagnosis) void cognitive.trigger();
-  }, [runDiagnosis, cognitiveDiagnosis, cognitive.reset, cognitive.trigger]);
+    cognitive.reset()
+    await runDiagnosis()
+    if (cognitiveDiagnosis) void cognitive.trigger()
+  }, [runDiagnosis, cognitiveDiagnosis, cognitive.reset, cognitive.trigger])
 
   const handleChatSend = useCallback(
     (q: string) => {
-      void cognitive.trigger(q);
+      void cognitive.trigger(q)
     },
     [cognitive.trigger],
-  );
+  )
 
   const handleVehicleConfirmed = useCallback(
     (scenarioId: string) => {
-      setSelectedId(scenarioId);
-      wizard.confirm();
+      setSelectedId(scenarioId)
+      wizard.confirm()
     },
     [setSelectedId, wizard.confirm],
-  );
+  )
 
   const handleDtcSelect = useCallback((code: string) => {
-    setSelectedDtc(code);
-    setActiveSection("freeze-frame");
-  }, []);
+    setSelectedDtc(code)
+    setActiveSection('freeze-frame')
+  }, [])
 
-  if (auth.status === "anonymous") {
-    return <Navigate to="/login" replace />;
+  if (auth.status === 'anonymous') {
+    return <Navigate to="/login" replace />
   }
 
-  const rpm = live?.rpm ?? result?.parsedValues.rpm ?? null;
-  const coolant = live?.coolantTemp ?? result?.parsedValues.coolantTemp ?? null;
-  const speed = live?.speed ?? result?.parsedValues.speed ?? null;
-  const intake = live?.intakeTemp ?? result?.parsedValues.intakeTemp ?? null;
-  const rawSummary = live?.rawData ?? result?.rawData ?? null;
+  const rpm = live?.rpm ?? result?.parsedValues.rpm ?? null
+  const coolant = live?.coolantTemp ?? result?.parsedValues.coolantTemp ?? null
+  const speed = live?.speed ?? result?.parsedValues.speed ?? null
+  const intake = live?.intakeTemp ?? result?.parsedValues.intakeTemp ?? null
+  const rawSummary = live?.rawData ?? result?.rawData ?? null
 
-  const vehicleReady = wizard.step === "done";
-  const dtcCodes = result?.dtcCodes ?? null;
-  const hasDiagnosis = result !== null;
-  const dtcCount = dtcCodes?.length ?? 0;
+  const vehicleReady = wizard.step === 'done'
+  const dtcCodes = result?.dtcCodes ?? null
+  const hasDiagnosis = result !== null
+  const dtcCount = dtcCodes?.length ?? 0
 
   if (!vehicleReady) {
     return (
@@ -139,7 +133,7 @@ export function DashboardPage() {
           onConfirm={handleVehicleConfirmed}
         />
       </DashboardLayout>
-    );
+    )
   }
 
   return (
@@ -163,31 +157,23 @@ export function DashboardPage() {
         activeSection={activeSection}
         selectedId={selectedId}
         selectedScenario={selectedScenario}
-        rpm={rpm}
-        coolant={coolant}
-        speed={speed}
-        intake={intake}
-        rawSummary={rawSummary}
-        loading={loading}
-        streamOk={streamOk}
-        result={result}
-        dtcCodes={dtcCodes}
-        selectedDtc={selectedDtc}
-        cognitiveDiagnosisText={cognitive.diagnosisText}
-        cognitiveSeverity={cognitive.severity}
-        cognitiveConfidence={cognitive.confidence}
-        cognitiveConversationHistory={cognitive.conversationHistory}
-        cognitiveLoading={cognitive.loading}
-        cognitiveError={cognitive.error}
-        cognitivePidRows={cognitive.pidRows}
-        cognitiveAvailable={!!cognitiveDiagnosis}
-        ecus={ecus}
-        ecusLoading={ecusLoading}
-        ecusError={ecusError}
+        telemetry={{ rpm, coolant, speed, intake, rawSummary }}
+        diagnosis={{ loading, streamOk, result, dtcCodes, selectedDtc }}
+        cognitive={{
+          diagnosisText: cognitive.diagnosisText,
+          severity: cognitive.severity,
+          confidence: cognitive.confidence,
+          conversationHistory: cognitive.conversationHistory,
+          loading: cognitive.loading,
+          error: cognitive.error,
+          pidRows: cognitive.pidRows,
+          available: !!cognitiveDiagnosis,
+        }}
+        ecu={{ ecus, loading: ecusLoading, error: ecusError }}
         onDiagnose={handleDiagnose}
         onDtcSelect={handleDtcSelect}
         onChatSend={handleChatSend}
       />
     </DashboardLayout>
-  );
+  )
 }

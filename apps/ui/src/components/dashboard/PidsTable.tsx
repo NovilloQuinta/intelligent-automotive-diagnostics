@@ -1,4 +1,4 @@
-import { AlertTriangle, Gauge, Loader2, Sparkles } from "lucide-react";
+import { AlertTriangle, Gauge, Loader2, Sparkles } from 'lucide-react'
 import {
   Table,
   TableHeader,
@@ -6,26 +6,21 @@ import {
   TableRow,
   TableHead,
   TableCell,
-} from "@/components/ui/table";
-import type { DiagnosisResponse } from "./types";
-import {
-  buildPidRows,
-  mergePidRows,
-  pidStatusMeta,
-  type PidRow,
-} from "./pidCatalog";
-import type { CognitiveDiagnosisError } from "./useCognitiveDiagnosis";
+} from '@/components/ui/table'
+import type { DiagnosisResponse } from './types'
+import { buildPidRows, mergePidRows, pidStatusMeta, type PidRow } from './pidCatalog'
+import type { CognitiveDiagnosisError } from './useCognitiveDiagnosis'
 
 type Props = {
-  parsedValues: DiagnosisResponse["parsedValues"] | null;
-  empty: boolean;
+  parsedValues: DiagnosisResponse['parsedValues'] | null
+  empty: boolean
   /** PIDs discovered by the cognitive diagnosis, or null while unavailable. */
-  aiRows?: PidRow[] | null;
+  aiRows?: PidRow[] | null
   /** True while the cognitive response (up to 60 s) is still in flight. */
-  aiLoading?: boolean;
+  aiLoading?: boolean
   /** Set when the last cognitive search failed — shown only when there are no AI rows to display instead. */
-  aiError?: CognitiveDiagnosisError | null;
-};
+  aiError?: CognitiveDiagnosisError | null
+}
 
 /** Discreet badge marking a row as discovered by the AI rather than read by the fixed diagnosis. */
 function AiOriginBadge() {
@@ -37,7 +32,7 @@ function AiOriginBadge() {
       <Sparkles className="h-2.5 w-2.5" />
       IA
     </span>
-  );
+  )
 }
 
 /** Secondary, non-blocking loading row shown while the cognitive diagnosis resolves. */
@@ -51,7 +46,7 @@ function AiLoadingRow() {
         </span>
       </TableCell>
     </TableRow>
-  );
+  )
 }
 
 /** Brief, non-blocking notice shown when the cognitive PID search failed and left no AI rows. */
@@ -65,7 +60,7 @@ function AiErrorRow({ message }: { message: string }) {
         </span>
       </TableCell>
     </TableRow>
-  );
+  )
 }
 
 function EmptyPrompt() {
@@ -73,7 +68,7 @@ function EmptyPrompt() {
     <div className="flex h-full min-h-[120px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
       <span>Selecciona un vehículo y pulsa INICIAR DIAGNÓSTICO</span>
     </div>
-  );
+  )
 }
 
 function PidRowsTable({
@@ -81,11 +76,11 @@ function PidRowsTable({
   aiLoading,
   aiError,
 }: {
-  rows: PidRow[];
-  aiLoading: boolean;
-  aiError: CognitiveDiagnosisError | null;
+  rows: PidRow[]
+  aiLoading: boolean
+  aiError: CognitiveDiagnosisError | null
 }) {
-  const hasAiRows = rows.some((row) => row.source === "ai");
+  const hasAiRows = rows.some((row) => row.source === 'ai')
   return (
     <Table>
       <TableHeader>
@@ -106,7 +101,7 @@ function PidRowsTable({
       </TableHeader>
       <TableBody>
         {rows.map((row, i) => {
-          const meta = pidStatusMeta(row.status);
+          const meta = pidStatusMeta(row.status)
           return (
             <TableRow
               key={row.code}
@@ -117,14 +112,10 @@ function PidRowsTable({
             >
               <TableCell className="mono text-xs font-bold text-foreground/90">
                 {row.code}
-                {row.source === "ai" ? <AiOriginBadge /> : null}
+                {row.source === 'ai' ? <AiOriginBadge /> : null}
               </TableCell>
-              <TableCell className="text-sm text-foreground/90">
-                {row.description}
-              </TableCell>
-              <TableCell className="mono text-sm text-foreground/90">
-                {row.value}
-              </TableCell>
+              <TableCell className="text-sm text-foreground/90">{row.description}</TableCell>
+              <TableCell className="mono text-sm text-foreground/90">{row.value}</TableCell>
               <TableCell className="text-right">
                 <span
                   className="mono inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
@@ -134,23 +125,18 @@ function PidRowsTable({
                     background: meta.bg,
                   }}
                 >
-                  <meta.icon
-                    className="h-3 w-3"
-                    style={{ color: meta.color }}
-                  />
+                  <meta.icon className="h-3 w-3" style={{ color: meta.color }} />
                   {meta.label}
                 </span>
               </TableCell>
             </TableRow>
-          );
+          )
         })}
         {aiLoading ? <AiLoadingRow /> : null}
-        {!aiLoading && !hasAiRows && aiError ? (
-          <AiErrorRow message={aiError.message} />
-        ) : null}
+        {!aiLoading && !hasAiRows && aiError ? <AiErrorRow message={aiError.message} /> : null}
       </TableBody>
     </Table>
-  );
+  )
 }
 
 /** Panel listing every OBD-II PID read during the current diagnosis session with an OK/Revisar verdict per PID. */
@@ -161,27 +147,23 @@ export function PidsTable({
   aiLoading = false,
   aiError = null,
 }: Props) {
-  const fixedRows = parsedValues ? buildPidRows(parsedValues) : null;
-  const rows = fixedRows ? mergePidRows(fixedRows, aiRows) : null;
+  const fixedRows = parsedValues ? buildPidRows(parsedValues) : null
+  const rows = fixedRows ? mergePidRows(fixedRows, aiRows) : null
   return (
     <div className="panel flex min-h-0 flex-col p-4">
       <div className="mb-3 flex items-center justify-between border-b border-white/5 pb-3">
         <div className="flex items-center gap-2">
           <Gauge className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold uppercase tracking-[0.15em]">
-            PIDs Leídos
-          </h3>
+          <h3 className="text-sm font-semibold uppercase tracking-[0.15em]">PIDs Leídos</h3>
         </div>
         <span className="mono text-[10px] text-muted-foreground">
-          {rows ? `${rows.length} registrados` : "—"}
+          {rows ? `${rows.length} registrados` : '—'}
         </span>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {empty && <EmptyPrompt />}
-        {!empty && rows && (
-          <PidRowsTable rows={rows} aiLoading={aiLoading} aiError={aiError} />
-        )}
+        {!empty && rows && <PidRowsTable rows={rows} aiLoading={aiLoading} aiError={aiError} />}
       </div>
     </div>
-  );
+  )
 }

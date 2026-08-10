@@ -8,7 +8,7 @@ export class ApiHttpError extends Error {
     message: string,
     public readonly status: number,
   ) {
-    super(message);
-    this.name = "ApiHttpError";
+    super(message)
+    this.name = 'ApiHttpError'
   }
 }

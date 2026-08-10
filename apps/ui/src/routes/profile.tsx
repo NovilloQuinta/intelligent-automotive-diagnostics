@@ -1,96 +1,78 @@
-import { useState } from "react";
-import { createFileRoute, Navigate, useNavigate } from "@tanstack/react-router";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { toast } from "sonner";
-import { useAuth } from "@/lib/auth-context";
-import { api } from "@/lib/api";
-import type { AuthUser } from "@/components/dashboard/types";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/ui/password-input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User } from "lucide-react";
-import {
-  PASSWORD_REGEX,
-  PasswordStrengthIndicator,
-} from "@/components/auth/PasswordStrength";
+import { useState } from 'react'
+import { createFileRoute, Navigate, useNavigate } from '@tanstack/react-router'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { toast } from 'sonner'
+import { useAuth } from '@/lib/auth-context'
+import { api } from '@/lib/api'
+import type { AuthUser } from '@/components/dashboard/types'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { User } from 'lucide-react'
+import { PASSWORD_REGEX, PasswordStrengthIndicator } from '@/components/auth/PasswordStrength'
 
 // ---------------------------------------------------------------------------
 // Zod schemas
 // ---------------------------------------------------------------------------
 
 const profileDataSchema = z.object({
-  username: z.string().min(3, "Mínimo 3 caracteres").max(50),
+  username: z.string().min(3, 'Mínimo 3 caracteres').max(50),
   address: z.string().max(500).optional(),
   businessName: z.string().max(200).optional(),
   taxId: z.string().max(50).optional(),
-});
+})
 
 const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(1, "La contraseña actual es obligatoria"),
+    currentPassword: z.string().min(1, 'La contraseña actual es obligatoria'),
     newPassword: z
       .string()
-      .min(8, "Mínimo 8 caracteres")
+      .min(8, 'Mínimo 8 caracteres')
       .max(128)
-      .regex(
-        PASSWORD_REGEX,
-        "Debe incluir 1 mayúscula, 1 número y 1 carácter especial",
-      ),
-    confirmPassword: z.string().min(1, "Confirma la nueva contraseña"),
+      .regex(PASSWORD_REGEX, 'Debe incluir 1 mayúscula, 1 número y 1 carácter especial'),
+    confirmPassword: z.string().min(1, 'Confirma la nueva contraseña'),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Las contraseñas no coinciden",
-    path: ["confirmPassword"],
-  });
+    message: 'Las contraseñas no coinciden',
+    path: ['confirmPassword'],
+  })
 
-type ProfileDataFormData = z.infer<typeof profileDataSchema>;
-type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
+type ProfileDataFormData = z.infer<typeof profileDataSchema>
+type ChangePasswordFormData = z.infer<typeof changePasswordSchema>
 
 // ---------------------------------------------------------------------------
 // Route
 // ---------------------------------------------------------------------------
 
-export const Route = createFileRoute("/profile")({
+export const Route = createFileRoute('/profile')({
   component: ProfilePage,
-});
+})
 
 // ---------------------------------------------------------------------------
 // Page — auth gating (mirrors DashboardPage's in-component pattern)
 // ---------------------------------------------------------------------------
 
 function ProfilePage() {
-  const auth = useAuth();
+  const auth = useAuth()
 
-  if (auth.status === "loading") {
+  if (auth.status === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0d1117]">
         <p className="text-muted-foreground">Cargando…</p>
       </div>
-    );
+    )
   }
 
-  if (auth.status === "anonymous" || !auth.user) {
-    return <Navigate to="/login" replace />;
+  if (auth.status === 'anonymous' || !auth.user) {
+    return <Navigate to="/login" replace />
   }
 
-  return (
-    <ProfileContent
-      user={auth.user}
-      onRefreshUser={auth.refreshUser}
-      onLogout={auth.logout}
-    />
-  );
+  return <ProfileContent user={auth.user} onRefreshUser={auth.refreshUser} onLogout={auth.logout} />
 }
 
 // ---------------------------------------------------------------------------
@@ -102,9 +84,9 @@ function ProfileContent({
   onRefreshUser,
   onLogout,
 }: {
-  user: AuthUser;
-  onRefreshUser: () => Promise<void>;
-  onLogout: () => Promise<void>;
+  user: AuthUser
+  onRefreshUser: () => Promise<void>
+  onLogout: () => Promise<void>
 }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#0d1117] px-4 py-10">
@@ -134,7 +116,7 @@ function ProfileContent({
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -145,10 +127,10 @@ function ProfileDataForm({
   user,
   onRefreshUser,
 }: {
-  user: AuthUser;
-  onRefreshUser: () => Promise<void>;
+  user: AuthUser
+  onRefreshUser: () => Promise<void>
 }) {
-  const [serverError, setServerError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null)
   const {
     register,
     handleSubmit,
@@ -157,45 +139,33 @@ function ProfileDataForm({
     resolver: zodResolver(profileDataSchema),
     defaultValues: {
       username: user.username,
-      address: user.address ?? "",
-      businessName: user.businessName ?? "",
-      taxId: user.taxId ?? "",
+      address: user.address ?? '',
+      businessName: user.businessName ?? '',
+      taxId: user.taxId ?? '',
     },
-  });
+  })
 
   const onSubmit = async (data: ProfileDataFormData) => {
     try {
-      setServerError(null);
-      await api.updateProfile(data);
-      await onRefreshUser();
-      toast.success("Perfil actualizado correctamente.");
+      setServerError(null)
+      await api.updateProfile(data)
+      await onRefreshUser()
+      toast.success('Perfil actualizado correctamente.')
     } catch (e) {
-      setServerError(
-        e instanceof Error ? e.message : "Error al actualizar el perfil",
-      );
+      setServerError(e instanceof Error ? e.message : 'Error al actualizar el perfil')
     }
-  };
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="profile-username">Usuario</Label>
-        <Input
-          id="profile-username"
-          autoComplete="username"
-          {...register("username")}
-        />
-        {errors.username && (
-          <p className="text-xs text-destructive">{errors.username.message}</p>
-        )}
+        <Input id="profile-username" autoComplete="username" {...register('username')} />
+        {errors.username && <p className="text-xs text-destructive">{errors.username.message}</p>}
       </div>
       <div className="space-y-2">
         <Label htmlFor="profile-address">Dirección</Label>
-        <Input
-          id="profile-address"
-          placeholder="C/ Mayor 1, Madrid"
-          {...register("address")}
-        />
+        <Input id="profile-address" placeholder="C/ Mayor 1, Madrid" {...register('address')} />
       </div>
       {user.isWorkshop && (
         <>
@@ -204,16 +174,12 @@ function ProfileDataForm({
             <Input
               id="profile-businessName"
               placeholder="Talleres AutoPro S.L."
-              {...register("businessName")}
+              {...register('businessName')}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="profile-taxId">CIF / NIF</Label>
-            <Input
-              id="profile-taxId"
-              placeholder="B12345678"
-              {...register("taxId")}
-            />
+            <Input id="profile-taxId" placeholder="B12345678" {...register('taxId')} />
           </div>
         </>
       )}
@@ -223,10 +189,10 @@ function ProfileDataForm({
         </div>
       )}
       <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? "Guardando…" : "Guardar cambios"}
+        {isSubmitting ? 'Guardando…' : 'Guardar cambios'}
       </Button>
     </form>
-  );
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -234,8 +200,8 @@ function ProfileDataForm({
 // ---------------------------------------------------------------------------
 
 function ChangePasswordForm({ onLogout }: { onLogout: () => Promise<void> }) {
-  const navigate = useNavigate();
-  const [serverError, setServerError] = useState<string | null>(null);
+  const navigate = useNavigate()
+  const [serverError, setServerError] = useState<string | null>(null)
   const {
     register,
     handleSubmit,
@@ -244,28 +210,24 @@ function ChangePasswordForm({ onLogout }: { onLogout: () => Promise<void> }) {
     formState: { errors, isSubmitting },
   } = useForm<ChangePasswordFormData>({
     resolver: zodResolver(changePasswordSchema),
-  });
+  })
 
-  const newPassword = watch("newPassword") ?? "";
+  const newPassword = watch('newPassword') ?? ''
 
   const onSubmit = async (data: ChangePasswordFormData) => {
     try {
-      setServerError(null);
-      await api.changePassword(data.currentPassword, data.newPassword);
-      reset();
-      toast.success(
-        "Contraseña actualizada. Por seguridad, vuelve a iniciar sesión.",
-      );
+      setServerError(null)
+      await api.changePassword(data.currentPassword, data.newPassword)
+      reset()
+      toast.success('Contraseña actualizada. Por seguridad, vuelve a iniciar sesión.')
       // The server revokes all refresh tokens on a successful change — the
       // current session is treated as invalidated on the client too.
-      await onLogout();
-      navigate({ to: "/login", replace: true });
+      await onLogout()
+      navigate({ to: '/login', replace: true })
     } catch (e) {
-      setServerError(
-        e instanceof Error ? e.message : "Error al cambiar la contraseña",
-      );
+      setServerError(e instanceof Error ? e.message : 'Error al cambiar la contraseña')
     }
-  };
+  }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -274,12 +236,10 @@ function ChangePasswordForm({ onLogout }: { onLogout: () => Promise<void> }) {
         <PasswordInput
           id="profile-currentPassword"
           autoComplete="current-password"
-          {...register("currentPassword")}
+          {...register('currentPassword')}
         />
         {errors.currentPassword && (
-          <p className="text-xs text-destructive">
-            {errors.currentPassword.message}
-          </p>
+          <p className="text-xs text-destructive">{errors.currentPassword.message}</p>
         )}
       </div>
       <div className="space-y-2">
@@ -288,29 +248,23 @@ function ChangePasswordForm({ onLogout }: { onLogout: () => Promise<void> }) {
           id="profile-newPassword"
           placeholder="Mínimo 8 caracteres"
           autoComplete="new-password"
-          {...register("newPassword")}
+          {...register('newPassword')}
         />
         {errors.newPassword && (
-          <p className="text-xs text-destructive">
-            {errors.newPassword.message}
-          </p>
+          <p className="text-xs text-destructive">{errors.newPassword.message}</p>
         )}
         <PasswordStrengthIndicator password={newPassword} />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="profile-confirmPassword">
-          Confirmar nueva contraseña
-        </Label>
+        <Label htmlFor="profile-confirmPassword">Confirmar nueva contraseña</Label>
         <PasswordInput
           id="profile-confirmPassword"
           placeholder="Repite la contraseña"
           autoComplete="new-password"
-          {...register("confirmPassword")}
+          {...register('confirmPassword')}
         />
         {errors.confirmPassword && (
-          <p className="text-xs text-destructive">
-            {errors.confirmPassword.message}
-          </p>
+          <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
         )}
       </div>
       {serverError && (
@@ -319,8 +273,8 @@ function ChangePasswordForm({ onLogout }: { onLogout: () => Promise<void> }) {
         </div>
       )}
       <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? "Cambiando…" : "Cambiar contraseña"}
+        {isSubmitting ? 'Cambiando…' : 'Cambiar contraseña'}
       </Button>
     </form>
-  );
+  )
 }

@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import type { TelemetrySnapshot } from "./types";
+import { useQuery } from '@tanstack/react-query'
+import { api } from '@/lib/api'
+import type { TelemetrySnapshot } from './types'
 
 /**
  * Cadencia de polling para la telemetria en vivo.
@@ -12,7 +12,7 @@ import type { TelemetrySnapshot } from "./types";
  * en cuanto el enlace tiene un mal momento y las peticiones se solapan sobre la
  * misma cola. 1 Hz deja el doble de margen y sigue leyendose como tiempo real.
  */
-export const LIVE_TELEMETRY_INTERVAL_MS = 1000;
+export const LIVE_TELEMETRY_INTERVAL_MS = 1000
 
 /**
  * Lee los 4 PIDs del dashboard desde {@code GET /api/live-data} una vez por
@@ -24,7 +24,7 @@ export const LIVE_TELEMETRY_INTERVAL_MS = 1000;
  */
 export function useLiveTelemetry(selectedId: string) {
   const { data, isError, isLoading } = useQuery({
-    queryKey: ["live-telemetry", selectedId],
+    queryKey: ['live-telemetry', selectedId],
     // Via `api`, no `fetch` directo: el endpoint exige token y `apiFetch` es
     // quien pone la cabecera Authorization y renueva el access token cuando
     // caduca. Con `fetch` a pelo cada lectura respondia 401 y los gauges no
@@ -32,10 +32,10 @@ export function useLiveTelemetry(selectedId: string) {
     queryFn: () => api.getLiveData(selectedId),
     enabled: selectedId.length > 0,
     refetchInterval: LIVE_TELEMETRY_INTERVAL_MS,
-  });
+  })
 
   if (!selectedId || !data || isLoading) {
-    return { live: null, streamOk: false } as const;
+    return { live: null, streamOk: false } as const
   }
 
   const live: TelemetrySnapshot = {
@@ -43,9 +43,9 @@ export function useLiveTelemetry(selectedId: string) {
     speed: data.speed ?? 0,
     coolantTemp: data.coolantTemp ?? 0,
     intakeTemp: data.intakeTemp ?? 0,
-    rawData: "",
+    rawData: '',
     ts: Date.now(),
-  };
+  }
 
-  return { live, streamOk: !isError };
+  return { live, streamOk: !isError }
 }

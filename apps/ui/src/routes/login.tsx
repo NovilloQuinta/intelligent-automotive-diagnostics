@@ -1,80 +1,57 @@
-import { useState } from "react";
-import {
-  createFileRoute,
-  Link,
-  Navigate,
-  useNavigate,
-} from "@tanstack/react-router";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useAuth } from "@/lib/auth-context";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/ui/password-input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState } from 'react'
+import { createFileRoute, Link, Navigate, useNavigate } from '@tanstack/react-router'
+import { useForm } from 'react-hook-form'
+import { z } from 'zod'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useAuth } from '@/lib/auth-context'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { PasswordInput } from '@/components/ui/password-input'
+import { Label } from '@/components/ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Car, Wrench } from "lucide-react";
-import {
-  PASSWORD_REGEX,
-  PasswordStrengthIndicator,
-} from "@/components/auth/PasswordStrength";
+} from '@/components/ui/select'
+import { Car, Wrench } from 'lucide-react'
+import { PASSWORD_REGEX, PasswordStrengthIndicator } from '@/components/auth/PasswordStrength'
 
 // ---------------------------------------------------------------------------
 // Zod schemas
 // ---------------------------------------------------------------------------
 
 const loginSchema = z.object({
-  email: z.string().email("Email inválido"),
-  password: z.string().min(1, "La contraseña es obligatoria"),
-});
+  email: z.string().email('Email inválido'),
+  password: z.string().min(1, 'La contraseña es obligatoria'),
+})
 
 const registerSchema = z.object({
-  username: z.string().min(3, "Mínimo 3 caracteres").max(50),
-  email: z.string().email("Email inválido").max(255),
+  username: z.string().min(3, 'Mínimo 3 caracteres').max(50),
+  email: z.string().email('Email inválido').max(255),
   password: z
     .string()
-    .min(8, "Mínimo 8 caracteres")
+    .min(8, 'Mínimo 8 caracteres')
     .max(128)
-    .regex(
-      PASSWORD_REGEX,
-      "Debe incluir 1 mayúscula, 1 número y 1 carácter especial",
-    ),
-  userType: z.enum(["individual", "workshop"]),
+    .regex(PASSWORD_REGEX, 'Debe incluir 1 mayúscula, 1 número y 1 carácter especial'),
+  userType: z.enum(['individual', 'workshop']),
   businessName: z.string().max(200).optional(),
   taxId: z.string().max(50).optional(),
   address: z.string().max(500).optional(),
-});
+})
 
-type LoginFormData = z.infer<typeof loginSchema>;
-type RegisterFormData = z.infer<typeof registerSchema>;
+type LoginFormData = z.infer<typeof loginSchema>
+type RegisterFormData = z.infer<typeof registerSchema>
 
 // ---------------------------------------------------------------------------
 // Required label helper
 // ---------------------------------------------------------------------------
 
 /** Label with a red asterisk for required fields. */
-function RequiredLabel({
-  htmlFor,
-  children,
-}: {
-  htmlFor: string;
-  children: React.ReactNode;
-}) {
+function RequiredLabel({ htmlFor, children }: { htmlFor: string; children: React.ReactNode }) {
   return (
     <Label htmlFor={htmlFor}>
       {children}
@@ -82,37 +59,37 @@ function RequiredLabel({
         *
       </span>
     </Label>
-  );
+  )
 }
 
 // ---------------------------------------------------------------------------
 // Route
 // ---------------------------------------------------------------------------
 
-export const Route = createFileRoute("/login")({
+export const Route = createFileRoute('/login')({
   component: AuthPage,
-});
+})
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 function AuthPage() {
-  const navigate = useNavigate();
-  const auth = useAuth();
-  const [tab, setTab] = useState<"login" | "register">("login");
-  const [serverError, setServerError] = useState<string | null>(null);
+  const navigate = useNavigate()
+  const auth = useAuth()
+  const [tab, setTab] = useState<'login' | 'register'>('login')
+  const [serverError, setServerError] = useState<string | null>(null)
 
-  if (auth.status === "loading") {
+  if (auth.status === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0d1117]">
         <p className="text-muted-foreground">Cargando…</p>
       </div>
-    );
+    )
   }
 
-  if (auth.status === "authed") {
-    return <Navigate to="/" replace />;
+  if (auth.status === 'authed') {
+    return <Navigate to="/" replace />
   }
 
   return (
@@ -122,19 +99,15 @@ function AuthPage() {
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <Car className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-xl">
-            Intelligent Automotive Diagnostics
-          </CardTitle>
-          <CardDescription>
-            Conecta al sistema de diagnóstico OBD-II
-          </CardDescription>
+          <CardTitle className="text-xl">Intelligent Automotive Diagnostics</CardTitle>
+          <CardDescription>Conecta al sistema de diagnóstico OBD-II</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs
             value={tab}
             onValueChange={(v) => {
-              setTab(v as "login" | "register");
-              setServerError(null);
+              setTab(v as 'login' | 'register')
+              setServerError(null)
             }}
           >
             <TabsList className="mb-6 grid w-full grid-cols-2">
@@ -146,15 +119,11 @@ function AuthPage() {
               <LoginForm
                 onSubmit={async (data) => {
                   try {
-                    setServerError(null);
-                    await auth.login(data);
-                    navigate({ to: "/", replace: true });
+                    setServerError(null)
+                    await auth.login(data)
+                    navigate({ to: '/', replace: true })
                   } catch (e) {
-                    setServerError(
-                      e instanceof Error
-                        ? e.message
-                        : "Error al iniciar sesión",
-                    );
+                    setServerError(e instanceof Error ? e.message : 'Error al iniciar sesión')
                   }
                 }}
                 serverError={serverError}
@@ -165,13 +134,11 @@ function AuthPage() {
               <RegisterForm
                 onSubmit={async (data) => {
                   try {
-                    setServerError(null);
-                    await auth.register(data);
-                    navigate({ to: "/", replace: true });
+                    setServerError(null)
+                    await auth.register(data)
+                    navigate({ to: '/', replace: true })
                   } catch (e) {
-                    setServerError(
-                      e instanceof Error ? e.message : "Error al registrarse",
-                    );
+                    setServerError(e instanceof Error ? e.message : 'Error al registrarse')
                   }
                 }}
                 serverError={serverError}
@@ -181,7 +148,7 @@ function AuthPage() {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -192,8 +159,8 @@ function LoginForm({
   onSubmit,
   serverError,
 }: {
-  onSubmit: (data: LoginFormData) => Promise<void>;
-  serverError: string | null;
+  onSubmit: (data: LoginFormData) => Promise<void>
+  serverError: string | null
 }) {
   const {
     register,
@@ -201,7 +168,7 @@ function LoginForm({
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-  });
+  })
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -212,11 +179,9 @@ function LoginForm({
           type="email"
           placeholder="tu@email.com"
           autoComplete="email"
-          {...register("email")}
+          {...register('email')}
         />
-        {errors.email && (
-          <p className="text-xs text-destructive">{errors.email.message}</p>
-        )}
+        {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
       </div>
       <div className="space-y-2">
         <RequiredLabel htmlFor="login-password">Contraseña</RequiredLabel>
@@ -224,11 +189,9 @@ function LoginForm({
           id="login-password"
           placeholder="••••••••"
           autoComplete="current-password"
-          {...register("password")}
+          {...register('password')}
         />
-        {errors.password && (
-          <p className="text-xs text-destructive">{errors.password.message}</p>
-        )}
+        {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
         <div className="text-right">
           <Link
             to="/forgot-password"
@@ -244,10 +207,10 @@ function LoginForm({
         </div>
       )}
       <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? "Autenticando…" : "Iniciar sesión"}
+        {isSubmitting ? 'Autenticando…' : 'Iniciar sesión'}
       </Button>
     </form>
-  );
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -258,8 +221,8 @@ function RegisterForm({
   onSubmit,
   serverError,
 }: {
-  onSubmit: (data: RegisterFormData) => Promise<void>;
-  serverError: string | null;
+  onSubmit: (data: RegisterFormData) => Promise<void>
+  serverError: string | null
 }) {
   const {
     register,
@@ -269,11 +232,11 @@ function RegisterForm({
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { userType: "individual" },
-  });
+    defaultValues: { userType: 'individual' },
+  })
 
-  const userType = watch("userType");
-  const password = watch("password") ?? "";
+  const userType = watch('userType')
+  const password = watch('password') ?? ''
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -283,14 +246,10 @@ function RegisterForm({
           id="reg-username"
           placeholder="usuario123"
           autoComplete="username"
-          {...register("username")}
+          {...register('username')}
         />
-        {errors.username && (
-          <p className="text-xs text-destructive">{errors.username.message}</p>
-        )}
-        <p className="text-[11px] text-muted-foreground">
-          Entre 3 y 50 caracteres
-        </p>
+        {errors.username && <p className="text-xs text-destructive">{errors.username.message}</p>}
+        <p className="text-[11px] text-muted-foreground">Entre 3 y 50 caracteres</p>
       </div>
       <div className="space-y-2">
         <RequiredLabel htmlFor="reg-email">Email</RequiredLabel>
@@ -299,11 +258,9 @@ function RegisterForm({
           type="email"
           placeholder="tu@email.com"
           autoComplete="email"
-          {...register("email")}
+          {...register('email')}
         />
-        {errors.email && (
-          <p className="text-xs text-destructive">{errors.email.message}</p>
-        )}
+        {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
       </div>
       <div className="space-y-2">
         <RequiredLabel htmlFor="reg-password">Contraseña</RequiredLabel>
@@ -311,11 +268,9 @@ function RegisterForm({
           id="reg-password"
           placeholder="Mínimo 8 caracteres"
           autoComplete="new-password"
-          {...register("password")}
+          {...register('password')}
         />
-        {errors.password && (
-          <p className="text-xs text-destructive">{errors.password.message}</p>
-        )}
+        {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
         <PasswordStrengthIndicator password={password} />
       </div>
       <div className="space-y-2">
@@ -323,7 +278,7 @@ function RegisterForm({
         <Select
           value={userType}
           onValueChange={(v) =>
-            setValue("userType", v as "individual" | "workshop", {
+            setValue('userType', v as 'individual' | 'workshop', {
               shouldValidate: true,
             })
           }
@@ -344,39 +299,27 @@ function RegisterForm({
             </SelectItem>
           </SelectContent>
         </Select>
-        {errors.userType && (
-          <p className="text-xs text-destructive">{errors.userType.message}</p>
-        )}
+        {errors.userType && <p className="text-xs text-destructive">{errors.userType.message}</p>}
       </div>
-      {userType === "workshop" && (
+      {userType === 'workshop' && (
         <>
           <div className="space-y-2">
-            <RequiredLabel htmlFor="reg-businessName">
-              Nombre del taller
-            </RequiredLabel>
+            <RequiredLabel htmlFor="reg-businessName">Nombre del taller</RequiredLabel>
             <Input
               id="reg-businessName"
               placeholder="Talleres AutoPro S.L."
-              {...register("businessName")}
+              {...register('businessName')}
             />
           </div>
           <div className="space-y-2">
             <RequiredLabel htmlFor="reg-taxId">CIF / NIF</RequiredLabel>
-            <Input
-              id="reg-taxId"
-              placeholder="B12345678"
-              {...register("taxId")}
-            />
+            <Input id="reg-taxId" placeholder="B12345678" {...register('taxId')} />
           </div>
         </>
       )}
       <div className="space-y-2">
         <Label htmlFor="reg-address">Dirección</Label>
-        <Input
-          id="reg-address"
-          placeholder="C/ Mayor 1, Madrid"
-          {...register("address")}
-        />
+        <Input id="reg-address" placeholder="C/ Mayor 1, Madrid" {...register('address')} />
       </div>
       {serverError && (
         <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
@@ -384,8 +327,8 @@ function RegisterForm({
         </div>
       )}
       <Button type="submit" className="w-full" disabled={isSubmitting}>
-        {isSubmitting ? "Creando cuenta…" : "Crear cuenta"}
+        {isSubmitting ? 'Creando cuenta…' : 'Crear cuenta'}
       </Button>
     </form>
-  );
+  )
 }

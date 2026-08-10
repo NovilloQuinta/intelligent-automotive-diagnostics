@@ -1,126 +1,60 @@
-import { useCallback, useMemo } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { useCallback } from 'react'
+import { Input } from '@/components/ui/input'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-type DateShortcut = "today" | "7d" | "30d";
+} from '@/components/ui/select'
+import { computeDateRange, DATE_SHORTCUT_LABELS } from '@/lib/date'
+import type { DateShortcut } from '@/lib/date'
+import { Paginator } from '@/components/shared/Paginator'
 
 type LevelFilter = {
-  value?: string;
-  onChange: (level?: string) => void;
-  options: { value: string; label: string }[];
-};
-
-type StatusFilter = {
-  value?: number;
-  onChange: (statusCode?: number) => void;
-};
-
-type DataTableFiltersProps = {
-  searchPlaceholder?: string;
-  onSearchChange: (q: string) => void;
-  onDateRangeChange: (range: { from?: string; to?: string }) => void;
-  dateRange?: { from?: string; to?: string };
-  dateShortcuts?: DateShortcut[];
-  levelFilter?: LevelFilter;
-  statusFilter?: StatusFilter;
-  page: number;
-  pageSize: number;
-  total: number;
-  onPageChange: (page: number) => void;
-  onPageSizeChange: (pageSize: number) => void;
-};
-
-const DATE_SHORTCUT_LABELS: Record<DateShortcut, string> = {
-  today: "Hoy",
-  "7d": "7 d",
-  "30d": "30 d",
-};
-
-type PageItem = number | "ellipsis-start" | "ellipsis-end";
-
-const PAGE_WINDOW_SIBLINGS = 1;
-
-/**
- * Ventana de números de página a mostrar: primera, última, y `siblings`
- * páginas a cada lado de la actual, con "…" en los huecos. Evita pintar un
- * botón por página cuando `totalPages` es grande (miles de registros).
- */
-function computePageWindow(
-  page: number,
-  totalPages: number,
-  siblings = PAGE_WINDOW_SIBLINGS,
-): PageItem[] {
-  const first = 1;
-  const last = totalPages;
-  const start = Math.max(first + 1, page - siblings);
-  const end = Math.min(last - 1, page + siblings);
-
-  const items: PageItem[] = [first];
-  if (start > first + 1) items.push("ellipsis-start");
-  for (let p = start; p <= end; p++) items.push(p);
-  if (end < last - 1) items.push("ellipsis-end");
-  if (last > first) items.push(last);
-  return items;
+  value?: string
+  onChange: (level?: string) => void
+  options: { value: string; label: string }[]
 }
 
-function computeDateRange(shortcut: DateShortcut): {
-  from: string;
-  to: string;
-} {
-  const now = new Date();
-  const to = now.toISOString();
-  const from = new Date(now);
+export interface PaginationConfig {
+  readonly page: number
+  readonly pageSize: number
+  readonly total: number
+  readonly onPageChange: (page: number) => void
+  readonly onPageSizeChange: (pageSize: number) => void
+}
 
-  switch (shortcut) {
-    case "today":
-      from.setHours(0, 0, 0, 0);
-      break;
-    case "7d":
-      from.setDate(from.getDate() - 7);
-      from.setHours(0, 0, 0, 0);
-      break;
-    case "30d":
-      from.setDate(from.getDate() - 30);
-      from.setHours(0, 0, 0, 0);
-      break;
-  }
-
-  return { from: from.toISOString(), to };
+type DataTableFiltersProps = {
+  searchPlaceholder?: string
+  onSearchChange: (q: string) => void
+  onDateRangeChange: (range: { from?: string; to?: string }) => void
+  dateRange?: { from?: string; to?: string }
+  dateShortcuts?: DateShortcut[]
+  levelFilter?: LevelFilter
+  pagination: PaginationConfig
 }
 
 export function DataTableFilters(props: DataTableFiltersProps) {
   const {
-    searchPlaceholder = "Buscar...",
+    searchPlaceholder = 'Buscar...',
     onSearchChange,
     onDateRangeChange,
     dateShortcuts,
     levelFilter,
-    page,
-    pageSize,
-    total,
-    onPageChange,
-    onPageSizeChange,
-  } = props;
+    pagination,
+  } = props
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const { page, pageSize, total, onPageChange, onPageSizeChange } = pagination
+  const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
   const handleShortcut = useCallback(
     (shortcut: DateShortcut) => {
-      onDateRangeChange(computeDateRange(shortcut));
+      onDateRangeChange(computeDateRange(shortcut))
     },
     [onDateRangeChange],
-  );
-
-  const pageWindow = useMemo(
-    () => computePageWindow(page, totalPages),
-    [page, totalPages],
-  );
+  )
 
   return (
     <div className="flex flex-col gap-3">
@@ -148,10 +82,8 @@ export function DataTableFilters(props: DataTableFiltersProps) {
 
         {levelFilter && (
           <Select
-            value={levelFilter.value ?? "all"}
-            onValueChange={(v) =>
-              levelFilter.onChange(v === "all" ? undefined : v)
-            }
+            value={levelFilter.value ?? 'all'}
+            onValueChange={(v) => levelFilter.onChange(v === 'all' ? undefined : v)}
           >
             <SelectTrigger className="w-[130px]" aria-label="Nivel">
               <SelectValue placeholder="Nivel" />
@@ -172,53 +104,14 @@ export function DataTableFilters(props: DataTableFiltersProps) {
         <p className="text-sm text-muted-foreground">Sin resultados</p>
       ) : (
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => onPageChange(page - 1)}
-            >
-              Anterior
-            </Button>
-            {pageWindow.map((item) =>
-              typeof item === "number" ? (
-                <Button
-                  key={item}
-                  variant={item === page ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => onPageChange(item)}
-                >
-                  {item}
-                </Button>
-              ) : (
-                <span
-                  key={item}
-                  className="px-1 text-sm text-muted-foreground"
-                  aria-hidden="true"
-                >
-                  …
-                </span>
-              ),
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page >= totalPages}
-              onClick={() => onPageChange(page + 1)}
-            >
-              Siguiente
-            </Button>
-          </div>
-
+          <Paginator
+            page={page}
+            totalPages={totalPages}
+            total={total}
+            onPageChange={onPageChange}
+          />
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>
-              {total} resultado{total !== 1 ? "s" : ""}
-            </span>
-            <Select
-              value={String(pageSize)}
-              onValueChange={(v) => onPageSizeChange(Number(v))}
-            >
+            <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v))}>
               <SelectTrigger className="w-[80px]">
                 <SelectValue />
               </SelectTrigger>
@@ -233,5 +126,5 @@ export function DataTableFilters(props: DataTableFiltersProps) {
         </div>
       )}
     </div>
-  );
+  )
 }
