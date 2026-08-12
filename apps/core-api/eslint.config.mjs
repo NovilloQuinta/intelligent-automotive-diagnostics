@@ -13,6 +13,9 @@ export default tseslint.config(
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
       ],
+      // Complejidad ciclomática accionable: señala funciones >5 (no el promedio).
+      // 'warn' por ahora: identifica candidatas a refactor sin bloquear commits.
+      complexity: ['warn', 5],
     },
   },
   {

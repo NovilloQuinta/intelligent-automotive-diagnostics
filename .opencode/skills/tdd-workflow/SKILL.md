@@ -61,6 +61,17 @@ Each development cycle follows three strict phases:
   - `it('should parse coolant temperature correctly')`
 - One `*.test.ts` file per module; one `describe` per class/function
 
+### Test isolation (AISLAR LOS TESTS — convención del proyecto)
+
+Cada test debe ser **independiente y autocontenido**:
+
+- **Sin estado compartido entre tests**: un test no puede depender del orden de ejecución de otro, ni de lo que otro test haya dejado en memoria/BD/singleton.
+- **Instancias frescas en `beforeEach`**: no reutilizar singletons, repositorios ni módulos con estado entre tests. Si el módulo usa un singleton (p. ej. una conexión a BD), exponer un `reset`/`close` y llamarlo en `afterEach`.
+- **Nada de `describe` que dependa de `it` previos**: cada `it` monta su propio contexto.
+- **Mockear SOLO en fronteras de infraestructura**: OBD simulator, HTTP server, file system, red, clock. **NUNCA** mockear domain entities ni funciones puras (parsers, validators, converters).
+
+Señal de que un test NO está aislado: falla si se ejecuta solo (`-t "nombre"`) o en orden distinto (`--shuffle`).
+
 ### Mock boundaries
 
 - Mock **only** at infrastructure boundaries: OBD simulator, HTTP server, file system

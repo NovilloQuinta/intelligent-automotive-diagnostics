@@ -29,6 +29,16 @@ export default defineConfig({
         '**/swagger.ts',
         '**/server.ts',
         '**/isotp/index.ts',
+        // Infraestructura (0% por estrategia): cableado DI, adaptadores que
+        // delegan, controladores HTTP, factories y helpers de glue. Validados
+        // por TypeScript/ESLint, no por tests de cobertura.
+        '**/composition.ts',
+        '**/simulatorAdapter.ts',
+        '**/lancedb.ts',
+        '**/AdminController.ts',
+        '**/ProfileController.ts',
+        '**/httpErrors.ts',
+        '**/composeLlmClient.ts',
       ],
       thresholds: {
         statements: 80,
