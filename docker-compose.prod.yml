@@ -8,12 +8,6 @@ services:
     ports:
       - "35000:35000"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost',35000)); s.close()"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
 
   elm327-kawasaki:
     image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/elm327:latest
@@ -22,12 +16,6 @@ services:
     ports:
       - "35001:35001"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost',35001)); s.close()"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
 
   elm327-toyota:
     image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/elm327:latest
@@ -36,12 +24,6 @@ services:
     ports:
       - "35002:35002"
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost',35002)); s.close()"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
 
   api:
     image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/api:latest
@@ -78,13 +60,13 @@ services:
     restart: unless-stopped
     depends_on:
       elm327-audi:
-        condition: service_healthy
+        condition: service_started
       elm327-kawasaki:
-        condition: service_healthy
+        condition: service_started
       elm327-toyota:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:4000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -99,7 +81,7 @@ services:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/"]
       interval: 30s
       timeout: 5s
       retries: 3
