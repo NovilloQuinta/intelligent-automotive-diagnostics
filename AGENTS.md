@@ -25,14 +25,13 @@ Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de siste
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura + deploy a produccion
-- **Ultimo paso**: `add-live-data-pid-selector` implementado, mergeado a `develop` (commit `5496900`) y **archivado** en `openspec/changes/archive/2026-08-12-add-live-data-pid-selector/`. Spec sincronizada a `openspec/specs/live-data-pid-selector/spec.md`. Backend: `readPids` multi-PID, `parseModeResponse` multi-frame, `GET /api/live-data?pids=` (máx 8, Mode 01), `readings {code,name,unit,value}`, simulador a 16 PIDs Mode 01. UI: checkboxes `PidsTable`, gauges dinámicos + `PidValueGauge`, `useLiveTelemetry(pids)`, reset al cambiar vehículo. Pendiente: verificación manual (sección 8).
+- **Ultimo paso**: `unify-diagnosis-ai-chat` implementado, mergeado a `develop` (commit `2cf6c44`) y **archivado** en `openspec/changes/archive/2026-08-12-unify-diagnosis-ai-chat/`. Specs sincronizadas: capability nueva `diagnosis-chat` + delta `execute-cognitive-diagnosis`. Backend: snapshot con `conversation` en `result_json`, `sessionId` opcional + follow-up `updateSessionResult` (sin migración; follow-up no re-escribe `endedAt`). UI: `DiagnosisChat` (3 estados + CTA a demanda), sidebar unificado (una sección `diagnosis`), eliminados `DiagnosisPanel`/`MechanicChat`, `useCognitiveDiagnosis` con `sessionId`. 13 warnings DRY/KISS/code-smell corregidos. Pendiente: verificación manual (sección 9) con emulador.
 - **Flujo de ramas**: `develop` es la rama de integración; toda `feat.*`/`fix.*` sale de `develop` y se mergea ahí. `main` = releases (deploy CI). **Ojo**: hay agentes paralelos en el repo principal (rama cambia sola) — verificar `git branch --show-current` antes de commitear.
 - **Rama base**: `develop` (no == `main`; deploy via `main`).
-- **Worktrees activos** en `.claude/worktrees/`: `deployment` (`feat/deployment`, obsoleto), `unify-diagnosis-ai-chat`.
+- **Worktrees activos** en `.claude/worktrees/`: `deployment` (`feat/deployment`, obsoleto).
 - **OpenSpec changes activos**: add-connection-type-selector, add-topology-mapping-screen, add-dtc-repair-tips-screen, add-ecu-discovery-and-system-catalog (propuestos).
 - **Deuda `brace-expansion`**: RESUELTA.
 - **Deuda coverage thresholds**: `test:coverage` falla por archivos bajo umbral (composition.ts ~32%, simulatorAdapter, lancedb, AdminController, ProfileController...).
-- **Deuda `cognitiveDiagnosis`** >100 líneas: extraer helpers.
 - **Deuda GGA vs lint/prettier**: archivos no tocados se reformatean en commits.
 - **Deuda vectorial**: migrar a schema con columna JSON metadata para evitar migraciones futuras.
 
