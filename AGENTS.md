@@ -30,7 +30,8 @@ Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de siste
 - **Rama base**: `develop` == `main` tras el release de deploy.
 - **3 worktrees activos** en `.claude/worktrees/`: `deployment` (`feat/deployment`, obsoleto), `live-data-pid-selector`, `move-manufacturer-data-to-db`. Rama `feat/unify-diagnosis-ai-chat` activa en el repo principal (otro agente).
 - **OpenSpec changes activos (propuestos, sin implementar)**: add-live-data-pid-selector, add-connection-type-selector, add-topology-mapping-screen, add-dtc-repair-tips-screen.
-- **Deuda `brace-expansion`** (lint UI): sin resolver.
+- **Deuda `brace-expansion`**: RESUELTA (se quito el override; `pnpm lint` y `test:coverage` ya corren).
+- **Deuda coverage thresholds**: `test:coverage` falla por archivos bajo umbral (composition.ts ~32%, simulatorAdapter, lancedb, AdminController, ProfileController...). Distinto de brace-expansion.
 - **Deuda `cognitiveDiagnosis`** >100 líneas: extraer helpers (GGA bloqueó commit).
 - **Deuda GGA vs lint/prettier**: archivos no tocados se reformatean en commits.
 - **Deuda vectorial**: migrar a schema con columna JSON metadata para evitar migraciones futuras.
@@ -184,5 +185,4 @@ pnpm test:coverage                      # coverage (Features >=80% + Core 100%)
 
 ## DEUDA CONOCIDA
 
-- **`brace-expansion: '>=5.0.9'`** (pnpm-workspace.yaml) rompe `minimatch@3` de `@eslint/config-array` (ESLint 9): `pnpm test:coverage` (core-api) y `pnpm lint` (apps/ui) fallan con `TypeError: expand is not a function`. Requiere cambio propio.
-- **`brace-expansion: '>=5.0.9'`** (pnpm-workspace.yaml) rompe `minimatch@3` de `@eslint/config-array` (ESLint 9): `pnpm test:coverage` (core-api) y `pnpm lint` (apps/ui) fallan con `TypeError: expand is not a function`. Requiere cambio propio.
+- **Coverage thresholds** (test:coverage falla, no por brace-expansion): `composition.ts` (~32% lines), `simulatorAdapter.ts`, `lancedb.ts`, `AdminController.ts`, `ProfileController.ts`, `diagnosisService.ts` (funciones ~88% vs 90%), `elm327Adapter.ts` (funciones ~89% vs 90%). Subir tests o ajustar umbrales por archivo.
