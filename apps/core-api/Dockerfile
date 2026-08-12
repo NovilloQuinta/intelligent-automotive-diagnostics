@@ -26,6 +26,7 @@ COPY --from=builder /app/apps/core-api/package.json ./apps/core-api/
 RUN pnpm install --frozen-lockfile --prod
 
 COPY --from=builder /app/apps/core-api/dist ./apps/core-api/dist/
+COPY apps/core-api/drizzle ./drizzle/
 
 RUN mkdir -p /app/data
 
