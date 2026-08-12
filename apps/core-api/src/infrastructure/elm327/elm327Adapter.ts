@@ -18,6 +18,7 @@ import { Elm327ConnectionError, Elm327NoDataError, Elm327ParseError } from './er
 import {
   formatCommand,
   parseModeResponse,
+  parseModeResponseEntries,
   parseMode22Response,
   parseVinResponse,
   parseDtcResponse,
@@ -96,6 +97,20 @@ export class Elm327TcpRepository implements ObdRepository {
 
     const bytes = await this.fetchPidBytes(modeUpper, pidUpper, entry?.dataBytes ?? 0)
     return this.pidFormulas.apply(modeUpper, pidUpper, bytes)
+  }
+
+  async readPids(mode: string, pids: readonly string[]): Promise<Map<string, number>> {
+    const raw = await this.client.sendCommand(formatCommand(mode, pids.join(' ')))
+    const entries = parseModeResponseEntries(raw)
+    const result = new Map<string, number>()
+    for (const { pid, bytes } of entries) {
+      try {
+        result.set(pid, this.pidFormulas.apply(mode, pid, bytes))
+      } catch {
+        // Degradación por PID: una fórmula que falla no invalida el resto del Map
+      }
+    }
+    return result
   }
 
   async readPidRaw(mode: string, pid: string, dataBytes: number): Promise<number[]> {

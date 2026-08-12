@@ -22,6 +22,13 @@ import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { ToolCallTrace } from '@/application/ports/LlmClientPort.js'
 
+// El rate limiter de /api/live-data (1 req/s) interferiria con los tests
+// secuenciales del endpoint: se desactiva en este fichero (el rate limit real
+// se cubre en rateLimits.test.ts).
+vi.mock('express-rate-limit', () => ({
+  rateLimit: () => (_req: unknown, _res: unknown, next: () => void) => next(),
+}))
+
 const mockLogger: LoggerPort = {
   debug: vi.fn(),
   info: vi.fn(),
@@ -112,6 +119,7 @@ type ServiceStub = Pick<
   | 'getFreezeFrame'
   | 'getEcuInfo'
   | 'getVehicleInfo'
+  | 'getLiveData'
   | 'clearDtcCodes'
   | 'readPendingDtcCodes'
   | 'readPermanentDtcCodes'
@@ -140,6 +148,7 @@ function createServiceStub(overrides: Partial<ServiceStub> = {}): DiagnosisServi
       region: { country: 'Germany', region: 'Europe' },
       modelYearDecoded: 2018,
     })),
+    getLiveData: vi.fn(async () => ({ rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 })),
     clearDtcCodes: vi.fn(async () => undefined),
     readPendingDtcCodes: vi.fn(async () => [{ code: 'P0301', description: 'Cylinder 1 Misfire' }]),
     readPermanentDtcCodes: vi.fn(async () => [
@@ -499,6 +508,56 @@ describe('diagnosisRoutes', () => {
 
       expect(res.status).toBe(500)
       expect(res.body.error).toBe('Internal server error')
+    })
+  })
+
+  describe('GET /api/live-data', () => {
+    it('should return only the requested PIDs', async () => {
+      const service = createServiceStub({
+        getLiveData: vi.fn(async () => ({ rpm: 800, speed: 90 })),
+      })
+      const { app } = createApp(service)
+      const res = await request(app)
+        .get('/api/live-data')
+        .query({ scenarioId: 'audi-a3-idle', pids: '0C,0D' })
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({ rpm: 800, speed: 90 })
+      expect(service.getLiveData).toHaveBeenCalledWith('audi-a3-idle', ['0C', '0D'])
+    })
+
+    it('should return the 4 default fields without pids', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service)
+      const res = await request(app).get('/api/live-data').query({ scenarioId: 'audi-a3-idle' })
+
+      expect(res.status).toBe(200)
+      expect(res.body).toEqual({ rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 })
+      expect(service.getLiveData).toHaveBeenCalledWith('audi-a3-idle', undefined)
+    })
+
+    it('should return 400 for invalid PIDs', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service)
+      const res = await request(app)
+        .get('/api/live-data')
+        .query({ scenarioId: 'audi-a3-idle', pids: 'ZZ,XX' })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid request body')
+      expect(service.getLiveData).not.toHaveBeenCalled()
+    })
+
+    it('should return 400 for more than 8 PIDs', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service)
+      const res = await request(app)
+        .get('/api/live-data')
+        .query({ scenarioId: 'audi-a3-idle', pids: 'A,B,0C,D,E,F,G,H,I,J' })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid request body')
+      expect(service.getLiveData).not.toHaveBeenCalled()
     })
   })
 

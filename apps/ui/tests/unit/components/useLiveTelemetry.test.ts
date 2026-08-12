@@ -18,7 +18,13 @@ function wrapper({ children }: { children: React.ReactNode }) {
   return createElement(QueryClientProvider, { client: qc }, children);
 }
 
-const mockLiveData = { rpm: 800, coolantTemp: 90, speed: 0, intakeTemp: 35 };
+const mockLiveData = {
+  rpm: 800,
+  coolantTemp: 90,
+  speed: 0,
+  intakeTemp: 35,
+  readings: [],
+};
 
 describe("useLiveTelemetry", () => {
   beforeEach(() => {
@@ -103,5 +109,20 @@ describe("useLiveTelemetry", () => {
     expect(result.current.live).toBeNull();
     expect(result.current.streamOk).toBe(false);
     expect(api.getLiveData).not.toHaveBeenCalled();
+  });
+
+  it("pasa los pids al cliente api y expone las readings", async () => {
+    const readings = [{ code: "01 11", name: "Posición del acelerador", unit: "%", value: 14 }];
+    vi.mocked(api.getLiveData).mockResolvedValue({ ...mockLiveData, readings });
+
+    const { result } = renderHook(() => useLiveTelemetry("audi-a3", ["0C", "0D"]), {
+      wrapper,
+    });
+
+    await waitFor(() => {
+      expect(result.current.streamOk).toBe(true);
+    });
+    expect(api.getLiveData).toHaveBeenCalledWith("audi-a3", ["0C", "0D"]);
+    expect(result.current.readings).toEqual(readings);
   });
 });

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Navigate } from '@tanstack/react-router'
 import { useAuth } from '@/lib/auth-context'
 import { useScenarios } from './useScenarios'
+import { DEFAULT_LIVE_PIDS } from './pidCatalog'
 import { useVehicleAutoDetect } from './useVehicleAutoDetect'
 import { VehicleAutoDetectWizard } from './VehicleAutoDetectWizard'
 import { useLiveTelemetry } from './useLiveTelemetry'
@@ -18,7 +19,8 @@ export function DashboardPage() {
 
   const { scenarios, selectedId, setSelectedId, scenariosError } = useScenarios()
   const selectedScenario = scenarios.find((s) => s.id === selectedId) ?? null
-  const { live, streamOk } = useLiveTelemetry(selectedId)
+  const [selectedPids, setSelectedPids] = useState<readonly string[]>(DEFAULT_LIVE_PIDS)
+  const { live, streamOk, readings } = useLiveTelemetry(selectedId, selectedPids)
   const { loading, result, runDiagnosis } = useDiagnosis(selectedId)
   const { cognitiveDiagnosis } = useCapabilities()
   const cognitive = useCognitiveDiagnosis(selectedId)
@@ -42,6 +44,7 @@ export function DashboardPage() {
 
   useEffect(() => {
     setSelectedDtc(null)
+    setSelectedPids(DEFAULT_LIVE_PIDS)
   }, [selectedId])
 
   useEffect(() => {
@@ -157,7 +160,8 @@ export function DashboardPage() {
         activeSection={activeSection}
         selectedId={selectedId}
         selectedScenario={selectedScenario}
-        telemetry={{ rpm, coolant, speed, intake, rawSummary }}
+        telemetry={{ rpm, coolant, speed, intake, rawSummary, pids: selectedPids, readings }}
+        pidSelection={{ selectedPids, onPidsChange: setSelectedPids }}
         diagnosis={{ loading, streamOk, result, dtcCodes, selectedDtc }}
         cognitive={{
           diagnosisText: cognitive.diagnosisText,

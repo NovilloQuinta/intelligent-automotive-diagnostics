@@ -9,7 +9,7 @@ import { SessionReportPanel } from './SessionReportPanel'
 import { VehicleStatusPanel } from './VehicleStatusPanel'
 import type { SidebarSection } from '@/components/layout/Sidebar'
 import type { CognitiveDiagnosisError } from './useCognitiveDiagnosis'
-import type { EcuInfo, Scenario, DiagnosisResponse } from './types'
+import type { EcuInfo, Scenario, DiagnosisResponse, PidReading } from './types'
 import type { PidRow } from './pidCatalog'
 import type { ConversationItem } from '@/lib/api'
 
@@ -23,6 +23,13 @@ export interface TelemetryConfig {
   readonly speed: number | null
   readonly intake: number | null
   readonly rawSummary: string | null
+  readonly pids: readonly string[]
+  readonly readings: readonly PidReading[] | null
+}
+
+export interface PidSelectionConfig {
+  readonly selectedPids: readonly string[]
+  readonly onPidsChange: (pids: string[]) => void
 }
 
 export interface DiagnosisState {
@@ -55,6 +62,7 @@ export interface DashboardSectionProps {
   readonly selectedId: string | null
   readonly selectedScenario: Scenario | null
   readonly telemetry: TelemetryConfig
+  readonly pidSelection: PidSelectionConfig
   readonly diagnosis: DiagnosisState
   readonly cognitive: CognitiveState
   readonly ecu: EcuState
@@ -68,6 +76,7 @@ export function DashboardSection({
   selectedId,
   selectedScenario,
   telemetry,
+  pidSelection,
   diagnosis,
   cognitive,
   ecu,
@@ -75,7 +84,7 @@ export function DashboardSection({
   onDtcSelect,
   onChatSend,
 }: DashboardSectionProps) {
-  const { rpm, coolant, speed, intake, rawSummary } = telemetry
+  const { rpm, coolant, speed, intake, rawSummary, pids, readings } = telemetry
   const { loading, streamOk, result, dtcCodes, selectedDtc } = diagnosis
   const { ecus, loading: ecusLoading, error: ecusError } = ecu
 
@@ -93,6 +102,8 @@ export function DashboardSection({
             canDiagnose={!!selectedId}
             telemetryStatus={streamOk ? 'Transmisión ECU · 1 Hz' : 'Reconectando…'}
             onDiagnose={onDiagnose}
+            pids={pids}
+            readings={readings}
           />
           <PidsTable
             parsedValues={result?.parsedValues ?? null}
@@ -100,6 +111,9 @@ export function DashboardSection({
             aiRows={cognitive.pidRows}
             aiLoading={cognitive.loading}
             aiError={cognitive.error}
+            selectable
+            selectedPids={pidSelection.selectedPids}
+            onPidsChange={pidSelection.onPidsChange}
           />
         </div>
       )

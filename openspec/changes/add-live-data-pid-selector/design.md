@@ -51,6 +51,21 @@ UI (PidsTable checkboxes)
 - Más de 8 PIDs a 1 Hz no drena la cola
 - **Decisión**: validación Zod `pids.max(8)` en el endpoint.
 
+**D7. Respuesta genérica: `readings` (añadido en implementación)**
+- La spec exige "cada PID Mode 01 muestra un checkbox", no solo los 4 con gauge dedicado.
+- El simulador solo modela 7 PIDs (4 por `sensorValues` + acelerador/load/voltaje por `pidValues`);
+  un ELM327 real lee los 16 Mode 01 del catálogo `ALL_SEED_PIDS` vía fórmula.
+- **Decisión**: `getLiveData` devuelve, además de los 4 campos nombrados (backward compat),
+  un array `readings: { code, name, unit, value }[]` enriquecido desde `ALL_SEED_PIDS`
+  para TODOS los PIDs solicitados. Los 4 con gauge dedicado usan sus componentes; el resto
+  se renderiza con un gauge genérico (nombre + valor + unidad).
+
+**D8. Simulador con datos para los 16 Mode 01 (añadido en implementación)**
+- Para que la verificación manual y la UI cubran el catálogo completo, el simulador genera
+  valores plausibles para los 16 PIDs Mode 01, no solo los 7 actuales.
+- **Decisión**: extender `seedScenarios`/`readPidValue` para los 16 Mode 01; los PIDs sin
+  sensor explícito usan un valor derivado estable (no aleatorio) para no romper TDD.
+
 ### Capas Clean Architecture
 
 | Capa | Archivo | Responsabilidad |

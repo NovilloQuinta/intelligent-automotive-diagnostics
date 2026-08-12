@@ -53,7 +53,7 @@ vi.mock("../../../src/components/dashboard/useScenarios", () => ({
   useScenarios: () => mockUseScenarios(),
 }));
 vi.mock("../../../src/components/dashboard/useLiveTelemetry", () => ({
-  useLiveTelemetry: (_selectedId: string) => mockUseLiveTelemetry(),
+  useLiveTelemetry: (_selectedId: string, _pids?: string[]) => mockUseLiveTelemetry(),
 }));
 vi.mock("../../../src/components/dashboard/useDiagnosis", () => ({
   useDiagnosis: () => mockUseDiagnosis(),
@@ -735,5 +735,88 @@ describe("DashboardPage", () => {
 
     expect(screen.getByTestId("connection-usb")).toBeDefined();
     expect(screen.queryByTestId("connection-wifi")).toBeNull();
+  });
+
+  it("should propagate the selected PIDs from PidsTable to TelemetrySection", () => {
+    mockAuthStatus.value = "authed";
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario],
+      selectedId: scenario.id,
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    });
+    mockUseDiagnosis.mockReturnValue({
+      loading: false,
+      result: {
+        rawData: "41 0C 5A",
+        parsedValues: { rpm: 850, coolantTemp: 90, speed: 50, intakeTemp: 35 },
+        dtcCodes: [],
+        diagnosisText: "Sin fallos",
+        severity: "low",
+      },
+      runDiagnosis: vi.fn(),
+    });
+    mockUseLiveTelemetry.mockReturnValue({
+      live: { rpm: 850, speed: 50, coolantTemp: 90, intakeTemp: 35, rawData: "", ts: 1 },
+      streamOk: true,
+      readings: null,
+    });
+
+    render(<DashboardPage />);
+
+    expect(screen.getAllByRole("checkbox")).toHaveLength(4);
+    expect(screen.getByText("Refrigerante")).toBeDefined();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Seleccionar PID 05" }));
+
+    expect(screen.queryByText("Refrigerante")).toBeNull();
+    expect(screen.getByText("RPM")).toBeDefined();
+    expect(screen.getByText("Velocidad")).toBeDefined();
+    expect(screen.getByText("Admisión")).toBeDefined();
+  });
+
+  it("should reset the PID selection to the 4 defaults when the vehicle changes", () => {
+    mockAuthStatus.value = "authed";
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario],
+      selectedId: scenario.id,
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    });
+    mockUseDiagnosis.mockReturnValue({
+      loading: false,
+      result: {
+        rawData: "41 0C 5A",
+        parsedValues: { rpm: 850, coolantTemp: 90, speed: 50, intakeTemp: 35 },
+        dtcCodes: [],
+        diagnosisText: "Sin fallos",
+        severity: "low",
+      },
+      runDiagnosis: vi.fn(),
+    });
+    mockUseLiveTelemetry.mockReturnValue({
+      live: { rpm: 850, speed: 50, coolantTemp: 90, intakeTemp: 35, rawData: "", ts: 1 },
+      streamOk: true,
+      readings: null,
+    });
+
+    const { rerender } = render(<DashboardPage />);
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Seleccionar PID 05" }));
+    expect(screen.queryByText("Refrigerante")).toBeNull();
+
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario],
+      selectedId: "kawa-z900",
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    });
+    rerender(<DashboardPage />);
+
+    expect(screen.getByText("Refrigerante")).toBeDefined();
+    const checked = screen
+      .getAllByRole("checkbox")
+      .filter((c) => (c as HTMLInputElement).checked);
+    expect(checked).toHaveLength(4);
   });
 });

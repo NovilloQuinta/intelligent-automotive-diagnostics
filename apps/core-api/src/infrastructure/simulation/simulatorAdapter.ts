@@ -15,6 +15,22 @@ export class ObdSimulatorRepository implements ObdRepository {
   }
 
   /**
+   * Lee varios PIDs simulados con degradación por PID: un PID que el escenario no
+   * soporta lanza y se omite del Map, el resto mantiene sus valores.
+   */
+  async readPids(mode: string, pids: readonly string[]): Promise<Map<string, number>> {
+    const result = new Map<string, number>()
+    for (const pid of pids) {
+      try {
+        result.set(pid, this.simulator.readPidValue(mode, pid))
+      } catch {
+        // PID no soportado por el escenario: se omite
+      }
+    }
+    return result
+  }
+
+  /**
    * El escenario define la codificacion de cada sensor que modela, asi que `dataBytes` no
    * interviene: no hay una trama real que recortar.
    */

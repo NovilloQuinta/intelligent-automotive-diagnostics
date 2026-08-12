@@ -1,10 +1,13 @@
+import { Fragment } from 'react'
 import { Activity } from 'lucide-react'
 import { RpmGauge } from './RpmGauge'
 import { CoolantBar } from './CoolantBar'
 import { SpeedDisplay } from './SpeedDisplay'
 import { IntakeThermo } from './IntakeThermo'
+import { PidValueGauge } from './PidValueGauge'
 import { DiagnoseButton } from './DiagnoseButton'
-import { COLORS } from './types'
+import { COLORS, type PidReading } from './types'
+import { DEFAULT_LIVE_PIDS, PID_RPM, PID_COOLANT, PID_SPEED, PID_INTAKE } from './pidCatalog'
 
 type TelemetryValues = {
   rpm: number | null
@@ -21,6 +24,39 @@ type Props = {
   canDiagnose: boolean
   telemetryStatus: string
   onDiagnose: () => void
+  /** Short Mode 01 codes to render (no mode prefix). Defaults to {@link DEFAULT_LIVE_PIDS}. */
+  pids?: readonly string[]
+  /** Generic readings from `GET /api/live-data`, used for PIDs without a dedicated gauge. */
+  readings?: readonly PidReading[] | null
+}
+
+/** Maps a short PID code to its dedicated gauge, falling back to the generic {@link PidValueGauge}. */
+function renderGauge(
+  pid: string,
+  values: TelemetryValues,
+  loading: boolean,
+  readings: readonly PidReading[] | null | undefined,
+) {
+  switch (pid) {
+    case PID_RPM:
+      return <RpmGauge value={values.rpm} loading={loading && values.rpm == null} />
+    case PID_COOLANT:
+      return <CoolantBar value={values.coolant} loading={loading && values.coolant == null} />
+    case PID_SPEED:
+      return <SpeedDisplay value={values.speed} loading={loading && values.speed == null} />
+    case PID_INTAKE:
+      return <IntakeThermo value={values.intake} loading={loading && values.intake == null} />
+    default: {
+      const reading = readings?.find((r) => r.code.toUpperCase() === `01 ${pid}`)
+      return (
+        <PidValueGauge
+          name={reading?.name ?? `PID ${pid}`}
+          unit={reading?.unit ?? ''}
+          value={reading?.value ?? null}
+        />
+      )
+    }
+  }
 }
 
 function LiveBadge({ streamOk, loading }: { streamOk: boolean; loading: boolean }) {
@@ -47,8 +83,10 @@ export function TelemetrySection({
   canDiagnose,
   telemetryStatus,
   onDiagnose,
+  pids,
+  readings = null,
 }: Props) {
-  const { rpm, coolant, speed, intake } = values
+  const activePids = pids ?? DEFAULT_LIVE_PIDS
   return (
     <section
       className={`panel relative flex flex-col self-start overflow-hidden p-4 md:p-5 ${loading ? 'scanning' : ''}`}
@@ -66,10 +104,9 @@ export function TelemetrySection({
       <div
         className={`relative grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 ${loading ? 'scan-sweep' : ''}`}
       >
-        <RpmGauge value={rpm} loading={loading && rpm == null} />
-        <CoolantBar value={coolant} loading={loading && coolant == null} />
-        <SpeedDisplay value={speed} loading={loading && speed == null} />
-        <IntakeThermo value={intake} loading={loading && intake == null} />
+        {activePids.map((pid) => (
+          <Fragment key={pid}>{renderGauge(pid, values, loading, readings)}</Fragment>
+        ))}
       </div>
       <DiagnoseButton
         loading={loading}
