@@ -37,11 +37,6 @@ diag.jcodinglabs.com {
         reverse_proxy localhost:8080
     }
 
-    # Logs
-    log {
-        output file /var/log/caddy/diagnostics.log
-    }
-
     # Gzip
     encode gzip zstd
 }
