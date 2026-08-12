@@ -31,6 +31,15 @@ Each development cycle follows three strict phases:
    ```
 3. **Refactor** — Improve readability, extract constants, rename variables, remove duplication. All tests must stay green throughout.
 
+### Running tests during the cycle
+
+- **Red / Green** — run ONLY the test in progress (fast feedback, avoids burning time/tokens on the whole suite):
+  ```bash
+  npx vitest run tests/unit/path/archivo.test.ts   # one file
+  npx vitest run -t "test description"              # by name
+  ```
+- **Full suite** (`pnpm test`) — reserve it for the end of the change and pre-push checks. NOT on every iteration.
+
 ### File layout
 
 - Tests mirror `src/` structure under `tests/unit/`:

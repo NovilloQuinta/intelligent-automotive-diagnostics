@@ -48,8 +48,9 @@ Si la tarea viene de un cambio OpenSpec (tasks.md), carga ADEMÁS:
 
 1. **Cargar contexto** — Skills obligatorios + Engram (`mem_search`)
 2. **Explorar codebase** — Delega a `explore` si necesitas entender componentes o rutas existentes
-3. **RED → GREEN → REFACTOR** — Según el skill `tdd-workflow`
-4. **Verificar** — `pnpm lint && pnpm test && pnpm test:coverage`
+3. **RED → GREEN → REFACTOR** — Según el skill `tdd-workflow`. En cada iteración corre SOLO el test en curso, NUNCA `pnpm test:ui`:
+   `npx vitest run apps/ui/tests/unit/ruta/archivo.test.tsx` (un archivo) o `npx vitest run -t "nombre"` (por nombre)
+4. **Verificar** — Suite completa + checks SOLO al cerrar el cambio / pre-push: `pnpm lint:ui && pnpm test:ui`
 5. **Guardar en Engram** — `mem_save` solo para decisiones/discoveries no obvios
 
 ## Modo Pipeline
