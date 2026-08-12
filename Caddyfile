@@ -22,13 +22,13 @@ diag.jcodinglabs.com {
         max_size 1048576  # 1 MB — diagnóstico con contexto LLM
     }
 
-    # API — proxy al contenedor core-api
-    handle_path /api/* {
+    # API — proxy al contenedor core-api (conservando el prefijo /api)
+    handle /api/* {
         reverse_proxy localhost:4000
     }
 
-    # Swagger UI
-    handle_path /api-docs* {
+    # Swagger UI / OpenAPI JSON
+    handle /api-docs* {
         reverse_proxy localhost:4000
     }
 

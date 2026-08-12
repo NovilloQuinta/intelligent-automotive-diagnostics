@@ -1,6 +1,8 @@
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
+import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
+import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import { DtcCode } from '@/domain/value-objects/dtcCode.js'
-import { EcuInfo } from '@/domain/entities/ecuInfo.js'
+import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
@@ -48,12 +50,19 @@ const MODE_UDS = '22'
 export class Elm327TcpRepository implements ObdRepository {
   private readonly client: Elm327Transport
   private readonly pidFormulas: PidFormulaCatalog
+  private readonly vehicleRepo?: VehicleRepository
 
-  constructor(transport: Elm327Transport) {
+  constructor(transport: Elm327Transport, vehicleRepo?: VehicleRepository, logger?: LoggerPort) {
     this.client = transport
+    this.vehicleRepo = vehicleRepo
     this.pidFormulas = createPidFormulaCatalog(toFormulaEntries(ALL_SEED_PIDS))
     this.client.connect().catch((err: unknown) => {
-      console.error('[Elm327TcpRepository] eager connect failed:', err)
+      const message = '[Elm327TcpRepository] eager connect failed'
+      if (logger) {
+        logger.error(message, { err: String(err) })
+      } else {
+        console.error(message + ':', err)
+      }
     })
   }
 
@@ -69,9 +78,24 @@ export class Elm327TcpRepository implements ObdRepository {
   }
 
   async readPid(mode: string, pid: string): Promise<number> {
-    const entry = this.pidFormulas.get(mode, pid)
-    const bytes = await this.fetchPidBytes(mode, pid, entry?.dataBytes ?? 0)
-    return this.pidFormulas.apply(mode, pid, bytes)
+    // Normaliza a mayúsculas para ser coherente con `pidKey` del catálogo estándar
+    // (case-insensitive) y con los PidCodes almacenados en BD (uppercase).
+    const modeUpper = mode.toUpperCase()
+    const pidUpper = pid.toUpperCase()
+    const entry = this.pidFormulas.get(modeUpper, pidUpper)
+
+    // Cerrar el loop de lectura: los PIDs Mode 22 (o cualquier PID fuera del
+    // catálogo estándar) se resuelven desde la BD vía el puerto VehicleRepository.
+    if (this.vehicleRepo && (modeUpper === MODE_UDS || !entry)) {
+      const definition = await this.vehicleRepo.findPidDefinition(modeUpper, pidUpper)
+      if (definition) {
+        const bytes = await this.fetchPidBytes(modeUpper, pidUpper, definition.dataBytes)
+        return definition.formula.evaluate(bytes)
+      }
+    }
+
+    const bytes = await this.fetchPidBytes(modeUpper, pidUpper, entry?.dataBytes ?? 0)
+    return this.pidFormulas.apply(modeUpper, pidUpper, bytes)
   }
 
   async readPidRaw(mode: string, pid: string, dataBytes: number): Promise<number[]> {
@@ -108,14 +132,28 @@ export class Elm327TcpRepository implements ObdRepository {
     })
   }
 
+  /** Resuelve la descripcion de un DTC: catalogo estandar J2012, o BD si es manufacturer-specific.
+   * Nunca inventa: si ninguno de los dos la conoce devuelve {@code ''}.
+   */
+  private async resolveDtcDescription(code: string): Promise<string> {
+    const normalized = code.toUpperCase()
+    const known = dtcDescribe(normalized)
+    if (known !== '' || !this.vehicleRepo) return known
+    const definition = await this.vehicleRepo.findDtcDefinitionByCode(normalized)
+    return definition?.description ?? ''
+  }
+
   /** Envia un comando de lectura DTC y parsea la respuesta con el header del modo indicado. */
   private async fetchDtcCodes(mode: '03' | '07' | '0A'): Promise<DtcCode[]> {
     const raw = await this.client.sendCommand(mode)
     try {
-      return parseDtcResponse(raw, mode).map(([b1, b2]) => {
-        const code = DtcCode.decodeFromBytes(b1, b2)
-        return new DtcCode({ code, description: dtcDescribe(code) })
-      })
+      const codes = parseDtcResponse(raw, mode).map(([b1, b2]) => DtcCode.decodeFromBytes(b1, b2))
+      return await Promise.all(
+        codes.map(
+          async (code) =>
+            new DtcCode({ code, description: await this.resolveDtcDescription(code) }),
+        ),
+      )
     } catch (err) {
       if (err instanceof Elm327ParseError) return []
       throw err
@@ -180,16 +218,8 @@ export class Elm327TcpRepository implements ObdRepository {
   }
 
   async getEcuInfo(): Promise<EcuInfo[]> {
-    return [
-      new EcuInfo({
-        id: 0,
-        vehicleId: 0,
-        name: 'Engine Control Unit',
-        requestAddr: '7E0',
-        responseAddr: '7E8',
-        type: 'ECM',
-        protocol: 'ISO 15765-4 (CAN 11/500)',
-      }),
-    ]
+    // Sin ECU hardcodeada: el descubrimiento real de ECUs se hace en la capa de
+    // diagnóstico (scan CAN), no con un stub sintético del adaptador.
+    return []
   }
 }

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `pid_definitions_mode_pid_manufacturer_model_unique` ON `pid_definitions` (`mode`,`pid_code`,`manufacturer`,`model`);

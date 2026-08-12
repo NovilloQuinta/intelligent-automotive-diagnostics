@@ -1,0 +1,139 @@
+import { describe, it, expect, vi, beforeAll } from 'vitest'
+import Database from 'better-sqlite3'
+import { drizzle } from 'drizzle-orm/better-sqlite3'
+import * as schema from '@/infrastructure/persistence/sqlite/schema.js'
+import { SqliteVehicleRepository } from '@/infrastructure/persistence/sqlite/vehicleRepository.js'
+import { seedManufacturerCatalog } from '@/infrastructure/persistence/sqlite/seedManufacturerCatalog.js'
+import { PidDefinition } from '@/domain/entities/pidDefinition.js'
+import { PidCode } from '@/domain/value-objects/pidCode.js'
+import type { LoggerPort } from '@/application/ports/LoggerPort.js'
+
+const DDL = `
+  CREATE TABLE IF NOT EXISTS pid_definitions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    vehicle_id INTEGER,
+    ecu_id INTEGER,
+    mode TEXT NOT NULL,
+    pid_code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    formula TEXT NOT NULL,
+    unit TEXT,
+    data_bytes INTEGER NOT NULL DEFAULT 1,
+    pid_type TEXT NOT NULL DEFAULT 'formula',
+    min_value REAL,
+    max_value REAL,
+    manufacturer TEXT,
+    model TEXT,
+    confidence REAL NOT NULL DEFAULT 1.0,
+    source TEXT NOT NULL DEFAULT 'manual',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+
+  CREATE UNIQUE INDEX IF NOT EXISTS pid_definitions_mode_pid_manufacturer_model_unique
+    ON pid_definitions (mode, pid_code, manufacturer, model);
+
+  CREATE TABLE IF NOT EXISTS dtc_definitions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    manufacturer TEXT NOT NULL,
+    model TEXT NOT NULL,
+    code TEXT NOT NULL,
+    description TEXT,
+    confidence REAL NOT NULL DEFAULT 0.5,
+    source TEXT NOT NULL DEFAULT 'web',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(manufacturer, model, code)
+  );
+`
+
+describe('seedManufacturerCatalog', () => {
+  let db: ReturnType<typeof drizzle>
+  let repo: SqliteVehicleRepository
+  let logger: LoggerPort
+
+  beforeAll(() => {
+    const sqlite = new Database(':memory:')
+    sqlite.exec(DDL)
+    db = drizzle(sqlite, { schema })
+    repo = new SqliteVehicleRepository(db)
+    logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+  })
+
+  it('seeds 20 Mode 22 PIDs and 23 manufacturer-specific DTCs', async () => {
+    await seedManufacturerCatalog(repo, logger)
+
+    const mode22 = await repo.findPidsByMode('22')
+    expect(mode22).toHaveLength(20)
+
+    const dtcs = await db.select().from(schema.dtcDefinitions)
+    expect(dtcs).toHaveLength(23)
+  })
+
+  it('is idempotent: running twice does not duplicate rows', async () => {
+    await seedManufacturerCatalog(repo, logger)
+    await seedManufacturerCatalog(repo, logger)
+
+    const mode22 = await repo.findPidsByMode('22')
+    expect(mode22).toHaveLength(20)
+
+    const dtcs = await db.select().from(schema.dtcDefinitions)
+    expect(dtcs).toHaveLength(23)
+  })
+
+  it('marks seeded data with source "seed" and correct manufacturer/model', async () => {
+    await seedManufacturerCatalog(repo, logger)
+
+    const mode22 = await repo.findPidsByMode('22')
+    expect(mode22.every((p) => p.source === 'seed')).toBe(true)
+
+    const toyota = mode22.filter((p) => p.manufacturer === 'Toyota')
+    expect(toyota).toHaveLength(4)
+    expect(toyota.every((p) => p.model === 'Auris Hybrid')).toBe(true)
+
+    const audi = mode22.filter((p) => p.manufacturer === 'Audi')
+    expect(audi).toHaveLength(16)
+    expect(audi.every((p) => p.model === 'A3')).toBe(true)
+  })
+
+  it('DB unique index rejects duplicate (mode, pid_code, manufacturer, model)', async () => {
+    const pid = new PidDefinition({
+      id: 0,
+      pidCode: new PidCode('22', 'F00F'),
+      name: 'Test DID',
+      formula: 'A',
+      dataBytes: 1,
+      pidType: 'formula',
+      confidence: 1.0,
+      source: 'seed',
+      manufacturer: 'Audi',
+      model: 'A3',
+    })
+
+    await repo.insertPidDefinition(pid)
+
+    await expect(repo.insertPidDefinition(pid)).rejects.toThrow()
+  })
+
+  it('seed PIDs carry maxValue coherent with their formula', async () => {
+    await seedManufacturerCatalog(repo, logger)
+
+    const mode22 = await repo.findPidsByMode('22')
+    const byPid = new Map(mode22.map((p) => [p.pidCode.pid, p]))
+
+    // 1 byte con formula 'A' → max 255
+    expect(byPid.get('F430')!.maxValue).toBe(255)
+    expect(byPid.get('F432')!.maxValue).toBe(255)
+    expect(byPid.get('1035')!.maxValue).toBe(255)
+    expect(byPid.get('F449')!.maxValue).toBe(255)
+    expect(byPid.get('F40D')!.maxValue).toBe(255)
+
+    // (A*256+B)/4 → max 16383.75
+    expect(byPid.get('1130')!.maxValue).toBe(16383.75)
+
+    // (A*256+B)*0.01 o /100 → max 655.35
+    expect(byPid.get('F477')!.maxValue).toBe(655.35)
+    expect(byPid.get('1132')!.maxValue).toBe(655.35)
+    expect(byPid.get('1410')!.maxValue).toBe(655.35)
+    expect(byPid.get('1462')!.maxValue).toBe(655.35)
+  })
+})

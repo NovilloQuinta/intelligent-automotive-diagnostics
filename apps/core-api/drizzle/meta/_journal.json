@@ -29,6 +29,13 @@
       "when": 1786316156139,
       "tag": "0003_supreme_red_shift",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1786559492652,
+      "tag": "0004_striped_dorian_gray",
+      "breakpoints": true
     }
   ]
 }

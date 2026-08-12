@@ -17,6 +17,46 @@ import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import type { PidReading } from '@/domain/entities/pidReading.js'
 import type { DtcDefinition } from '@/domain/entities/dtcDefinition.js'
 
+type PidDefinitionRow = typeof schema.pidDefinitions.$inferSelect
+type DtcDefinitionRow = typeof schema.dtcDefinitions.$inferSelect
+
+/** Mapea una fila de `pid_definitions` a la entidad de dominio {@link PidDefinition}. */
+function toPidDefinition(r: PidDefinitionRow): PidDefinition {
+  return {
+    id: r.id,
+    vehicleId: r.vehicleId ?? undefined,
+    ecuId: r.ecuId ?? undefined,
+    pidCode: new PidCode(r.mode, r.pidCode),
+    name: r.name,
+    description: r.description ?? undefined,
+    formula: new Formula(r.formula),
+    unit: r.unit ?? undefined,
+    dataBytes: r.dataBytes,
+    pidType: r.pidType as PidDefinition['pidType'],
+    minValue: r.minValue ?? undefined,
+    maxValue: r.maxValue ?? undefined,
+    manufacturer: r.manufacturer || undefined,
+    model: r.model || undefined,
+    confidence: r.confidence,
+    source: r.source as PidDefinition['source'],
+    createdAt: r.createdAt ?? undefined,
+  }
+}
+
+/** Mapea una fila de `dtc_definitions` a la entidad de dominio {@link DtcDefinition}. */
+function toDtcDefinition(r: DtcDefinitionRow): DtcDefinition {
+  return {
+    id: r.id,
+    manufacturer: r.manufacturer,
+    model: r.model,
+    code: r.code,
+    description: r.description ?? undefined,
+    confidence: r.confidence,
+    source: r.source,
+    createdAt: r.createdAt ?? undefined,
+  }
+}
+
 /** Implementación de {@link VehicleRepository} con SQLite via Drizzle ORM. */
 export class SqliteVehicleRepository implements VehicleRepository {
   constructor(private readonly db: DiagnosticsDb) {}
@@ -130,8 +170,8 @@ export class SqliteVehicleRepository implements VehicleRepository {
         pidType: pid.pidType,
         minValue: pid.minValue ?? null,
         maxValue: pid.maxValue ?? null,
-        manufacturer: pid.manufacturer ?? null,
-        model: pid.model ?? null,
+        manufacturer: pid.manufacturer ?? '',
+        model: pid.model ?? '',
         confidence: pid.confidence,
         source: pid.source,
         createdAt: new Date().toISOString(),
@@ -159,30 +199,18 @@ export class SqliteVehicleRepository implements VehicleRepository {
       conditions = sql`${conditions} AND ${schema.pidDefinitions.model} = ${model}`
     }
 
-    const rows = await this.db.select().from(schema.pidDefinitions).where(conditions).limit(1)
+    // Orden determinista: prioriza las definiciones de mayor confianza (las seed
+    // 0.9-1.0 ganan a los placeholders 'auto' 0.3) y, a igual confianza, la más antigua.
+    const rows = await this.db
+      .select()
+      .from(schema.pidDefinitions)
+      .where(conditions)
+      .orderBy(desc(schema.pidDefinitions.confidence), schema.pidDefinitions.id)
+      .limit(1)
 
     if (rows.length === 0) return null
 
-    const r = rows[0]
-    return {
-      id: r.id,
-      vehicleId: r.vehicleId ?? undefined,
-      ecuId: r.ecuId ?? undefined,
-      pidCode: new PidCode(r.mode, r.pidCode),
-      name: r.name,
-      description: r.description ?? undefined,
-      formula: new Formula(r.formula),
-      unit: r.unit ?? undefined,
-      dataBytes: r.dataBytes,
-      pidType: r.pidType as PidDefinition['pidType'],
-      minValue: r.minValue ?? undefined,
-      maxValue: r.maxValue ?? undefined,
-      manufacturer: r.manufacturer ?? undefined,
-      model: r.model ?? undefined,
-      confidence: r.confidence,
-      source: r.source as PidDefinition['source'],
-      createdAt: r.createdAt ?? undefined,
-    }
+    return toPidDefinition(rows[0])
   }
 
   async findPidsByVehicle(vehicleId: number): Promise<PidDefinition[]> {
@@ -191,25 +219,16 @@ export class SqliteVehicleRepository implements VehicleRepository {
       .from(schema.pidDefinitions)
       .where(eq(schema.pidDefinitions.vehicleId, vehicleId))
 
-    return rows.map((r) => ({
-      id: r.id,
-      vehicleId: r.vehicleId ?? undefined,
-      ecuId: r.ecuId ?? undefined,
-      pidCode: new PidCode(r.mode, r.pidCode),
-      name: r.name,
-      description: r.description ?? undefined,
-      formula: new Formula(r.formula),
-      unit: r.unit ?? undefined,
-      dataBytes: r.dataBytes,
-      pidType: r.pidType as PidDefinition['pidType'],
-      minValue: r.minValue ?? undefined,
-      maxValue: r.maxValue ?? undefined,
-      manufacturer: r.manufacturer ?? undefined,
-      model: r.model ?? undefined,
-      confidence: r.confidence,
-      source: r.source as PidDefinition['source'],
-      createdAt: r.createdAt ?? undefined,
-    }))
+    return rows.map((r) => toPidDefinition(r))
+  }
+
+  async findPidsByMode(mode: string): Promise<PidDefinition[]> {
+    const rows = await this.db
+      .select()
+      .from(schema.pidDefinitions)
+      .where(eq(schema.pidDefinitions.mode, mode))
+
+    return rows.map((r) => toPidDefinition(r))
   }
 
   async insertPidReading(reading: PidReading): Promise<PidReading> {
@@ -251,7 +270,9 @@ export class SqliteVehicleRepository implements VehicleRepository {
     sessionId: number,
     result?: { resultJson: string; severity: SessionSeverity; dtcCount: number },
   ): Promise<void> {
-    const updates: Record<string, unknown> = { endedAt: new Date().toISOString() }
+    const updates: Partial<typeof schema.diagnosisSessions.$inferInsert> = {
+      endedAt: new Date().toISOString(),
+    }
     if (result) {
       updates.resultJson = result.resultJson
       updates.severity = result.severity
@@ -351,46 +372,57 @@ export class SqliteVehicleRepository implements VehicleRepository {
 
     if (rows.length === 0) return null
 
-    const r = rows[0]
-    return {
-      id: r.id,
-      manufacturer: r.manufacturer,
-      model: r.model,
-      code: r.code,
-      description: r.description ?? undefined,
-      confidence: r.confidence,
-      source: r.source,
-      createdAt: r.createdAt ?? undefined,
-    }
+    return toDtcDefinition(rows[0])
+  }
+
+  async findDtcDefinitionByCode(code: string): Promise<DtcDefinition | null> {
+    const rows = await this.db
+      .select()
+      .from(schema.dtcDefinitions)
+      .where(eq(schema.dtcDefinitions.code, code))
+      .orderBy(desc(schema.dtcDefinitions.confidence), schema.dtcDefinitions.id)
+      .limit(1)
+
+    if (rows.length === 0) return null
+
+    return toDtcDefinition(rows[0])
   }
 
   async upsertDtcDefinition(dtc: Omit<DtcDefinition, 'id' | 'createdAt'>): Promise<DtcDefinition> {
     const existing = await this.findDtcDefinition(dtc.manufacturer, dtc.model, dtc.code)
-    if (existing) return existing
+    if (existing) {
+      const updated = await this.db
+        .update(schema.dtcDefinitions)
+        .set({
+          description: dtc.description ?? null,
+          confidence: dtc.confidence,
+          source: dtc.source,
+        })
+        .where(eq(schema.dtcDefinitions.id, existing.id))
+        .returning()
+      return toDtcDefinition(updated[0])
+    }
 
-    const result = await this.db
-      .insert(schema.dtcDefinitions)
-      .values({
-        manufacturer: dtc.manufacturer,
-        model: dtc.model,
-        code: dtc.code,
-        description: dtc.description ?? null,
-        confidence: dtc.confidence,
-        source: dtc.source,
-        createdAt: new Date().toISOString(),
-      })
-      .returning()
-
-    const r = result[0]
-    return {
-      id: r.id,
-      manufacturer: r.manufacturer,
-      model: r.model,
-      code: r.code,
-      description: r.description ?? undefined,
-      confidence: r.confidence,
-      source: r.source,
-      createdAt: r.createdAt ?? undefined,
+    try {
+      const result = await this.db
+        .insert(schema.dtcDefinitions)
+        .values({
+          manufacturer: dtc.manufacturer,
+          model: dtc.model,
+          code: dtc.code,
+          description: dtc.description ?? null,
+          confidence: dtc.confidence,
+          source: dtc.source,
+          createdAt: new Date().toISOString(),
+        })
+        .returning()
+      return toDtcDefinition(result[0])
+    } catch (err) {
+      // Carrera con un insert concurrente de la misma clave única
+      // (manufacturer + model + code): re-consultar y devolver la fila ganadora.
+      const raced = await this.findDtcDefinition(dtc.manufacturer, dtc.model, dtc.code)
+      if (raced) return raced
+      throw err
     }
   }
 

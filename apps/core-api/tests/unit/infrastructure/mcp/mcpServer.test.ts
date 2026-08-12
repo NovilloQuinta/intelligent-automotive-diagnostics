@@ -8,6 +8,7 @@ import type { DiagnosisVectorRepository } from '@/application/ports/DiagnosisVec
 import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
+import { PidCode } from '@/domain/value-objects/pidCode.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
 import { ToolNotFoundError } from '@/infrastructure/mcp/errors.js'
@@ -53,11 +54,13 @@ function mockVehicleRepo(overrides: Partial<VehicleRepository> = {}): VehicleRep
     insertPidDefinition: vi.fn(),
     findPidDefinition: vi.fn(),
     findPidsByVehicle: vi.fn().mockResolvedValue([]),
+    findPidsByMode: vi.fn().mockResolvedValue([]),
     insertPidReading: vi.fn(),
     createSession: vi.fn(),
     endSession: vi.fn(),
     findDtcDefinition: vi.fn().mockResolvedValue(null),
     upsertDtcDefinition: vi.fn(),
+    findDtcDefinitionByCode: vi.fn().mockResolvedValue(null),
     findEcuByAddress: vi.fn().mockResolvedValue(null),
     updateEcuDiscoveredAt: vi.fn(),
     ...overrides,
@@ -97,6 +100,35 @@ const samplePids: PidDefinition[] = [
     pidType: 'formula',
     confidence: 0.9,
     source: 'manual',
+  },
+]
+
+const sampleMode22Pids: PidDefinition[] = [
+  {
+    id: 3,
+    pidCode: new PidCode('22', '0300'),
+    name: 'TCU Odometer',
+    formula: '(A<<24|B<<16|C<<8|D)/10',
+    unit: 'km',
+    dataBytes: 4,
+    pidType: 'formula',
+    confidence: 0.9,
+    source: 'seed',
+    manufacturer: 'Toyota',
+    model: 'Auris Hybrid',
+  },
+  {
+    id: 4,
+    pidCode: new PidCode('22', '0400'),
+    name: 'ECM Odometer',
+    formula: '(A<<24|B<<16|C<<8|D)/10',
+    unit: 'km',
+    dataBytes: 4,
+    pidType: 'formula',
+    confidence: 0.9,
+    source: 'seed',
+    manufacturer: 'Toyota',
+    model: 'Auris Hybrid',
   },
 ]
 
@@ -175,11 +207,15 @@ describe('McpServer', () => {
     })
 
     it('get_available_pids should return Mode 01 scan + Mode 22 catalog', async () => {
-      const vRepo = mockVehicleRepo({ findPidsByVehicle: vi.fn().mockResolvedValue([]) })
+      const vRepo = mockVehicleRepo({
+        findPidsByVehicle: vi.fn().mockResolvedValue([]),
+        findPidsByMode: vi.fn().mockResolvedValue(sampleMode22Pids),
+      })
       const mcp = createMcpServer(mockObdRepo(), vRepo)
 
       const result = await mcp.callTool('get_available_pids', { vehicleId: 1 })
 
+      expect(vRepo.findPidsByMode).toHaveBeenCalledWith('22')
       expect(result.content[0].text).toContain('01 0C')
       expect(result.content[0].text).toContain('TCU Odometer')
       expect(result.content[0].text).toContain('ECM Odometer')

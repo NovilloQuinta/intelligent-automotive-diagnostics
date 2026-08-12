@@ -1,8 +1,9 @@
 /**
  * Subconjunto del catalogo SAE J2012 de descripciones de DTC.
  *
- * Contiene los codigos de los escenarios del emulador (P0301, P0401, P2002)
- * mas los genericos P0xxx que un coche real puede reportar en la demo.
+ * Contiene SOLO los codigos estandar P0xxx que un coche real puede reportar en
+ * la demo. Los codigos manufacturer-specific (P1xxx, P2xxx, P24xx, etc.) viven
+ * en la BD (tabla `dtc_definitions`) via `seedManufacturerCatalog`, no en codigo.
  *
  * Un codigo ausente del catalogo se entrega con {@link dtcDescribe description: ''}.
  * Nunca se deriva la descripcion de la familia del codigo ni se inventa:
@@ -108,47 +109,6 @@ const DTC_DESCRIPTIONS: Record<string, string> = {
   P0722: 'Output Speed Sensor Circuit No Signal',
   P0730: 'Incorrect Gear Ratio',
   P0740: 'Torque Converter Clutch Circuit Malfunction',
-
-  // ===== P10xx — Manufacturer-specific (VAG EA288) =====
-  P1004: 'Intake Manifold Runner Control Valve Malfunction',
-  P1011: 'Fuel Rail Pressure Too Low',
-
-  // ===== P11xx — Manufacturer-specific =====
-  P1128: 'Fuel Trim System Too Lean (Bank 1, Multiplicative)',
-  P1136: 'Long Term Fuel Trim Additive Fuel System Too Lean (Bank 1)',
-
-  // ===== P14xx — Manufacturer-specific, EGR =====
-  P1403: 'Exhaust Gas Recirculation Valve Position Sensor Circuit Malfunction',
-
-  // ===== P16xx — Manufacturer-specific =====
-  P1602: 'Engine Control Module Supply Voltage Too Low',
-
-  // ===== P20xx — Auxiliary Emission Controls (Diesel-specific) =====
-  P2002: 'Diesel Particulate Filter Efficiency Below Threshold (Bank 1)',
-  P2004: 'Intake Manifold Runner Control Stuck Open (Bank 1)',
-  P2006: 'Intake Manifold Runner Control Stuck Closed (Bank 1)',
-  P2008: 'Intake Manifold Runner Control Circuit/Open (Bank 1)',
-  P2015: 'Intake Manifold Runner Position Sensor/Switch Circuit Range/Performance (Bank 1)',
-  P2031: 'Exhaust Gas Temperature Sensor Circuit (Bank 1, Sensor 2)',
-  P2080: 'Exhaust Gas Temperature Sensor Circuit Range/Performance (Bank 1, Sensor 1)',
-  P2100: 'Throttle Actuator Control Motor Circuit/Open',
-  P2101: 'Throttle Actuator Control Motor Circuit Range/Performance',
-
-  // ===== P21xx — Air and Fuel Metering (Throttle) =====
-  P2111: 'Throttle Actuator Control System — Stuck Open',
-
-  // ===== P24xx — Diesel Particulate Filter =====
-  P244B: 'Diesel Particulate Filter Differential Pressure Too High',
-  P2454: 'Diesel Particulate Filter Pressure Sensor "A" Circuit Low',
-  P2459: 'Diesel Particulate Filter Regeneration Frequency',
-  P2463: 'Diesel Particulate Filter — Soot Accumulation',
-  P246C: 'Diesel Particulate Filter Restriction — Forced Engine Shutdown',
-
-  // ===== P25xx — Turbocharger Boost Control =====
-  P2564: 'Turbocharger Boost Control Position Sensor Circuit Low',
-
-  // ===== P26xx — ECM/PCM =====
-  P2610: 'ECM/PCM Internal Engine Off Timer Performance',
 }
 
 /**

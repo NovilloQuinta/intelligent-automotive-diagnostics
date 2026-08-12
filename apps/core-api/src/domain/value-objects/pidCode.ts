@@ -18,6 +18,12 @@ export class PidCode {
   readonly mode: string
   readonly pid: string
 
+  /**
+   * @param mode - Modo OBD-II (2 digitos hex, ej. '01', '22').
+   * @param pid - Codigo PID/DID (2-4 digitos hex, ej. '0C', '1130').
+   * @throws {PidCodeError} Si el modo o el PID no cumplen el formato hex, o si un
+   *   modo estandar (Service 01-09) recibe un PID de mas de 2 digitos.
+   */
   constructor(mode: string, pid: string) {
     if (!MODE_REGEX.test(mode)) {
       throw new PidCodeError(`Invalid OBD mode: "${mode}". Must be 2 hex digits.`)

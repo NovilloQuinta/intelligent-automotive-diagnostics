@@ -347,6 +347,59 @@ describe('SqliteVehicleRepository', () => {
       expect(result.source).toBe('llm_guess')
       expect(result.confidence).toBe(0.75)
     })
+
+    it('should find all PIDs of a mode from the global catalog', async () => {
+      await repo.insertPidDefinition({
+        ...rpmPid(),
+        pidCode: new PidCode('22', '1130'),
+        name: 'Engine Speed',
+        formula: '(A*256+B)/4',
+        manufacturer: 'Audi',
+        model: 'A3',
+      })
+
+      const mode22 = await repo.findPidsByMode('22')
+
+      expect(mode22.map((p) => p.pidCode.pid)).toContain('1130')
+      expect(mode22.every((p) => p.pidCode.mode === '22')).toBe(true)
+    })
+
+    it('should return an empty array for a mode with no PIDs', async () => {
+      const result = await repo.findPidsByMode('FE')
+
+      expect(result).toEqual([])
+    })
+
+    it('findPidDefinition without manufacturer/model returns the highest-confidence match deterministically', async () => {
+      await repo.insertPidDefinition({
+        vehicleId,
+        ecuId,
+        pidCode: new PidCode('22', '1234'),
+        name: 'Unknown DID',
+        formula: 'A*256+B',
+        dataBytes: 2,
+        pidType: 'formula',
+        confidence: 0.3,
+        source: 'auto',
+      })
+      await repo.insertPidDefinition({
+        pidCode: new PidCode('22', '1234'),
+        name: 'Real DID',
+        formula: '(A*256+B)/4',
+        dataBytes: 2,
+        pidType: 'formula',
+        confidence: 1.0,
+        source: 'seed',
+        manufacturer: 'Audi',
+        model: 'A3',
+      })
+
+      const result = await repo.findPidDefinition('22', '1234')
+
+      expect(result).not.toBeNull()
+      expect(result!.name).toBe('Real DID')
+      expect(result!.confidence).toBe(1.0)
+    })
   })
 
   describe('pidReadings', () => {
@@ -580,7 +633,7 @@ describe('SqliteVehicleRepository', () => {
       expect(result.source).toBe('web')
     })
 
-    it('upsertDtcDefinition returns existing on duplicate manufacturer+model+code', async () => {
+    it('upsertDtcDefinition updates existing on duplicate manufacturer+model+code', async () => {
       const first = await repo.upsertDtcDefinition(sampleDtc)
 
       const second = await repo.upsertDtcDefinition({
@@ -590,8 +643,8 @@ describe('SqliteVehicleRepository', () => {
       })
 
       expect(second.id).toBe(first.id)
-      expect(second.description).toBe('Cylinder 1 Misfire Detected')
-      expect(second.confidence).toBe(0.85)
+      expect(second.description).toBe('Updated description')
+      expect(second.confidence).toBe(0.9)
     })
 
     it('findDtcDefinition returns found definition', async () => {
@@ -608,6 +661,47 @@ describe('SqliteVehicleRepository', () => {
       const result = await repo.findDtcDefinition('Ford', 'Focus', 'P9999')
 
       expect(result).toBeNull()
+    })
+
+    it('findDtcDefinitionByCode returns found definition by code only', async () => {
+      await repo.upsertDtcDefinition(sampleDtc)
+
+      const result = await repo.findDtcDefinitionByCode('P0301')
+
+      expect(result).not.toBeNull()
+      expect(result!.code).toBe('P0301')
+      expect(result!.manufacturer).toBe('Toyota')
+    })
+
+    it('findDtcDefinitionByCode returns null for unknown code', async () => {
+      const result = await repo.findDtcDefinitionByCode('P9999')
+
+      expect(result).toBeNull()
+    })
+
+    it('findDtcDefinitionByCode returns the highest-confidence match deterministically', async () => {
+      await repo.upsertDtcDefinition({
+        manufacturer: 'Audi',
+        model: 'A3',
+        code: 'P1234',
+        description: 'Low confidence',
+        confidence: 0.3,
+        source: 'auto',
+      })
+      await repo.upsertDtcDefinition({
+        manufacturer: 'VW',
+        model: 'Golf',
+        code: 'P1234',
+        description: 'High confidence',
+        confidence: 0.9,
+        source: 'seed',
+      })
+
+      const result = await repo.findDtcDefinitionByCode('P1234')
+
+      expect(result).not.toBeNull()
+      expect(result!.manufacturer).toBe('VW')
+      expect(result!.confidence).toBe(0.9)
     })
   })
 
