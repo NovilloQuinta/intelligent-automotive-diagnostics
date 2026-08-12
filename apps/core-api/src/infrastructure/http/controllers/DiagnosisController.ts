@@ -14,6 +14,8 @@ import {
 import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
+import { ALL_SEED_PIDS } from '@/infrastructure/persistence/sqlite/seed-pids.js'
+import { MODE_CURRENT_DATA } from '@/domain/pids.js'
 
 const ERROR_MESSAGES = {
   scenarioNotFound: 'Scenario not found',
@@ -88,7 +90,33 @@ const { docker: EcuInfoQuerySchema, tcp: EcuInfoQueryTcpSchema } = scenarioSchem
 
 const { docker: VehicleInfoQuerySchema, tcp: VehicleInfoQueryTcpSchema } = scenarioSchemas({})
 
-const { docker: LiveDataQuerySchema, tcp: LiveDataQueryTcpSchema } = scenarioSchemas({})
+/** Códigos de PID Mode 01 válidos (SAE J1979) según el catálogo de seed data. */
+const MODE_01_PID_CODES = new Set(
+  ALL_SEED_PIDS.filter((p) => p.pidCode.mode === MODE_CURRENT_DATA).map((p) => p.pidCode.pid),
+)
+
+/** Número máximo de PIDs simultáneos en un comando multi-PID (design D6). */
+const MAX_LIVE_PIDS = 8
+
+/** Query param `pids` opcional: lista separada por comas de códigos de PID Mode 01. */
+const PidsQuerySchema = z
+  .string()
+  .optional()
+  .transform((raw) =>
+    raw === undefined || raw.trim() === ''
+      ? undefined
+      : raw.split(',').map((p) => p.trim().toUpperCase()),
+  )
+  .refine((pids) => pids === undefined || pids.length <= MAX_LIVE_PIDS, {
+    message: `Maximum ${MAX_LIVE_PIDS} PIDs allowed`,
+  })
+  .refine((pids) => pids === undefined || pids.every((pid) => MODE_01_PID_CODES.has(pid)), {
+    message: 'Invalid PID code',
+  })
+
+const { docker: LiveDataQuerySchema, tcp: LiveDataQueryTcpSchema } = scenarioSchemas({
+  pids: PidsQuerySchema,
+})
 
 const { docker: ClearDtcBodySchema, tcp: ClearDtcBodyTcpSchema } = scenarioSchemas({})
 
@@ -268,7 +296,7 @@ export class DiagnosisController {
     }
 
     try {
-      const result = await this.service.getLiveData(parsed.data.scenarioId)
+      const result = await this.service.getLiveData(parsed.data.scenarioId, parsed.data.pids)
       res.status(200).json(result)
     } catch (err) {
       if (this.respondIfCommonError(err, res)) return
@@ -433,7 +461,10 @@ export class DiagnosisController {
     }
   }
 
-  private selectSchema<T>(required: z.ZodType<T>, optional: z.ZodType<T>): z.ZodType<T> {
+  private selectSchema<T>(
+    required: z.ZodType<T, z.ZodTypeDef, unknown>,
+    optional: z.ZodType<T, z.ZodTypeDef, unknown>,
+  ): z.ZodType<T, z.ZodTypeDef, unknown> {
     return this.service.isDirectConnection ? optional : required
   }
 

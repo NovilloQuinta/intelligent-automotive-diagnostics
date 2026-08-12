@@ -10,6 +10,7 @@ import type {
   EcuInfo,
   FreezeFrame,
   LoginInput,
+  PidReading,
   RegisterInput,
   Scenario,
   UpdateProfileInput,
@@ -245,6 +246,8 @@ export type LiveDataResponse = {
   coolantTemp: number | null
   speed: number | null
   intakeTemp: number | null
+  /** Generic per-PID readings (one entry per requested PID), used for gauges without a dedicated widget. */
+  readings: PidReading[]
 }
 
 export type PidObservation = {
@@ -455,12 +458,16 @@ export const api = {
   },
 
   /**
-   * GET /api/live-data — reads the four dashboard PIDs from the vehicle.
+   * GET /api/live-data — reads the dashboard PIDs from the vehicle.
    *
-   * A `null` field means that single PID failed; the others keep their value.
+   * `pids` are short Mode 01 codes (e.g. `['0C', '0D']`); when omitted the
+   * backend returns the 4 defaults. A `null` field means that single PID
+   * failed; the others keep their value.
    */
-  async getLiveData(scenarioId: string): Promise<LiveDataResponse> {
-    const res = await apiFetch(`/api/live-data?scenarioId=${encodeURIComponent(scenarioId)}`)
+  async getLiveData(scenarioId: string, pids?: readonly string[]): Promise<LiveDataResponse> {
+    const query = new URLSearchParams({ scenarioId })
+    if (pids && pids.length > 0) query.set('pids', pids.join(','))
+    const res = await apiFetch(`/api/live-data?${query.toString()}`)
     await assertOk(res, GENERIC_ERROR_MESSAGE)
     return (await res.json()) as LiveDataResponse
   },

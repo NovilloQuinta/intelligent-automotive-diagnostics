@@ -52,17 +52,26 @@ import {
   PID_RPM,
   PID_SPEED,
   PID_INTAKE_TEMP,
+  DEFAULT_LIVE_PIDS,
 } from '@/domain/pids.js'
 
 const COGNITIVE_DIAGNOSIS_TIMEOUT_MS = 60_000
 
-/** Nombre legible de un PID Mode 01 por su código hex (ej. "0C" → "Engine RPM"). */
-const PID_NAMES: Record<string, string> = Object.fromEntries(
-  ALL_SEED_PIDS.filter((p) => p.pidCode.mode === MODE_CURRENT_DATA).map((p) => [
-    p.pidCode.pid,
-    p.name,
-  ]),
-)
+/**
+ * Metadatos de presentación (nombre + unidad) de los PIDs Mode 01 del catálogo
+ * {@link ALL_SEED_PIDS}, indexados por código hex (ej. "0C" → "Engine RPM"/"rpm").
+ *
+ * Se usa `ALL_SEED_PIDS` (en inglés, SAE J1979) y no `PID_OBSERVATION_CATALOG`
+ * (español) porque este último solo define 7 PIDs y la respuesta genérica
+ * `readings` debe cubrir los 16 Mode 01 para poder mostrar un gauge por PID.
+ */
+const PID_METADATA: ReadonlyMap<string, { readonly name: string; readonly unit: string }> =
+  new Map(
+    ALL_SEED_PIDS.filter((p) => p.pidCode.mode === MODE_CURRENT_DATA).map((p) => [
+      p.pidCode.pid,
+      { name: p.name, unit: p.unit ?? '' },
+    ]),
+  )
 
 /** Descriptor de un escenario de vehiculo disponible para diagnostico. */
 export interface ScenarioDescriptor {
@@ -158,6 +167,18 @@ export interface TelemetryOutput {
   coolantTemp: number | null
   speed: number | null
   intakeTemp: number | null
+}
+
+/** Lectura genérica de un PID en la respuesta `readings` de {@link DiagnosisService.getLiveData}. */
+export interface PidReading {
+  /** Clave compuesta modo + PID separados por espacio (ej. "01 0C"). */
+  readonly code: string
+  /** Nombre legible del PID (del catálogo `ALL_SEED_PIDS`). */
+  readonly name: string
+  /** Unidad física del valor (ej. "rpm", "°C"). */
+  readonly unit: string
+  /** Valor físico resuelto; `null` si la lectura falló (NO DATA). */
+  readonly value: number | null
 }
 
 /** Dependencias de {@link DiagnosisService}. */
@@ -261,31 +282,52 @@ export class DiagnosisService {
   }
 
   /**
-   * Lee los 4 PIDs del dashboard en tiempo real con degradacion por PID.
+   * Lee los PIDs del dashboard en tiempo real con degradacion por PID.
    *
-   * Un PID que falla (NO DATA/parse error) llega a `null`; el resto con valor.
+   * Acepta un array opcional de PIDs; sin el usa {@link DEFAULT_LIVE_PIDS}
+   * (compatibilidad hacia atras). Devuelve:
+   * - Los 4 campos nombrados (`rpm`, `coolantTemp`, `speed`, `intakeTemp`) cuando el PID
+   *   solicitado tiene gauge dedicado; un PID que falla (NO DATA) llega a `null`.
+   * - Un array generico `readings` con una entrada `{ code, name, unit, value }` por PID
+   *   solicitado, enriqueciendo `name`/`unit` desde {@link ALL_SEED_PIDS}. Un PID fallido
+   *   aparece con `value: null` (no se omite la entrada).
+   *
    * La cadencia la controla el cliente (1 Hz via `refetchInterval`).
    *
    * @param scenarioId — Escenario; opcional en modo TCP directo.
+   * @param pids — Codigos de PID Mode 01 opcionales (ej. `['0C', '0D']`).
    * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
    */
-  async getLiveData(scenarioId?: string): Promise<TelemetryOutput> {
+  async getLiveData(
+    scenarioId?: string,
+    pids?: readonly string[],
+  ): Promise<Partial<TelemetryOutput> & { readonly readings: PidReading[] }> {
     const repository = this.resolveRepository(scenarioId)
+    const requested = (pids && pids.length > 0 ? pids : DEFAULT_LIVE_PIDS).map((pid) =>
+      pid.toUpperCase(),
+    )
+    const values = await repository.readPids(MODE_CURRENT_DATA, requested)
+
     const pidToField: Record<string, keyof TelemetryOutput> = {
       [PID_COOLANT_TEMP]: 'coolantTemp',
       [PID_RPM]: 'rpm',
       [PID_SPEED]: 'speed',
       [PID_INTAKE_TEMP]: 'intakeTemp',
     }
-    const result: TelemetryOutput = { rpm: null, coolantTemp: null, speed: null, intakeTemp: null }
-    for (const [pid, field] of Object.entries(pidToField)) {
-      try {
-        result[field] = await repository.readPid(MODE_CURRENT_DATA, pid)
-      } catch {
-        // degradacion por PID: uno que falla no tumba el resto
-      }
+    const result: Partial<TelemetryOutput> = {}
+    const readings: PidReading[] = []
+    for (const pid of requested) {
+      const field = pidToField[pid]
+      if (field) result[field] = values.get(pid) ?? null
+      const metadata = PID_METADATA.get(pid)
+      readings.push({
+        code: `${MODE_CURRENT_DATA} ${pid}`,
+        name: metadata?.name ?? pid,
+        unit: metadata?.unit ?? '',
+        value: values.get(pid) ?? null,
+      })
     }
-    return result
+    return { ...result, readings }
   }
 
   /**
@@ -690,7 +732,9 @@ export class DiagnosisService {
 
     const base = `[${result.severity.toUpperCase()}] ${description}`
     if (result.freezeFrame) {
-      const freezeKeys = result.freezeFrame.pidKeys.map((pid) => PID_NAMES[pid] ?? pid).join(', ')
+      const freezeKeys = result.freezeFrame.pidKeys
+        .map((pid) => PID_METADATA.get(pid)?.name ?? pid)
+        .join(', ')
       return `${base} (freeze frame: ${result.freezeFrame.dtcCode} → ${freezeKeys})`
     }
     return base

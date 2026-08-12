@@ -296,6 +296,76 @@ export const openApiSpec = {
         },
       },
     },
+    '/api/live-data': {
+      get: {
+        tags: ['Diagnosis'],
+        summary: 'Get live telemetry (dynamic PIDs)',
+        description:
+          'Returns live telemetry for the requested Mode 01 PIDs (or the 4 default dashboard ' +
+          'PIDs when `pids` is omitted). Values are null when a PID read fails. ' +
+          'Requires authentication.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          {
+            name: 'scenarioId',
+            in: 'query',
+            required: true,
+            schema: { type: 'string' },
+            description: 'Scenario ID (e.g. "audi-a3-idle"). Optional in direct TCP mode.',
+            example: 'audi-a3-idle',
+          },
+          {
+            name: 'pids',
+            in: 'query',
+            required: false,
+            schema: { type: 'string' },
+            description:
+              'Comma-separated Mode 01 PID codes (max 8), e.g. "0C,0D,05". ' +
+              'Omit for the 4 default PIDs (rpm, coolantTemp, speed, intakeTemp).',
+            example: '0C,0D,05',
+          },
+        ],
+        responses: {
+          '200': {
+            description:
+              'Live telemetry: the named fields (rpm/coolantTemp/speed/intakeTemp) for the PIDs ' +
+              'with a dedicated gauge, plus a generic `readings` array with one entry per ' +
+              'requested PID (code, name, unit, value). Values are null when a PID read fails.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    rpm: { type: 'number', nullable: true, example: 750 },
+                    coolantTemp: { type: 'number', nullable: true, example: 90 },
+                    speed: { type: 'number', nullable: true, example: 0 },
+                    intakeTemp: { type: 'number', nullable: true, example: 25 },
+                    readings: {
+                      type: 'array',
+                      description:
+                        'Generic reading per requested PID, enriched with name/unit from the ' +
+                        'standard Mode 01 catalog.',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          code: { type: 'string', example: '01 0C' },
+                          name: { type: 'string', example: 'Engine RPM' },
+                          unit: { type: 'string', example: 'rpm' },
+                          value: { type: 'number', nullable: true, example: 750 },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '400': { description: 'Invalid query parameters (bad PID code or more than 8 PIDs)' },
+          '401': { description: 'Access token required' },
+          '404': { description: 'Scenario not found' },
+        },
+      },
+    },
     '/api/ecu-info': {
       get: {
         tags: ['Diagnosis'],

@@ -85,10 +85,52 @@ describe('ObdSimulatorRepository', () => {
       )
     })
 
-    it('lanza PidRawReadNotSupportedError con un PID Mode 01 fuera de los cuatro sensores', async () => {
-      await expect(realRepo().readPidRaw('01', '11', 1)).rejects.toThrow(
+    it('codifica el acelerador (PID 11) con la escala porcentual de SAE J1979', async () => {
+      // audi-a3-idle: 14 % → round(14 * 255 / 100) = 36
+      const bytes = await realRepo().readPidRaw('01', '11', 1)
+
+      expect(bytes).toEqual([36])
+    })
+
+    it('lanza PidRawReadNotSupportedError con un PID Mode 01 fuera del catalogo', async () => {
+      // 1C no esta entre los 16 Mode 01 modelados por el simulador
+      await expect(realRepo().readPidRaw('01', '1C', 1)).rejects.toThrow(
         PidRawReadNotSupportedError,
       )
+    })
+  })
+
+  describe('readPids', () => {
+    it('should map each supported PID to its physical value', async () => {
+      const simulator = mockSimulator({
+        readPidValue: vi.fn((_mode: string, pid: string) => (pid === '0C' ? 750 : 90)),
+      })
+      const repo = new ObdSimulatorRepository(simulator)
+
+      const result = await repo.readPids('01', ['0C', '0D'])
+
+      expect(result).toEqual(
+        new Map([
+          ['0C', 750],
+          ['0D', 90],
+        ]),
+      )
+      expect(simulator.readPidValue).toHaveBeenCalledWith('01', '0C')
+      expect(simulator.readPidValue).toHaveBeenCalledWith('01', '0D')
+    })
+
+    it('should omit a PID that the scenario does not support', async () => {
+      const simulator = mockSimulator({
+        readPidValue: vi.fn((_mode: string, pid: string) => {
+          if (pid === '0C') return 750
+          throw new Error(`PID ${pid} not supported by current scenario`)
+        }),
+      })
+      const repo = new ObdSimulatorRepository(simulator)
+
+      const result = await repo.readPids('01', ['0C', '11'])
+
+      expect(result).toEqual(new Map([['0C', 750]]))
     })
   })
 

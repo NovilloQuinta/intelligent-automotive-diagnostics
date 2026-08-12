@@ -3,6 +3,7 @@ import {
   formatCommand,
   stripEcho,
   parseModeResponse,
+  parseModeResponseEntries,
   parseMode22Response,
   parseVinResponse,
   parseDtcResponse,
@@ -69,6 +70,45 @@ describe('protocol', () => {
 
     it('should throw Elm327ParseError on genuine negative response 7F at start', () => {
       expect(() => parseModeResponse('7F 01 11')).toThrow(Elm327ParseError)
+    })
+
+    it('should parse multi-frame "0: 41 0C 0C 80\\n1: 41 0D 5A\\n>" → [0x0C, 0x80, 0x5A]', () => {
+      expect(parseModeResponse('0: 41 0C 0C 80\n1: 41 0D 5A\n>')).toEqual([0x0c, 0x80, 0x5a])
+    })
+
+    it('should parse multi-PID "0: 41 0C 0C 80\\r\\n1: 41 0D 5A\\r\\n2: 41 05 50\\r\\n>" → [0x0C, 0x80, 0x5A, 0x50]', () => {
+      expect(parseModeResponse('0: 41 0C 0C 80\r\n1: 41 0D 5A\r\n2: 41 05 50\r\n>')).toEqual([
+        0x0c, 0x80, 0x5a, 0x50,
+      ])
+    })
+
+    it('should keep single-line "41 0C 0C 80>" → [0x0C, 0x80]', () => {
+      expect(parseModeResponse('41 0C 0C 80>')).toEqual([0x0c, 0x80])
+    })
+
+    it('should throw Elm327NoDataError when a multi-frame line is "NO DATA"', () => {
+      expect(() => parseModeResponse('0: 41 0C 0C 80\n1: NO DATA\n>')).toThrow(Elm327NoDataError)
+    })
+  })
+
+  describe('parseModeResponseEntries', () => {
+    it('should map each "N: 4X YY <data>" line to { pid, bytes }', () => {
+      expect(parseModeResponseEntries('0: 41 0C 0C 80\n1: 41 0D 5A\n>')).toEqual([
+        { pid: '0C', bytes: [0x0c, 0x80] },
+        { pid: '0D', bytes: [0x5a] },
+      ])
+    })
+
+    it('should omit "NO DATA" lines (per-PID degradation)', () => {
+      expect(parseModeResponseEntries('0: 41 0C 0C 80\n1: NO DATA\n>')).toEqual([
+        { pid: '0C', bytes: [0x0c, 0x80] },
+      ])
+    })
+
+    it('should uppercase the PID code', () => {
+      expect(parseModeResponseEntries('0: 41 0c 0c 80\n>')).toEqual([
+        { pid: '0C', bytes: [0x0c, 0x80] },
+      ])
     })
   })
 

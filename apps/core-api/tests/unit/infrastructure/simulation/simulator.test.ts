@@ -229,3 +229,64 @@ describe('ObdSimulator with seed scenarios pidValues', () => {
     }
   })
 })
+
+describe('ObdSimulator with seed scenarios — 16 Mode 01 PIDs', () => {
+  function seedScenario(id: string): SimulationScenario {
+    const scenario = seedScenarios.find((s) => s.id === id)
+    if (!scenario) throw new Error(`Seed scenario ${id} not found`)
+    return scenario
+  }
+
+  const audi16: Record<string, number> = {
+    '04': 18,
+    '05': 90,
+    '06': 0,
+    '07': 3.1,
+    '0B': 35,
+    '0C': 750,
+    '0D': 0,
+    '0E': 8,
+    '0F': 25,
+    '10': 3.5,
+    '11': 14,
+    '2F': 62,
+    '31': 0,
+    '42': 14.2,
+    '46': 18,
+    '5C': 95,
+  }
+
+  it('returns a deterministic value for all 16 Mode 01 PIDs (audi-a3-idle)', () => {
+    const simulator = new ObdSimulator(seedScenario('audi-a3-idle'))
+
+    for (const [pid, expected] of Object.entries(audi16)) {
+      expect(simulator.readPidValue('01', pid)).toBe(expected)
+    }
+  })
+
+  it('returns a deterministic value for all 16 Mode 01 PIDs (kawa-z900)', () => {
+    const simulator = new ObdSimulator(seedScenario('kawa-z900'))
+    const kawa16: Record<string, number> = {
+      '04': 58,
+      '05': 105,
+      '06': -1.5,
+      '07': 4.7,
+      '0B': 78,
+      '0C': 4500,
+      '0D': 0,
+      '0E': 24,
+      '0F': 28,
+      '10': 28,
+      '11': 52,
+      '2F': 45,
+      '31': 0,
+      '42': 10.9,
+      '46': 20,
+      '5C': 110,
+    }
+
+    for (const [pid, expected] of Object.entries(kawa16)) {
+      expect(simulator.readPidValue('01', pid)).toBe(expected)
+    }
+  })
+})

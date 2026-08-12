@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { TelemetrySection } from "../../../src/components/dashboard/TelemetrySection";
+import type { PidReading } from "../../../src/components/dashboard/types";
 
 beforeEach(() => {
   vi.stubGlobal("requestAnimationFrame", vi.fn());
@@ -175,5 +176,73 @@ describe("TelemetrySection", () => {
       );
       expect(screen.getByText(status)).toBeDefined();
     }
+  });
+});
+
+describe("TelemetrySection — dynamic pids", () => {
+  const onDiagnose = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function renderSection(pids?: string[], readings: PidReading[] | null = null) {
+    render(
+      <TelemetrySection
+        values={numericValues}
+        rawSummary={null}
+        loading={false}
+        streamOk={true}
+        canDiagnose={true}
+        telemetryStatus="Transmisión ECU · 1 Hz"
+        onDiagnose={onDiagnose}
+        pids={pids}
+        readings={readings}
+      />,
+    );
+  }
+
+  it("should render only the requested gauges when pids are provided", () => {
+    renderSection(["0C", "0D"]);
+
+    expect(screen.getByText("RPM")).toBeDefined();
+    expect(screen.getByText("Velocidad")).toBeDefined();
+    expect(screen.queryByText("Refrigerante")).toBeNull();
+    expect(screen.queryByText("Admisión")).toBeNull();
+  });
+
+  it("should render the 4 default gauges when no pids are provided", () => {
+    renderSection();
+
+    expect(screen.getByText("RPM")).toBeDefined();
+    expect(screen.getByText("Refrigerante")).toBeDefined();
+    expect(screen.getByText("Velocidad")).toBeDefined();
+    expect(screen.getByText("Admisión")).toBeDefined();
+  });
+
+  it("should render an em dash for a generic PID whose value is null", () => {
+    renderSection(["11"], [
+      { code: "01 11", name: "Posición del acelerador", unit: "%", value: null },
+    ]);
+
+    expect(screen.getByText("Posición del acelerador")).toBeDefined();
+    expect(screen.getByText("—")).toBeDefined();
+  });
+
+  it("should render a generic gauge with name, value and unit from readings", () => {
+    renderSection(["11"], [
+      { code: "01 11", name: "Posición del acelerador", unit: "%", value: 14 },
+    ]);
+
+    expect(screen.getByText("Posición del acelerador")).toBeDefined();
+    expect(screen.getByText("14")).toBeDefined();
+    expect(screen.getByText("%")).toBeDefined();
+  });
+
+  it("should fall back to a generic gauge when readings have not arrived yet", () => {
+    renderSection(["11"], null);
+
+    expect(screen.getByText("PID 11")).toBeDefined();
+    expect(screen.getByText("—")).toBeDefined();
   });
 });

@@ -40,14 +40,74 @@ export function stripEcho(raw: string): string {
     .join('\n')
 }
 
+/** Prefijo de línea Mode 01: byte de respuesta (4X) + PID (YY) al inicio de cada línea. */
+const MODE_01_LINE_RE = /^4[0-9A-F]\s+[0-9A-F]{2}\s+/i
+
+/** Prefijo de línea VIN Mode 09: "49 02 01" (mode + pid + count). */
+const VIN_LINE_RE = /^49\s+02\s+01\s+/i
+
+/**
+ * Itera las líneas "N: <hex>" de una respuesta multi-frame y concatena los bytes
+ * de datos, quitando el prefijo `linePrefix` del inicio de cada línea.
+ *
+ * Salta las líneas sin prefijo "N:" (echo del comando, cabecera, prompt `>`).
+ *
+ * @param raw - Respuesta cruda del adaptador ELM327.
+ * @param linePrefix - Expresión regular del prefijo a eliminar de cada línea de datos.
+ * @returns Bytes de datos concatenados de todas las líneas (vacío si no hay líneas multi-frame).
+ * @throws {Elm327NoDataError} Si la respuesta contiene "NO DATA".
+ */
+export function parseMultiLineResponse(raw: string, linePrefix: RegExp): number[] {
+  if (/NO DATA/i.test(raw)) throw new Elm327NoDataError(raw)
+  const payload: number[] = []
+  for (const line of raw.split(/\r\n?|\n/)) {
+    const idx = line.indexOf(':')
+    if (idx === -1) continue // salta echo, cabecera y prompt
+    const dataHex = line.slice(idx + 1).trim().replace(linePrefix, '').trim()
+    if (dataHex) payload.push(...parseHexBytes(dataHex))
+  }
+  return payload
+}
+
 /** Mode 01: extrae los bytes de datos tras `4X YY` (ignora headers si aparecen). */
 export function parseModeResponse(raw: string): number[] {
+  const payload = parseMultiLineResponse(raw, MODE_01_LINE_RE)
+  if (payload.length > 0) return payload
+
   const cleaned = stripEcho(raw)
-  if (/NO DATA/i.test(cleaned)) throw new Elm327NoDataError(raw)
   if (/^7F\s/i.test(cleaned)) throw new Elm327ParseError(raw)
   const match = cleaned.match(/4[0-9A-F]\s+[0-9A-F]{2}\s+([0-9A-F]{2}(?:\s+[0-9A-F]{2})*)/i)
   if (!match) throw new Elm327ParseError(raw)
   return parseHexBytes(match[1])
+}
+
+/** Entrada de una línea de respuesta Mode 01: código de PID + bytes de datos. */
+export interface ModeResponseEntry {
+  readonly pid: string
+  readonly bytes: number[]
+}
+
+/**
+ * Parsea una respuesta Mode 01 multi-PID línea a línea.
+ *
+ * Cada línea `N: 4X YY <data>` se mapea a `{ pid: YY, bytes: <data> }`. Las líneas
+ * `NO DATA` (PID no soportado) se omiten para permitir la degradación por PID en
+ * {@code readPids}, a diferencia de {@link parseModeResponse} que lanza.
+ *
+ * @param raw - Respuesta cruda del adaptador ELM327.
+ * @returns Entradas PID → bytes en orden de aparición.
+ */
+export function parseModeResponseEntries(raw: string): ModeResponseEntry[] {
+  const entries: ModeResponseEntry[] = []
+  for (const line of raw.split(/\r\n?|\n/)) {
+    const idx = line.indexOf(':')
+    if (idx === -1) continue
+    const lineHex = line.slice(idx + 1).trim()
+    const match = lineHex.match(/^4[0-9A-F]\s+([0-9A-F]{2})\s+(.+)$/i)
+    if (!match) continue // línea "NO DATA" o sin formato "4X YY ..."
+    entries.push({ pid: match[1].toUpperCase(), bytes: parseHexBytes(match[2]) })
+  }
+  return entries
 }
 
 /** Mode 22 UDS: extrae los bytes de payload tras `62 XX XX`. */
@@ -62,26 +122,13 @@ export function parseMode22Response(raw: string, didLen: number): number[] {
 
 /** Mode 09 02: extrae los bytes ASCII del VIN desde líneas `N:` / `0:`..`N:` o formato single-line. */
 export function parseVinResponse(raw: string): number[] {
-  const cleaned = stripEcho(raw)
-  if (/NO DATA/i.test(cleaned)) throw new Elm327NoDataError(raw)
-  const payload: number[] = []
-  for (const line of cleaned.split('\n')) {
-    const idx = line.indexOf(':')
-    if (idx === -1) continue // salta cabecera "014" y líneas sin prefijo
-    payload.push(...parseHexBytes(line.slice(idx + 1)))
-  }
+  const payload = parseMultiLineResponse(raw, VIN_LINE_RE)
+  if (payload.length > 0) return payload
   // Single-line response: adaptador devuelve 49 02 01 ... sin prefijos de línea
-  if (payload.length === 0) {
-    const hexMatch = cleaned.match(/49\s*02\s*01\s+((?:[0-9A-F]{2}\s*)+)/i)
-    if (hexMatch) {
-      payload.push(...parseHexBytes(hexMatch[1]))
-    }
-  }
-  // Quita el prefijo "49 02 01" (mode + pid + count) de la primera línea si existe
-  if (payload.length >= 3 && payload[0] === 0x49 && payload[1] === 0x02 && payload[2] === 0x01) {
-    return payload.slice(3)
-  }
-  return payload
+  const cleaned = stripEcho(raw)
+  const hexMatch = cleaned.match(/49\s*02\s*01\s+((?:[0-9A-F]{2}\s*)+)/i)
+  if (hexMatch) return parseHexBytes(hexMatch[1])
+  return []
 }
 
 /**

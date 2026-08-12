@@ -13,6 +13,19 @@ export interface ObdRepository {
    */
   readPid(mode: string, pid: string): Promise<number>
 
+  /**
+   * Service 01 — Lee varios PIDs en un único comando multi-PID.
+   *
+   * Envía un solo comando (ej. `01 0C 0D 05`) y devuelve un Map PID → valor físico.
+   * Degradación por PID: un PID que responde `NO DATA` se omite del Map; el resto
+   * mantiene sus valores.
+   *
+   * @param mode — Modo OBD (ej. `'01'`)
+   * @param pids — Códigos de PID a leer (ej. `['0C', '0D', '05']`)
+   * @returns Map con clave = código de PID (uppercase) y valor = valor físico
+   */
+  readPids(mode: string, pids: readonly string[]): Promise<Map<string, number>>
+
   /** Lee un PID devolviendo sus bytes de datos **sin aplicar ninguna formula**.
    *
    * Existe para validar un PID recien descubierto, cuya formula no esta en el catalogo interno

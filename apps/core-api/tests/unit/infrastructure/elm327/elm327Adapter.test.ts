@@ -209,6 +209,34 @@ describe('Elm327TcpRepository', () => {
     expect(findPidDefinition).toHaveBeenCalledWith('22', 'F430')
   })
 
+  describe('readPids', () => {
+    it('envía un solo comando multi-PID y devuelve un Map PID → valor físico', async () => {
+      const repo = makeRepo()
+      const promise = repo.readPids('01', ['0C', '0D'])
+      expectSent('01 0C 0D')
+      respond('01 0C 0D\r0: 41 0C 0B B8\r1: 41 0D 5A\r\r>')
+      await expect(promise).resolves.toEqual(
+        new Map([
+          ['0C', 750],
+          ['0D', 90],
+        ]),
+      )
+    })
+
+    it('omite del Map un PID que responde NO DATA, manteniendo el resto', async () => {
+      const repo = makeRepo()
+      const promise = repo.readPids('01', ['0C', '05', '0D'])
+      expectSent('01 0C 05 0D')
+      respond('01 0C 05 0D\r0: 41 0C 0B B8\r1: NO DATA\r2: 41 0D 5A\r\r>')
+      await expect(promise).resolves.toEqual(
+        new Map([
+          ['0C', 750],
+          ['0D', 90],
+        ]),
+      )
+    })
+  })
+
   it('readDtcCodes: mock responde "43 03 01 04 01" → [P0301, P0401] con descripcion', async () => {
     const repo = makeRepo()
     const promise = repo.readDtcCodes()

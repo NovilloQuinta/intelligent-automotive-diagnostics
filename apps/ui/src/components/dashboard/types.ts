@@ -42,7 +42,7 @@ export type DiagnosisResponse = {
   severity: Severity
 }
 
-/** Live telemetry snapshot (client-side jitter from sensorValues baseline). */
+/** Live telemetry snapshot returned by GET /api/live-data (one poll cycle). */
 export type TelemetrySnapshot = {
   rpm: number
   speed: number
@@ -50,6 +50,18 @@ export type TelemetrySnapshot = {
   intakeTemp: number
   rawData: string
   ts: number
+}
+
+/**
+ * Single PID reading from the generic `readings` array of `GET /api/live-data`.
+ * `value: null` means that single PID failed its read (NO DATA); the entry is
+ * kept so the UI can render a `—` placeholder without shifting the layout.
+ */
+export type PidReading = {
+  readonly code: string
+  readonly name: string
+  readonly unit: string
+  readonly value: number | null
 }
 
 /** OBD-II freeze frame snapshot as returned by GET /api/freeze-frame. */

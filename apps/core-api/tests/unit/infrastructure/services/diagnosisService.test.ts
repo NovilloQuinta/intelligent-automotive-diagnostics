@@ -73,6 +73,7 @@ function createMockObdRepo(sensorOverrides?: {
       if (pid === '05') return sensorOverrides?.coolantTemp ?? 90
       return 90
     }),
+    readPids: vi.fn(async () => new Map<string, number>()),
     readPidRaw: vi.fn(async () => [0x00, 0x00]),
     getSupportedPids: vi.fn(async () => ['01 0C']),
     getFreezeFrame: vi.fn(async () => null),
@@ -174,7 +175,6 @@ describe('DiagnosisService', () => {
     it('should run a full diagnosis for an existing simulation scenario', async () => {
       const service = new DiagnosisService({
         scenarios: mockScenarios,
-        obdRepos: createMockObdRepos(),
         obdRepos: createMockObdRepos(),
         logger: createMockLogger(),
       })
@@ -335,6 +335,169 @@ describe('DiagnosisService', () => {
       })
 
       expect(diagnosisIndex.index).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('getLiveData', () => {
+    it('should use readPids for a custom PID list and map to named fields', async () => {
+      const repos = createMockObdRepos()
+      const repo = repos.get('audi-a3-idle')!
+      vi.mocked(repo.readPids).mockResolvedValue(
+        new Map([
+          ['0C', 800],
+          ['0D', 90],
+        ]),
+      )
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: repos,
+        logger: createMockLogger(),
+      })
+
+      const result = await service.getLiveData('audi-a3-idle', ['0C', '0D'])
+
+      expect(result).toEqual({
+        rpm: 800,
+        speed: 90,
+        readings: [
+          { code: '01 0C', name: 'Engine RPM', unit: 'rpm', value: 800 },
+          { code: '01 0D', name: 'Vehicle Speed', unit: 'km/h', value: 90 },
+        ],
+      })
+      expect(repo.readPids).toHaveBeenCalledWith('01', ['0C', '0D'])
+      expect(repo.readPid).not.toHaveBeenCalled()
+    })
+
+    it('should default to the 4 dashboard PIDs when no list is provided', async () => {
+      const repos = createMockObdRepos()
+      const repo = repos.get('audi-a3-idle')!
+      vi.mocked(repo.readPids).mockResolvedValue(
+        new Map([
+          ['0C', 750],
+          ['05', 90],
+          ['0D', 0],
+          ['0F', 25],
+        ]),
+      )
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: repos,
+        logger: createMockLogger(),
+      })
+
+      const result = await service.getLiveData('audi-a3-idle')
+
+      expect(result).toEqual({
+        rpm: 750,
+        coolantTemp: 90,
+        speed: 0,
+        intakeTemp: 25,
+        readings: [
+          { code: '01 0C', name: 'Engine RPM', unit: 'rpm', value: 750 },
+          { code: '01 05', name: 'Engine Coolant Temperature', unit: '°C', value: 90 },
+          { code: '01 0D', name: 'Vehicle Speed', unit: 'km/h', value: 0 },
+          { code: '01 0F', name: 'Intake Air Temperature', unit: '°C', value: 25 },
+        ],
+      })
+      expect(repo.readPids).toHaveBeenCalledWith('01', ['0C', '05', '0D', '0F'])
+    })
+
+    it('should set null for a requested PID that readPids omits', async () => {
+      const repos = createMockObdRepos()
+      const repo = repos.get('audi-a3-idle')!
+      vi.mocked(repo.readPids).mockResolvedValue(new Map([['0C', 800]]))
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: repos,
+        logger: createMockLogger(),
+      })
+
+      const result = await service.getLiveData('audi-a3-idle', ['0C', '0D'])
+
+      expect(result).toEqual({
+        rpm: 800,
+        speed: null,
+        readings: [
+          { code: '01 0C', name: 'Engine RPM', unit: 'rpm', value: 800 },
+          { code: '01 0D', name: 'Vehicle Speed', unit: 'km/h', value: null },
+        ],
+      })
+    })
+
+    it('should return generic readings for PIDs without a dedicated gauge', async () => {
+      const repos = createMockObdRepos()
+      const repo = repos.get('audi-a3-idle')!
+      vi.mocked(repo.readPids).mockResolvedValue(
+        new Map([
+          ['11', 14],
+          ['42', 14.2],
+        ]),
+      )
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: repos,
+        logger: createMockLogger(),
+      })
+
+      const result = await service.getLiveData('audi-a3-idle', ['11', '42'])
+
+      expect(result).toEqual({
+        readings: [
+          { code: '01 11', name: 'Throttle Position', unit: '%', value: 14 },
+          { code: '01 42', name: 'Control Module Voltage', unit: 'V', value: 14.2 },
+        ],
+      })
+    })
+
+    it('should return the 4 named fields plus readings of the default PIDs', async () => {
+      const repos = createMockObdRepos()
+      const repo = repos.get('audi-a3-idle')!
+      vi.mocked(repo.readPids).mockResolvedValue(
+        new Map([
+          ['0C', 750],
+          ['05', 90],
+          ['0D', 0],
+          ['0F', 25],
+        ]),
+      )
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: repos,
+        logger: createMockLogger(),
+      })
+
+      const result = await service.getLiveData('audi-a3-idle')
+
+      expect(result).toEqual({
+        rpm: 750,
+        coolantTemp: 90,
+        speed: 0,
+        intakeTemp: 25,
+        readings: [
+          { code: '01 0C', name: 'Engine RPM', unit: 'rpm', value: 750 },
+          { code: '01 05', name: 'Engine Coolant Temperature', unit: '°C', value: 90 },
+          { code: '01 0D', name: 'Vehicle Speed', unit: 'km/h', value: 0 },
+          { code: '01 0F', name: 'Intake Air Temperature', unit: '°C', value: 25 },
+        ],
+      })
+    })
+
+    it('should emit a reading with null value for a PID that readPids omits', async () => {
+      const repos = createMockObdRepos()
+      const repo = repos.get('audi-a3-idle')!
+      vi.mocked(repo.readPids).mockResolvedValue(new Map([['0C', 800]]))
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: repos,
+        logger: createMockLogger(),
+      })
+
+      const result = await service.getLiveData('audi-a3-idle', ['0C', '0D'])
+
+      expect(result.readings).toEqual([
+        { code: '01 0C', name: 'Engine RPM', unit: 'rpm', value: 800 },
+        { code: '01 0D', name: 'Vehicle Speed', unit: 'km/h', value: null },
+      ])
     })
   })
 

@@ -5,9 +5,18 @@ import { Vin } from '@/domain/value-objects/vin.js'
 import { LiveData } from '@/domain/value-objects/liveData.js'
 import {
   MODE_CURRENT_DATA,
+  PID_AMBIENT_AIR_TEMP,
   PID_CONTROL_MODULE_VOLTAGE,
+  PID_DISTANCE_SINCE_CLEARED,
   PID_ENGINE_LOAD,
+  PID_ENGINE_OIL_TEMP,
+  PID_FUEL_TANK_LEVEL,
+  PID_LONG_TERM_FUEL_TRIM,
+  PID_MANIFOLD_ABS_PRESSURE,
+  PID_MASS_AIR_FLOW,
+  PID_SHORT_TERM_FUEL_TRIM,
   PID_THROTTLE_POSITION,
+  PID_TIMING_ADVANCE,
 } from '@/domain/pids.js'
 
 const audiIdleData = new LiveData({ rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 })
@@ -38,11 +47,35 @@ const THROTTLE_KEY = `${MODE_CURRENT_DATA} ${PID_THROTTLE_POSITION}`
 const ENGINE_LOAD_KEY = `${MODE_CURRENT_DATA} ${PID_ENGINE_LOAD}`
 const CONTROL_MODULE_VOLTAGE_KEY = `${MODE_CURRENT_DATA} ${PID_CONTROL_MODULE_VOLTAGE}`
 
+/** Clave compuesta `"01 PID"` para las lecturas extra de un escenario. */
+function mode01Key(pid: string): string {
+  return `${MODE_CURRENT_DATA} ${pid}`
+}
+
+const SHORT_TERM_FUEL_TRIM_KEY = mode01Key(PID_SHORT_TERM_FUEL_TRIM)
+const LONG_TERM_FUEL_TRIM_KEY = mode01Key(PID_LONG_TERM_FUEL_TRIM)
+const MANIFOLD_ABS_PRESSURE_KEY = mode01Key(PID_MANIFOLD_ABS_PRESSURE)
+const TIMING_ADVANCE_KEY = mode01Key(PID_TIMING_ADVANCE)
+const MASS_AIR_FLOW_KEY = mode01Key(PID_MASS_AIR_FLOW)
+const FUEL_TANK_LEVEL_KEY = mode01Key(PID_FUEL_TANK_LEVEL)
+const DISTANCE_SINCE_CLEARED_KEY = mode01Key(PID_DISTANCE_SINCE_CLEARED)
+const AMBIENT_AIR_TEMP_KEY = mode01Key(PID_AMBIENT_AIR_TEMP)
+const ENGINE_OIL_TEMP_KEY = mode01Key(PID_ENGINE_OIL_TEMP)
+
 /** Lecturas extra del Audi al ralenti: acelerador suelto, carga baja y bateria sana. */
 const audiPidValues: Record<string, number> = {
   [THROTTLE_KEY]: 14,
   [ENGINE_LOAD_KEY]: 18,
   [CONTROL_MODULE_VOLTAGE_KEY]: 14.2,
+  [SHORT_TERM_FUEL_TRIM_KEY]: 0,
+  [LONG_TERM_FUEL_TRIM_KEY]: 3.1,
+  [MANIFOLD_ABS_PRESSURE_KEY]: 35,
+  [TIMING_ADVANCE_KEY]: 8,
+  [MASS_AIR_FLOW_KEY]: 3.5,
+  [FUEL_TANK_LEVEL_KEY]: 62,
+  [DISTANCE_SINCE_CLEARED_KEY]: 0,
+  [AMBIENT_AIR_TEMP_KEY]: 18,
+  [ENGINE_OIL_TEMP_KEY]: 95,
 }
 
 /** Lecturas extra de la Kawasaki: acelerado y con voltaje de modulo bajo (fallo de carga). */
@@ -50,6 +83,15 @@ const kawaPidValues: Record<string, number> = {
   [THROTTLE_KEY]: 52,
   [ENGINE_LOAD_KEY]: 58,
   [CONTROL_MODULE_VOLTAGE_KEY]: 10.9,
+  [SHORT_TERM_FUEL_TRIM_KEY]: -1.5,
+  [LONG_TERM_FUEL_TRIM_KEY]: 4.7,
+  [MANIFOLD_ABS_PRESSURE_KEY]: 78,
+  [TIMING_ADVANCE_KEY]: 24,
+  [MASS_AIR_FLOW_KEY]: 28,
+  [FUEL_TANK_LEVEL_KEY]: 45,
+  [DISTANCE_SINCE_CLEARED_KEY]: 0,
+  [AMBIENT_AIR_TEMP_KEY]: 20,
+  [ENGINE_OIL_TEMP_KEY]: 110,
 }
 
 const ECM = createEcu({

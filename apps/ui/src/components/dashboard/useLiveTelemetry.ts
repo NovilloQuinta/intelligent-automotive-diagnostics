@@ -15,27 +15,32 @@ import type { TelemetrySnapshot } from './types'
 export const LIVE_TELEMETRY_INTERVAL_MS = 1000
 
 /**
- * Lee los 4 PIDs del dashboard desde {@code GET /api/live-data} una vez por
+ * Lee los PIDs del dashboard desde {@code GET /api/live-data} una vez por
  * segundo. Sustituye al antiguo generador de jitter en navegador.
+ *
+ * Acepta un array opcional de PIDs Mode 01 en formato corto (ej. {@code ['0C', '0D']});
+ * sin el, el endpoint devuelve los 4 por defecto. El array entra en la
+ * query key, de modo que cambiar la seleccion refetchea.
  *
  * Degradacion por PID: un valor {@code null} significa lectura fallida en ese
  * sensor; los demas mantienen su valor. El badge {@code LIVE} cae a
  * "Reconectando..." mientras el endpoint no responde.
  */
-export function useLiveTelemetry(selectedId: string) {
+export function useLiveTelemetry(selectedId: string, pids?: readonly string[]) {
+  const hasPids = pids !== undefined && pids.length > 0
   const { data, isError, isLoading } = useQuery({
-    queryKey: ['live-telemetry', selectedId],
+    queryKey: ['live-telemetry', selectedId, pids ?? null],
     // Via `api`, no `fetch` directo: el endpoint exige token y `apiFetch` es
     // quien pone la cabecera Authorization y renueva el access token cuando
     // caduca. Con `fetch` a pelo cada lectura respondia 401 y los gauges no
     // llegaban a mostrar un solo valor.
-    queryFn: () => api.getLiveData(selectedId),
+    queryFn: () => (hasPids ? api.getLiveData(selectedId, pids) : api.getLiveData(selectedId)),
     enabled: selectedId.length > 0,
     refetchInterval: LIVE_TELEMETRY_INTERVAL_MS,
   })
 
   if (!selectedId || !data || isLoading) {
-    return { live: null, streamOk: false } as const
+    return { live: null, streamOk: false, readings: null } as const
   }
 
   const live: TelemetrySnapshot = {
@@ -47,5 +52,5 @@ export function useLiveTelemetry(selectedId: string) {
     ts: Date.now(),
   }
 
-  return { live, streamOk: !isError }
+  return { live, streamOk: !isError, readings: data.readings }
 }
