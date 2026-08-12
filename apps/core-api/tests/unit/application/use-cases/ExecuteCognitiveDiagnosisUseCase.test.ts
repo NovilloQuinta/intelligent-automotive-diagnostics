@@ -92,6 +92,8 @@ describe('ExecuteCognitiveDiagnosisUseCase', () => {
     const callArgs = (mockLlmClient.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
     expect(callArgs.systemPrompt.toLowerCase()).toContain('concisa')
     expect(callArgs.systemPrompt.toLowerCase()).toContain('mecánico')
+    expect(callArgs.systemPrompt).toContain('~200 palabras')
+    expect(callArgs.systemPrompt).toContain('Máximo 5 recomendaciones')
   })
 
   it('should keep parsing the ---JSON--- block correctly with the extended prompt (regression)', async () => {
