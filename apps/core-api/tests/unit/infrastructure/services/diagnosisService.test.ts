@@ -3,6 +3,7 @@ import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 import {
   DiagnosisScenarioNotFoundError,
   CognitiveDiagnosisUnavailableError,
+  DiagnosisSessionNotFoundError,
 } from '@/infrastructure/services/errors.js'
 import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
@@ -126,6 +127,9 @@ function createMockVehicleRepo(overrides?: Partial<VehicleRepository>): VehicleR
     insertPidReading: vi.fn(),
     createSession: vi.fn(),
     endSession: vi.fn().mockResolvedValue(undefined),
+    updateSessionResult: vi.fn().mockResolvedValue(undefined),
+    findSessions: vi.fn().mockResolvedValue({ items: [], total: 0 }),
+    findSessionById: vi.fn().mockResolvedValue(null),
     findDtcDefinition: vi.fn().mockResolvedValue(null),
     upsertDtcDefinition: vi.fn(),
     findEcuByAddress: vi.fn().mockResolvedValue(null),
@@ -1132,6 +1136,158 @@ describe('DiagnosisService', () => {
       expect(sessionArg.vehicleId).toBe(42)
       expect(sessionArg.scenarioId).toBe('audi-a3-idle')
       expect(sessionArg.startedAt).toBeDefined()
+    })
+
+    it('persists the first assistant turn in the snapshot conversation', async () => {
+      const upsertedProfile = new VehicleProfile({
+        id: 42,
+        make: 'Audi',
+        model: 'A3',
+        year: 2018,
+        engineType: 'unknown',
+        vin: TEST_VIN,
+      })
+      const endSessionSpy = vi.fn().mockResolvedValue(undefined)
+      const vehicleRepo = createMockVehicleRepo({
+        upsertVehicle: vi.fn().mockResolvedValue(upsertedProfile),
+        createSession: vi.fn().mockResolvedValue(
+          new DiagnosisSession({
+            id: 10,
+            vehicleId: 42,
+            scenarioId: 'audi-a3-idle',
+            startedAt: new Date().toISOString(),
+          }),
+        ),
+        endSession: endSessionSpy,
+      })
+
+      await createService(vehicleRepo).cognitiveDiagnosis({
+        scenarioId: 'audi-a3-idle',
+        userQuery: '¿Por qué tiembla?',
+      })
+
+      expect(endSessionSpy).toHaveBeenCalledTimes(1)
+      const snapshot = endSessionSpy.mock.calls[0][1] as {
+        resultJson: string
+        severity: string
+        dtcCount: number
+      }
+      expect(snapshot).toBeDefined()
+      const parsed = JSON.parse(snapshot.resultJson) as {
+        conversation: Array<{ role: string; text: string; timestamp: string }>
+      }
+      expect(parsed.conversation).toEqual([
+        {
+          role: 'assistant',
+          text: 'El motor tiembla en ralentí por fallo de encendido.',
+          timestamp: expect.any(String),
+        },
+      ])
+    })
+
+    it('returns the created sessionId in the cognitive result', async () => {
+      const upsertedProfile = new VehicleProfile({
+        id: 42,
+        make: 'Audi',
+        model: 'A3',
+        year: 2018,
+        engineType: 'unknown',
+        vin: TEST_VIN,
+      })
+      const vehicleRepo = createMockVehicleRepo({
+        upsertVehicle: vi.fn().mockResolvedValue(upsertedProfile),
+        createSession: vi.fn().mockResolvedValue(
+          new DiagnosisSession({
+            id: 10,
+            vehicleId: 42,
+            scenarioId: 'audi-a3-idle',
+            startedAt: new Date().toISOString(),
+          }),
+        ),
+      })
+
+      const result = await createService(vehicleRepo).cognitiveDiagnosis({
+        scenarioId: 'audi-a3-idle',
+        userQuery: '¿Por qué tiembla?',
+      })
+
+      expect(result.sessionId).toBe(10)
+    })
+
+    it('reuses the existing session and appends the follow-up turns without creating a new session', async () => {
+      const existingSession = new DiagnosisSession({
+        id: 10,
+        vehicleId: 42,
+        userId: 7,
+        scenarioId: 'audi-a3-idle',
+        startedAt: '2026-08-12T10:00:00.000Z',
+        endedAt: '2026-08-12T10:01:00.000Z',
+        resultJson: JSON.stringify({
+          vehicle: { vin: 'WAUZZZ8V5JA123456', make: 'Audi', model: 'A3', year: 2018 },
+          diagnosis: { severity: 'high', confidence: 0.9, narrative: 'primero' },
+          conversation: [{ role: 'assistant', text: 'primero', timestamp: 't1' }],
+          timestamp: 't1',
+        }),
+      })
+      const updateSessionResultSpy = vi.fn().mockResolvedValue(undefined)
+      const vehicleRepo = createMockVehicleRepo({
+        findSessionById: vi.fn().mockResolvedValue(existingSession),
+        updateSessionResult: updateSessionResultSpy,
+      })
+
+      const result = await createService(vehicleRepo).cognitiveDiagnosis({
+        scenarioId: 'audi-a3-idle',
+        userQuery: '¿Y en frío?',
+        userId: 7,
+        sessionId: 10,
+      })
+
+      expect(result.sessionId).toBe(10)
+      expect(vehicleRepo.upsertVehicle).not.toHaveBeenCalled()
+      expect(vehicleRepo.createSession).not.toHaveBeenCalled()
+      expect(updateSessionResultSpy).toHaveBeenCalledTimes(1)
+      const [sid, snapshot] = updateSessionResultSpy.mock.calls[0] as [
+        number,
+        { resultJson: string; severity: string; dtcCount: number },
+      ]
+      expect(sid).toBe(10)
+      const parsed = JSON.parse(snapshot.resultJson) as {
+        conversation: Array<{ role: string; text: string; timestamp: string }>
+      }
+      expect(parsed.conversation).toHaveLength(3)
+      expect(parsed.conversation[0]).toEqual({
+        role: 'assistant',
+        text: 'primero',
+        timestamp: 't1',
+      })
+      expect(parsed.conversation[1]).toMatchObject({ role: 'user', text: '¿Y en frío?' })
+      expect(parsed.conversation[2]).toMatchObject({
+        role: 'assistant',
+        text: 'El motor tiembla en ralentí por fallo de encendido.',
+      })
+    })
+
+    it('throws DiagnosisSessionNotFoundError for another user sessionId without mutating', async () => {
+      const sendSpy = vi
+        .fn()
+        .mockResolvedValue({ text: cognitiveText, toolCalls: cognitiveToolCalls })
+      const vehicleRepo = createMockVehicleRepo({
+        findSessionById: vi.fn().mockResolvedValue(null),
+      })
+
+      await expect(
+        createService(vehicleRepo, { sendMessage: sendSpy }).cognitiveDiagnosis({
+          scenarioId: 'audi-a3-idle',
+          userQuery: 'x',
+          userId: 7,
+          sessionId: 999,
+        }),
+      ).rejects.toThrow(DiagnosisSessionNotFoundError)
+
+      expect(sendSpy).not.toHaveBeenCalled()
+      expect(vehicleRepo.createSession).not.toHaveBeenCalled()
+      expect(vehicleRepo.updateSessionResult).not.toHaveBeenCalled()
+      expect(vehicleRepo.endSession).not.toHaveBeenCalled()
     })
 
     it('calls endSession in finally even on cognitiveDiagnosis error', async () => {

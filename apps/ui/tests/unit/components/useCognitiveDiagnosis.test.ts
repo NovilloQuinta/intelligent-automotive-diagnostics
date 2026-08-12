@@ -10,6 +10,8 @@ vi.mock("../../../src/lib/api", () => ({
   api: {
     getCognitiveDiagnosis: vi.fn(),
   },
+  GENERIC_ERROR_MESSAGE:
+    "Ha ocurrido un problema. Si el problema persiste, contacta con soporte.",
 }));
 
 import { api } from "../../../src/lib/api";
@@ -84,6 +86,7 @@ describe("useCognitiveDiagnosis", () => {
     });
     expect(api.getCognitiveDiagnosis).toHaveBeenCalledWith(
       "kawa-z900",
+      undefined,
       undefined,
       undefined,
     );
@@ -435,5 +438,96 @@ describe("useCognitiveDiagnosis", () => {
       expect(result.current.conversationHistory).toHaveLength(0);
     });
     expect(result.current.diagnosisText).toBeNull();
+  });
+
+  it("stores the sessionId returned by the cognitive output", async () => {
+    vi.mocked(api.getCognitiveDiagnosis).mockResolvedValue({
+      ...cognitiveOutput(),
+      sessionId: 42,
+    });
+
+    const { result } = renderHook(() => useCognitiveDiagnosis("kawa-z900"), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await result.current.trigger();
+    });
+
+    await waitFor(() => {
+      expect(result.current.sessionId).toBe(42);
+    });
+  });
+
+  it("resends the stored sessionId on a follow-up trigger", async () => {
+    vi.mocked(api.getCognitiveDiagnosis)
+      .mockResolvedValueOnce({ ...cognitiveOutput(), sessionId: 42 })
+      .mockResolvedValueOnce({
+        ...cognitiveOutput(),
+        diagnosis: "Segunda respuesta",
+        sessionId: 42,
+      });
+
+    const { result } = renderHook(() => useCognitiveDiagnosis("kawa-z900"), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await result.current.trigger();
+    });
+    await waitFor(() => {
+      expect(result.current.sessionId).toBe(42);
+    });
+
+    await act(async () => {
+      await result.current.trigger("¿Y eso por qué?");
+    });
+
+    await waitFor(() => {
+      expect(result.current.conversationHistory).toHaveLength(3);
+    });
+    expect(api.getCognitiveDiagnosis).toHaveBeenLastCalledWith(
+      "kawa-z900",
+      "¿Y eso por qué?",
+      expect.any(Array),
+      42,
+    );
+  });
+
+  it("clears the sessionId and thread when trigger() has no query (new diagnosis)", async () => {
+    vi.mocked(api.getCognitiveDiagnosis)
+      .mockResolvedValueOnce({ ...cognitiveOutput(), sessionId: 42 })
+      .mockResolvedValueOnce({ ...cognitiveOutput(), sessionId: 7 });
+
+    const { result } = renderHook(() => useCognitiveDiagnosis("kawa-z900"), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await result.current.trigger();
+    });
+    await waitFor(() => {
+      expect(result.current.sessionId).toBe(42);
+    });
+
+    await act(async () => {
+      await result.current.trigger();
+    });
+
+    await waitFor(() => {
+      expect(result.current.sessionId).toBe(7);
+    });
+    // Una sesion nueva NO reenvia el sessionId anterior ni el hilo previo.
+    expect(api.getCognitiveDiagnosis).toHaveBeenLastCalledWith(
+      "kawa-z900",
+      undefined,
+      undefined,
+      undefined,
+    );
+    expect(result.current.conversationHistory).toHaveLength(1);
+    expect(result.current.conversationHistory[0]).toEqual({
+      __type: "raw_response",
+      data: { text: "Narrativa" },
+    });
   });
 });

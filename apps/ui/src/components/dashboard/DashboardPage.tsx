@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Navigate } from '@tanstack/react-router'
 import { useAuth } from '@/lib/auth-context'
 import { useScenarios } from './useScenarios'
@@ -29,69 +29,44 @@ export function DashboardPage() {
   const [activeSection, setActiveSection] = useState<SidebarSection>('live-data')
   const wizard = useVehicleAutoDetect()
 
-  const autoDiagnoseRef = useRef({
-    runDiagnosis,
-    cognitiveDiagnosis,
-    reset: cognitive.reset,
-    trigger: cognitive.trigger,
+  const resetCognitiveRef = useRef(cognitive.reset)
+
+  // Mantiene el ref sincronizado con el último reset() sin mutar durante el render.
+  useEffect(() => {
+    resetCognitiveRef.current = cognitive.reset
   })
-  autoDiagnoseRef.current = {
-    runDiagnosis,
-    cognitiveDiagnosis,
-    reset: cognitive.reset,
-    trigger: cognitive.trigger,
-  }
 
   useEffect(() => {
     setSelectedDtc(null)
     setSelectedPids(DEFAULT_LIVE_PIDS)
+    // Al cambiar de vehículo solo se limpia el hilo cognitivo anterior: ni el
+    // diagnóstico determinista ni el LLM se disparan automáticamente.
+    if (selectedId) resetCognitiveRef.current()
   }, [selectedId])
 
-  useEffect(() => {
-    if (!selectedId) return
-    const {
-      runDiagnosis: run,
-      cognitiveDiagnosis: cog,
-      reset,
-      trigger: trig,
-    } = autoDiagnoseRef.current
-    reset()
-    void (async () => {
-      await run()
-      if (cog) void trig()
-    })()
-  }, [selectedId])
+  /** Recoge los fallos crudos (DTCs, datos en vivo) sin lanzar la IA. */
+  const handleDiagnose = () => {
+    void runDiagnosis()
+  }
 
-  /**
-   * El diagnóstico cognitivo se dispara tras el determinista y sin `await`: la
-   * respuesta LLM puede tardar hasta 60 s y no debe retrasar la pintura de
-   * severidad, DTCs ni de los 4 PIDs fijos.
-   */
-  const handleDiagnose = useCallback(async () => {
-    cognitive.reset()
-    await runDiagnosis()
-    if (cognitiveDiagnosis) void cognitive.trigger()
-  }, [runDiagnosis, cognitiveDiagnosis, cognitive.reset, cognitive.trigger])
+  const handleChatSend = (q: string) => {
+    void cognitive.trigger(q)
+  }
 
-  const handleChatSend = useCallback(
-    (q: string) => {
-      void cognitive.trigger(q)
-    },
-    [cognitive.trigger],
-  )
+  /** Lanza un diagnóstico IA nuevo: sesión nueva, sin query ni historial. */
+  const handleLaunchDiagnosis = () => {
+    void cognitive.trigger()
+  }
 
-  const handleVehicleConfirmed = useCallback(
-    (scenarioId: string) => {
-      setSelectedId(scenarioId)
-      wizard.confirm()
-    },
-    [setSelectedId, wizard.confirm],
-  )
+  const handleVehicleConfirmed = (scenarioId: string) => {
+    setSelectedId(scenarioId)
+    wizard.confirm()
+  }
 
-  const handleDtcSelect = useCallback((code: string) => {
+  const handleDtcSelect = (code: string) => {
     setSelectedDtc(code)
     setActiveSection('freeze-frame')
-  }, [])
+  }
 
   if (auth.status === 'anonymous') {
     return <Navigate to="/login" replace />
@@ -107,6 +82,7 @@ export function DashboardPage() {
   const dtcCodes = result?.dtcCodes ?? null
   const hasDiagnosis = result !== null
   const dtcCount = dtcCodes?.length ?? 0
+  const canLaunch = hasDiagnosis && !!selectedId
 
   if (!vehicleReady) {
     return (
@@ -164,7 +140,6 @@ export function DashboardPage() {
         pidSelection={{ selectedPids, onPidsChange: setSelectedPids }}
         diagnosis={{ loading, streamOk, result, dtcCodes, selectedDtc }}
         cognitive={{
-          diagnosisText: cognitive.diagnosisText,
           severity: cognitive.severity,
           confidence: cognitive.confidence,
           conversationHistory: cognitive.conversationHistory,
@@ -177,6 +152,8 @@ export function DashboardPage() {
         onDiagnose={handleDiagnose}
         onDtcSelect={handleDtcSelect}
         onChatSend={handleChatSend}
+        onLaunchDiagnosis={handleLaunchDiagnosis}
+        canLaunch={canLaunch}
       />
     </DashboardLayout>
   )

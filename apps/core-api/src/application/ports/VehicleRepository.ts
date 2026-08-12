@@ -22,6 +22,13 @@ export interface DiagnosisSessionFilter {
   readonly offset: number
 }
 
+/** Snapshot inmutable del resultado de una sesión: JSON del informe + severidad + recuento de DTCs. */
+export interface SessionResultSnapshot {
+  readonly resultJson: string
+  readonly severity: SessionSeverity
+  readonly dtcCount: number
+}
+
 /** Contrato para la persistencia del catálogo auto-expansivo de vehículos, ECUs y PIDs. */
 export interface VehicleRepository {
   /** Registra un vehículo nuevo o actualiza la fecha de último avistamiento si ya existe (por VIN).
@@ -65,10 +72,10 @@ export interface VehicleRepository {
   createSession(session: DiagnosisSession): Promise<DiagnosisSession>
 
   /** Finaliza una sesión de diagnóstico guardando opcionalmente el snapshot del resultado. */
-  endSession(
-    sessionId: number,
-    result?: { resultJson: string; severity: SessionSeverity; dtcCount: number },
-  ): Promise<void>
+  endSession(sessionId: number, result?: SessionResultSnapshot): Promise<void>
+
+  /** Actualiza el resultado de una sesión existente (follow-up) sin crear una sesión nueva. */
+  updateSessionResult(sessionId: number, result: SessionResultSnapshot): Promise<void>
 
   /** Lista paginada de sesiones de un usuario con filtros (todos en SQL, nunca en memoria). */
   findSessions(filter: DiagnosisSessionFilter): Promise<DiagnosisSessionPage>

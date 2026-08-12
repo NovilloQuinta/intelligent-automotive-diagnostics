@@ -116,4 +116,11 @@ describe("Sidebar", () => {
       diagnosisButton.querySelector(".bg-primary.rounded-full"),
     ).not.toBeNull();
   });
+
+  it("should expose a single diagnosis section, without a separate chat section", () => {
+    render(<Sidebar active="vehicle" onChange={vi.fn()} />);
+
+    expect(screen.getAllByTitle("Diagnóstico")).toHaveLength(1);
+    expect(screen.queryByTitle("Chat IA")).toBeNull();
+  });
 });

@@ -19,6 +19,7 @@ import {
   DiagnosisScenarioNotFoundError,
   CognitiveDiagnosisUnavailableError,
   CognitiveDiagnosisTimeoutError,
+  DiagnosisSessionNotFoundError,
 } from '@/infrastructure/services/errors.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
@@ -36,7 +37,10 @@ import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosi
 import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
-import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
+import type {
+  VehicleRepository,
+  SessionResultSnapshot,
+} from '@/application/ports/VehicleRepository.js'
 import type {
   DiagnosisSessionFilter,
   DiagnosisSessionPage,
@@ -72,6 +76,9 @@ const PID_METADATA: ReadonlyMap<string, { readonly name: string; readonly unit: 
       { name: p.name, unit: p.unit ?? '' },
     ]),
   )
+
+/** Nombre de la tool MCP que devuelve los códigos DTC detectados en el vehículo. */
+const GET_DTC_CODES_TOOL = 'get_dtc_codes'
 
 /** Descriptor de un escenario de vehiculo disponible para diagnostico. */
 export interface ScenarioDescriptor {
@@ -179,6 +186,33 @@ export interface PidReading {
   readonly unit: string
   /** Valor físico resuelto; `null` si la lectura falló (NO DATA). */
   readonly value: number | null
+}
+
+/** Rol de un turno dentro de la conversación persistida del diagnóstico. */
+type ConversationRole = 'user' | 'assistant'
+
+/** Turno individual de la conversación entre mecánico y asistente IA. */
+interface ConversationTurn {
+  readonly role: ConversationRole
+  readonly text: string
+  readonly timestamp: string
+}
+
+/** Construye un turno de conversación inmutable con marca de tiempo actual. */
+function buildConversationTurn(role: ConversationRole, text: string): ConversationTurn {
+  return { role, text, timestamp: new Date().toISOString() }
+}
+
+/** Resultado del diagnóstico cognitivo, enriquecido con el id de la sesión persistida. */
+export type CognitiveDiagnosisResult = ExecuteCognitiveDiagnosisOutput & {
+  readonly sessionId?: number
+}
+
+/** Estado de sesión resuelto antes de ejecutar el diagnóstico cognitivo. */
+interface ResolvedDiagnosisSession {
+  readonly followUpSession: DiagnosisSession | undefined
+  readonly sessionId: number | undefined
+  readonly vehicleId: number | undefined
 }
 
 /** Dependencias de {@link DiagnosisService}. */
@@ -500,6 +534,7 @@ export class DiagnosisService {
    *
    * @throws {CognitiveDiagnosisUnavailableError} Si no hay cliente LLM configurado.
    * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
+   * @throws {DiagnosisSessionNotFoundError} Si `sessionId` no existe o no pertenece al usuario.
    * @throws {CognitiveDiagnosisTimeoutError} Si se agota `cognitiveTimeoutMs`.
    * @throws {EmptyToolResultError} Si una tool invocada responde sin contenido.
    */
@@ -508,101 +543,215 @@ export class DiagnosisService {
     userQuery?: string
     conversationHistory?: readonly LlmConversationItem[]
     userId?: number
-  }): Promise<ExecuteCognitiveDiagnosisOutput> {
-    const { scenarioId, userQuery, conversationHistory, userId } = input
+    sessionId?: number
+  }): Promise<CognitiveDiagnosisResult> {
+    const { scenarioId, userQuery, conversationHistory, userId, sessionId } = input
     const repository = this.resolveRepository(scenarioId)
-
-    // Leer vehicleInfo una sola vez: se reutiliza en el upsert y en el use case
     const vehicleInfo = await repository.getVehicleInfo()
 
-    // --- Persistencia del vehículo (D2, antes de validar LLM) ---
-    let vehicleId: number | undefined
-    if (this.vehicleRepo) {
-      try {
-        const profile = this.toVehicleProfile(vehicleInfo)
-        const result = await this.vehicleRepo.upsertVehicle(profile)
-        vehicleId = result.id
-      } catch (e) {
-        this.logger.warn('Failed to upsert vehicle in diagnosis session', {
-          err: e instanceof Error ? e : String(e),
-        })
-      }
-    }
+    const { followUpSession, sessionId: resolvedSessionId, vehicleId } =
+      await this.resolveDiagnosisSession(sessionId, userId, vehicleInfo)
 
-    if (!this.llmClient) {
-      this.logger.warn('Cognitive diagnosis requested but no LLM client is configured')
-      throw new CognitiveDiagnosisUnavailableError()
-    }
+    const llmClient = this.requireLlmClient()
 
-    // --- Sesión de diagnóstico (D3) ---
-    let sessionId: number | undefined
-    if (vehicleId !== undefined) {
-      try {
-        const session = await this.vehicleRepo!.createSession(
-          new DiagnosisSession({
-            id: 0,
-            vehicleId,
-            userId: userId ?? null,
-            scenarioId,
-            startedAt: new Date().toISOString(),
-          }),
-        )
-        sessionId = session.id
-      } catch (e) {
-        this.logger.warn('Failed to create diagnosis session', {
-          err: e instanceof Error ? e : String(e),
-        })
-      }
-    }
+    // D3: la sesión de diagnóstico se crea solo para diagnósticos nuevos (no follow-ups)
+    const persistedSessionId = followUpSession
+      ? resolvedSessionId
+      : await this.createDiagnosisSession(vehicleId, scenarioId, userId)
 
-    const llmClient = this.llmClient
-    const normalizedMake = normalizeManufacturer(vehicleInfo.make)
-    const sessionCtx: SessionContext = {
-      sessionId,
-      vehicleId,
-      manufacturer: normalizedMake,
-      model: vehicleInfo.model,
-    }
-    const mcp = this.getMcpServer(scenarioId, sessionCtx)
-    const tools = mcp.listTools()
-    const handler: ToolCallHandler = async (name, args) => {
-      const result = await mcp.callTool(name, args)
-      return this.firstText(result, name)
-    }
-
-    const diagnosis = (async () => {
-      const useCase = new ExecuteCognitiveDiagnosisUseCase({
-        llmClient,
-        tools,
-        handler,
-        logger: this.logger,
-        diagnosisIndex: this.knowledgeStack?.diagnosisIndex,
-      })
-      return useCase.execute({ userQuery, vehicleContext: vehicleInfo, conversationHistory })
-    })()
+    const session = this.buildSessionContext(persistedSessionId, vehicleId, vehicleInfo)
 
     let diagnosisResult: ExecuteCognitiveDiagnosisOutput | undefined
-
     try {
-      diagnosisResult = await withTimeout(
-        diagnosis,
-        this.cognitiveTimeoutMs,
-        'Cognitive diagnosis timed out',
-      )
-      return diagnosisResult
+      diagnosisResult = await this.runCognitiveDiagnosis(llmClient, scenarioId, session, {
+        vehicleInfo,
+        userQuery,
+        conversationHistory,
+      })
+      return { ...diagnosisResult, sessionId: persistedSessionId }
     } catch (err) {
       if (err instanceof TimeoutError) {
         throw new CognitiveDiagnosisTimeoutError()
       }
       throw err
     } finally {
-      if (sessionId !== undefined) {
-        const snapshot = this.buildDiagnosisSnapshot(vehicleInfo, diagnosisResult)
-        void this.vehicleRepo!.endSession(sessionId, snapshot ?? undefined).catch((e) =>
-          this.logger.warn('Failed to end diagnosis session with snapshot', e),
-        )
+      this.persistDiagnosisSnapshot(persistedSessionId, followUpSession, {
+        vehicleInfo,
+        userQuery,
+        diagnosisResult,
+      })
+    }
+  }
+
+  /**
+   * Resuelve la sesión de follow-up (verificando propiedad) o persiste el vehículo
+   * para un diagnóstico nuevo. Fallar aquí evita gastar una llamada LLM.
+   */
+  private async resolveDiagnosisSession(
+    sessionId: number | undefined,
+    userId: number | undefined,
+    vehicleInfo: VehicleInfo,
+  ): Promise<ResolvedDiagnosisSession> {
+    if (sessionId === undefined) {
+      return {
+        followUpSession: undefined,
+        sessionId: undefined,
+        vehicleId: await this.upsertVehicleForDiagnosis(vehicleInfo),
       }
     }
+    if (!this.vehicleRepo || typeof userId !== 'number') {
+      throw new DiagnosisSessionNotFoundError()
+    }
+    const existing = await this.vehicleRepo.findSessionById(sessionId, userId)
+    if (!existing) {
+      throw new DiagnosisSessionNotFoundError()
+    }
+    return {
+      followUpSession: existing,
+      sessionId: existing.id,
+      vehicleId: existing.vehicleId ?? undefined,
+    }
+  }
+
+  /**
+   * Persiste el vehículo activo al inicio de un diagnóstico nuevo (D2).
+   * Devuelve su id, o `undefined` si no hay repositorio o la escritura falla.
+   */
+  private async upsertVehicleForDiagnosis(vehicleInfo: VehicleInfo): Promise<number | undefined> {
+    if (!this.vehicleRepo) return undefined
+    try {
+      const profile = this.toVehicleProfile(vehicleInfo)
+      const result = await this.vehicleRepo.upsertVehicle(profile)
+      return result.id
+    } catch (e) {
+      this.logger.warn('Failed to upsert vehicle in diagnosis session', {
+        err: e instanceof Error ? e : String(e),
+      })
+      return undefined
+    }
+  }
+
+  /** Crea la sesión de diagnóstico (solo diagnósticos nuevos) y devuelve su id, o `undefined` si falla. */
+  private async createDiagnosisSession(
+    vehicleId: number | undefined,
+    scenarioId: string | undefined,
+    userId: number | undefined,
+  ): Promise<number | undefined> {
+    if (vehicleId === undefined || !this.vehicleRepo) return undefined
+    try {
+      const session = await this.vehicleRepo.createSession(
+        new DiagnosisSession({
+          id: 0,
+          vehicleId,
+          userId: userId ?? null,
+          scenarioId,
+          startedAt: new Date().toISOString(),
+        }),
+      )
+      return session.id
+    } catch (e) {
+      this.logger.warn('Failed to create diagnosis session', {
+        err: e instanceof Error ? e : String(e),
+      })
+      return undefined
+    }
+  }
+
+  /** Garantiza que el diagnóstico cognitivo esté disponible (LLM configurado) y devuelve el cliente. */
+  private requireLlmClient(): LlmClientPort {
+    if (!this.llmClient) {
+      this.logger.warn('Cognitive diagnosis requested but no LLM client is configured')
+      throw new CognitiveDiagnosisUnavailableError()
+    }
+    return this.llmClient
+  }
+
+  /** Construye el contexto de sesión MCP con fabricante normalizado y modelo. */
+  private buildSessionContext(
+    sessionId: number | undefined,
+    vehicleId: number | undefined,
+    vehicleInfo: VehicleInfo,
+  ): SessionContext {
+    return {
+      sessionId,
+      vehicleId,
+      manufacturer: normalizeManufacturer(vehicleInfo.make),
+      model: vehicleInfo.model,
+    }
+  }
+
+  /**
+   * Cablea el servidor MCP, crea el use case cognitivo y lo ejecuta con timeout.
+   *
+   * @throws {CognitiveDiagnosisTimeoutError} Si se agota `cognitiveTimeoutMs`.
+   * @throws {EmptyToolResultError} Si una tool invocada responde sin contenido.
+   */
+  private runCognitiveDiagnosis(
+    llmClient: LlmClientPort,
+    scenarioId: string | undefined,
+    session: SessionContext,
+    input: {
+      vehicleInfo: VehicleInfo
+      userQuery?: string
+      conversationHistory?: readonly LlmConversationItem[]
+    },
+  ): Promise<ExecuteCognitiveDiagnosisOutput> {
+    const mcp = this.getMcpServer(scenarioId, session)
+    const handler: ToolCallHandler = async (name, args) => {
+      const result = await mcp.callTool(name, args)
+      return this.firstText(result, name)
+    }
+    const useCase = new ExecuteCognitiveDiagnosisUseCase({
+      llmClient,
+      tools: mcp.listTools(),
+      handler,
+      logger: this.logger,
+      diagnosisIndex: this.knowledgeStack?.diagnosisIndex,
+    })
+    return withTimeout(
+      useCase.execute({
+        userQuery: input.userQuery,
+        vehicleContext: input.vehicleInfo,
+        conversationHistory: input.conversationHistory,
+      }),
+      this.cognitiveTimeoutMs,
+      'Cognitive diagnosis timed out',
+    )
+  }
+
+  /**
+   * Persiste el snapshot del resultado al cerrar (end) o actualizar (follow-up) la sesión.
+   *
+   * Fire-and-forget: los fallos de persistencia se registran sin enmascarar el
+   * resultado del diagnóstico.
+   */
+  private persistDiagnosisSnapshot(
+    sessionId: number | undefined,
+    followUpSession: DiagnosisSession | undefined,
+    input: {
+      vehicleInfo: VehicleInfo
+      userQuery?: string
+      diagnosisResult?: ExecuteCognitiveDiagnosisOutput
+    },
+  ): void {
+    if (sessionId === undefined || !this.vehicleRepo) return
+    if (followUpSession) {
+      if (!input.diagnosisResult) return
+      const snapshot = this.buildFollowUpSnapshot(
+        input.vehicleInfo,
+        followUpSession.resultJson,
+        input.userQuery,
+        input.diagnosisResult,
+      )
+      void this.vehicleRepo
+        .updateSessionResult(sessionId, snapshot)
+        .catch((e) => this.logger.warn('Failed to update diagnosis session with snapshot', e))
+      return
+    }
+    const snapshot = this.buildDiagnosisSnapshot(input.vehicleInfo, input.diagnosisResult)
+    void this.vehicleRepo
+      .endSession(sessionId, snapshot ?? undefined)
+      .catch((e) => this.logger.warn('Failed to end diagnosis session with snapshot', e))
   }
 
   /**
@@ -616,9 +765,39 @@ export class DiagnosisService {
   private buildDiagnosisSnapshot(
     vehicleInfo: VehicleInfo,
     diagnosis?: ExecuteCognitiveDiagnosisOutput,
-  ): { resultJson: string; severity: SessionSeverity; dtcCount: number } | null {
+  ): SessionResultSnapshot | null {
     if (!diagnosis) return null
+    return this.buildSnapshot(vehicleInfo, diagnosis, [
+      buildConversationTurn('assistant', diagnosis.diagnosis),
+    ])
+  }
 
+  /**
+   * Construye el snapshot de un follow-up reutilizando la conversación previa.
+   *
+   * Lee los turnos ya persistidos en `result_json`, añade la pregunta del mecánico
+   * (si la hay) y la nueva respuesta del asistente, y serializa el snapshot completo.
+   */
+  private buildFollowUpSnapshot(
+    vehicleInfo: VehicleInfo,
+    previousResultJson: string | undefined,
+    userQuery: string | undefined,
+    diagnosis: ExecuteCognitiveDiagnosisOutput,
+  ): SessionResultSnapshot {
+    const turns = [...this.parseConversation(previousResultJson)]
+    if (userQuery) {
+      turns.push(buildConversationTurn('user', userQuery))
+    }
+    turns.push(buildConversationTurn('assistant', diagnosis.diagnosis))
+    return this.buildSnapshot(vehicleInfo, diagnosis, turns)
+  }
+
+  /** Serializa el snapshot inmutable con la conversación dada. */
+  private buildSnapshot(
+    vehicleInfo: VehicleInfo,
+    diagnosis: ExecuteCognitiveDiagnosisOutput,
+    conversation: ConversationTurn[],
+  ): SessionResultSnapshot {
     const dtcCount = this.countDtcsFromToolCalls(diagnosis.toolCalls)
     const severity: SessionSeverity = (diagnosis.severity as SessionSeverity) ?? 'low'
 
@@ -637,6 +816,7 @@ export class DiagnosisService {
         recommendations: diagnosis.recommendations,
         toolCalls: diagnosis.toolCalls,
       },
+      conversation,
       timestamp: new Date().toISOString(),
     }
 
@@ -647,12 +827,29 @@ export class DiagnosisService {
     }
   }
 
-  /** Cuenta DTCs unicos extraidos de las tool calls `get_dtc_codes`. */
+  /**
+   * Recupera los turnos de conversación de un `result_json` previo.
+   *
+   * Devuelve `[]` si no hay snapshot previo o si el JSON no es parseable, de modo
+   * que un follow-up sobre una sesión sin conversación no rompe el diagnóstico.
+   */
+  private parseConversation(resultJson: string | undefined): ConversationTurn[] {
+    if (!resultJson) return []
+    try {
+      const parsed = JSON.parse(resultJson) as { conversation?: ConversationTurn[] }
+      return Array.isArray(parsed.conversation) ? parsed.conversation : []
+    } catch {
+      this.logger.warn('Failed to parse previous diagnosis snapshot conversation')
+      return []
+    }
+  }
+
+  /** Cuenta DTCs unicos extraidos de las tool calls {@link GET_DTC_CODES_TOOL}. */
   private countDtcsFromToolCalls(
     toolCalls?: ReadonlyArray<{ readonly tool: string; readonly result: string }>,
   ): number {
     if (!toolCalls) return 0
-    const dtcToolResult = toolCalls.find((t) => t.tool === 'get_dtc_codes')?.result
+    const dtcToolResult = toolCalls.find((t) => t.tool === GET_DTC_CODES_TOOL)?.result
     if (!dtcToolResult) return 0
     // El resultado es tipo "P0301: Cylinder 1 Misfire, P0420: Catalyst..."
     return dtcToolResult.split(',').filter((s) => /[A-Z]\d{4}/.test(s.trim())).length

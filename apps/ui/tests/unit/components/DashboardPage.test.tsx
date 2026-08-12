@@ -276,7 +276,7 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Error al cargar escenarios")).toBeDefined();
   });
 
-  it("should show the loading UI in diagnosis panel while a diagnosis runs", () => {
+  it("should show the generating state in the diagnosis section while the cognitive call runs", () => {
     mockAuthStatus.value = "authed";
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
@@ -284,10 +284,17 @@ describe("DashboardPage", () => {
       setSelectedId: vi.fn(),
       scenariosError: null,
     });
-    mockUseDiagnosis.mockReturnValue({
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true });
+    mockUseCognitiveDiagnosis.mockReturnValue({
+      pidRows: null,
       loading: true,
-      result: null,
-      runDiagnosis: vi.fn(),
+      trigger: vi.fn(),
+      reset: vi.fn(),
+      diagnosisText: null,
+      severity: null,
+      confidence: null,
+      recommendations: null,
+      conversationHistory: [],
     });
 
     render(<DashboardPage />);
@@ -423,7 +430,7 @@ describe("DashboardPage", () => {
     expect(screen.queryByText("Telemetría en vivo")).toBeNull();
   });
 
-  it("should render the diagnosis result in DTC and diagnosis panels", () => {
+  it("should render DTC codes and the diagnosis CTA, not the deterministic panel", () => {
     mockAuthStatus.value = "authed";
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
@@ -444,6 +451,7 @@ describe("DashboardPage", () => {
       },
       runDiagnosis: vi.fn(),
     });
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true });
 
     render(<DashboardPage />);
 
@@ -453,8 +461,10 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Fallo de encendido cilindro 1")).toBeDefined();
 
     fireEvent.click(screen.getByTitle("Diagnóstico"));
-    expect(screen.getByText("Se recomienda revisar las bujías.")).toBeDefined();
-    expect(screen.getByText("ALTA")).toBeDefined();
+    // El apartado diagnóstico muestra el chat (CTA vacío), no el texto determinista.
+    expect(screen.getByText("Lanzar diagnóstico IA")).toBeDefined();
+    expect(screen.queryByText("Se recomienda revisar las bujías.")).toBeNull();
+    expect(screen.queryByText("ALTA")).toBeNull();
 
     fireEvent.click(screen.getByTitle("Datos Vivo"));
     expect(screen.getByText("850")).toBeDefined();
@@ -538,7 +548,7 @@ describe("DashboardPage", () => {
     expect(screen.queryByText("Informe de Sesión de Diagnóstico")).toBeNull();
   });
 
-  it("should trigger the cognitive diagnosis after runDiagnosis when the capability is on", async () => {
+  it("does not auto-run deterministic or cognitive diagnosis when a vehicle is selected", () => {
     mockAuthStatus.value = "authed";
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
@@ -546,7 +556,7 @@ describe("DashboardPage", () => {
       setSelectedId: vi.fn(),
       scenariosError: null,
     });
-    const runDiagnosis = vi.fn().mockResolvedValue(undefined);
+    const runDiagnosis = vi.fn();
     const trigger = vi.fn();
     const reset = vi.fn();
     mockUseDiagnosis.mockReturnValue({
@@ -568,19 +578,14 @@ describe("DashboardPage", () => {
     });
 
     render(<DashboardPage />);
-    fireEvent.click(screen.getByText("Iniciar diagnóstico"));
 
-    await waitFor(() => {
-      expect(trigger).toHaveBeenCalledTimes(2);
-    });
-    expect(runDiagnosis).toHaveBeenCalledTimes(2);
-    expect(reset).toHaveBeenCalledTimes(2);
-    expect(reset.mock.invocationCallOrder[0]).toBeLessThan(
-      trigger.mock.invocationCallOrder[0],
-    );
+    // Solo se limpia el estado cognitivo del vehículo anterior (reset).
+    expect(reset).toHaveBeenCalledTimes(1);
+    expect(runDiagnosis).not.toHaveBeenCalled();
+    expect(trigger).not.toHaveBeenCalled();
   });
 
-  it("should not trigger the cognitive diagnosis when the capability is off", async () => {
+  it("runs only the deterministic diagnosis when 'Iniciar diagnóstico' is clicked", () => {
     mockAuthStatus.value = "authed";
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
@@ -595,7 +600,7 @@ describe("DashboardPage", () => {
       result: null,
       runDiagnosis,
     });
-    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: false });
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true });
     mockUseCognitiveDiagnosis.mockReturnValue({
       pidRows: null,
       loading: false,
@@ -611,10 +616,50 @@ describe("DashboardPage", () => {
     render(<DashboardPage />);
     fireEvent.click(screen.getByText("Iniciar diagnóstico"));
 
-    await waitFor(() => {
-      expect(runDiagnosis).toHaveBeenCalledTimes(2);
-    });
+    expect(runDiagnosis).toHaveBeenCalledTimes(1);
     expect(trigger).not.toHaveBeenCalled();
+  });
+
+  it("launches a new cognitive session (no query) from the diagnosis CTA", () => {
+    mockAuthStatus.value = "authed";
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario],
+      selectedId: scenario.id,
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    });
+    const trigger = vi.fn();
+    mockUseDiagnosis.mockReturnValue({
+      loading: false,
+      result: {
+        rawData: "41 0C 5A",
+        parsedValues: { rpm: 850, coolantTemp: 90, speed: 0, intakeTemp: 35 },
+        dtcCodes: [],
+        diagnosisText: "[LOW] Sin fallos",
+        severity: "low",
+      },
+      runDiagnosis: vi.fn(),
+    });
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true });
+    mockUseCognitiveDiagnosis.mockReturnValue({
+      pidRows: null,
+      loading: false,
+      trigger,
+      reset: vi.fn(),
+      diagnosisText: null,
+      severity: null,
+      confidence: null,
+      recommendations: null,
+      conversationHistory: [],
+    });
+
+    render(<DashboardPage />);
+
+    fireEvent.click(screen.getByTitle("Diagnóstico"));
+    fireEvent.click(screen.getByText("Lanzar diagnóstico IA"));
+
+    expect(trigger).toHaveBeenCalledTimes(1);
+    expect(trigger).toHaveBeenCalledWith();
   });
 
   it("should paint the deterministic result while the cognitive call is still loading", () => {

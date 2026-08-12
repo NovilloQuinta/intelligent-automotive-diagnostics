@@ -8,6 +8,7 @@ import type {
   VehicleRepository,
   DiagnosisSessionFilter,
   DiagnosisSessionPage,
+  SessionResultSnapshot,
 } from '@/application/ports/VehicleRepository.js'
 import type { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
 import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
@@ -266,22 +267,32 @@ export class SqliteVehicleRepository implements VehicleRepository {
     })
   }
 
-  async endSession(
-    sessionId: number,
-    result?: { resultJson: string; severity: SessionSeverity; dtcCount: number },
-  ): Promise<void> {
-    const updates: Partial<typeof schema.diagnosisSessions.$inferInsert> = {
-      endedAt: new Date().toISOString(),
-    }
-    if (result) {
-      updates.resultJson = result.resultJson
-      updates.severity = result.severity
-      updates.dtcCount = result.dtcCount
-    }
+  async endSession(sessionId: number, result?: SessionResultSnapshot): Promise<void> {
     await this.db
       .update(schema.diagnosisSessions)
-      .set(updates)
+      .set({ ...(result ? this.resultSet(result) : {}), endedAt: new Date().toISOString() })
       .where(eq(schema.diagnosisSessions.id, sessionId))
+  }
+
+  async updateSessionResult(sessionId: number, result: SessionResultSnapshot): Promise<void> {
+    // El follow-up no re-cierra la sesión: conserva el endedAt del diagnóstico inicial.
+    await this.db
+      .update(schema.diagnosisSessions)
+      .set(this.resultSet(result))
+      .where(eq(schema.diagnosisSessions.id, sessionId))
+  }
+
+  /** Columnas del snapshot de resultado compartidas por endSession y updateSessionResult. */
+  private resultSet(result: SessionResultSnapshot): {
+    resultJson: string
+    severity: SessionSeverity
+    dtcCount: number
+  } {
+    return {
+      resultJson: result.resultJson,
+      severity: result.severity,
+      dtcCount: result.dtcCount,
+    }
   }
 
   async findSessions(filter: DiagnosisSessionFilter): Promise<DiagnosisSessionPage> {

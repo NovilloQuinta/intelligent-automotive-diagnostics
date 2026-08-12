@@ -520,6 +520,68 @@ describe('SqliteVehicleRepository', () => {
       expect(found!.endedAt).toBeDefined()
     })
 
+    it('should update the session result in place without creating a new session', async () => {
+      const session = await repo.createSession({
+        id: 0,
+        vehicleId,
+        userId: USER_ID,
+        scenarioId: 'follow-up-test',
+        startedAt: new Date().toISOString(),
+      })
+      await repo.endSession(session.id, {
+        resultJson: '{"conversation":[]}',
+        severity: 'medium',
+        dtcCount: 1,
+      })
+
+      await repo.updateSessionResult(session.id, {
+        resultJson: '{"conversation":[{"role":"assistant","text":"hola","timestamp":"x"}]}',
+        severity: 'high',
+        dtcCount: 2,
+      })
+
+      const found = await repo.findSessionById(session.id, USER_ID)
+      expect(found).not.toBeNull()
+      expect(found!.id).toBe(session.id)
+      expect(found!.resultJson).toBe(
+        '{"conversation":[{"role":"assistant","text":"hola","timestamp":"x"}]}',
+      )
+      expect(found!.severity).toBe('high')
+      expect(found!.dtcCount).toBe(2)
+      expect(found!.endedAt).toBeDefined()
+    })
+
+    it('should preserve endedAt when updating session result (follow-up does not re-close)', async () => {
+      const session = await repo.createSession({
+        id: 0,
+        vehicleId,
+        userId: USER_ID,
+        scenarioId: 'follow-up-ended-at',
+        startedAt: new Date().toISOString(),
+      })
+      await repo.endSession(session.id, {
+        resultJson: '{"conversation":[]}',
+        severity: 'medium',
+        dtcCount: 1,
+      })
+
+      const closed = await repo.findSessionById(session.id, USER_ID)
+      const endedAtBefore = closed!.endedAt
+      expect(endedAtBefore).toBeDefined()
+
+      // Asegura que el follow-up ocurre claramente despues del cierre inicial
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      await repo.updateSessionResult(session.id, {
+        resultJson: '{"conversation":[{"role":"assistant","text":"hola","timestamp":"x"}]}',
+        severity: 'high',
+        dtcCount: 2,
+      })
+
+      const updated = await repo.findSessionById(session.id, USER_ID)
+      expect(updated!.endedAt).toBe(endedAtBefore)
+    })
+
     it('should find sessions for a user (paginated)', async () => {
       // Create a few sessions
       for (let i = 0; i < 3; i++) {

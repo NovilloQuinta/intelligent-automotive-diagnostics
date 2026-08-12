@@ -10,6 +10,7 @@ import {
   DiagnosisScenarioNotFoundError,
   CognitiveDiagnosisUnavailableError,
   CognitiveDiagnosisTimeoutError,
+  DiagnosisSessionNotFoundError,
 } from '@/infrastructure/services/errors.js'
 import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
@@ -31,6 +32,7 @@ const ERROR_MESSAGES = {
   internalError: 'Internal server error',
   invalidDateRange: 'from must be before to',
   sessionNotFound: 'Diagnosis session not found',
+  accessTokenRequired: 'Access token required',
 } as const
 
 /** scenarioId obligatorio: modo simulacion, donde hay que elegir escenario. */
@@ -80,6 +82,7 @@ const { docker: CognitiveDiagnosisBodySchema, tcp: CognitiveDiagnosisBodyTcpSche
   scenarioSchemas({
     query: z.string().optional(),
     history: z.array(LlmConversationItemSchema).optional(),
+    sessionId: z.number().int().positive().optional(),
   })
 
 const { docker: FreezeFrameQuerySchema, tcp: FreezeFrameQueryTcpSchema } = scenarioSchemas({
@@ -225,6 +228,7 @@ export class DiagnosisController {
         userQuery: parsed.data.query,
         conversationHistory: parsed.data.history as readonly LlmConversationItem[] | undefined,
         userId: req.userId,
+        sessionId: parsed.data.sessionId,
       })
       res.status(200).json(result)
     } catch (err) {
@@ -393,7 +397,7 @@ export class DiagnosisController {
 
     const userId = req.userId
     if (!userId) {
-      res.status(401).json({ error: 'Access token required' })
+      res.status(401).json({ error: ERROR_MESSAGES.accessTokenRequired })
       return
     }
 
@@ -435,7 +439,7 @@ export class DiagnosisController {
 
     const userId = req.userId
     if (!userId) {
-      res.status(401).json({ error: 'Access token required' })
+      res.status(401).json({ error: ERROR_MESSAGES.accessTokenRequired })
       return
     }
 
@@ -509,6 +513,10 @@ export class DiagnosisController {
     }
     if (err instanceof CognitiveDiagnosisTimeoutError) {
       res.status(504).json({ error: ERROR_MESSAGES.cognitiveTimedOut })
+      return
+    }
+    if (err instanceof DiagnosisSessionNotFoundError) {
+      res.status(404).json({ error: ERROR_MESSAGES.sessionNotFound })
       return
     }
     if (err instanceof MaxToolCallIterationsError) {

@@ -265,6 +265,8 @@ export type CognitiveOutput = {
   recommendations: string[]
   toolCalls: { tool: string; args: Record<string, unknown>; result: string }[]
   pidObservations: PidObservation[]
+  /** Id de la `diagnosis_session` persistida; presente cuando el backend creó/resolvió la sesión. */
+  sessionId?: number
 }
 
 export type ConversationItem = {
@@ -523,10 +525,11 @@ export const api = {
     scenarioId: string,
     query?: string,
     history?: readonly ConversationItem[],
+    sessionId?: number,
   ): Promise<CognitiveOutput> {
     const res = await apiFetch('/api/mcp/cognitive-diagnosis', {
       method: 'POST',
-      body: JSON.stringify({ scenarioId, query, history }),
+      body: JSON.stringify({ scenarioId, query, history, sessionId }),
       signal: AbortSignal.timeout(COGNITIVE_TIMEOUT_MS),
     })
     await assertOk(res, GENERIC_ERROR_MESSAGE)

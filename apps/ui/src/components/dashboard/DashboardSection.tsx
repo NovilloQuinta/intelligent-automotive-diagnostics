@@ -3,13 +3,12 @@ import { PidsTable } from './PidsTable'
 import { DtcPanel } from './DtcPanel'
 import { FreezeFramePanel } from './FreezeFramePanel'
 import { EcuInfoPanel } from './EcuInfoPanel'
-import { DiagnosisPanel } from './DiagnosisPanel'
-import { MechanicChat } from './MechanicChat'
+import { DiagnosisChat } from './DiagnosisChat'
 import { SessionReportPanel } from './SessionReportPanel'
 import { VehicleStatusPanel } from './VehicleStatusPanel'
 import type { SidebarSection } from '@/components/layout/Sidebar'
 import type { CognitiveDiagnosisError } from './useCognitiveDiagnosis'
-import type { EcuInfo, Scenario, DiagnosisResponse, PidReading } from './types'
+import type { DtcCode, EcuInfo, Scenario, DiagnosisResponse, PidReading } from './types'
 import type { PidRow } from './pidCatalog'
 import type { ConversationItem } from '@/lib/api'
 
@@ -36,12 +35,11 @@ export interface DiagnosisState {
   readonly loading: boolean
   readonly streamOk: boolean
   readonly result: DiagnosisResponse | null | undefined
-  readonly dtcCodes: readonly { code: string; description?: string }[] | null
+  readonly dtcCodes: DtcCode[] | null
   readonly selectedDtc: string | null
 }
 
 export interface CognitiveState {
-  readonly diagnosisText: string | null
   readonly severity: string | null
   readonly confidence: number | null
   readonly conversationHistory: ConversationItem[]
@@ -69,6 +67,8 @@ export interface DashboardSectionProps {
   readonly onDiagnose: () => void
   readonly onDtcSelect: (code: string) => void
   readonly onChatSend: (query: string) => void
+  readonly onLaunchDiagnosis: () => void
+  readonly canLaunch: boolean
 }
 
 export function DashboardSection({
@@ -83,6 +83,8 @@ export function DashboardSection({
   onDiagnose,
   onDtcSelect,
   onChatSend,
+  onLaunchDiagnosis,
+  canLaunch,
 }: DashboardSectionProps) {
   const { rpm, coolant, speed, intake, rawSummary, pids, readings } = telemetry
   const { loading, streamOk, result, dtcCodes, selectedDtc } = diagnosis
@@ -120,7 +122,7 @@ export function DashboardSection({
     case 'dtc':
       return (
         <DtcPanel
-          codes={dtcCodes as import('./types').DtcCode[] | null}
+          codes={dtcCodes}
           severity={result?.severity ?? null}
           empty={!result && !loading}
           selectedCode={selectedDtc}
@@ -141,15 +143,6 @@ export function DashboardSection({
         />
       )
     case 'diagnosis':
-      return (
-        <DiagnosisPanel
-          text={result?.diagnosisText ?? null}
-          severity={result?.severity ?? null}
-          empty={!result && !loading}
-          loading={loading}
-        />
-      )
-    case 'chat':
       if (!cognitive.available) {
         return (
           <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
@@ -158,14 +151,15 @@ export function DashboardSection({
         )
       }
       return (
-        <MechanicChat
-          diagnosisText={cognitive.diagnosisText}
+        <DiagnosisChat
           severity={cognitive.severity}
           confidence={cognitive.confidence}
           conversationHistory={cognitive.conversationHistory}
           loading={cognitive.loading}
           error={cognitive.error}
           onSend={onChatSend}
+          onLaunchDiagnosis={onLaunchDiagnosis}
+          canLaunch={canLaunch}
         />
       )
     case 'report':

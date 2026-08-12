@@ -14,6 +14,7 @@ import {
   DiagnosisScenarioNotFoundError,
   CognitiveDiagnosisUnavailableError,
   CognitiveDiagnosisTimeoutError,
+  DiagnosisSessionNotFoundError,
 } from '@/infrastructure/services/errors.js'
 import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
 import { Vin } from '@/domain/value-objects/vin.js'
@@ -894,6 +895,65 @@ describe('diagnosisRoutes', () => {
         userQuery: '¿Y eso por qué?',
         conversationHistory: [historyItem],
       })
+    })
+
+    it('should return 200 with a numeric sessionId in the response', async () => {
+      const service = createServiceStub({
+        cognitiveDiagnosis: vi.fn(async () => ({ ...cognitiveOutput, sessionId: 10 })),
+      })
+      const { app } = createApp(service)
+
+      const res = await request(app)
+        .post('/api/mcp/cognitive-diagnosis')
+        .send({ scenarioId: 'audi-a3-idle', query: '¿Por qué tiembla?' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.sessionId).toBe(10)
+    })
+
+    it('should pass sessionId from the body to the service', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service)
+
+      const res = await request(app)
+        .post('/api/mcp/cognitive-diagnosis')
+        .send({ scenarioId: 'audi-a3-idle', query: '¿Y en frío?', sessionId: 10 })
+
+      expect(res.status).toBe(200)
+      expect(service.cognitiveDiagnosis).toHaveBeenCalledWith({
+        scenarioId: 'audi-a3-idle',
+        userQuery: '¿Y en frío?',
+        sessionId: 10,
+      })
+    })
+
+    it('should return 400 for a non-positive sessionId', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service)
+
+      const res = await request(app)
+        .post('/api/mcp/cognitive-diagnosis')
+        .send({ scenarioId: 'audi-a3-idle', sessionId: 0 })
+
+      expect(res.status).toBe(400)
+      expect(res.body.error).toBe('Invalid request body')
+      expect(service.cognitiveDiagnosis).not.toHaveBeenCalled()
+    })
+
+    it('should return 404 for a sessionId of another user or nonexistent', async () => {
+      const service = createServiceStub({
+        cognitiveDiagnosis: vi.fn(async () => {
+          throw new DiagnosisSessionNotFoundError()
+        }),
+      })
+      const { app } = createApp(service)
+
+      const res = await request(app)
+        .post('/api/mcp/cognitive-diagnosis')
+        .send({ scenarioId: 'audi-a3-idle', query: 'x', sessionId: 999 })
+
+      expect(res.status).toBe(404)
+      expect(res.body.error).toBe('Diagnosis session not found')
     })
 
     it('should return 500 without leaking details when the LLM fails', async () => {

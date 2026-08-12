@@ -29,3 +29,11 @@ export class CognitiveDiagnosisTimeoutError extends Error {
     this.name = 'CognitiveDiagnosisTimeoutError'
   }
 }
+
+/** Error lanzado cuando el `sessionId` de un follow-up no existe o no pertenece al usuario. */
+export class DiagnosisSessionNotFoundError extends Error {
+  constructor(message: string = 'Diagnosis session not found') {
+    super(message)
+    this.name = 'DiagnosisSessionNotFoundError'
+  }
+}

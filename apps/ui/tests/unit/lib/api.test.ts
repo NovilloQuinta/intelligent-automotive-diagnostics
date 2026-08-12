@@ -502,6 +502,30 @@ describe("api", () => {
       });
     });
 
+    it("sends sessionId when provided", async () => {
+      setStoredTokens();
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ...cognitive, sessionId: 42 }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getCognitiveDiagnosis(
+        "audi-a3-idle",
+        "¿Y eso por qué?",
+        undefined,
+        42,
+      );
+
+      expect(result.sessionId).toBe(42);
+      const [, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(JSON.parse(init.body as string)).toEqual({
+        scenarioId: "audi-a3-idle",
+        query: "¿Y eso por qué?",
+        sessionId: 42,
+      });
+    });
+
     it("sends conversation history when provided", async () => {
       setStoredTokens();
       const mockFetch = vi
