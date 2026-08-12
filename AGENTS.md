@@ -25,11 +25,11 @@ Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de siste
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura + deploy a produccion
-- **Ultimo paso**: `add-live-data-pid-selector` implementado y mergeado a `develop` (commit `5496900`). Backend: `readPids` multi-PID (un comando ELM327), `parseModeResponse` multi-frame, `GET /api/live-data?pids=` (máx 8, Mode 01), respuesta genérica `readings {code,name,unit,value}` + 4 campos nombrados, simulador ampliado a los 16 PIDs Mode 01. UI: checkboxes en `PidsTable`, `TelemetrySection` con gauges dinámicos (4 dedicados + `PidValueGauge` genérico), `useLiveTelemetry` con array pids, reset al cambiar vehículo. Worktree limpiado, rama borrada. Cambio OpenSpec **pendiente de archivar** (`/opsx-archive`).
+- **Ultimo paso**: `add-live-data-pid-selector` implementado, mergeado a `develop` (commit `5496900`) y **archivado** en `openspec/changes/archive/2026-08-12-add-live-data-pid-selector/`. Spec sincronizada a `openspec/specs/live-data-pid-selector/spec.md`. Backend: `readPids` multi-PID, `parseModeResponse` multi-frame, `GET /api/live-data?pids=` (máx 8, Mode 01), `readings {code,name,unit,value}`, simulador a 16 PIDs Mode 01. UI: checkboxes `PidsTable`, gauges dinámicos + `PidValueGauge`, `useLiveTelemetry(pids)`, reset al cambiar vehículo. Pendiente: verificación manual (sección 8).
 - **Flujo de ramas**: `develop` es la rama de integración; toda `feat.*`/`fix.*` sale de `develop` y se mergea ahí. `main` = releases (deploy CI). **Ojo**: hay agentes paralelos en el repo principal (rama cambia sola) — verificar `git branch --show-current` antes de commitear.
 - **Rama base**: `develop` (no == `main`; deploy via `main`).
 - **Worktrees activos** en `.claude/worktrees/`: `deployment` (`feat/deployment`, obsoleto), `unify-diagnosis-ai-chat`.
-- **OpenSpec changes activos**: add-connection-type-selector, add-topology-mapping-screen, add-dtc-repair-tips-screen, add-ecu-discovery-and-system-catalog (propuestos). `add-live-data-pid-selector` implementado, por archivar.
+- **OpenSpec changes activos**: add-connection-type-selector, add-topology-mapping-screen, add-dtc-repair-tips-screen, add-ecu-discovery-and-system-catalog (propuestos).
 - **Deuda `brace-expansion`**: RESUELTA.
 - **Deuda coverage thresholds**: `test:coverage` falla por archivos bajo umbral (composition.ts ~32%, simulatorAdapter, lancedb, AdminController, ProfileController...).
 - **Deuda `cognitiveDiagnosis`** >100 líneas: extraer helpers.
