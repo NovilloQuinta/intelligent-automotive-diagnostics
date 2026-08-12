@@ -54,6 +54,10 @@ export interface VehicleRepository {
   /** Devuelve todos los PIDs conocidos para un vehículo. */
   findPidsByVehicle(vehicleId: number): Promise<PidDefinition[]>
 
+  /** Devuelve todos los PIDs de un modo (ej. '22') desde el catálogo global,
+   *  sin filtrar por vehículo ni fabricante/modelo. */
+  findPidsByMode(mode: string): Promise<PidDefinition[]>
+
   /** Registra una lectura de PID en una sesión. */
   insertPidReading(reading: PidReading): Promise<PidReading>
 
@@ -86,6 +90,11 @@ export interface VehicleRepository {
    * (por clave única manufacturer + model + code).
    */
   upsertDtcDefinition(dtc: Omit<DtcDefinition, 'id' | 'createdAt'>): Promise<DtcDefinition>
+
+  /** Busca una definición de DTC por código (lookup global, sin fabricante/modelo).
+   * Retorna null si no existe en el catálogo.
+   */
+  findDtcDefinitionByCode(code: string): Promise<DtcDefinition | null>
 
   /** Busca una ECU por vehículo y direcciones CAN (request + response). */
   findEcuByAddress(

@@ -26,9 +26,14 @@ export class PidDefinition {
   readonly manufacturer?: string
   readonly model?: string
   readonly confidence: number
-  readonly source: 'auto' | 'llm_guess' | 'manual'
+  readonly source: 'auto' | 'llm_guess' | 'manual' | 'seed'
   readonly createdAt?: string
 
+  /**
+   * @param params - Propiedades de la definicion del PID.
+   * @throws {PidDefinitionError} Si el nombre o la formula estan vacios,
+   *   `dataBytes < 1`, o `confidence` esta fuera del rango [0, 1].
+   */
   constructor(params: {
     id: number
     vehicleId?: number
@@ -45,7 +50,7 @@ export class PidDefinition {
     manufacturer?: string
     model?: string
     confidence: number
-    source: 'auto' | 'llm_guess' | 'manual'
+    source: 'auto' | 'llm_guess' | 'manual' | 'seed'
     createdAt?: string
   }) {
     if (!params.name.trim()) throw new PidDefinitionError('PID name must not be empty')

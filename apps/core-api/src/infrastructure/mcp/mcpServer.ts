@@ -16,7 +16,6 @@ import { PidCode } from '@/domain/value-objects/pidCode.js'
 import { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import { PidReading } from '@/domain/entities/pidReading.js'
 import { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import { ALL_SEED_PIDS } from '@/infrastructure/persistence/sqlite/seed-pids.js'
 import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
 import { initialConfidenceFor } from '@/application/knowledge/confidenceScale.js'
 import type { PidFormulaSource } from '@/application/dto/diagnosis/PidFormulaSource.js'
@@ -405,12 +404,14 @@ function handleGetAvailablePids(
       // Escaneo fallido (ej. coche no conectado) — continuamos con la BD
     }
 
-    // 2. Mostrar PIDs Mode 22 conocidos del catálogo (propietarios, sin descubrimiento estándar)
-    const mode22Pids = ALL_SEED_PIDS.filter((p) => p.pidCode.mode === '22')
-    for (const p of mode22Pids) {
-      lines.push(
-        `${p.pidCode.mode} ${p.pidCode.pid}: ${p.name} (${p.formula.toString()}) [${p.unit ?? ''}]`,
-      )
+    // 2. Mostrar PIDs Mode 22 conocidos del catálogo (propietarios, desde BD)
+    if (vehicleRepo) {
+      const mode22Pids = await vehicleRepo.findPidsByMode('22')
+      for (const p of mode22Pids) {
+        lines.push(
+          `${p.pidCode.mode} ${p.pidCode.pid}: ${p.name} (${p.formula.toString()}) [${p.unit ?? ''}]`,
+        )
+      }
     }
 
     // 3. Consultar BD: PIDs almacenados por vehículo

@@ -1,4 +1,12 @@
-import { sqliteTable, integer, real, text, unique, index } from 'drizzle-orm/sqlite-core'
+import {
+  sqliteTable,
+  integer,
+  real,
+  text,
+  unique,
+  uniqueIndex,
+  index,
+} from 'drizzle-orm/sqlite-core'
 
 /** Tabla de vehiculos detectados por VIN (ISO 3779). */
 export const vehicles = sqliteTable('vehicles', {
@@ -27,26 +35,37 @@ export const ecus = sqliteTable('ecus', {
 })
 
 /** Catalogo auto-expansivo de definiciones de PID (SAE J1979 + propietarios). */
-export const pidDefinitions = sqliteTable('pid_definitions', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  vehicleId: integer('vehicle_id').references(() => vehicles.id),
-  ecuId: integer('ecu_id').references(() => ecus.id),
-  mode: text('mode').notNull(),
-  pidCode: text('pid_code').notNull(),
-  name: text('name').notNull(),
-  description: text('description'),
-  formula: text('formula').notNull(),
-  unit: text('unit'),
-  dataBytes: integer('data_bytes').notNull().default(1),
-  pidType: text('pid_type').notNull().default('formula'),
-  minValue: real('min_value'),
-  maxValue: real('max_value'),
-  manufacturer: text('manufacturer'),
-  model: text('model'),
-  confidence: real('confidence').notNull().default(1.0),
-  source: text('source').notNull().default('manual'),
-  createdAt: text('created_at').notNull().default("datetime('now')"),
-})
+export const pidDefinitions = sqliteTable(
+  'pid_definitions',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    vehicleId: integer('vehicle_id').references(() => vehicles.id),
+    ecuId: integer('ecu_id').references(() => ecus.id),
+    mode: text('mode').notNull(),
+    pidCode: text('pid_code').notNull(),
+    name: text('name').notNull(),
+    description: text('description'),
+    formula: text('formula').notNull(),
+    unit: text('unit'),
+    dataBytes: integer('data_bytes').notNull().default(1),
+    pidType: text('pid_type').notNull().default('formula'),
+    minValue: real('min_value'),
+    maxValue: real('max_value'),
+    manufacturer: text('manufacturer'),
+    model: text('model'),
+    confidence: real('confidence').notNull().default(1.0),
+    source: text('source').notNull().default('manual'),
+    createdAt: text('created_at').notNull().default("datetime('now')"),
+  },
+  (table) => ({
+    // Backstop de idempotencia: una misma definición (modo + pid + fabricante + modelo)
+    // solo puede existir una vez. `insertPidDefinition` normaliza manufacturer/model
+    // de NULL a '' para que SQLite deduplique también las filas globales.
+    modePidManufacturerModelUnique: uniqueIndex(
+      'pid_definitions_mode_pid_manufacturer_model_unique',
+    ).on(table.mode, table.pidCode, table.manufacturer, table.model),
+  }),
+)
 
 /** Lecturas historicas de PIDs con valor parseado y raw hex. */
 export const pidReadings = sqliteTable('pid_readings', {

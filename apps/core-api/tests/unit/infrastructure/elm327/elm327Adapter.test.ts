@@ -7,7 +7,9 @@ import {
   Elm327NoDataError,
   Elm327ParseError,
 } from '@/infrastructure/elm327/elm327Adapter.js'
-import { EcuInfo } from '@/domain/entities/ecuInfo.js'
+import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
+import { PidDefinition } from '@/domain/entities/pidDefinition.js'
+import { PidCode } from '@/domain/value-objects/pidCode.js'
 import { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 
 vi.mock('node:net', () => {
@@ -36,9 +38,57 @@ type MockSocket = ReturnType<typeof createConnection>
 const HOST = 'localhost'
 const PORT = 35000
 
-function makeRepo(timeout?: number): Elm327TcpRepository {
+function mockVehicleRepo(overrides: Partial<VehicleRepository> = {}): VehicleRepository {
+  return {
+    upsertVehicle: vi.fn(),
+    findVehicleByVin: vi.fn(),
+    insertEcu: vi.fn(),
+    findEcusByVehicle: vi.fn(),
+    insertPidDefinition: vi.fn(),
+    findPidDefinition: vi.fn().mockResolvedValue(null),
+    findPidsByVehicle: vi.fn(),
+    findPidsByMode: vi.fn(),
+    insertPidReading: vi.fn(),
+    createSession: vi.fn(),
+    endSession: vi.fn(),
+    findSessions: vi.fn(),
+    findSessionById: vi.fn(),
+    findDtcDefinition: vi.fn(),
+    upsertDtcDefinition: vi.fn(),
+    findDtcDefinitionByCode: vi.fn().mockResolvedValue(null),
+    findEcuByAddress: vi.fn(),
+    updateEcuDiscoveredAt: vi.fn(),
+    ...overrides,
+  }
+}
+
+const VAG_RPM_DID = new PidDefinition({
+  id: 1,
+  pidCode: new PidCode('22', '1130'),
+  name: 'Engine Speed',
+  formula: '(A*256+B)/4',
+  unit: 'rpm',
+  dataBytes: 2,
+  pidType: 'formula',
+  confidence: 1.0,
+  source: 'seed',
+})
+
+const VAG_COOLANT_DID = new PidDefinition({
+  id: 2,
+  pidCode: new PidCode('22', 'F430'),
+  name: 'Coolant Temperature',
+  formula: 'A',
+  unit: '°C',
+  dataBytes: 1,
+  pidType: 'formula',
+  confidence: 1.0,
+  source: 'seed',
+})
+
+function makeRepo(timeout?: number, vehicleRepo?: VehicleRepository): Elm327TcpRepository {
   const transport = createElm327TcpClient({ host: HOST, port: PORT, timeout, maxRetries: 0 })
-  return new Elm327TcpRepository(transport)
+  return new Elm327TcpRepository(transport, vehicleRepo)
 }
 
 function lastSocket(): MockSocket {
@@ -112,20 +162,51 @@ describe('Elm327TcpRepository', () => {
     await expect(promise).resolves.toBe(0)
   })
 
-  it('readPid Mode 22 VAG: mock responde "62 11 30 0C 80" → 800', async () => {
-    const repo = makeRepo()
+  it('readPid Mode 22 VAG: resuelve formula desde BD via vehicleRepo → 800', async () => {
+    const vRepo = mockVehicleRepo({ findPidDefinition: vi.fn().mockResolvedValue(VAG_RPM_DID) })
+    const repo = makeRepo(undefined, vRepo)
     const promise = repo.readPid('22', '1130')
-    expectSent('22 11 30')
+    await vi.waitFor(() => expectSent('22 11 30'))
     respond(RESPONSES['22 11 30'])
     await expect(promise).resolves.toBe(800)
   })
 
-  it('readPid Mode 22 VAG coolant: mock responde "62 F4 30 5A" → 90', async () => {
-    const repo = makeRepo()
+  it('readPid Mode 22 VAG coolant: resuelve formula desde BD via vehicleRepo → 90', async () => {
+    const vRepo = mockVehicleRepo({ findPidDefinition: vi.fn().mockResolvedValue(VAG_COOLANT_DID) })
+    const repo = makeRepo(undefined, vRepo)
     const promise = repo.readPid('22', 'F430')
-    expectSent('22 F4 30')
+    await vi.waitFor(() => expectSent('22 F4 30'))
     respond(RESPONSES['22 F4 30'])
     await expect(promise).resolves.toBe(90)
+  })
+
+  it('readPid Mode 22 sin vehicleRepo: fallback big-endian sobre los bytes', async () => {
+    const repo = makeRepo()
+    const promise = repo.readPid('22', '1130')
+    expectSent('22 11 30')
+    respond(RESPONSES['22 11 30'])
+    await expect(promise).resolves.toBe(3200)
+  })
+
+  it('readPid Mode 22 con vehicleRepo sin definicion: fallback big-endian', async () => {
+    const repo = makeRepo(undefined, mockVehicleRepo())
+    const promise = repo.readPid('22', '1130')
+    await vi.waitFor(() => expectSent('22 11 30'))
+    respond(RESPONSES['22 11 30'])
+    await expect(promise).resolves.toBe(3200)
+  })
+
+  it('readPid normaliza mode/pid a mayusculas antes de consultar la BD', async () => {
+    const findPidDefinition = vi.fn().mockResolvedValue(VAG_COOLANT_DID)
+    const vRepo = mockVehicleRepo({ findPidDefinition })
+    const repo = makeRepo(undefined, vRepo)
+
+    const promise = repo.readPid('22', 'f430')
+    await vi.waitFor(() => expectSent('22 F4 30'))
+    respond(RESPONSES['22 F4 30'])
+
+    await expect(promise).resolves.toBe(90)
+    expect(findPidDefinition).toHaveBeenCalledWith('22', 'F430')
   })
 
   it('readDtcCodes: mock responde "43 03 01 04 01" → [P0301, P0401] con descripcion', async () => {
@@ -146,6 +227,39 @@ describe('Elm327TcpRepository', () => {
     expectSent('03')
     respond('NO DATA\r\r>')
     await expect(promise).resolves.toEqual([])
+  })
+
+  it('readDtcCodes: DTC manufacturer-specific resuelve descripcion desde BD', async () => {
+    const vRepo = mockVehicleRepo({
+      findDtcDefinitionByCode: vi.fn().mockResolvedValue({
+        manufacturer: 'Audi',
+        model: 'A3',
+        code: 'P2002',
+        description: 'Diesel Particulate Filter Efficiency Below Threshold (Bank 1)',
+        confidence: 0.9,
+        source: 'seed',
+      }),
+    })
+    const repo = makeRepo(undefined, vRepo)
+    const promise = repo.readDtcCodes()
+    expectSent('03')
+    respond('03\r43 20 02\r\r>')
+    const dtcs = await promise
+    expect(dtcs).toEqual([
+      {
+        code: 'P2002',
+        description: 'Diesel Particulate Filter Efficiency Below Threshold (Bank 1)',
+      },
+    ])
+  })
+
+  it('readDtcCodes: DTC manufacturer-specific sin vehicleRepo → description vacia', async () => {
+    const repo = makeRepo()
+    const promise = repo.readDtcCodes()
+    expectSent('03')
+    respond('03\r43 20 02\r\r>')
+    const dtcs = await promise
+    expect(dtcs).toEqual([{ code: 'P2002', description: '' }])
   })
 
   it('readPendingDtcCodes: mock responde "47 03 01 04 01" → [P0301, P0401] con descripcion', async () => {
@@ -394,18 +508,12 @@ describe('Elm327TcpRepository', () => {
     expect(createConnection).toHaveBeenCalledTimes(1)
   })
 
-  it('getEcuInfo should return synthetic Engine Control Unit with OBD-II addresses', async () => {
+  it('getEcuInfo should return an empty array (no synthetic ECU stub)', async () => {
     const repo = makeRepo()
 
     const ecus = await repo.getEcuInfo()
 
-    expect(ecus).toHaveLength(1)
-    expect(ecus[0]).toBeInstanceOf(EcuInfo)
-    expect(ecus[0].name).toBe('Engine Control Unit')
-    expect(ecus[0].requestAddr).toBe('7E0')
-    expect(ecus[0].responseAddr).toBe('7E8')
-    expect(ecus[0].type).toBe('ECM')
-    expect(ecus[0].protocol).toBe('ISO 15765-4 (CAN 11/500)')
+    expect(ecus).toEqual([])
   })
 
   describe('readPidRaw', () => {

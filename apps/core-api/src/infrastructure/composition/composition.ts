@@ -5,6 +5,7 @@ import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRe
 import { SqliteRefreshTokenStore } from '@/infrastructure/persistence/sqlite/refreshTokenStore.js'
 import { SqlitePasswordResetTokenRepository } from '@/infrastructure/persistence/sqlite/passwordResetTokenRepository.js'
 import { SqliteVehicleRepository } from '@/infrastructure/persistence/sqlite/vehicleRepository.js'
+import { seedManufacturerCatalog } from '@/infrastructure/persistence/sqlite/seedManufacturerCatalog.js'
 import { createAuthService } from '@/infrastructure/services/authService.js'
 import { createNodemailerEmailSender } from '@/infrastructure/email/nodemailerEmailSender.js'
 import { createConsoleEmailSender } from '@/infrastructure/email/consoleEmailSender.js'
@@ -75,14 +76,14 @@ import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 const ACCESS_TOKEN_TTL = '15m'
 const REFRESH_TOKEN_TTL = '7d'
 
+/** Falla con un mensaje de configuracion, no con un ZodError de "string too small". */
+function requireConfig(value: string | undefined, name: string): string {
+  if (!value) throw new Error(`Missing required configuration: ${name}`)
+  return value
+}
+
 /** Crea el cliente LLM segun el proveedor configurado, o undefined si no hay provider. */
 function createLlmClient(config: AppConfig, logger: LoggerPort): LlmClientPort | undefined {
-  /** Falla con un mensaje de configuracion, no con un ZodError de "string too small". */
-  function requireConfig(value: string | undefined, name: string): string {
-    if (!value) throw new Error(`Missing required configuration: ${name}`)
-    return value
-  }
-
   if (config.LLM_PROVIDER === 'anthropic') {
     return createAnthropicClient({
       apiKey: requireConfig(config.ANTHROPIC_API_KEY, 'ANTHROPIC_API_KEY'),
@@ -322,11 +323,15 @@ function createDockerScenarios(config: AppConfig): ScenarioDescriptor[] {
 }
 
 /** Mapa scenarioId → ObdRepository creado a partir de los descriptores de escenarios. */
-function createObdRepoMap(scenarios: ScenarioDescriptor[]): Map<string, ObdRepository> {
+function createObdRepoMap(
+  scenarios: ScenarioDescriptor[],
+  vehicleRepo: VehicleRepository,
+  logger: LoggerPort,
+): Map<string, ObdRepository> {
   const map = new Map<string, ObdRepository>()
   for (const s of scenarios) {
     const transport = createElm327TcpClient({ host: s.host, port: s.port })
-    map.set(s.id, new Elm327TcpRepository(transport))
+    map.set(s.id, new Elm327TcpRepository(transport, vehicleRepo, logger))
   }
   return map
 }
@@ -422,6 +427,7 @@ export async function buildApp(config: AppConfig): Promise<Application> {
     logger,
   )
   await seedAdminUser(config, userRepo, auth.authService, logger)
+  await seedManufacturerCatalog(vehicleRepo, logger)
   const authController = new AuthController({
     registerUser: auth.registerUseCase,
     loginUser: auth.loginUseCase,
@@ -476,7 +482,7 @@ function createDiagnosisService(opts: CreateDiagnosisServiceOptions): DiagnosisS
   const { config, llmClient, knowledgeStack, webSearch, vehicleRepo, logger } = opts
   if (config.OBD_MODE === 'docker') {
     const scenarios = createDockerScenarios(config)
-    const obdRepos = createObdRepoMap(scenarios)
+    const obdRepos = createObdRepoMap(scenarios, vehicleRepo, logger)
     return new DiagnosisService({
       scenarios,
       obdRepos,
@@ -492,7 +498,7 @@ function createDiagnosisService(opts: CreateDiagnosisServiceOptions): DiagnosisS
       path: config.SERIAL_PORT_PATH,
       baudRate: config.SERIAL_BAUD_RATE,
     })
-    const obdRepo = new Elm327TcpRepository(transport)
+    const obdRepo = new Elm327TcpRepository(transport, vehicleRepo, logger)
     return new DiagnosisService({
       scenarios: [],
       obdRepo,
@@ -508,7 +514,7 @@ function createDiagnosisService(opts: CreateDiagnosisServiceOptions): DiagnosisS
     host: config.ELM327_HOST,
     port: config.ELM327_PORT,
   })
-  const obdRepo = new Elm327TcpRepository(transport)
+  const obdRepo = new Elm327TcpRepository(transport, vehicleRepo, logger)
   return new DiagnosisService({
     scenarios: [],
     obdRepo,
