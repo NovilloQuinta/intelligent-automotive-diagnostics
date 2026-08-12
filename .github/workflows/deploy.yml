@@ -68,7 +68,7 @@ jobs:
           script: |
             set -e
 
-            APP_DIR=/opt/intelligent-automotive-diagnostics
+            APP_DIR=/var/www/intelligent-automotive-diagnostics
             REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
 
             if [ ! -d "$APP_DIR" ]; then
