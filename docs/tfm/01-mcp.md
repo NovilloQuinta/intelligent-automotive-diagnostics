@@ -45,7 +45,7 @@ Estas herramientas leen datos en tiempo real del vehículo a través del puerto 
 | `get_freeze_frame` | Recupera los datos congelados del momento en que se disparó un DTC (Service 02 / Mode 02). | `dtc?: string` (opcional — código DTC específico) | `"DTC P0301 freeze frame: RPM: 2500, Coolant: 92, ..."` o `"No freeze frame data available."` | Cruza síntomas con el estado del motor en el instante del fallo. |
 | `read_vin` | Lee el VIN (número de bastidor) del vehículo (Service 09 PID 02). | Sin parámetros | VIN como texto (ej. `"WAUZZZ8V1FA123456"`) | Identifica fabricante, modelo y año para contextualizar el diagnóstico. |
 | `get_vehicle_info` | Devuelve marca, modelo, año y tipo de motor. | Sin parámetros | `"Audi A3 (2015) — 2.0 TDI"` | Contexto rápido sin necesidad de decodificar el VIN completo. |
-| `get_available_pids` | Lista todos los PIDs soportados por el vehículo conectado. | `vehicleId?: number` (opcional) | Lista con formato `"0C: Engine RPM (Mode 01)"`, `"22 F40C: Oil Pressure ((A*256+B)/100) [kPa]"` | Descubre qué sensores están disponibles antes de intentar leerlos. Combina tres fuentes: escaneo Mode 01 PID 00 (J1979), catálogo Mode 22 de seed PIDs, y PIDs almacenados por vehículo en BD. |
+| `get_available_pids` | Lista todos los PIDs soportados por el vehículo conectado. | `vehicleId?: number` (opcional) | Lista con formato `"0C: Engine RPM (Mode 01)"`, `"22 F40C: Oil Pressure ((A*256+B)/100) [kPa]"` | Descubre qué sensores están disponibles antes de intentar leerlos. Combina tres fuentes: escaneo Mode 01 PID 00 (J1979), catálogo Mode 22 de la BD, y PIDs almacenados por vehículo en BD. |
 | `get_ecu_info` | Lista las ECUs (unidades de control electrónico) descubiertas en el bus CAN. | Sin parámetros | `"ECM (Engine, 7E0→7E8) — ISO 15765-4"` | Identifica qué módulos están presentes (motor, ABS, airbag, etc.). |
 
 ### 2.2 Tools de conocimiento RAG (búsqueda semántica)
@@ -327,7 +327,7 @@ Comparando la documentación (ADR 003, OpenSpec specs, AGENTS.md) contra el cód
 - **ADR 003**: describe `get_available_pids` como "PIDs conocidos para un vehículo → `VehicleRepository.findPidsByVehicle`".
 - **Código real** (`handleGetAvailablePids`): la herramienta hace **tres cosas**, no una:
   1. Escanea el vehículo real vía Mode 01 PID 00 (bitmask J1979) para PIDs soportados.
-  2. Muestra PIDs Mode 22 del catálogo (`ALL_SEED_PIDS` filtrados por `mode === '22'`).
+  2. Muestra PIDs Mode 22 de la BD (`vehicleRepo.findPidsByMode('22')`).
   3. Consulta PIDs almacenados en BD por vehículo (`vehicleRepo.findPidsByVehicle`).
 - **Impacto**: la documentación subestima significativamente la capacidad de descubrimiento de esta herramienta.
 

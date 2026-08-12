@@ -254,7 +254,7 @@ El servidor MCP (`mcpServer.ts`) registra tools condicionalmente según las depe
 | `get_freeze_frame` | `dtc?: string` | Datos congelados del fallo (Service 02) | `ObdRepository.getFreezeFrame` |
 | `read_vin` | _(ninguno)_ | VIN del vehículo (Service 09 PID 02) | `ObdRepository.readVin` |
 | `get_vehicle_info` | _(ninguno)_ | Marca, modelo, año, tipo de motor | `ObdRepository.getVehicleInfo` |
-| `get_available_pids` | `vehicleId?: number` | PIDs soportados (escaneo Mode 01 + catálogo Mode 22 + BD) | `ObdRepository.getSupportedPids` + `VehicleRepository` |
+| `get_available_pids` | `vehicleId?: number` | PIDs soportados (escaneo Mode 01 + Mode 22 desde BD + PIDs por vehículo) | `ObdRepository.getSupportedPids` + `VehicleRepository` |
 | `get_ecu_info` | _(ninguno)_ | ECUs descubiertas (nombres, direcciones CAN, protocolo) | `ObdRepository.getEcuInfo` |
 
 **Auto-aprendizaje en `read_pid`**: cuando se lee un PID no estándar (Mode ≠ `01`) y existe `VehicleRepository`, el handler registra automáticamente el PID en la base de datos con fórmula genérica `(A*256+B)`, 2 bytes de datos, y confianza `0.3`. Esto es **transparente para el LLM** — él solo ve el valor leído.
@@ -660,7 +660,7 @@ Comparando la documentación de arquitectura (ADR-003, ADR-006, AGENTS.md) contr
 |---|---|---|---|
 | **Número de tools diagnósticas** | 6 tools en la tabla | 7 tools (`+ get_ecu_info`) | Bajo — tool adicional no documentada |
 | **Tools de conocimiento** | No mencionadas | 6 tools RAG + 1 web search | Medio — el ADR omite la mitad del MCP server |
-| **`get_available_pids`** | "Usa `VehicleRepository.findPidsByVehicle`" | Escanea Mode 01 real + catálogo Mode 22 + BD | Bajo — el handler es más completo que lo documentado |
+| **`get_available_pids`** | "Usa `VehicleRepository.findPidsByVehicle`" | Escanea Mode 01 real + Mode 22 desde BD | Bajo — el handler es más completo que lo documentado |
 | **`read_vin` retorno** | "VIN del vehículo (Service 09 PID 02)" | Correcto, coincide | Ninguno |
 | **Proveedor LLM** | "LLM (Claude)" — implica solo Anthropic | Multi-proveedor vía ADR-006 | Bajo — el ADR-003 es anterior al ADR-006 |
 

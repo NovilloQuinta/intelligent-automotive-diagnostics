@@ -297,14 +297,13 @@ El proyecto implementa un **parser y evaluador aritmético completo** para fórm
 
 ### 5.2 Catálogo de PIDs semilla
 
-El fichero `infrastructure/persistence/sqlite/seed-pids.ts` contiene **37 PIDs** organizados en cuatro grupos:
+El fichero `infrastructure/persistence/sqlite/seed-pids.ts` contiene **16 PIDs** universales SAE J1979 (Mode 01), aplicables a cualquier vehículo:
 
 | Grupo | Cantidad | Modo | Descripción |
 |-------|----------|------|-------------|
 | `STANDARD_MODE_01_PIDS` | 16 | 01 | PIDs SAE J1979 globales (todos los vehículos) |
-| `STANDARD_MODE_09_PIDS` | 1 | 09 | VIN (17 bytes ASCII) |
-| `TOYOTA_AURIS_MODE_22_PIDS` | 4 | 22 | Odómetros TCU/ECM, batería híbrida |
-| `VAG_AUDI_MODE_22_PIDS` | 16 | 22 | Motor TDI EA288 (Ross-Tech VCDS) |
+
+Los PIDs **propietarios de fabricante (Mode 22)** y los **DTCs manufacturer-specific** ya **no viven en código**: se siembran en la BD en runtime vía `seedManufacturerCatalog.ts` (idempotente, `source: 'seed'`) en las tablas `pid_definitions` y `dtc_definitions`. El VIN (Service 09 PID 02) se lee por `readVin`/`parseVinResponse`, no por el catálogo de fórmulas.
 
 Cada entrada del catálogo es un `PidDefinition` con:
 
@@ -317,7 +316,7 @@ interface PidDefinition {
   dataBytes: number         // Bytes esperados en la respuesta
   pidType: 'formula'|'ascii'|'bitmask'  // Tipo de decodificación
   confidence: number        // 0..1 confianza en la fórmula
-  source: 'manual'|'discovered'  // Origen del PID
+  source: 'manual'|'seed'|'auto'|'llm_guess'  // Origen del PID
   description?: string      // Descripción extendida
   minValue?: number         // Rango mínimo (para validación UI)
   maxValue?: number         // Rango máximo
@@ -326,7 +325,7 @@ interface PidDefinition {
 
 ### 5.3 Catálogo de descripciones DTC
 
-El módulo `domain/dtcCatalog.ts` contiene un **diccionario de 93 códigos DTC** (SAE J2012) con sus descripciones en inglés, cubriendo:
+El módulo `domain/dtcCatalog.ts` contiene un **diccionario de códigos DTC estándar SAE J2012** (P0xxx) con sus descripciones en inglés, cubriendo:
 
 - **P00xx**: Fuel and Air Metering (MAF, MAP, IAT, O2 sensors)
 - **P02xx**: Injector circuits, turbo
@@ -335,9 +334,8 @@ El módulo `domain/dtcCatalog.ts` contiene un **diccionario de 93 códigos DTC**
 - **P05xx**: Vehicle speed, idle control
 - **P06xx**: ECM/PCM internal, generator, VIN mismatch
 - **P07xx**: Transmission
-- **P10xx-P26xx**: Manufacturer-specific (VAG TDI), DPF
 
-Los DTCs no encontrados en el catálogo se entregan con `description: ''`. El sistema **nunca inventa** descripciones: ese vacío lo rellena el índice vectorial (LanceDB) y el LLM durante el diagnóstico cognitivo.
+Los DTCs **manufacturer-specific** (P1xxx VAG, P2xxx diesel) ya **no están en código**: se siembran en la BD (`dtc_definitions`, `source: 'seed'`) y el `elm327Adapter` resuelve su descripción desde BD cuando `dtcDescribe` no acierta. El sistema **nunca inventa** descripciones: el hueco que no cubre ni el catálogo ni la BD lo rellena el índice vectorial (LanceDB) y el LLM durante el diagnóstico cognitivo.
 
 ---
 
@@ -520,22 +518,7 @@ El `Elm327TcpRepository.getSupportedPids()` envía `01 00`, parsea los 4 bytes d
 
 ### 8.4 ECUs y direccionamiento CAN
 
-El `Elm327TcpRepository.getEcuInfo()` devuelve **siempre** una única ECU hardcodeada:
-
-```typescript
-async getEcuInfo(): Promise<EcuInfo[]> {
-  return [new EcuInfo({
-    id: 0, vehicleId: 0,
-    name: 'Engine Control Unit',
-    requestAddr: '7E0',    // Dirección CAN de petición (OBD-II estándar)
-    responseAddr: '7E8',   // Dirección CAN de respuesta
-    type: 'ECM',
-    protocol: 'ISO 15765-4 (CAN 11/500)',
-  })]
-}
-```
-
-Esto refleja que el sistema actual solo se comunica con el ECM (Engine Control Module). En un vehículo real con gateway CAN, habría que descubrir dinámicamente las ECUs presentes en el bus. El simulador interno sí modela múltiples ECUs (hasta 6 en el escenario Audi).
+El `Elm327TcpRepository.getEcuInfo()` devuelve actualmente `[]`: el descubrimiento real de ECUs (nombres, direcciones CAN, protocolo) aún no está implementado para el transporte ELM327 real. El simulador interno sí modela múltiples ECUs (hasta 6 en el escenario Audi) a través de `ObdSimulatorRepository` → `simulator.getEcus()`, y el MCP persiste las ECUs descubiertas en la tabla `ecus` cuando hay sesión activa (`persistEcus`, con deduplicación por direcciones CAN).
 
 ### 8.5 DTCs y Freeze Frame
 
@@ -623,7 +606,7 @@ Esta sección compara los documentos de arquitectura (ADR 004, 005, 008) y la do
 | Documento | Realidad |
 |-----------|----------|
 | Menciona comandos AT (`AT SP 0`, `AT H1`) como parte del troubleshooting | `Elm327TcpRepository` **nunca envía comandos AT**. Asume que el emulador ya está en el modo correcto (eco desactivado, sin headers). El script `send-obd.ts` tampoco envía AT. |
-| Dice que el emulador soporta "Multi-ECU" con "CAN 11-bit" | En la práctica, el `Elm327TcpRepository.getEcuInfo()` devuelve siempre 1 sola ECU hardcodeada (`7E0`/`7E8`). El multi-ECU no se aprovecha. |
+| Dice que el emulador soporta "Multi-ECU" con "CAN 11-bit" | En la práctica, el `Elm327TcpRepository.getEcuInfo()` devuelve `[]` (descubrimiento de ECUs aún no implementado para ELM327 real). El multi-ECU no se aprovecha. |
 | Menciona "escenario `default`" y "escenario `mt05`" como disponibles | El `docker-compose.yml` solo despliega 3 contenedores: `audi-a3-tdi`, `kawasaki-z900` y `car` (Toyota). Los escenarios `default` y `mt05` no están desplegados. |
 
 ### 10.5 Simulador interno no usado en producción
@@ -661,7 +644,8 @@ Esta sección compara los documentos de arquitectura (ADR 004, 005, 008) y la do
 | `apps/core-api/src/infrastructure/simulation/scenario.ts` | Interfaz SimulationScenario |
 | `apps/core-api/src/infrastructure/simulation/seedScenarios.ts` | Escenarios predefinidos |
 | `apps/core-api/src/infrastructure/composition/composition.ts` | Wiring: selección OBD_MODE |
-| `apps/core-api/src/infrastructure/persistence/sqlite/seed-pids.ts` | Catálogo de 37 PIDs semilla |
+| `apps/core-api/src/infrastructure/persistence/sqlite/seed-pids.ts` | Catálogo de 16 PIDs semilla (universales Mode 01) |
+| `apps/core-api/src/infrastructure/persistence/sqlite/seedManufacturerCatalog.ts` | Seed idempotente: 20 PIDs Mode 22 + 23 DTCs manufacturer en BD |
 | `apps/core-api/src/domain/pids.ts` | Constantes: modos y PIDs |
 | `apps/core-api/src/domain/pidFormulaEntry.ts` | Entidad PidFormulaEntry |
 | `apps/core-api/src/domain/services/pidFormula.ts` | Motor Shunting-yard |
@@ -673,7 +657,7 @@ Esta sección compara los documentos de arquitectura (ADR 004, 005, 008) y la do
 | `apps/core-api/src/domain/value-objects/freezeFrame.ts` | Value Object FreezeFrame |
 | `apps/core-api/src/domain/value-objects/liveData.ts` | Value Object LiveData |
 | `apps/core-api/src/domain/value-objects/pidCode.ts` | Value Object PidCode |
-| `apps/core-api/src/domain/dtcCatalog.ts` | Catálogo de 93 descripciones DTC |
+| `apps/core-api/src/domain/dtcCatalog.ts` | Catálogo de descripciones DTC estándar (P0xxx, SAE J2012) |
 | `apps/core-api/src/domain/entities/ecuInfo.ts` | Entidad EcuInfo |
 | `apps/core-api/src/application/ports/ObdRepository.ts` | Puerto ObdRepository |
 | `apps/core-api/src/application/ports/PidFormulaCatalog.ts` | Puerto PidFormulaCatalog |

@@ -129,7 +129,7 @@ Objetos inmutables sin identidad, con validación en constructor:
 
 #### Catálogos y Constantes
 - **`pids.ts`**: Constantes de modos OBD-II (`MODE_CURRENT_DATA = '01'`, `MODE_PROPRIETARY = '22'`) y PIDs estándar (`PID_RPM = '0C'`, `PID_COOLANT_TEMP = '05'`, etc.)
-- **`dtcCatalog.ts`**: Subconjunto del catálogo SAE J2012 (~120 DTCs con descripciones) más códigos específicos VAG y diesel. Un código ausente devuelve `description: ''` — el LLM y el índice vectorial completan el hueco.
+- **`dtcCatalog.ts`**: Subconjunto del catálogo SAE J2012 (P0xxx estándar con descripciones). Los DTCs manufacturer-specific (P1xxx/P2xxx) viven en la BD (`dtc_definitions`, `source: 'seed'`). Un código ausente devuelve `description: ''` — el LLM y el índice vectorial completan el hueco.
 
 ### 5.3.2. Capa de Aplicación (`application/`)
 
