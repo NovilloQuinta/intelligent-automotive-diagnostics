@@ -101,8 +101,8 @@ function createTestApp(
 ) {
   const { userRepo, authService, tokenStore, tokenRepo, emailSender } = createMocks(overrides)
 
-  const registerUseCase = new RegisterUserUseCase(userRepo, authService, tokenStore)
-  const loginUseCase = new LoginUserUseCase(userRepo, authService, tokenStore)
+  const registerUseCase = new RegisterUserUseCase(userRepo, authService, tokenStore, 604800000)
+  const loginUseCase = new LoginUserUseCase(userRepo, authService, tokenStore, 604800000)
   const refreshUseCase = new RefreshTokenUseCase(authService)
   const getCurrentUserUseCase = new GetCurrentUserUseCase(userRepo)
   const logoutUseCase = new LogoutUserUseCase(tokenStore)

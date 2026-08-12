@@ -12,6 +12,7 @@ export class LoginUserUseCase {
     private readonly userRepo: UserRepository,
     private readonly authService: AuthServicePort,
     private readonly tokenStore: RefreshTokenRepository,
+    private readonly refreshTokenTtlMs: number,
     private readonly logger?: LoggerPort,
   ) {}
 
@@ -43,7 +44,7 @@ export class LoginUserUseCase {
     await this.userRepo.resetFailedLogins(user.id)
 
     const tokens = this.authService.generateTokens(user.id)
-    await persistRefreshToken(this.tokenStore, user.id, tokens)
+    await persistRefreshToken(this.tokenStore, user.id, tokens, this.refreshTokenTtlMs)
 
     this.logger?.info('auth.login_success', { userId: user.id })
 

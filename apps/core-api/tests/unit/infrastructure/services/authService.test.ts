@@ -17,8 +17,8 @@ describe('authService', () => {
   const service = createAuthService({
     accessTokenSecret: 'access-secret-test',
     refreshTokenSecret: 'refresh-secret-test',
-    accessTokenExpiresIn: '15m',
-    refreshTokenExpiresIn: '7d',
+    accessTokenExpiresIn: 900,
+    refreshTokenExpiresIn: 604800,
     tokenStore: mockStore,
   })
 

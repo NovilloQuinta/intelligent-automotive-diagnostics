@@ -103,16 +103,16 @@ describe('Auth integration', () => {
     const authService = createAuthService({
       accessTokenSecret: ACCESS_SECRET,
       refreshTokenSecret: REFRESH_SECRET,
-      accessTokenExpiresIn: '15m',
-      refreshTokenExpiresIn: '7d',
+      accessTokenExpiresIn: 900,
+      refreshTokenExpiresIn: 604800,
       tokenStore,
     })
     emailSender = new CapturingEmailSender()
     authServiceForSeed = authService
 
     const authController = new AuthController({
-      registerUser: new RegisterUserUseCase(userRepo, authService, tokenStore),
-      loginUser: new LoginUserUseCase(userRepo, authService, tokenStore),
+      registerUser: new RegisterUserUseCase(userRepo, authService, tokenStore, 604800000),
+      loginUser: new LoginUserUseCase(userRepo, authService, tokenStore, 604800000),
       refreshToken: new RefreshTokenUseCase(authService),
       getCurrentUser: new GetCurrentUserUseCase(userRepo),
       logoutUser: new LogoutUserUseCase(tokenStore),

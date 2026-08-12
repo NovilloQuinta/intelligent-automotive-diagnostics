@@ -47,6 +47,8 @@ services:
       - LLM_MODEL=${LLM_MODEL:-}
       - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET:?ACCESS_TOKEN_SECRET is required}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET:?REFRESH_TOKEN_SECRET is required}
+      - ACCESS_TOKEN_TTL=${ACCESS_TOKEN_TTL:-900}
+      - REFRESH_TOKEN_TTL=${REFRESH_TOKEN_TTL:-604800}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://diag.jcodinglabs.com}
       - APP_BASE_URL=${APP_BASE_URL:-https://diag.jcodinglabs.com}
       - SMTP_HOST=${SMTP_HOST:-}

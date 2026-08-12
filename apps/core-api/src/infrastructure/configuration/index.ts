@@ -19,6 +19,8 @@ const configSchema = z.object({
   ALLOWED_ORIGINS: z.string().default('http://localhost:5173,http://localhost:4173'),
   ACCESS_TOKEN_SECRET: z.string().min(1).default('dev-access-secret'),
   REFRESH_TOKEN_SECRET: z.string().min(1).default('dev-refresh-secret'),
+  ACCESS_TOKEN_TTL: z.coerce.number().int().positive().default(900),
+  REFRESH_TOKEN_TTL: z.coerce.number().int().positive().default(604800),
   LLM_PROVIDER: z.string().optional(),
   ANTHROPIC_API_KEY: z.string().optional(),
   LLM_API_KEY: z.string().optional(),

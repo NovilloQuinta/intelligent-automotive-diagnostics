@@ -72,9 +72,6 @@ import { createSerpApiClient } from '@/infrastructure/web-search/serpApiClient.j
 import { Vin } from '@/domain/value-objects/vin.js'
 import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 
-const ACCESS_TOKEN_TTL = '15m'
-const REFRESH_TOKEN_TTL = '7d'
-
 /** Crea el cliente LLM segun el proveedor configurado, o undefined si no hay provider. */
 function createLlmClient(config: AppConfig, logger: LoggerPort): LlmClientPort | undefined {
   /** Falla con un mensaje de configuracion, no con un ZodError de "string too small". */
@@ -162,14 +159,27 @@ function createAuthStack(
   const authService = createAuthService({
     accessTokenSecret: config.ACCESS_TOKEN_SECRET,
     refreshTokenSecret: config.REFRESH_TOKEN_SECRET,
-    accessTokenExpiresIn: ACCESS_TOKEN_TTL,
-    refreshTokenExpiresIn: REFRESH_TOKEN_TTL,
+    accessTokenExpiresIn: config.ACCESS_TOKEN_TTL,
+    refreshTokenExpiresIn: config.REFRESH_TOKEN_TTL,
     tokenStore: repos.tokenStore,
   })
+  const refreshTokenTtlMs = config.REFRESH_TOKEN_TTL * 1000
   return {
     authService,
-    registerUseCase: new RegisterUserUseCase(repos.userRepo, authService, repos.tokenStore, logger),
-    loginUseCase: new LoginUserUseCase(repos.userRepo, authService, repos.tokenStore, logger),
+    registerUseCase: new RegisterUserUseCase(
+      repos.userRepo,
+      authService,
+      repos.tokenStore,
+      refreshTokenTtlMs,
+      logger,
+    ),
+    loginUseCase: new LoginUserUseCase(
+      repos.userRepo,
+      authService,
+      repos.tokenStore,
+      refreshTokenTtlMs,
+      logger,
+    ),
     refreshUseCase: new RefreshTokenUseCase(authService, logger),
     getCurrentUserUseCase: new GetCurrentUserUseCase(repos.userRepo),
     logoutUseCase: new LogoutUserUseCase(repos.tokenStore, logger),

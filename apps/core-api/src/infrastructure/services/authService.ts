@@ -5,14 +5,14 @@ import { randomUUID } from 'node:crypto'
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { TokenPair } from '@/application/dto/auth/TokenPair.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
-import { hashToken, REFRESH_TOKEN_DURATION_MS } from '@/application/shared/hashToken.js'
+import { hashToken } from '@/application/shared/hashToken.js'
 
 /** Configuracion del servicio de autenticacion. */
 interface AuthServiceConfig {
   readonly accessTokenSecret: string
   readonly refreshTokenSecret: string
-  readonly accessTokenExpiresIn: string
-  readonly refreshTokenExpiresIn: string
+  readonly accessTokenExpiresIn: number
+  readonly refreshTokenExpiresIn: number
   readonly tokenStore: RefreshTokenRepository
 }
 
@@ -72,8 +72,8 @@ function verifyAndParse(token: string, secret: string): { sub: number } {
   return parsed.data
 }
 
-function calculateExpiryDate(): string {
-  return new Date(Date.now() + REFRESH_TOKEN_DURATION_MS).toISOString()
+function calculateExpiryDate(refreshTokenTtlSeconds: number): string {
+  return new Date(Date.now() + refreshTokenTtlSeconds * 1000).toISOString()
 }
 
 /** Crea una instancia del servicio de autenticacion con la configuracion dada. */
@@ -128,7 +128,7 @@ export function createAuthService(config: AuthServiceConfig): AuthServicePort {
     const tokens = generateTokens(decoded.sub)
 
     const newTokenHash = hashToken(tokens.refreshToken)
-    const expiresAt = calculateExpiryDate()
+    const expiresAt = calculateExpiryDate(refreshTokenExpiresIn)
     await tokenStore.saveRefreshToken(decoded.sub, newTokenHash, expiresAt)
 
     return tokens

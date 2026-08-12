@@ -17,6 +17,7 @@ export class RegisterUserUseCase {
     private readonly userRepo: UserRepository,
     private readonly authService: AuthServicePort,
     private readonly tokenStore: RefreshTokenRepository,
+    private readonly refreshTokenTtlMs: number,
     private readonly logger?: LoggerPort,
   ) {}
 
@@ -40,7 +41,7 @@ export class RegisterUserUseCase {
     })
 
     const tokens = this.authService.generateTokens(user.id)
-    await persistRefreshToken(this.tokenStore, user.id, tokens)
+    await persistRefreshToken(this.tokenStore, user.id, tokens, this.refreshTokenTtlMs)
 
     // El userId ya identifica la cuenta; el email es PII y sobra en el log.
     this.logger?.info('auth.register', {

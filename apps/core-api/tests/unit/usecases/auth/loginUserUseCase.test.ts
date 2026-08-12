@@ -74,7 +74,7 @@ describe('LoginUserUseCase', () => {
 
   beforeEach(() => {
     mocks = createMocks()
-    useCase = new LoginUserUseCase(mocks.userRepo, mocks.authService, mocks.tokenStore)
+    useCase = new LoginUserUseCase(mocks.userRepo, mocks.authService, mocks.tokenStore, 604800000)
   })
 
   it('deberia devolver tokens en login exitoso', async () => {
