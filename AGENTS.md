@@ -25,14 +25,14 @@ Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de siste
 ## SESION ACTUAL
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura + deploy a produccion
-- **Ultimo paso**: Deploy CI/CD a `diag.jcodinglabs.com` completado. Pipeline `deploy.yml` (push a `main`): builda 3 imagenes a GHCR y despliega por SSH al VPS OVH via `docker compose -f docker-compose.prod.yml` en `/var/www/intelligent-automotive-diagnostics`. Caddy proxy: `/api`→:4000, UI→nginx:8080. Fixes necesarios: `tsc-alias` (alias `@/*` no se resolvia con `node dist/main.js`), copiar `apps/core-api/drizzle` al contenedor, healthcheck con `node fetch` (wget no existe en node:22-slim), base `node:22-slim` (prebuilds nativos), nombres GHCR en minusculas, secrets de GitHub. Verificado en VPS: contenedores healthy + register/login/scenarios OK (3 coches emulados, `OBD_MODE=docker`). Web publica: registro A hecho en IONOS (el subdominio `diag` era un hosting IONOS; se borro y se puso registro A suelto), cert Let's Encrypt emitido por Caddy, HTTPS OK. Healthchecks docker corregidos (elm327 sin probe `service_started`; ui/api `127.0.0.1` no `localhost`).
+- **Ultimo paso**: `add-live-data-pid-selector` implementado y mergeado a `develop` (commit `5496900`). Backend: `readPids` multi-PID (un comando ELM327), `parseModeResponse` multi-frame, `GET /api/live-data?pids=` (máx 8, Mode 01), respuesta genérica `readings {code,name,unit,value}` + 4 campos nombrados, simulador ampliado a los 16 PIDs Mode 01. UI: checkboxes en `PidsTable`, `TelemetrySection` con gauges dinámicos (4 dedicados + `PidValueGauge` genérico), `useLiveTelemetry` con array pids, reset al cambiar vehículo. Worktree limpiado, rama borrada. Cambio OpenSpec **pendiente de archivar** (`/opsx-archive`).
 - **Flujo de ramas**: `develop` es la rama de integración; toda `feat.*`/`fix.*` sale de `develop` y se mergea ahí. `main` = releases (deploy CI). **Ojo**: hay agentes paralelos en el repo principal (rama cambia sola) — verificar `git branch --show-current` antes de commitear.
-- **Rama base**: `develop` == `main` tras el release de deploy.
-- **3 worktrees activos** en `.claude/worktrees/`: `deployment` (`feat/deployment`, obsoleto), `live-data-pid-selector`, `move-manufacturer-data-to-db`. Rama `feat/unify-diagnosis-ai-chat` activa en el repo principal (otro agente).
-- **OpenSpec changes activos (propuestos, sin implementar)**: add-live-data-pid-selector, add-connection-type-selector, add-topology-mapping-screen, add-dtc-repair-tips-screen.
-- **Deuda `brace-expansion`**: RESUELTA (se quito el override; `pnpm lint` y `test:coverage` ya corren).
-- **Deuda coverage thresholds**: `test:coverage` falla por archivos bajo umbral (composition.ts ~32%, simulatorAdapter, lancedb, AdminController, ProfileController...). Distinto de brace-expansion.
-- **Deuda `cognitiveDiagnosis`** >100 líneas: extraer helpers (GGA bloqueó commit).
+- **Rama base**: `develop` (no == `main`; deploy via `main`).
+- **Worktrees activos** en `.claude/worktrees/`: `deployment` (`feat/deployment`, obsoleto), `unify-diagnosis-ai-chat`.
+- **OpenSpec changes activos**: add-connection-type-selector, add-topology-mapping-screen, add-dtc-repair-tips-screen, add-ecu-discovery-and-system-catalog (propuestos). `add-live-data-pid-selector` implementado, por archivar.
+- **Deuda `brace-expansion`**: RESUELTA.
+- **Deuda coverage thresholds**: `test:coverage` falla por archivos bajo umbral (composition.ts ~32%, simulatorAdapter, lancedb, AdminController, ProfileController...).
+- **Deuda `cognitiveDiagnosis`** >100 líneas: extraer helpers.
 - **Deuda GGA vs lint/prettier**: archivos no tocados se reformatean en commits.
 - **Deuda vectorial**: migrar a schema con columna JSON metadata para evitar migraciones futuras.
 
