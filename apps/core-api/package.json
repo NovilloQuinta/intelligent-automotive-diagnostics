@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/main.ts",
-    "build": "tsc",
+    "build": "tsc && tsc-alias",
     "start": "node dist/main.js",
     "lint": "eslint src/ tests/",
     "format": "prettier --check \"src/**/*.ts\" \"tests/**/*.ts\"",
@@ -63,6 +63,7 @@
     "eslint-plugin-jsdoc": "^63.1.0",
     "prettier": "^3.9.5",
     "supertest": "^7.2.2",
+    "tsc-alias": "^1.9.1",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.63.0",
