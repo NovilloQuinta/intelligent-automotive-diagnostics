@@ -1,0 +1,109 @@
+name: intelligent-automotive-diagnostics
+
+services:
+  elm327-audi:
+    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/elm327:latest
+    environment:
+      - SCENARIO_SCRIPT=run_audi.py
+    ports:
+      - "35000:35000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost',35000)); s.close()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  elm327-kawasaki:
+    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/elm327:latest
+    environment:
+      - SCENARIO_SCRIPT=run_kawasaki.py
+    ports:
+      - "35001:35001"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost',35001)); s.close()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  elm327-toyota:
+    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/elm327:latest
+    environment:
+      - SCENARIO_SCRIPT=run_toyota.py
+    ports:
+      - "35002:35002"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.socket(); s.connect(('localhost',35002)); s.close()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  api:
+    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/api:latest
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - DB_PATH=/app/data/diagnostics.db
+      - LANCEDB_PATH=/app/data/lancedb
+      - OBD_MODE=${OBD_MODE:-docker}
+      - ELM327_AUDI_HOST=elm327-audi
+      - ELM327_AUDI_PORT=35000
+      - ELM327_KAWASAKI_HOST=elm327-kawasaki
+      - ELM327_KAWASAKI_PORT=35001
+      - ELM327_TOYOTA_HOST=elm327-toyota
+      - ELM327_TOYOTA_PORT=35002
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - LLM_API_KEY=${LLM_API_KEY:?LLM_API_KEY is required}
+      - LLM_BASE_URL=${LLM_BASE_URL:-}
+      - LLM_MODEL=${LLM_MODEL:-}
+      - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET:?ACCESS_TOKEN_SECRET is required}
+      - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET:?REFRESH_TOKEN_SECRET is required}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://diag.jcodinglabs.com}
+      - APP_BASE_URL=${APP_BASE_URL:-https://diag.jcodinglabs.com}
+      - SMTP_HOST=${SMTP_HOST:-}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASS=${SMTP_PASS:-}
+      - SMTP_FROM=${SMTP_FROM:-no-reply@jcodinglabs.com}
+    volumes:
+      - api-data:/app/data
+    restart: unless-stopped
+    depends_on:
+      elm327-audi:
+        condition: service_healthy
+      elm327-kawasaki:
+        condition: service_healthy
+      elm327-toyota:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  ui:
+    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/ui:latest
+    ports:
+      - "${UI_PORT:-8080}:80"
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  api-data:

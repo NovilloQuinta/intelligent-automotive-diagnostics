@@ -1,0 +1,47 @@
+# =============================================================================
+# Caddyfile — Reverse Proxy para Intelligent Automotive Diagnostics
+# =============================================================================
+# Ubicacion: /etc/caddy/Caddyfile (o donde apunte tu Caddy)
+# Despues de editar: sudo systemctl reload caddy
+# =============================================================================
+
+diag.jcodinglabs.com {
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+        Cross-Origin-Opener-Policy "same-origin"
+        Cross-Origin-Resource-Policy "cross-origin"
+        -Server
+    }
+
+    request_body {
+        max_size 1048576  # 1 MB — diagnóstico con contexto LLM
+    }
+
+    # API — proxy al contenedor core-api
+    handle_path /api/* {
+        reverse_proxy localhost:4000
+    }
+
+    # Swagger UI
+    handle_path /api-docs* {
+        reverse_proxy localhost:4000
+    }
+
+    # UI — proxy al contenedor nginx (Vite build)
+    handle {
+        reverse_proxy localhost:8080
+    }
+
+    # Logs
+    log {
+        output file /var/log/caddy/diagnostics.log
+    }
+
+    # Gzip
+    encode gzip zstd
+}
