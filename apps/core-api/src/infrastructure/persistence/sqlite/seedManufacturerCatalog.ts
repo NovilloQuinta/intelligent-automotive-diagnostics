@@ -15,6 +15,56 @@ import { PidCode } from '@/domain/value-objects/pidCode.js'
 /** Confianza asignada a los DTCs manufacturer-specific del seed (fuente documentada VAG/Ross-Tech). */
 const SEED_DTC_CONFIDENCE = 0.9
 
+/** Confianza de la asignacion WMI: es registro oficial ISO 3779, no una conjetura. */
+const SEED_WMI_CONFIDENCE = 0.9
+
+/**
+ * Asignacion WMI → fabricante, seed de BD.
+ *
+ * Datos movidos desde `WMI_MANUFACTURER_REGISTRY` en `vin.ts`: el value object
+ * decodifica lo que la ISO 3779 define por posicion (region, anio de modelo),
+ * pero traducir un WMI a una marca es una consulta de datos. Como tabla en
+ * codigo siempre iba por detras de la realidad — de ahi que un Peugeot reciente
+ * (`VR3`) se registrara como `unknown`.
+ *
+ * Aqui es la semilla del catalogo, exactamente como {@link ALL_SEED_PIDS} lo es
+ * de los PID Mode 01: arranque conocido, y encima crece lo que resuelva la
+ * cascada de identificacion. **No se anaden marcas a mano**: lo que falte lo
+ * aprende el sistema y, cuando se consolide, se promueve aqui en un commit.
+ *
+ * Los rangos del registro anterior (`WP[01]`, `1F[1-2]`, `1G[1-4]`) quedan
+ * expandidos a WMI literales: la clave del catalogo es exacta, no un patron.
+ */
+export const WMI_IDENTITY_SEEDS: ReadonlyArray<{ wmi: string; manufacturer: string }> = [
+  { wmi: 'WAU', manufacturer: 'Audi' },
+  { wmi: 'WUA', manufacturer: 'Audi' },
+  { wmi: 'WVW', manufacturer: 'Volkswagen' },
+  { wmi: 'WP0', manufacturer: 'Porsche' },
+  { wmi: 'WP1', manufacturer: 'Porsche' },
+  { wmi: 'WBA', manufacturer: 'BMW' },
+  { wmi: 'WBS', manufacturer: 'BMW' },
+  { wmi: 'WDD', manufacturer: 'Mercedes-Benz' },
+  { wmi: 'WDC', manufacturer: 'Mercedes-Benz' },
+  { wmi: 'W0L', manufacturer: 'Opel' },
+  { wmi: 'VF3', manufacturer: 'Peugeot' },
+  { wmi: 'VF7', manufacturer: 'Citroën' },
+  { wmi: 'ZFA', manufacturer: 'Fiat' },
+  { wmi: 'ZAR', manufacturer: 'Alfa Romeo' },
+  { wmi: 'JKA', manufacturer: 'Kawasaki' },
+  { wmi: 'JTD', manufacturer: 'Toyota' },
+  { wmi: 'JHM', manufacturer: 'Honda' },
+  { wmi: 'JN1', manufacturer: 'Nissan' },
+  { wmi: 'KND', manufacturer: 'Kia' },
+  { wmi: 'KMH', manufacturer: 'Hyundai' },
+  { wmi: '1F1', manufacturer: 'Ford' },
+  { wmi: '1F2', manufacturer: 'Ford' },
+  { wmi: 'WF0', manufacturer: 'Ford' },
+  { wmi: '1G1', manufacturer: 'Chevrolet' },
+  { wmi: '1G2', manufacturer: 'Chevrolet' },
+  { wmi: '1G3', manufacturer: 'Chevrolet' },
+  { wmi: '1G4', manufacturer: 'Chevrolet' },
+]
+
 /**
  * PIDs Mode 22 (UDS ReadDataByIdentifier) propietarios de fabricante, seed de BD.
  * Datos movidos desde el antiguo `seed-pids.ts` para que el codigo solo conserve
@@ -573,8 +623,23 @@ export async function seedManufacturerCatalog(
     await vehicleRepo.upsertDtcDefinition(dtc)
   }
 
+  // Re-sembrar es idempotente: `upsertVehicleIdentity` nunca degrada una entrada
+  // existente. Para el WMI el seed es la autoridad — 0.9 queda por encima del
+  // mecanico (0.8) a proposito, porque la asignacion la publica la ISO y no es
+  // cuestion de criterio. Lo que aporte el mecanico se aplica igualmente a su
+  // vehiculo; lo que no puede es reescribir la marca de todo un WMI.
+  for (const identity of WMI_IDENTITY_SEEDS) {
+    await vehicleRepo.upsertVehicleIdentity({
+      wmi: identity.wmi,
+      manufacturer: identity.manufacturer,
+      confidence: SEED_WMI_CONFIDENCE,
+      source: 'seed',
+    })
+  }
+
   logger.info('Manufacturer catalog seeded', {
     pidsInserted,
     dtcsSeeded: MANUFACTURER_DTC_SEEDS.length,
+    wmisSeeded: WMI_IDENTITY_SEEDS.length,
   })
 }

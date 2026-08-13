@@ -131,68 +131,6 @@ describe('Vin', () => {
     })
   })
 
-  describe('Vin.manufacturer', () => {
-    it('should return "Audi" for WAU WMI', () => {
-      const vin = new Vin('WAUZZZ8V5JA123456')
-      expect(vin.manufacturer).toBe('Audi')
-    })
-
-    it('should return "Kawasaki" for JKA WMI', () => {
-      const vin = new Vin('JKAZR2A1XLA000111')
-      expect(vin.manufacturer).toBe('Kawasaki')
-    })
-
-    it('should return "Volkswagen" for WVW WMI', () => {
-      const vin = new Vin('WVWZZZ1JZXW123456')
-      expect(vin.manufacturer).toBe('Volkswagen')
-    })
-
-    it('should return "BMW" for WBA WMI', () => {
-      const vin = new Vin('WBA3B5C50J1234567')
-      expect(vin.manufacturer).toBe('BMW')
-    })
-
-    it('should return "Mercedes-Benz" for WDD WMI', () => {
-      const vin = new Vin('WDDGF4HB3CR123456')
-      expect(vin.manufacturer).toBe('Mercedes-Benz')
-    })
-
-    it('should return "Porsche" for WP0 WMI', () => {
-      const vin = new Vin('WP0ZZZ99ZTS390000')
-      expect(vin.manufacturer).toBe('Porsche')
-    })
-
-    it('should return "Toyota" for JTD WMI (japanese)', () => {
-      const vin = new Vin('JTDKB20EX20012345')
-      expect(vin.manufacturer).toBe('Toyota')
-    })
-
-    it('should return "Honda" for JHM WMI (japanese)', () => {
-      const vin = new Vin('JHMCM56557C404321')
-      expect(vin.manufacturer).toBe('Honda')
-    })
-
-    it('should return "Ford" for WF0 WMI (european)', () => {
-      const vin = new Vin('WF0MXXGCM5X123456')
-      expect(vin.manufacturer).toBe('Ford')
-    })
-
-    it('should return "Chevrolet" for 1G1 WMI (american)', () => {
-      const vin = new Vin('1G1BC52E5P7123456')
-      expect(vin.manufacturer).toBe('Chevrolet')
-    })
-
-    it('should return null for unknown WMI (XTA)', () => {
-      const vin = new Vin('XTAZZZ8V5JA123456')
-      expect(vin.manufacturer).toBeNull()
-    })
-
-    it('should return null for unknown WMI (99 prefix)', () => {
-      const vin = new Vin('99ZZZZ8V5JA123456')
-      expect(vin.manufacturer).toBeNull()
-    })
-  })
-
   describe('Vin.modelYear', () => {
     it('should return 2018 for position 10 "J"', () => {
       const vin = new Vin('WAUZZZ8V5JA123456')

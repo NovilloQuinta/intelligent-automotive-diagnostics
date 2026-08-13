@@ -43,6 +43,15 @@ const DDL = `
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     UNIQUE(manufacturer, model, code)
   );
+
+  CREATE TABLE IF NOT EXISTS vehicle_identities (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    wmi TEXT NOT NULL UNIQUE,
+    manufacturer TEXT NOT NULL,
+    confidence REAL NOT NULL DEFAULT 0.3,
+    source TEXT NOT NULL DEFAULT 'web',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `
 
 describe('seedManufacturerCatalog', () => {
@@ -156,5 +165,56 @@ describe('seedManufacturerCatalog', () => {
     const mode22 = await repo.findPidsByMode('22')
     const labeled = mode22.filter((p) => p.system !== undefined && p.system !== '')
     expect(labeled).toHaveLength(20)
+  })
+
+  describe('identidades WMI', () => {
+    // Cobertura heredada de `Vin.manufacturer`, que era una tabla en codigo:
+    // las mismas marcas, ahora comprobadas en su sitio nuevo.
+    it.each([
+      ['WAUZZZ8V5JA123456', 'Audi'],
+      ['WVWZZZ1JZXW123456', 'Volkswagen'],
+      ['WBA3B5C50J1234567', 'BMW'],
+      ['WDDGF4HB3CR123456', 'Mercedes-Benz'],
+      ['WP0ZZZ99ZTS390000', 'Porsche'],
+      ['VF3XXXXXXXX123456', 'Peugeot'],
+      ['JKAZR2A1XLA000111', 'Kawasaki'],
+      ['JTDKB20EX20012345', 'Toyota'],
+      ['JHMCM56557C404321', 'Honda'],
+      ['WF0MXXGCM5X123456', 'Ford'],
+      ['1G1BC52E5P7123456', 'Chevrolet'],
+    ])('resuelve el fabricante de %s', async (vin, expected) => {
+      await seedManufacturerCatalog(repo, logger)
+
+      const identity = await repo.findVehicleIdentityByWmi(vin.slice(0, 3))
+
+      expect(identity).not.toBeNull()
+      expect(identity!.manufacturer).toBe(expected)
+      expect(identity!.source).toBe('seed')
+    })
+
+    it('no conoce un WMI que no esta sembrado: lo resolvera la cascada', async () => {
+      await seedManufacturerCatalog(repo, logger)
+
+      // VR3 es el WMI de los Peugeot recientes de Stellantis, y es justo el caso
+      // que se registraba como `unknown` con la tabla en codigo.
+      expect(await repo.findVehicleIdentityByWmi('VR3')).toBeNull()
+      expect(await repo.findVehicleIdentityByWmi('XTA')).toBeNull()
+    })
+
+    it('re-sembrar no pisa lo que la cascada haya aprendido con mas confianza', async () => {
+      await seedManufacturerCatalog(repo, logger)
+      await repo.upsertVehicleIdentity({
+        wmi: 'VR3',
+        manufacturer: 'Peugeot',
+        confidence: 0.3,
+        source: 'web',
+      })
+
+      await seedManufacturerCatalog(repo, logger)
+
+      const learned = await repo.findVehicleIdentityByWmi('VR3')
+      expect(learned!.manufacturer).toBe('Peugeot')
+      expect(learned!.source).toBe('web')
+    })
   })
 })

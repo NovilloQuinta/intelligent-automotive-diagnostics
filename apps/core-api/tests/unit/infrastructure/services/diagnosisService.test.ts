@@ -14,8 +14,33 @@ import {
   createMockLogger,
   createMockObdRepo,
   createMockObdRepos,
+  createMockVehicleRepo,
   mockScenarios,
 } from './diagnosisServiceTestFactories.js'
+import { VehicleIdentity } from '@/domain/entities/vehicleIdentity.js'
+import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
+
+/**
+ * Catalogo de identidades para los tests de `getVehicleInfo`.
+ *
+ * El fabricante ya no sale de una tabla en `Vin`: es una consulta al catalogo,
+ * asi que un servicio sin repositorio no puede resolverlo. Eso es el diseno, no
+ * una regresion — la tabla en codigo dejaba `unknown` cualquier WMI no previsto.
+ */
+function repoWithIdentities(): VehicleRepository {
+  const byWmi = new Map([
+    ['WAU', 'Audi'],
+    ['WP0', 'Porsche'],
+  ])
+  return createMockVehicleRepo({
+    findVehicleIdentityByWmi: vi.fn(async (wmi: string) => {
+      const manufacturer = byWmi.get(wmi)
+      return manufacturer
+        ? new VehicleIdentity({ id: 1, wmi, manufacturer, confidence: 0.9, source: 'seed' })
+        : null
+    }),
+  })
+}
 
 describe('DiagnosisService — OBD, telemetria y passthrough MCP', () => {
   describe('listScenarios', () => {
@@ -387,6 +412,7 @@ describe('DiagnosisService — OBD, telemetria y passthrough MCP', () => {
         scenarios: mockScenarios,
         obdRepos: createMockObdRepos(),
         logger: createMockLogger(),
+        vehicleRepo: repoWithIdentities(),
       })
 
       const result = await service.getVehicleInfo('audi-a3-idle')
@@ -421,6 +447,7 @@ describe('DiagnosisService — OBD, telemetria y passthrough MCP', () => {
         scenarios: mockScenarios,
         obdRepos: repos,
         logger: createMockLogger(),
+        vehicleRepo: repoWithIdentities(),
       })
 
       const result = await service.getVehicleInfo('audi-a3-idle')
@@ -442,6 +469,7 @@ describe('DiagnosisService — OBD, telemetria y passthrough MCP', () => {
         obdRepos: createMockObdRepos(),
         obdRepo,
         logger: createMockLogger(),
+        vehicleRepo: repoWithIdentities(),
       })
 
       const result = await service.getVehicleInfo()

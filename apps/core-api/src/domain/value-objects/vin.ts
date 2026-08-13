@@ -57,33 +57,6 @@ const WMI_REGISTRY: Array<[RegExp, { country: string; region: string }]> = [
   [/^[145]/, { country: 'United States', region: 'North America' }],
 ]
 
-/** Registro WMI → fabricante. Primera coincidencia gana (3 primeros chars del VIN). */
-const WMI_MANUFACTURER_REGISTRY: Array<[RegExp, string]> = [
-  [/^WAU/, 'Audi'],
-  [/^WUA/, 'Audi'],
-  [/^WVW/, 'Volkswagen'],
-  [/^WP[01]/, 'Porsche'],
-  [/^WBA/, 'BMW'],
-  [/^WBS/, 'BMW'],
-  [/^WDD/, 'Mercedes-Benz'],
-  [/^WDC/, 'Mercedes-Benz'],
-  [/^W0L/, 'Opel'],
-  [/^VF3/, 'Peugeot'],
-  [/^VF7/, 'Citroën'],
-  [/^ZFA/, 'Fiat'],
-  [/^ZAR/, 'Alfa Romeo'],
-  [/^JKA/, 'Kawasaki'],
-  [/^JTD/, 'Toyota'],
-  [/^JHM/, 'Honda'],
-  [/^JN1/, 'Nissan'],
-  [/^KND/, 'Kia'],
-  [/^KMH/, 'Hyundai'],
-  [/^1F[1-2]/, 'Ford'],
-  [/^WF0/, 'Ford'],
-  [/^1G[1-4]/, 'Chevrolet'],
-  [/^LSG/, 'Chevrolet'],
-]
-
 /** Tabla ISO 3779: char posicion 10 → anio de modelo (ciclo mas reciente, 1980-2030). Excluye I/O/Q/U/Z/0. */
 const MODEL_YEAR_TABLE: Record<string, number> = {
   A: 2010,
@@ -170,20 +143,22 @@ export class Vin {
     return this.value[8] === expected
   }
 
+  /**
+   * World Manufacturer Identifier: los 3 primeros caracteres.
+   *
+   * Es la clave con la que el catalogo resuelve el fabricante. El VO **no**
+   * traduce WMI a marca: eso es una consulta de datos, no una regla posicional
+   * de la ISO 3779, y vive en `vehicle_identities` para poder crecer.
+   */
+  get wmi(): string {
+    return this.value.slice(0, 3)
+  }
+
   /** Identifica pais y region a partir del WMI (primeros 2 caracteres del VIN). */
   get wmiRegion(): { country: string; region: string } | null {
     const wmi = this.value.slice(0, 2)
     for (const [regex, result] of WMI_REGISTRY) {
       if (regex.test(wmi)) return result
-    }
-    return null
-  }
-
-  /** Identifica el fabricante a partir del WMI (primeros 3 caracteres del VIN). */
-  get manufacturer(): string | null {
-    const wmi = this.value.slice(0, 3)
-    for (const [regex, name] of WMI_MANUFACTURER_REGISTRY) {
-      if (regex.test(wmi)) return name
     }
     return null
   }

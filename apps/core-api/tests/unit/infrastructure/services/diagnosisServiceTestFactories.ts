@@ -123,6 +123,8 @@ export function createMockVehicleRepo(overrides?: Partial<VehicleRepository>): V
     updateEcuDiscoveredAt: vi.fn(),
     findEcuDefinitionByAddress: vi.fn().mockResolvedValue(null),
     upsertEcuDefinition: vi.fn(),
+    findVehicleIdentityByWmi: vi.fn().mockResolvedValue(null),
+    upsertVehicleIdentity: vi.fn(),
     ...overrides,
   }
 }

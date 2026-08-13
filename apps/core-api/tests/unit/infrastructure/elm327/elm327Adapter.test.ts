@@ -447,14 +447,19 @@ describe('Elm327TcpRepository', () => {
     await expect(promise).resolves.toBeNull()
   })
 
-  it('getVehicleInfo: lee VIN → { make: "Porsche", model: "unknown", year: 2026, ... }', async () => {
+  it('getVehicleInfo: lee el VIN y deja la marca sin resolver', async () => {
+    // El adaptador es el borde del sistema: sabe leer el bus, no consultar el
+    // catalogo. La marca la resuelve `ResolveVehicleIdentityUseCase`, que si
+    // puede aprender un WMI nuevo — antes esto salia de una tabla en codigo que
+    // dejaba `unknown` cualquier fabricante no previsto.
     const repo = makeRepo()
     const promise = repo.getVehicleInfo()
     expectSent('09 02')
     respond(RESPONSES['09 02'])
     const info = await promise
-    expect(info.make).toBe('Porsche')
+    expect(info.make).toBe('unknown')
     expect(info.model).toBe('unknown')
+    // El anio si: es regla posicional de la ISO 3779, no una consulta de datos.
     expect(info.year).toBe(2026)
     expect(info.engineType).toBe('unknown')
     expect(info.vin.value).toBe('WP0ZZZ99ZTS390000')

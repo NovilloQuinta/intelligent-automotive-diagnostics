@@ -30,6 +30,10 @@ import type { DiagnosisResult } from '@/domain/value-objects/diagnosisResult.js'
 import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
 import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
+import {
+  ResolveVehicleIdentityUseCase,
+  UNKNOWN_VEHICLE_FIELD,
+} from '@/application/use-cases/ResolveVehicleIdentityUseCase.js'
 import type { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
@@ -106,6 +110,7 @@ export class DiagnosisService {
   private readonly logger: LoggerPort
   private readonly cognitiveTimeoutMs: number
   private readonly toolCallTimeoutMs: number
+  private readonly identityResolver: ResolveVehicleIdentityUseCase
 
   constructor(options: DiagnosisServiceOptions) {
     this.scenarios = options.scenarios
@@ -119,6 +124,12 @@ export class DiagnosisService {
     this.logger = options.logger
     this.cognitiveTimeoutMs = options.cognitiveTimeoutMs ?? COGNITIVE_DIAGNOSIS_TIMEOUT_MS
     this.toolCallTimeoutMs = options.toolCallTimeoutMs ?? DIAGNOSIS_TIMEOUT_MS
+    this.identityResolver = new ResolveVehicleIdentityUseCase({
+      vehicleRepo: this.vehicleRepo,
+      webSearch: this.webSearch,
+      llmClient: this.llmClient,
+      logger: this.logger,
+    })
   }
 
   /** True cuando se opera contra un unico ELM327 TCP real (scenarioId opcional). */
@@ -346,7 +357,7 @@ export class DiagnosisService {
       year: descriptor?.vehicleInfo.year ?? info.year,
       engineType: descriptor?.vehicleInfo.engineType ?? info.engineType,
       vinStatus,
-      ...this.decodeVin(vin),
+      ...(await this.decodeVin(vin)),
     }
   }
 
@@ -357,19 +368,22 @@ export class DiagnosisService {
    * ruido y los escenarios de demo usan {@link FALLBACK_VIN}. En ambos casos los
    * campos derivados van a `null` en vez de propagar `VinDecodeError`.
    */
-  private decodeVin(raw: string): {
+  private async decodeVin(raw: string): Promise<{
     manufacturer: string | null
     region: { country: string; region: string } | null
     modelYearDecoded: number | null
-  } {
+  }> {
     // FALLBACK_VIN es sintacticamente valido (17 'X'), asi que el VO le asignaria
     // un anio de modelo real por la posicion 10. Es un placeholder, no un vehiculo:
     // se descarta antes de decodificar.
     if (raw === FALLBACK_VIN) return UNDECODED_VIN
     try {
       const vin = new Vin(raw)
+      // Region y anio son reglas posicionales de la ISO 3779 y las resuelve el VO.
+      // El fabricante no: es una consulta al catalogo, que puede aprender.
+      const identity = await this.identityResolver.execute(vin)
       return {
-        manufacturer: vin.manufacturer,
+        manufacturer: identity.make === UNKNOWN_VEHICLE_FIELD ? null : identity.make,
         region: vin.wmiRegion,
         modelYearDecoded: vin.modelYear,
       }
@@ -384,6 +398,32 @@ export class DiagnosisService {
    *
    * `id: 0` indica clave autogenerada en la capa de persistencia.
    */
+  /**
+   * Completa marca/modelo/año/motor con la cascada de identificación.
+   *
+   * Solo rellena lo que falta: si el escenario o el adaptador ya traen el dato
+   * (modo Docker, donde el descriptor conoce el vehículo), se respeta. La cascada
+   * es para el coche real, donde lo único que hay es el VIN.
+   */
+  private async identify(vehicleInfo: VehicleInfo): Promise<VehicleInfo> {
+    if (vehicleInfo.make !== UNKNOWN_VEHICLE_FIELD) return vehicleInfo
+
+    const resolved = await this.identityResolver.execute(vehicleInfo.vin)
+    if (resolved.origin === 'none') return vehicleInfo
+
+    return new VehicleInfo({
+      make: resolved.make,
+      model: vehicleInfo.model === UNKNOWN_VEHICLE_FIELD ? resolved.model : vehicleInfo.model,
+      year: vehicleInfo.year === 0 ? resolved.year : vehicleInfo.year,
+      engineType:
+        vehicleInfo.engineType === UNKNOWN_VEHICLE_FIELD
+          ? resolved.engineType
+          : vehicleInfo.engineType,
+      vin: vehicleInfo.vin,
+      vinStatus: vehicleInfo.vinStatus,
+    })
+  }
+
   private toVehicleProfile(vehicleInfo: VehicleInfo): VehicleProfile {
     return new VehicleProfile({
       id: 0,
@@ -489,11 +529,17 @@ export class DiagnosisService {
   /**
    * Persiste el vehículo activo al inicio de un diagnóstico nuevo (D2).
    * Devuelve su id, o `undefined` si no hay repositorio o la escritura falla.
+   *
+   * Resuelve la identidad **antes** de persistir: marca y modelo son la clave con
+   * la que el catálogo RAG archiva y recupera lo aprendido, así que un `unknown`
+   * aquí no es cosmético — condena todo lo que el agente aprenda de este coche a
+   * quedar bajo `unknown/unknown` y a no recuperarse nunca.
    */
   private async upsertVehicleForDiagnosis(vehicleInfo: VehicleInfo): Promise<number | undefined> {
     if (!this.vehicleRepo) return undefined
     try {
-      const profile = this.toVehicleProfile(vehicleInfo)
+      const identified = await this.identify(vehicleInfo)
+      const profile = this.toVehicleProfile(identified)
       const result = await this.vehicleRepo.upsertVehicle(profile)
       return result.id
     } catch (e) {

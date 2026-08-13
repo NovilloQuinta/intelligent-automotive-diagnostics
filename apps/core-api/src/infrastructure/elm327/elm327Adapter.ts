@@ -203,8 +203,12 @@ export class Elm327TcpRepository implements ObdRepository {
     try {
       const vinValue = await this.readVin()
       const vin = new Vin(vinValue)
+      // El adaptador solo sabe lo que dice el bus: el VIN y lo que la ISO 3779
+      // deriva de su posicion. Traducir el WMI a una marca es una consulta al
+      // catalogo, y este es el borde del sistema — no tiene acceso a BBDD ni
+      // debe tenerlo. Lo completa `ResolveVehicleIdentityUseCase` en aplicacion.
       return {
-        make: vin.manufacturer ?? 'unknown',
+        make: 'unknown',
         model: 'unknown',
         year: vin.modelYear ?? 0,
         engineType: 'unknown',

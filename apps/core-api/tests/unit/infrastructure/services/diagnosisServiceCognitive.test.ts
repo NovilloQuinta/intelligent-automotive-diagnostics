@@ -7,6 +7,7 @@ import {
 } from '@/infrastructure/services/errors.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 import { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
+import { VehicleIdentity } from '@/domain/entities/vehicleIdentity.js'
 import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
@@ -19,6 +20,7 @@ import {
   cognitiveText,
   cognitiveToolCalls,
   createMockLogger,
+  createMockObdRepo,
   createMockObdRepos,
   createMockVehicleRepo,
   mockLlmClient,
@@ -771,6 +773,93 @@ describe('DiagnosisService — diagnostico cognitivo y persistencia', () => {
         'Failed to end diagnosis session with snapshot',
         expect.any(Error),
       )
+    })
+  })
+
+  describe('identificacion del vehiculo en conexion directa', () => {
+    /**
+     * El daño que motivó la cascada.
+     *
+     * Con un coche real no hay descriptor de escenario: la marca sale del VIN. Un
+     * WMI que no estuviera en la tabla de código dejaba `make: 'unknown'`, y como
+     * el catálogo RAG se archiva y se busca por fabricante/modelo, todo lo que el
+     * agente aprendiera de ese coche quedaba bajo `unknown/unknown` y no se
+     * recuperaba nunca.
+     */
+    const PEUGEOT_VIN = 'VR3XXXXXXXX123456'
+
+    function directService(vehicleRepo: VehicleRepository) {
+      const obdRepo = createMockObdRepo()
+      obdRepo.getVehicleInfo = vi.fn(async () => ({
+        // Lo que devuelve el adaptador ELM327 de verdad: solo sabe leer el VIN.
+        make: 'unknown',
+        model: 'unknown',
+        year: 0,
+        engineType: 'unknown',
+        vin: new Vin(PEUGEOT_VIN),
+        vinStatus: 'read' as const,
+      }))
+      return new DiagnosisService({
+        scenarios: [],
+        obdRepo,
+        llmClient: mockLlmClient({
+          sendMessage: vi
+            .fn()
+            .mockResolvedValue({ text: cognitiveText, toolCalls: cognitiveToolCalls }),
+        }),
+        logger: createMockLogger(),
+        vehicleRepo,
+      })
+    }
+
+    it('archiva el vehiculo con la marca del catalogo, no con unknown', async () => {
+      const vehicleRepo = createMockVehicleRepo({
+        findVehicleIdentityByWmi: vi.fn().mockResolvedValue(
+          new VehicleIdentity({
+            id: 1,
+            wmi: 'VR3',
+            manufacturer: 'Peugeot',
+            confidence: 0.3,
+            source: 'web',
+          }),
+        ),
+        upsertVehicle: vi.fn().mockResolvedValue(
+          new VehicleProfile({
+            id: 5,
+            make: 'Peugeot',
+            model: 'unknown',
+            year: 2029,
+            engineType: 'unknown',
+            vin: new Vin(PEUGEOT_VIN),
+          }),
+        ),
+      })
+
+      await directService(vehicleRepo).cognitiveDiagnosis({ userQuery: '¿Qué le pasa?' })
+
+      const profile = (vehicleRepo.upsertVehicle as ReturnType<typeof vi.fn>).mock
+        .calls[0][0] as VehicleProfile
+      expect(profile.make).toBe('Peugeot')
+      expect(profile.vin.value).toBe(PEUGEOT_VIN)
+    })
+
+    it('consulta el catalogo por el WMI del coche conectado', async () => {
+      const vehicleRepo = createMockVehicleRepo({
+        upsertVehicle: vi.fn().mockResolvedValue(
+          new VehicleProfile({
+            id: 5,
+            make: 'unknown',
+            model: 'unknown',
+            year: 2029,
+            engineType: 'unknown',
+            vin: new Vin(PEUGEOT_VIN),
+          }),
+        ),
+      })
+
+      await directService(vehicleRepo).cognitiveDiagnosis({ userQuery: '¿Qué le pasa?' })
+
+      expect(vehicleRepo.findVehicleIdentityByWmi).toHaveBeenCalledWith('VR3')
     })
   })
 })

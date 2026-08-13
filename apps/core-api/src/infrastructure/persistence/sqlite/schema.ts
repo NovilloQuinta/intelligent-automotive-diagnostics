@@ -192,6 +192,25 @@ export const dtcDefinitions = sqliteTable(
   }),
 )
 
+/**
+ * Catalogo de identificacion: WMI (3 primeros caracteres del VIN) → fabricante.
+ *
+ * Nace sembrado con la asignacion oficial ISO 3779 (`source: 'seed'`), que es
+ * dato fijo igual que los PID Mode 01 de la SAE J1979, y crece con lo que
+ * resuelve la cascada (`web`) o aporta el mecanico (`mechanic`).
+ *
+ * **No guarda modelo a proposito**: el WMI identifica al fabricante, no al
+ * modelo. El modelo vive en {@link vehicles}, por VIN.
+ */
+export const vehicleIdentities = sqliteTable('vehicle_identities', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  wmi: text('wmi').notNull().unique(),
+  manufacturer: text('manufacturer').notNull(),
+  confidence: real('confidence').notNull().default(0.3),
+  source: text('source').notNull().default('web'),
+  createdAt: text('created_at').notNull().default("datetime('now')"),
+})
+
 /** Catalogo auto-expansivo de definiciones de ECU por fabricante, modelo y
  *  direccion CAN. Nace vacio y se llena por aprendizaje (web / mecanico). */
 export const ecuDefinitions = sqliteTable(
