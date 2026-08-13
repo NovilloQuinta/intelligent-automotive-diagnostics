@@ -92,7 +92,7 @@ function ProfileContent({
 }) {
   return (
     <div className="flex min-h-screen flex-col bg-[#0d1117]">
-      <Header showAuthActions={false} />
+      <Header />
       <div className="flex flex-1 items-center justify-center px-4 py-10">
         <Card className="w-full max-w-lg border-white/10 bg-[#161b22]">
           <CardHeader className="text-center">

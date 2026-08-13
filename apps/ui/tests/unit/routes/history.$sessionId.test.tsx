@@ -32,6 +32,14 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
+vi.mock("../../../src/lib/auth-context", () => ({
+  useAuth: () => ({
+    status: "authed" as const,
+    user: { id: 1, username: "test", isAdmin: false },
+    logout: vi.fn(),
+  }),
+}));
+
 import { Route } from "../../../src/routes/history.$sessionId";
 const HistoryDetailRoute = (
   Route as unknown as { options: { component: React.ComponentType } }

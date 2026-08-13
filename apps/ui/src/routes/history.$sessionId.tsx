@@ -91,7 +91,7 @@ function HistoryDetailRoute() {
 function PageShell({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col">
-      <Header showAuthActions={false} />
+      <Header />
       <div className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">{children}</div>
       <FooterSection />
     </div>

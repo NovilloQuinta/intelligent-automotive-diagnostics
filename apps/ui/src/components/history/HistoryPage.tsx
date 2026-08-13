@@ -108,7 +108,7 @@ export function HistoryPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header showAuthActions={false} />
+      <Header />
       <div className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-4 py-8">
         {/* Header */}
         <div className="flex items-center gap-3">

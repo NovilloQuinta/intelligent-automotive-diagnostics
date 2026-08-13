@@ -7,7 +7,7 @@ import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { RequiredLabel } from '@/components/auth/RequiredLabel'
 import { Car, MailCheck } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -89,7 +89,7 @@ function ForgotPasswordPage() {
           ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="forgot-email">Email</Label>
+                <RequiredLabel htmlFor="forgot-email">Email</RequiredLabel>
                 <Input
                   id="forgot-email"
                   type="email"

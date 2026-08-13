@@ -27,6 +27,7 @@ vi.mock("../../../../src/lib/auth-context", () => ({
   useAuth: () => ({
     status: "authed" as const,
     user: { id: 1, username: "test", isAdmin: false },
+    logout: vi.fn(),
   }),
 }));
 
@@ -120,13 +121,17 @@ describe("HistoryPage", () => {
     expect(screen.getByRole("combobox", { name: /severidad/i })).toBeDefined();
   });
 
-  it("should render the shared header and footer", async () => {
+  it("should render the shared header with navigation and footer", async () => {
     const { HistoryPage } = await import(
       "../../../../src/components/history/HistoryPage"
     );
     render(<HistoryPage />);
 
     expect(screen.getByText("IADiagnostics")).toBeDefined();
+    expect(screen.getByText("Inicio")).toBeDefined();
+    expect(screen.getByText("Historial")).toBeDefined();
+    expect(screen.getByText("Perfil")).toBeDefined();
+    expect(screen.getByText("Cerrar sesión")).toBeDefined();
     expect(screen.getByText("Términos")).toBeDefined();
     expect(screen.getByText("Privacidad")).toBeDefined();
     expect(screen.getByText("Contacto")).toBeDefined();

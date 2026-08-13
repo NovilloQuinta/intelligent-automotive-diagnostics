@@ -10,6 +10,16 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
+vi.mock("../../../src/lib/auth-context", () => ({
+  useAuth: () => ({
+    status: "anonymous" as const,
+    user: null,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+  }),
+}));
+
 import { LandingPage } from "../../../src/components/landing/LandingPage";
 
 describe("LandingPage", () => {

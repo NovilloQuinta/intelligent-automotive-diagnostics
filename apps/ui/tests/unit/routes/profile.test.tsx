@@ -95,10 +95,14 @@ describe("ProfilePage", () => {
     expect(screen.queryByLabelText(/^email$/i)).toBeNull();
   });
 
-  it("renders the shared header (without auth actions) and footer", () => {
+  it("renders the shared header with navigation and footer", () => {
     render(<ProfilePage />);
 
     expect(screen.getByText("IADiagnostics")).toBeDefined();
+    expect(screen.getByText("Inicio")).toBeDefined();
+    expect(screen.getByText("Historial")).toBeDefined();
+    expect(screen.getByText("Perfil")).toBeDefined();
+    expect(screen.getByText("Cerrar sesión")).toBeDefined();
     expect(screen.getByText("Términos")).toBeDefined();
     expect(screen.getByText("Privacidad")).toBeDefined();
     expect(screen.getByText("Contacto")).toBeDefined();

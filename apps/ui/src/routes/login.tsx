@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/select'
 import { Car, Wrench } from 'lucide-react'
 import { PASSWORD_REGEX, PasswordStrengthIndicator } from '@/components/auth/PasswordStrength'
+import { RequiredLabel } from '@/components/auth/RequiredLabel'
 import { Header } from '@/components/layout/Header'
 import { FooterSection } from '@/components/landing/FooterSection'
 
@@ -47,22 +48,6 @@ const registerSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>
 type RegisterFormData = z.infer<typeof registerSchema>
-
-// ---------------------------------------------------------------------------
-// Required label helper
-// ---------------------------------------------------------------------------
-
-/** Label with a red asterisk for required fields. */
-function RequiredLabel({ htmlFor, children }: { htmlFor: string; children: React.ReactNode }) {
-  return (
-    <Label htmlFor={htmlFor}>
-      {children}
-      <span className="ml-0.5 text-destructive" aria-hidden="true">
-        *
-      </span>
-    </Label>
-  )
-}
 
 // ---------------------------------------------------------------------------
 // Route

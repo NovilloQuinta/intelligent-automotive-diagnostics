@@ -31,9 +31,10 @@ describe("ForgotPasswordPage", () => {
     vi.clearAllMocks();
   });
 
-  it("renders an email field and a link back to /login", () => {
+  it("renders an email field with a required indicator and a link back to /login", () => {
     render(<ForgotPasswordPage />);
     expect(screen.getByPlaceholderText("tu@email.com")).toBeDefined();
+    expect(screen.getByText("*")).toBeDefined();
     const backLink = screen.getByText(/Volver a iniciar sesión|Iniciar sesión/i);
     expect(backLink.closest("a")?.getAttribute("href")).toBe("/login");
   });
