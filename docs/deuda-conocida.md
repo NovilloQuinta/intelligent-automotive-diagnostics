@@ -4,8 +4,27 @@
 > de editar aqui**: este fichero se ha desincronizado dos veces por actualizarlo
 > de memoria.
 >
-> Estado general: 1732 tests en verde (1180 core-api + 552 ui), 0 errores de lint,
-> coverage 97% statements / 97.8% functions. Nada de lo que sigue es bloqueante.
+> Estado general: 1793 tests en verde (1214 core-api + 579 ui), 0 errores de lint.
+> Nada de lo que sigue es bloqueante.
+
+## Bateria del agente: construida, sin ejecutar
+
+`pnpm eval:agent` (30 casos, `apps/core-api/scripts/eval/`) **no se ha corrido
+nunca contra un LLM real**: la clave solo esta en la maquina del autor. Verificado
+el cableado end-to-end con un cliente falso y el smoke sin clave, nada mas.
+
+Lo que falta es leer las 30 respuestas y calibrar el prompt con ellas delante:
+
+- Primero `--only=B,C,D,E` (ambito, inyeccion, extraccion, internos), que es lo
+  que decide el exit code. Despues **el grupo A entero**, porque los bloques de
+  ambito nuevos pueden haber vuelto al agente reticente en consultas legitimas.
+- Los casos de seguridad se exigen 3/3 con `--repeat=3`; los de competencia, 2/3.
+- Cada fallo que aparezca, preguntarse si puede bajar a invariante de codigo:
+  si lo puede provocar el codigo es unit test, si solo lo puede provocar el
+  modelo es eval.
+
+Pendiente relacionado: no hay `LLM_TEMPERATURE`. Hoy se corre al 1.0 por defecto
+de Anthropic, que es lo peor para evaluar. `seed` no: no existe en su Messages API.
 
 ## Coverage: 3 ficheros bajo umbral
 

@@ -7,8 +7,8 @@
 > tenerla mezclada con las reglas obligaba a recargar el fichero entero en cada agente.
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura + deploy a produccion
-- **Ultimo paso**: `fix/ui-auth-header-navigation` **mergeado a develop** (8e8a69a). `Header` ahora es auth-aware: navegacion (Inicio/Historial/Perfil/Cerrar sesion) en perfil/historial/detalle; `RequiredLabel` extraido a `components/auth/` y aplicado al email de recuperar contraseña. `pnpm verify` verde (incluye `chore` prettier de `ValidationResult.ts`, que estaba sin formatear en develop).
-- **Pendiente (trabajo paralelo sin commitear)**: en el worktree principal hay cambios **sin commitear** en `ForgotPasswordUseCase.ts` + `templates/resetPasswordEmail.ts` + tests (extraccion del email de reset). No tocar sin coordinar.
+- **Ultimo paso**: `feat/agent-hardening` **mergeado a develop** (10f8f76). El agente ya no filtra UUIDs, distancias vectoriales ni confirmaciones de indexado a la narrativa (`redactInternals`), tiene instrucciones de ambito y el catalogo RAG va envuelto en `<untrusted-catalog-result>`. Anadida la bateria `pnpm eval:agent` y `typecheck:scripts` al gate. Aparte, el informe ya traduce la severidad, que llegaba en ingles y nunca casaba.
+- **Siguiente paso**: correr `pnpm eval:agent --only=B,C,D,E` con la clave local y calibrar el prompt con las respuestas delante. Detalle en `docs/deuda-conocida.md`.
 - **Coche real**: sesion aplazada a manana.
 - **OpenSpec changes activos**: `add-connection-type-selector` (13 tareas, el mas relevante para la demo por cable), `add-dtc-repair-tips-screen` (49 tareas).
 - **Flujo de ramas**: `develop` es la rama de integración; toda `feat.*`/`fix.*` sale de `develop` y se mergea ahí. `main` = releases (deploy CI). **Ojo**: hay agentes paralelos en el repo principal (rama cambia sola) — verificar `git branch --show-current` antes de commitear.
