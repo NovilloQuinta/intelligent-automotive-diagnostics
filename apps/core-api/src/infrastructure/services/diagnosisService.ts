@@ -26,9 +26,8 @@ import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
-import type { DiagnosisResult, Severity } from '@/domain/value-objects/diagnosisResult.js'
+import type { DiagnosisResult } from '@/domain/value-objects/diagnosisResult.js'
 import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
-import { LiveData } from '@/domain/value-objects/liveData.js'
 import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
 import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import type { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
@@ -37,18 +36,13 @@ import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosi
 import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
-import type {
-  VehicleRepository,
-  SessionResultSnapshot,
-} from '@/application/ports/VehicleRepository.js'
+import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import type {
   DiagnosisSessionFilter,
   DiagnosisSessionPage,
 } from '@/application/ports/VehicleRepository.js'
 import { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
 import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
-import type { SessionSeverity } from '@/domain/entities/diagnosisSession.js'
-import { ALL_SEED_PIDS } from '@/infrastructure/persistence/sqlite/seed-pids.js'
 import { normalizeManufacturer } from '@/domain/value-objects/manufacturer.js'
 import {
   MODE_CURRENT_DATA,
@@ -59,196 +53,45 @@ import {
   DEFAULT_LIVE_PIDS,
 } from '@/domain/pids.js'
 
-const COGNITIVE_DIAGNOSIS_TIMEOUT_MS = 60_000
+import {
+  buildDiagnosisSnapshot,
+  buildFollowUpSnapshot,
+} from '@/infrastructure/services/diagnosisSnapshots.js'
+import {
+  COGNITIVE_DIAGNOSIS_TIMEOUT_MS,
+  PID_METADATA,
+  TCP_DIRECT_SCENARIO,
+  UNDECODED_VIN,
+  type DiagnosisServiceOptions,
+  type ResolvedDiagnosisSession,
+  type ScenarioDescriptor,
+  type AvailablePid,
+  type CognitiveDiagnosisResult,
+  type DiagnoseOutput,
+  type PidReading,
+  type TelemetryOutput,
+  type VehicleInfoOutput,
+} from '@/infrastructure/services/diagnosisTypes.js'
 
 /**
- * Metadatos de presentación (nombre + unidad) de los PIDs Mode 01 del catálogo
- * {@link ALL_SEED_PIDS}, indexados por código hex (ej. "0C" → "Engine RPM"/"rpm").
+ * Tipos y descriptores de escenario re-exportados desde `diagnosisTypes`.
  *
- * Se usa `ALL_SEED_PIDS` (en inglés, SAE J1979) y no `PID_OBSERVATION_CATALOG`
- * (español) porque este último solo define 7 PIDs y la respuesta genérica
- * `readings` debe cubrir los 16 Mode 01 para poder mostrar un gauge por PID.
+ * El contrato publico del servicio sigue siendo este fichero: los 9 consumidores
+ * importan de aqui y no han tenido que cambiar.
  */
-const PID_METADATA: ReadonlyMap<string, { readonly name: string; readonly unit: string }> = new Map(
-  ALL_SEED_PIDS.filter((p) => p.pidCode.mode === MODE_CURRENT_DATA).map((p) => [
-    p.pidCode.pid,
-    { name: p.name, unit: p.unit ?? '' },
-  ]),
-)
+export type {
+  ScenarioDescriptor,
+  DiagnoseOutput,
+  VehicleInfoOutput,
+  TelemetryOutput,
+  PidReading,
+  AvailablePid,
+  CognitiveDiagnosisResult,
+  DiagnosisServiceOptions,
+} from '@/infrastructure/services/diagnosisTypes.js'
 
-/** Nombre de la tool MCP que devuelve los códigos DTC detectados en el vehículo. */
-const GET_DTC_CODES_TOOL = 'get_dtc_codes'
-
-/** Descriptor de un escenario de vehiculo disponible para diagnostico. */
-export interface ScenarioDescriptor {
-  readonly id: string
-  readonly name: string
-  readonly vehicleType: 'car' | 'motorcycle' | 'unknown'
-  /** Tipo de conexión al dispositivo: WiFi (TCP/IP), USB (serial), o Bluetooth (RFCOMM — futuro). */
-  readonly connectionType: 'wifi' | 'usb' | 'bluetooth'
-  readonly sensorValues?: LiveData
-  readonly dtcConfig?: DtcCode[]
-  readonly vehicleInfo: VehicleInfo
-  /** Host del emulador/dispositivo OBD (no se expone al cliente). */
-  readonly host: string
-  /** Puerto del emulador/dispositivo OBD (no se expone al cliente). */
-  readonly port: number
-}
-
-/** Escenario sintetico expuesto cuando se opera contra un ELM327 TCP real.
- * El tipo de vehiculo se descubre al diagnosticar (coche o moto). */
-const TCP_DIRECT_SCENARIO: ScenarioDescriptor = {
-  id: 'tcp',
-  name: 'ELM327 Direct Connection',
-  vehicleType: 'unknown',
-  connectionType: 'wifi',
-  sensorValues: new LiveData({ rpm: 0, coolantTemp: 0, speed: 0, intakeTemp: 0 }),
-  dtcConfig: [],
-  vehicleInfo: new VehicleInfo({
-    make: 'unknown',
-    model: 'unknown',
-    year: 0,
-    engineType: 'unknown',
-    vin: new Vin(FALLBACK_VIN),
-  }),
-  host: '',
-  port: 0,
-}
-
-/** Escenario sintetico expuesto cuando se opera contra un ELM327 USB/serial real. */
-export const SERIAL_DIRECT_SCENARIO: ScenarioDescriptor = {
-  id: 'serial',
-  name: 'ELM327 USB Connection',
-  vehicleType: 'unknown',
-  connectionType: 'usb',
-  sensorValues: new LiveData({ rpm: 0, coolantTemp: 0, speed: 0, intakeTemp: 0 }),
-  dtcConfig: [],
-  vehicleInfo: new VehicleInfo({
-    make: 'unknown',
-    model: 'unknown',
-    year: 0,
-    engineType: 'unknown',
-    vin: new Vin(FALLBACK_VIN),
-  }),
-  host: '',
-  port: 0,
-}
-
-/** Resultado del diagnostico determinista formateado para la API. */
-export interface DiagnoseOutput {
-  readonly rawData: string
-  readonly parsedValues: LiveData
-  readonly dtcCodes: DtcCode[]
-  readonly diagnosisText: string
-  readonly severity: Severity
-}
-
-/** Identificacion del vehiculo activo, con los campos derivados del VO {@link Vin}. */
-export interface VehicleInfoOutput {
-  readonly vin: string
-  readonly make: string
-  readonly model: string
-  readonly year: number
-  readonly engineType: string
-  /** Fabricante deducido del WMI; `null` si el VIN no es decodificable. */
-  readonly manufacturer: string | null
-  /** Pais/region deducidos del WMI; `null` si el VIN no es decodificable. */
-  readonly region: { country: string; region: string } | null
-  /** Anio de modelo deducido de la posicion 10; `null` si el VIN no es decodificable. */
-  readonly modelYearDecoded: number | null
-  /** Estado de la lectura del VIN. */
-  readonly vinStatus: 'read' | 'unsupported' | 'unreadable'
-}
-
-/** Campos decodificados vacios: VIN ausente, con ruido o {@link FALLBACK_VIN}. */
-const UNDECODED_VIN = {
-  manufacturer: null,
-  region: null,
-  modelYearDecoded: null,
-} as const
-
-/** Telemetria en vivo con degradacion por PID: un valor `null` indica lectura fallida. */
-export interface TelemetryOutput {
-  rpm: number | null
-  coolantTemp: number | null
-  speed: number | null
-  intakeTemp: number | null
-}
-
-/** Lectura genérica de un PID en la respuesta `readings` de {@link DiagnosisService.getLiveData}. */
-export interface PidReading {
-  /** Clave compuesta modo + PID separados por espacio (ej. "01 0C"). */
-  readonly code: string
-  /** Nombre legible del PID (del catálogo `ALL_SEED_PIDS`). */
-  readonly name: string
-  /** Unidad física del valor (ej. "rpm", "°C"). */
-  readonly unit: string
-  /** Valor físico resuelto; `null` si la lectura falló (NO DATA). */
-  readonly value: number | null
-}
-
-/** PID Mode 01 disponible en el selector de telemetría en vivo. */
-export interface AvailablePid {
-  /** Clave compuesta modo + PID separados por espacio (ej. "01 0C"). */
-  readonly code: string
-  /** Nombre legible del PID (del catálogo `ALL_SEED_PIDS`). */
-  readonly name: string
-  /** Unidad física del valor (ej. "rpm", "°C"). */
-  readonly unit: string
-}
-
-/** Rol de un turno dentro de la conversación persistida del diagnóstico. */
-type ConversationRole = 'user' | 'assistant'
-
-/** Turno individual de la conversación entre mecánico y asistente IA. */
-interface ConversationTurn {
-  readonly role: ConversationRole
-  readonly text: string
-  readonly timestamp: string
-}
-
-/** Construye un turno de conversación inmutable con marca de tiempo actual. */
-function buildConversationTurn(role: ConversationRole, text: string): ConversationTurn {
-  return { role, text, timestamp: new Date().toISOString() }
-}
-
-/** Resultado del diagnóstico cognitivo, enriquecido con el id de la sesión persistida. */
-export type CognitiveDiagnosisResult = ExecuteCognitiveDiagnosisOutput & {
-  readonly sessionId?: number
-}
-
-/** Estado de sesión resuelto antes de ejecutar el diagnóstico cognitivo. */
-interface ResolvedDiagnosisSession {
-  readonly followUpSession: DiagnosisSession | undefined
-  readonly sessionId: number | undefined
-  readonly vehicleId: number | undefined
-}
-
-/** Dependencias de {@link DiagnosisService}. */
-export interface DiagnosisServiceOptions {
-  /** Descriptores de escenarios disponibles (modo docker). */
-  readonly scenarios: ScenarioDescriptor[]
-  /** Mapa scenarioId → repositorio OBD en modo docker (multi-vehiculo). */
-  readonly obdRepos?: Map<string, ObdRepository>
-  /** Repositorio OBD unico en modo TCP directo (single-vehicle). */
-  readonly obdRepo?: ObdRepository
-  /** Escenario sintetico a devolver en `listScenarios()` cuando `obdRepo` está presente.
-   *  Por defecto {@link TCP_DIRECT_SCENARIO}. Usar {@link SERIAL_DIRECT_SCENARIO} para USB. */
-  readonly directScenario?: ScenarioDescriptor
-  /** Cliente LLM; ausente deshabilita el diagnostico cognitivo. */
-  readonly llmClient?: LlmClientPort
-  /** Stack de conocimiento vectorial RAG; ausente deshabilita busqueda/indexado. */
-  readonly knowledgeStack?: KnowledgeStack
-  /** Puerto de búsqueda web externa; ausente deshabilita la tool `web_search`. */
-  readonly webSearch?: WebSearchPort
-  /** Repositorio de vehículos; ausente deshabilita `get_available_pids`. */
-  readonly vehicleRepo?: VehicleRepository
-  readonly logger: LoggerPort
-  /** Timeout del diagnostico cognitivo en ms. Por defecto 60 s. */
-  readonly cognitiveTimeoutMs?: number
-  /** Timeout de una llamada a tool MCP en ms. Por defecto 10 s. */
-  readonly toolCallTimeoutMs?: number
-}
+/** Escenario sintetico para ELM327 USB/serial, re-exportado desde `diagnosisTypes`. */
+export { SERIAL_DIRECT_SCENARIO } from '@/infrastructure/services/diagnosisTypes.js'
 
 /** Servicio de orquestacion de diagnostico: resuelve repositorios, crea casos de uso y delega en MCP. */
 export class DiagnosisService {
@@ -767,122 +610,22 @@ export class DiagnosisService {
     if (sessionId === undefined || !this.vehicleRepo) return
     if (followUpSession) {
       if (!input.diagnosisResult) return
-      const snapshot = this.buildFollowUpSnapshot(
+      const snapshot = buildFollowUpSnapshot(
         input.vehicleInfo,
         followUpSession.resultJson,
         input.userQuery,
         input.diagnosisResult,
+        this.logger,
       )
       void this.vehicleRepo
         .updateSessionResult(sessionId, snapshot)
         .catch((e) => this.logger.warn('Failed to update diagnosis session with snapshot', e))
       return
     }
-    const snapshot = this.buildDiagnosisSnapshot(input.vehicleInfo, input.diagnosisResult)
+    const snapshot = buildDiagnosisSnapshot(input.vehicleInfo, input.diagnosisResult)
     void this.vehicleRepo
       .endSession(sessionId, snapshot ?? undefined)
       .catch((e) => this.logger.warn('Failed to end diagnosis session with snapshot', e))
-  }
-
-  /**
-   * Construye el snapshot inmutable del diagnostico para almacenar en `resultJson`.
-   *
-   * Incluye identidad del vehiculo, DTCs extraidos de las tools, freeze frame,
-   * y el veredicto completo del LLM (narrativa, severidad, confianza y recomendaciones).
-   * El snapshot es inmutable: si cambian catalogos, formulas o prompts en el futuro,
-   * este informe conserva lo que el mecanico vio ese dia (ver design.md Decision 1).
-   */
-  private buildDiagnosisSnapshot(
-    vehicleInfo: VehicleInfo,
-    diagnosis?: ExecuteCognitiveDiagnosisOutput,
-  ): SessionResultSnapshot | null {
-    if (!diagnosis) return null
-    return this.buildSnapshot(vehicleInfo, diagnosis, [
-      buildConversationTurn('assistant', diagnosis.diagnosis),
-    ])
-  }
-
-  /**
-   * Construye el snapshot de un follow-up reutilizando la conversación previa.
-   *
-   * Lee los turnos ya persistidos en `result_json`, añade la pregunta del mecánico
-   * (si la hay) y la nueva respuesta del asistente, y serializa el snapshot completo.
-   */
-  private buildFollowUpSnapshot(
-    vehicleInfo: VehicleInfo,
-    previousResultJson: string | undefined,
-    userQuery: string | undefined,
-    diagnosis: ExecuteCognitiveDiagnosisOutput,
-  ): SessionResultSnapshot {
-    const turns = [...this.parseConversation(previousResultJson)]
-    if (userQuery) {
-      turns.push(buildConversationTurn('user', userQuery))
-    }
-    turns.push(buildConversationTurn('assistant', diagnosis.diagnosis))
-    return this.buildSnapshot(vehicleInfo, diagnosis, turns)
-  }
-
-  /** Serializa el snapshot inmutable con la conversación dada. */
-  private buildSnapshot(
-    vehicleInfo: VehicleInfo,
-    diagnosis: ExecuteCognitiveDiagnosisOutput,
-    conversation: ConversationTurn[],
-  ): SessionResultSnapshot {
-    const dtcCount = this.countDtcsFromToolCalls(diagnosis.toolCalls)
-    const severity: SessionSeverity = (diagnosis.severity as SessionSeverity) ?? 'low'
-
-    const snapshot = {
-      vehicle: {
-        vin: vehicleInfo.vin.value,
-        make: vehicleInfo.make,
-        model: vehicleInfo.model,
-        year: vehicleInfo.year,
-        engineType: vehicleInfo.engineType,
-      },
-      diagnosis: {
-        severity: diagnosis.severity,
-        confidence: diagnosis.confidence,
-        narrative: diagnosis.diagnosis,
-        recommendations: diagnosis.recommendations,
-        toolCalls: diagnosis.toolCalls,
-      },
-      conversation,
-      timestamp: new Date().toISOString(),
-    }
-
-    return {
-      resultJson: JSON.stringify(snapshot),
-      severity,
-      dtcCount,
-    }
-  }
-
-  /**
-   * Recupera los turnos de conversación de un `result_json` previo.
-   *
-   * Devuelve `[]` si no hay snapshot previo o si el JSON no es parseable, de modo
-   * que un follow-up sobre una sesión sin conversación no rompe el diagnóstico.
-   */
-  private parseConversation(resultJson: string | undefined): ConversationTurn[] {
-    if (!resultJson) return []
-    try {
-      const parsed = JSON.parse(resultJson) as { conversation?: ConversationTurn[] }
-      return Array.isArray(parsed.conversation) ? parsed.conversation : []
-    } catch {
-      this.logger.warn('Failed to parse previous diagnosis snapshot conversation')
-      return []
-    }
-  }
-
-  /** Cuenta DTCs unicos extraidos de las tool calls {@link GET_DTC_CODES_TOOL}. */
-  private countDtcsFromToolCalls(
-    toolCalls?: ReadonlyArray<{ readonly tool: string; readonly result: string }>,
-  ): number {
-    if (!toolCalls) return 0
-    const dtcToolResult = toolCalls.find((t) => t.tool === GET_DTC_CODES_TOOL)?.result
-    if (!dtcToolResult) return 0
-    // El resultado es tipo "P0301: Cylinder 1 Misfire, P0420: Catalyst..."
-    return dtcToolResult.split(',').filter((s) => /[A-Z]\d{4}/.test(s.trim())).length
   }
 
   /**
