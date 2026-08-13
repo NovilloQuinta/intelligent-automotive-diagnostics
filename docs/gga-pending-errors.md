@@ -56,6 +56,25 @@ en verde. Violaciones de estilo reportadas:
   fallbacks `?? 2` (dataBytes) y `rawHex = '00'` sin constantes nombradas. Introducido en
   este cambio (sección 6).
 
+### 2026-08-13 — commit a69937b (cabecera navegación autenticada + asterisco email)
+
+GGA `STRICT_MODE` falla con "ambiguous response" (mismo bug del hook que la entrada anterior).
+Tests UI (577), `tsc`, `eslint`, `prettier` y `build` en verde. Violaciones reportadas, todas
+**preexistentes** (no introducidas por este cambio):
+
+- **`apps/ui/src/components/layout/Header.tsx:47`** — `boxShadow` con `rgba(255,107,53,0.6)`
+  hardcodeado (duplica el primary `#FF6B35`). Preexistente (venía del header inline de la landing).
+- **Error-box DRY** — bloque `rounded-md border border-destructive/30 bg-destructive/10 px-4
+  py-3 text-sm text-destructive` repetido 14× (history.$sessionId, login, profile, HistoryPage,
+  reset-password, DiagnosisChat, SessionReportPanel, DashboardPage, VehicleAutoDetectWizard).
+  Extraer un `<Alert>`/`<FormError>` compartido.
+- **Code smell >40 líneas sin disable** — `HistoryPage.tsx:68-284`, `login.tsx` RegisterForm
+  (~115), `profile.tsx` ProfileDataForm/ChangePasswordForm. Preexistentes.
+- **DRY `onChange` fechas** — `HistoryPage.tsx:128-132 / 144-148` duplican `slice(0,10)` +
+  `toISOString()` + `setPage(1)`. Extraer `handleDateChange`.
+- Menores: magic `5` (filas skeleton) en `HistoryPage.tsx:209`; "Registrarse" enlaza a `/login`
+  (no a la pestaña register).
+
 ---
 
 ## Corregidos
