@@ -389,8 +389,12 @@ describe('executeCognitiveDiagnosis', () => {
 
     const input = (llmClient.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
     expect(input.userMessage).toContain('Casos similares previos:')
-    expect(input.userMessage).toContain('(distancia 0.10)')
-    expect(input.userMessage).toContain('(distancia 0.20)')
+    // La distancia numerica se sustituyo por una etiqueta cualitativa: el modelo
+    // la leia en su propio prompt y la repetia en la narrativa ("distancia 1.40").
+    expect(input.userMessage).toContain('[muy similar]')
+    expect(input.userMessage).not.toMatch(/distancia\s*\d/)
+    // El catalogo lo alimentan otros usuarios: llega envuelto como no confiable.
+    expect(input.userMessage).toContain('<untrusted-catalog-result>')
     expect(index.search).toHaveBeenCalledWith('tiembla al ralentí', {
       limit: 5,
       filter: { manufacturer: 'Audi', model: 'A3' },
