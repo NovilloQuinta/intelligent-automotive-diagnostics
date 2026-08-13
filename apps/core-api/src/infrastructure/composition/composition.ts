@@ -57,6 +57,7 @@ import {
   PIDS_TABLE_CONFIG,
   DTCS_TABLE_CONFIG,
   DIAGNOSES_TABLE_CONFIG,
+  ECUS_TABLE_CONFIG,
 } from '@/infrastructure/persistence/vector/vectorTableConfigs.js'
 import { createKnowledgeIndex } from '@/application/knowledge/createKnowledgeIndex.js'
 import { toPidMetadata, toPidEntry } from '@/application/knowledge/pidKnowledgeMapper.js'
@@ -65,6 +66,7 @@ import {
   toDiagnosisMetadata,
   toDiagnosisEntry,
 } from '@/application/knowledge/diagnosisKnowledgeMapper.js'
+import { toEcuMetadata, toEcuEntry } from '@/application/knowledge/ecuKnowledgeMapper.js'
 import type { EmbeddingGenerator } from '@/application/ports/EmbeddingGenerator.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { KnowledgeVectorStores } from '@/application/use-cases/admin/GetKnowledgeStatsUseCase.js'
@@ -351,12 +353,16 @@ function createObdRepoMap(
  * administracion (`GetKnowledgeStatsUseCase.count()`/`sample()`). Extiende `KnowledgeStack`
  * (no lo sustituye) para que sigua siendo asignable donde se espera un `KnowledgeStack`
  * simple (p. ej. `DiagnosisService`).
+ *
+ * El cuarto indice (`ecusIndex`) se crea aqui pero su store no se expone en `vectorStores`:
+ * el panel de administracion sigue listando pids/dtcs/diagnoses (fuera del alcance de este
+ * cambio).
  */
 export interface KnowledgeStackWithStores extends KnowledgeStack {
   readonly vectorStores: KnowledgeVectorStores
 }
 
-/** Inicializa la base vectorial y los tres indices de conocimiento. */
+/** Inicializa la base vectorial y los cuatro indices de conocimiento. */
 export async function createKnowledgeStack(
   config: AppConfig,
   logger: LoggerPort,
@@ -364,10 +370,11 @@ export async function createKnowledgeStack(
   try {
     const { db } = await initLanceDb(config.LANCEDB_PATH)
     const embed: EmbeddingGenerator = createEmbedding
-    const [pidsStore, dtcsStore, diagnosesStore] = await Promise.all([
+    const [pidsStore, dtcsStore, diagnosesStore, ecusStore] = await Promise.all([
       createLanceVectorStore(db, PIDS_TABLE_CONFIG),
       createLanceVectorStore(db, DTCS_TABLE_CONFIG),
       createLanceVectorStore(db, DIAGNOSES_TABLE_CONFIG),
+      createLanceVectorStore(db, ECUS_TABLE_CONFIG),
     ])
     return {
       pidsIndex: createKnowledgeIndex({
@@ -387,6 +394,12 @@ export async function createKnowledgeStack(
         embed,
         toMetadata: toDiagnosisMetadata,
         fromMetadata: toDiagnosisEntry,
+      }),
+      ecusIndex: createKnowledgeIndex({
+        store: ecusStore,
+        embed,
+        toMetadata: toEcuMetadata,
+        fromMetadata: toEcuEntry,
       }),
       vectorStores: { pids: pidsStore, dtcs: dtcsStore, diagnoses: diagnosesStore },
     }

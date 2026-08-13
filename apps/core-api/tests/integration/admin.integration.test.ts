@@ -141,6 +141,7 @@ describe('Admin integration', () => {
       pidsIndex: fakeIndex([{ entry: { id: 'pid-1' }, distance: 0.1 }]),
       dtcsIndex: fakeIndex(),
       diagnosisIndex: fakeIndex(),
+      ecusIndex: fakeIndex(),
       vectorStores: {
         pids: fakeVectorStore(10, [{ id: 'pid-1' }]),
         dtcs: fakeVectorStore(5, [{ id: 'dtc-1' }]),

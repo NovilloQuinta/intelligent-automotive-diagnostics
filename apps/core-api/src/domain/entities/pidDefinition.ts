@@ -9,11 +9,17 @@ export class PidDefinitionError extends Error {
   }
 }
 
-/** Entidad que representa la definicion de un PID OBD-II (Mode 01, Mode 22, UDS, etc.). */
+/**
+ * Entidad que representa la definicion de un PID OBD-II (Mode 01, Mode 22, UDS, etc.).
+ *
+ * El campo `system` es una etiqueta de agrupacion opcional free-form (sin
+ * validacion). Los valores `Engine`, `Transmission`, `Battery`, `Exhaust`,
+ * `Emissions`, `Vehicle`, `Powertrain`, `ABS`, `Body`, `Airbag`, `Instrument`
+ * son una convencion sugerida, no un vocabulario impuesto. No forma parte de
+ * la identidad del PID, que sigue siendo `(mode, pidCode, manufacturer, model)`.
+ */
 export class PidDefinition {
   readonly id: number
-  readonly vehicleId?: number
-  readonly ecuId?: number
   readonly pidCode: PidCode
   readonly name: string
   readonly description?: string
@@ -25,6 +31,7 @@ export class PidDefinition {
   readonly maxValue?: number
   readonly manufacturer?: string
   readonly model?: string
+  readonly system?: string
   readonly confidence: number
   readonly source: 'auto' | 'llm_guess' | 'manual' | 'seed'
   readonly createdAt?: string
@@ -36,8 +43,6 @@ export class PidDefinition {
    */
   constructor(params: {
     id: number
-    vehicleId?: number
-    ecuId?: number
     pidCode: PidCode
     name: string
     description?: string
@@ -49,6 +54,7 @@ export class PidDefinition {
     maxValue?: number
     manufacturer?: string
     model?: string
+    system?: string
     confidence: number
     source: 'auto' | 'llm_guess' | 'manual' | 'seed'
     createdAt?: string
@@ -61,8 +67,6 @@ export class PidDefinition {
       throw new PidDefinitionError(`confidence must be between 0 and 1, got ${params.confidence}`)
     }
     this.id = params.id
-    this.vehicleId = params.vehicleId
-    this.ecuId = params.ecuId
     this.pidCode = params.pidCode
     this.name = params.name.trim()
     this.description = params.description
@@ -74,6 +78,7 @@ export class PidDefinition {
     this.maxValue = params.maxValue
     this.manufacturer = params.manufacturer
     this.model = params.model
+    this.system = params.system
     this.confidence = params.confidence
     this.source = params.source
     this.createdAt = params.createdAt

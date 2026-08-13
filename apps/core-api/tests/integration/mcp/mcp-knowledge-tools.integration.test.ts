@@ -13,11 +13,13 @@ import {
   toDiagnosisMetadata,
   toDiagnosisEntry,
 } from '@/application/knowledge/diagnosisKnowledgeMapper.js'
+import { toEcuMetadata, toEcuEntry } from '@/application/knowledge/ecuKnowledgeMapper.js'
 import {
   EMBEDDING_DIMENSIONS,
   PIDS_TABLE_CONFIG,
   DTCS_TABLE_CONFIG,
   DIAGNOSES_TABLE_CONFIG,
+  ECUS_TABLE_CONFIG,
 } from '@/infrastructure/persistence/vector/vectorTableConfigs.js'
 import type { EmbeddingGenerator } from '@/application/ports/EmbeddingGenerator.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
@@ -71,10 +73,11 @@ describe('MCP Knowledge Tools — integracion real con LanceDB', () => {
   })
 
   async function createKnowledgeStack() {
-    const [pidsStore, dtcsStore, diagnosesStore] = await Promise.all([
+    const [pidsStore, dtcsStore, diagnosesStore, ecusStore] = await Promise.all([
       createLanceVectorStore(connection.db, PIDS_TABLE_CONFIG),
       createLanceVectorStore(connection.db, DTCS_TABLE_CONFIG),
       createLanceVectorStore(connection.db, DIAGNOSES_TABLE_CONFIG),
+      createLanceVectorStore(connection.db, ECUS_TABLE_CONFIG),
     ])
     return {
       pidsIndex: createKnowledgeIndex({
@@ -94,6 +97,12 @@ describe('MCP Knowledge Tools — integracion real con LanceDB', () => {
         embed,
         toMetadata: toDiagnosisMetadata,
         fromMetadata: toDiagnosisEntry,
+      }),
+      ecusIndex: createKnowledgeIndex({
+        store: ecusStore,
+        embed,
+        toMetadata: toEcuMetadata,
+        fromMetadata: toEcuEntry,
       }),
     }
   }

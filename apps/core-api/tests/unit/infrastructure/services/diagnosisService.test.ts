@@ -19,6 +19,7 @@ import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { PidVectorRepository } from '@/application/ports/PidVectorRepository.js'
 import type { DtcVectorRepository } from '@/application/ports/DtcVectorRepository.js'
 import type { DiagnosisVectorRepository } from '@/application/ports/DiagnosisVectorRepository.js'
+import type { EcuVectorRepository } from '@/application/ports/EcuVectorRepository.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 
 const mockScenarios: SimulationScenario[] = [
@@ -324,7 +325,8 @@ describe('DiagnosisService', () => {
       }
       const pidsIndex = { index: vi.fn(), search: vi.fn() } as unknown as PidVectorRepository
       const dtcsIndex = { index: vi.fn(), search: vi.fn() } as unknown as DtcVectorRepository
-      const knowledgeStack: KnowledgeStack = { pidsIndex, dtcsIndex, diagnosisIndex }
+      const ecusIndex = { index: vi.fn(), search: vi.fn() } as unknown as EcuVectorRepository
+      const knowledgeStack: KnowledgeStack = { pidsIndex, dtcsIndex, diagnosisIndex, ecusIndex }
       const service = new DiagnosisService({
         scenarios: mockScenarios,
         obdRepos: createMockObdRepos(),
@@ -939,7 +941,8 @@ describe('DiagnosisService', () => {
         search: vi.fn().mockResolvedValue([]),
       } as unknown as PidVectorRepository
       const dtcsIndex = { index: vi.fn(), search: vi.fn() } as unknown as DtcVectorRepository
-      const knowledgeStack: KnowledgeStack = { pidsIndex, dtcsIndex, diagnosisIndex }
+      const ecusIndex = { index: vi.fn(), search: vi.fn() } as unknown as EcuVectorRepository
+      const knowledgeStack: KnowledgeStack = { pidsIndex, dtcsIndex, diagnosisIndex, ecusIndex }
       const service = new DiagnosisService({
         scenarios: mockScenarios,
         obdRepos: createMockObdRepos(),

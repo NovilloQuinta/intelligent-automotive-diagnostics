@@ -16,6 +16,8 @@ import { PidCode } from '@/domain/value-objects/pidCode.js'
 import { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import { PidReading } from '@/domain/entities/pidReading.js'
 import { EcuInfo } from '@/domain/entities/ecuInfo.js'
+import { EcuDefinition } from '@/domain/entities/ecuDefinition.js'
+import { resolveEcuDefinitions } from '@/application/ecu-catalog/resolveEcuDefinitions.js'
 import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
 import { initialConfidenceFor } from '@/application/knowledge/confidenceScale.js'
 import type { PidFormulaSource } from '@/application/dto/diagnosis/PidFormulaSource.js'
@@ -24,6 +26,7 @@ import { ValidateDiscoveredDtcUseCase } from '@/application/use-cases/ValidateDi
 import type { PidKnowledgeEntry } from '@/application/dto/knowledge/PidKnowledgeEntry.js'
 import type { DtcKnowledgeEntry } from '@/application/dto/knowledge/DtcKnowledgeEntry.js'
 import type { DiagnosisKnowledgeEntry } from '@/application/dto/knowledge/DiagnosisKnowledgeEntry.js'
+import type { EcuKnowledgeEntry } from '@/application/dto/knowledge/EcuKnowledgeEntry.js'
 import { wrapUntrustedResult } from '@/infrastructure/mcp/webSearchContent.js'
 import {
   createWebSearchBudget,
@@ -374,17 +377,65 @@ function handleGetEcuInfo(
     const ecus = await repo.getEcuInfo()
     if (ecus.length === 0) return text('No ECUs discovered.')
 
+    const resolved = await resolveDiscoveredEcus(vehicleRepo, sessionContext, ecus)
+
     // Persistir ECUs descubiertas si hay sesion activa (fire-and-forget)
     if (vehicleRepo && sessionContext?.vehicleId !== undefined) {
-      void persistEcus(vehicleRepo, sessionContext.vehicleId, ecus).catch(() => {})
+      void persistEcus(vehicleRepo, sessionContext.vehicleId, resolved).catch(() => {})
     }
 
     return text(
-      ecus
+      resolved
         .map((e) => `${e.name} (${e.type}, ${e.requestAddr}→${e.responseAddr}) — ${e.protocol}`)
         .join('\n'),
     )
   }
+}
+
+/**
+ * Resuelve las ECUs `UNKNOWN` del auto-scan contra el catalogo `ecu_definitions`.
+ *
+ * La resolucion requiere `manufacturer`/`model` en el `sessionContext`: sin ellos (o sin
+ * repositorio) devuelve las ECUs tal cual. Carga las definiciones de las direcciones
+ * `UNKNOWN` y delega en {@link resolveEcuDefinitions} (funcion pura) el filtrado por
+ * confianza.
+ */
+async function resolveDiscoveredEcus(
+  vehicleRepo: VehicleRepository | undefined,
+  sessionContext: SessionContext | undefined,
+  ecus: readonly EcuInfo[],
+): Promise<EcuInfo[]> {
+  const manufacturer = sessionContext?.manufacturer
+  const model = sessionContext?.model
+  if (!vehicleRepo || !manufacturer || !model) return [...ecus]
+
+  const lookup = await loadEcuDefinitionLookup(vehicleRepo, manufacturer, model, ecus)
+  return resolveEcuDefinitions(ecus, lookup)
+}
+
+/** Carga las definiciones de las ECUs `UNKNOWN` y devuelve un lookup por direccion de respuesta. */
+async function loadEcuDefinitionLookup(
+  vehicleRepo: VehicleRepository,
+  manufacturer: string,
+  model: string,
+  ecus: readonly EcuInfo[],
+): Promise<(responseAddr: string) => EcuDefinition | undefined> {
+  const unknownAddresses = ecus
+    .filter((ecu) => ecu.type === 'UNKNOWN')
+    .map((ecu) => ecu.responseAddr)
+
+  const definitions = await Promise.all(
+    unknownAddresses.map((address) =>
+      vehicleRepo.findEcuDefinitionByAddress(manufacturer, model, address),
+    ),
+  )
+
+  const byAddress = new Map<string, EcuDefinition>()
+  definitions.forEach((definition, index) => {
+    if (definition) byAddress.set(unknownAddresses[index], definition)
+  })
+
+  return (responseAddr) => byAddress.get(responseAddr)
 }
 
 function handleGetAvailablePids(
@@ -661,6 +712,53 @@ function handleIndexDiagnosis(stack: KnowledgeStack): ToolHandler {
 }
 
 /**
+ * Persiste una definicion de ECU aprendida en ambos niveles del catalogo:
+ * `ecu_definitions` (SQLite) y `ecus_index` (LanceDB). Las ECUs no admiten
+ * validacion OBD, asi que la confianza sale de la fuente (`initialConfidenceFor`).
+ */
+function handleIndexEcu(
+  stack: KnowledgeStack,
+  vehicleRepo: VehicleRepository | undefined,
+): ToolHandler {
+  return async (args) => {
+    const source = resolveKnowledgeSource(args)
+    const definition = new EcuDefinition({
+      id: 0,
+      manufacturer: args.manufacturer as string,
+      model: args.model as string,
+      responseAddr: args.responseAddr as string,
+      requestAddr: args.requestAddr as string,
+      name: args.name as string,
+      type: args.type as string,
+      system: args.system as string | undefined,
+      confidence: initialConfidenceFor(source),
+      source,
+    })
+
+    const entry: EcuKnowledgeEntry = {
+      id: crypto.randomUUID(),
+      embeddedText: args.embeddedText as string,
+      manufacturer: definition.manufacturer,
+      model: definition.model,
+      responseAddr: definition.responseAddr,
+      requestAddr: definition.requestAddr,
+      name: definition.name,
+      type: definition.type,
+      system: definition.system,
+      confidence: definition.confidence,
+      source,
+    }
+
+    await Promise.all([
+      vehicleRepo ? vehicleRepo.upsertEcuDefinition(definition) : Promise.resolve(),
+      stack.ecusIndex.index(entry),
+    ])
+
+    return text(formatIndexedMessage('ECU', entry, false))
+  }
+}
+
+/**
  * Registra las tools MCP de conocimiento sobre los indices vectoriales inyectados.
  *
  * Misma forma que {@link registerDiagnosticTools}: recibe un `register` y un `stack`.
@@ -671,6 +769,7 @@ function registerKnowledgeTools(
   register: ToolRegistrar,
   stack: KnowledgeStack,
   repo: ObdRepository,
+  vehicleRepo: VehicleRepository | undefined,
 ): void {
   const searchShape = {
     query: z.string(),
@@ -709,6 +808,17 @@ function registerKnowledgeTools(
       handleSearchSimilar<DiagnosisKnowledgeEntry>(
         (query, opts) => stack.diagnosisIndex.search(query, opts),
         'No diagnoses found.',
+      ),
+    ),
+  )
+  register(
+    'search_similar_ecus',
+    'Search ECU knowledge base by semantic similarity. Returns distance + fields.',
+    searchShape,
+    withErrorHandling(
+      handleSearchSimilar<EcuKnowledgeEntry>(
+        (query, opts) => stack.ecusIndex.search(query, opts),
+        'No ECUs found.',
       ),
     ),
   )
@@ -752,6 +862,22 @@ function registerKnowledgeTools(
       pidsInvolved: z.array(z.string()),
     },
     withErrorHandling(handleIndexDiagnosis(stack)),
+  )
+  register(
+    'index_ecu',
+    'Index a learned ECU definition (manufacturer, model, CAN addresses, name/type) into the relational catalog and the vector index.',
+    {
+      embeddedText: z.string(),
+      manufacturer: z.string(),
+      model: z.string(),
+      source: z.string(),
+      responseAddr: z.string(),
+      requestAddr: z.string(),
+      name: z.string(),
+      type: z.string(),
+      system: z.string().optional(),
+    },
+    withErrorHandling(handleIndexEcu(stack, vehicleRepo)),
   )
 }
 
@@ -827,7 +953,7 @@ export function createMcpServer(
   registerDiagnosticTools(registerTool, repo, vehicleRepo, sessionContext)
 
   if (knowledgeStack) {
-    registerKnowledgeTools(registerTool, knowledgeStack, repo)
+    registerKnowledgeTools(registerTool, knowledgeStack, repo, vehicleRepo)
   }
 
   if (webSearch) {

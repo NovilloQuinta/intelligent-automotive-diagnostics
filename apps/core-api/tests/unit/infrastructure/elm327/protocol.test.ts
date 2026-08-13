@@ -9,6 +9,7 @@ import {
   parseDtcResponse,
   parseSupportedPidBitmask,
   parseHexBytes,
+  parseCanHeaders,
 } from '@/infrastructure/elm327/protocol.js'
 import { Elm327NoDataError, Elm327ParseError } from '@/infrastructure/elm327/errors.js'
 
@@ -218,6 +219,53 @@ describe('protocol', () => {
 
     it('should return empty list for all-zero bitmask', () => {
       expect(parseSupportedPidBitmask([0x00, 0x00])).toEqual([])
+    })
+  })
+
+  describe('parseCanHeaders', () => {
+    it('should dedupe multi-ECU headers preserving order of appearance', () => {
+      const raw = '7E8 06 41 00 BE 3F A8 13\r7E9 06 41 00 80 00 00 00\r7E8 28 41 00 00 00 00 00\r>'
+      expect(parseCanHeaders(raw)).toEqual(['7E8', '7E9'])
+    })
+
+    it('should return [] for a single-ECU response without AT H1 headers', () => {
+      expect(parseCanHeaders('41 00 BE 3F A8 13\r>')).toEqual([])
+    })
+
+    it('should ignore 29-bit CAN headers (extended addressing)', () => {
+      expect(parseCanHeaders('18DAF110 06 41 00 BE 3F A8 13\r>')).toEqual([])
+    })
+
+    it('should discard empty lines and the ">" prompt', () => {
+      expect(parseCanHeaders('\r\r>\r7E8 06 41 00 BE 3F A8 13\r\r>')).toEqual(['7E8'])
+    })
+
+    it('should accept the ISO 15765-4 response range 7E8-7EF', () => {
+      const raw =
+        '7E8 06 41 00 BE 3F A8 13\r7E9 06 41 00 80 00 00 00\r7EF 06 41 00 00 00 00 00\r>'
+      expect(parseCanHeaders(raw)).toEqual(['7E8', '7E9', '7EF'])
+    })
+
+    it('should accept lower boundary 7E8 and discard 7E7', () => {
+      expect(parseCanHeaders('7E7 06 41 00 00 00 00 00\r7E8 06 41 00 BE 3F A8 13\r>')).toEqual([
+        '7E8',
+      ])
+    })
+
+    it('should accept upper boundary 7EF and discard 7F0', () => {
+      expect(parseCanHeaders('7EF 06 41 00 00 00 00 00\r7F0 06 41 00 BE 3F A8 13\r>')).toEqual([
+        '7EF',
+      ])
+    })
+
+    it('should discard 11-bit headers outside the 7E8-7EF range (e.g. 7DA, 768, 800)', () => {
+      const raw =
+        '7DA 06 41 00 00 00 00 00\r768 06 41 00 00 00 00 00\r800 06 41 00 00 00 00 00\r7E8 06 41 00 BE 3F A8 13\r>'
+      expect(parseCanHeaders(raw)).toEqual(['7E8'])
+    })
+
+    it('should discard NO DATA / CAN ERROR lines', () => {
+      expect(parseCanHeaders('NO DATA\rCAN ERROR\r7E8 06 41 00 BE 3F A8 13\r>')).toEqual(['7E8'])
     })
   })
 
