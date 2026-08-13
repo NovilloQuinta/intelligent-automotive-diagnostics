@@ -122,22 +122,28 @@ function formatIndexedMessage(
   return `Indexed ${prefix} ${entry.id} (confidence ${entry.confidence}, ${status})`
 }
 
+/**
+ * Extrae de los argumentos la formula a validar contra el vehiculo, o `undefined`
+ * si faltan datos. Sin los cuatro campos no hay nada que validar y el PID se
+ * indexa sin validar.
+ */
+function pidFormulaFromArgs(args: Record<string, unknown>): PidFormulaSource | undefined {
+  const mode = args.mode as string | undefined
+  const pid = args.pid as string | undefined
+  const formula = args.formula as string | undefined
+  const dataBytes = args.dataBytes as number | undefined
+
+  if (!mode || !pid || !formula || dataBytes === undefined) return undefined
+  return { pidCode: { key: `${mode} ${pid}` }, formula, dataBytes }
+}
+
 function handleIndexPid(stack: KnowledgeStack, obdRepo: ObdRepository): ToolHandler {
   return async (args) => {
     const source = resolveKnowledgeSource(args)
     const entry: PidKnowledgeEntry = baseKnowledgeEntry(args, source)
 
-    const mode = args.mode as string | undefined
-    const pid = args.pid as string | undefined
-    const formula = args.formula as string | undefined
-    const dataBytes = args.dataBytes as number | undefined
-
-    if (mode && pid && formula && dataBytes !== undefined) {
-      const pidFormula: PidFormulaSource = {
-        pidCode: { key: `${mode} ${pid}` },
-        formula,
-        dataBytes,
-      }
+    const pidFormula = pidFormulaFromArgs(args)
+    if (pidFormula) {
       const minValue = args.minValue as number | undefined
       const maxValue = args.maxValue as number | undefined
       const useCase = new ValidateDiscoveredPidUseCase()

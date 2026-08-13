@@ -151,6 +151,45 @@ async function persistEcus(
   )
 }
 
+/** Lo observado al leer un PID, con el repositorio de persistencia si lo hay. */
+interface PidObservation {
+  readonly repo: ObdRepository
+  readonly vehicleRepo: VehicleRepository | undefined
+  readonly sessionContext: SessionContext | undefined
+  readonly modeStr: string
+  readonly pidStr: string
+  readonly value: number
+}
+
+/**
+ * Efectos de lado de leer un PID: auto-registro en el catalogo (solo fuera de
+ * Mode 01) y persistencia de la lectura si hay sesion activa. Ambos best-effort.
+ *
+ * Vive aparte del handler para que este tenga una sola responsabilidad visible:
+ * leer y devolver el valor. Sin repositorio no hay nada que registrar, y esa
+ * decision se toma una vez aqui en lugar de en cada guarda.
+ */
+function recordPidObservation(observation: PidObservation): void {
+  const { repo, vehicleRepo, sessionContext, modeStr, pidStr, value } = observation
+  if (!vehicleRepo) return
+
+  autoRegisterIfProprietary(vehicleRepo, modeStr, pidStr, sessionContext)
+
+  if (sessionContext?.sessionId === undefined) return
+  persistPidReading({ repo, vehicleRepo, sessionContext, modeStr, pidStr, value })
+}
+
+/** Auto-registra en el catalogo los PID propietarios (todo lo que no es Mode 01). */
+function autoRegisterIfProprietary(
+  vehicleRepo: VehicleRepository,
+  modeStr: string,
+  pidStr: string,
+  sessionContext: SessionContext | undefined,
+): void {
+  if (modeStr === '01') return
+  autoRegisterPid(vehicleRepo, modeStr, pidStr, sessionContext?.manufacturer, sessionContext?.model)
+}
+
 function handleReadPid(
   repo: ObdRepository,
   vehicleRepo: VehicleRepository | undefined,
@@ -161,27 +200,7 @@ function handleReadPid(
     const pidStr = `${pid}`
     const value = await repo.readPid(modeStr, pidStr)
 
-    if (vehicleRepo && modeStr !== '01') {
-      void autoRegisterPid(
-        vehicleRepo,
-        modeStr,
-        pidStr,
-        sessionContext?.manufacturer,
-        sessionContext?.model,
-      )
-    }
-
-    // Persistir lectura si hay sesion activa (fire-and-forget)
-    if (vehicleRepo && sessionContext?.sessionId !== undefined) {
-      persistPidReading({
-        repo,
-        vehicleRepo,
-        sessionContext,
-        modeStr,
-        pidStr,
-        value,
-      })
-    }
+    recordPidObservation({ repo, vehicleRepo, sessionContext, modeStr, pidStr, value })
 
     return text(String(value))
   }
@@ -222,8 +241,10 @@ function handleGetDtcCodes(
   return async () => {
     const dtcs = await repo.readDtcCodes()
 
-    // Persistir DTC definitions si hay sesion activa con manufacturer/model
-    if (vehicleRepo && sessionContext?.manufacturer && sessionContext?.model) {
+    // Persistir DTC definitions si hay sesion activa. La comprobacion de
+    // manufacturer/model ya la hace persistDtcs: repetirla aqui era la misma
+    // guarda escrita dos veces.
+    if (vehicleRepo && sessionContext) {
       persistDtcs(vehicleRepo, sessionContext, dtcs)
     }
 
@@ -291,9 +312,9 @@ async function resolveDiscoveredEcus(
   sessionContext: SessionContext | undefined,
   ecus: readonly EcuInfo[],
 ): Promise<EcuInfo[]> {
-  const manufacturer = sessionContext?.manufacturer
-  const model = sessionContext?.model
-  if (!vehicleRepo || !manufacturer || !model) return [...ecus]
+  if (!vehicleRepo || !sessionContext) return [...ecus]
+  const { manufacturer, model } = sessionContext
+  if (!manufacturer || !model) return [...ecus]
 
   const lookup = await loadEcuDefinitionLookup(vehicleRepo, manufacturer, model, ecus)
   return resolveEcuDefinitions(ecus, lookup)

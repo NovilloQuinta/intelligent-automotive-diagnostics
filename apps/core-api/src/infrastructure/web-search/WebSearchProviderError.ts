@@ -1,3 +1,5 @@
+import type { CategorizedError, ErrorCategory } from '@/application/shared/errorCategory.js'
+
 /**
  * Error lanzado cuando el proveedor de búsqueda web devuelve una respuesta
  * no satisfactoria (HTTP no-OK, error de cuota, API key invalida, etc.).
@@ -6,8 +8,11 @@
  * viaja en la query string. Solo incluye el status o el mensaje de error
  * del cuerpo.
  */
-export class WebSearchProviderError extends Error {
+export class WebSearchProviderError extends Error implements CategorizedError {
   override readonly name = 'WebSearchProviderError'
+
+  /** El proveedor de busqueda es un tercero: reintentable. */
+  readonly errorCategory: ErrorCategory = 'external_error'
 
   constructor(detail: number | string) {
     const message =

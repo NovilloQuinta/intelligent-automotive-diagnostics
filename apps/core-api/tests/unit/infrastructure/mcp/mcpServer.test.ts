@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
 import { ToolNotFoundError } from '@/infrastructure/mcp/errors.js'
+import type { CategorizedError } from '@/application/shared/errorCategory.js'
 import { mockObdRepo, mockVehicleRepo } from './mcpTestFactories.js'
 
 describe('McpServer — composicion y contrato', () => {
@@ -79,6 +80,35 @@ describe('McpServer — composicion y contrato', () => {
 
       expect(result.isError).toBe(true)
       expect(result.content[0].text).toContain('bus off')
+    })
+
+    it('should honour the category an error declares, without the toolkit knowing the type', async () => {
+      // Error ajeno al MCP: no lo importa nadie del toolkit, solo declara su
+      // categoria. Es el contrato que permite anadir fuentes de error sin
+      // editar categorizeError.
+      class UnknownUpstreamError extends Error implements CategorizedError {
+        readonly errorCategory = 'external_error' as const
+      }
+      const repo = mockObdRepo({
+        readDtcCodes: vi.fn().mockRejectedValue(new UnknownUpstreamError('upstream down')),
+      })
+      const mcp = createMcpServer(repo, mockVehicleRepo())
+
+      const result = await mcp.callTool('get_dtc_codes', {})
+
+      expect(result.isError).toBe(true)
+      expect(result.content[0].text).toContain('[external_error]')
+    })
+
+    it('should fall back to server_error when the error declares no category', async () => {
+      const repo = mockObdRepo({
+        readDtcCodes: vi.fn().mockRejectedValue(new Error('sin categoria')),
+      })
+      const mcp = createMcpServer(repo, mockVehicleRepo())
+
+      const result = await mcp.callTool('get_dtc_codes', {})
+
+      expect(result.content[0].text).toContain('[server_error]')
     })
   })
 

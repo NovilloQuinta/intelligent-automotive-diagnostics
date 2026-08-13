@@ -1,5 +1,4 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { z } from 'zod'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
@@ -11,6 +10,7 @@ import {
   shapeToJsonSchema,
   type ToolCallResult,
   type ToolHandler,
+  type ToolRegistrar,
 } from '@/infrastructure/mcp/mcpToolkit.js'
 import {
   registerDiagnosticTools,
@@ -38,6 +38,41 @@ export interface DiagnosticsMcpServer {
 const MCP_SERVER_NAME = 'obd-diagnostics'
 const MCP_SERVER_VERSION = '0.2.0'
 
+/** Registro de tools: acumula handlers y definiciones mientras las inscribe en el servidor MCP. */
+interface ToolRegistry {
+  readonly register: ToolRegistrar
+  readonly handlers: Record<string, ToolHandler>
+  readonly definitions: McpToolDefinition[]
+}
+
+/**
+ * Crea el registro de tools sobre un servidor MCP.
+ *
+ * Separado de {@link createMcpServer} porque es la unica logica de este modulo:
+ * el resto es composicion. Mantener el closure dentro hacia que la funcion de
+ * composicion pasara de 40 lineas escondiendo este mecanismo.
+ */
+function createToolRegistry(server: McpServer): ToolRegistry {
+  const handlers: Record<string, ToolHandler> = {}
+  const definitions: McpToolDefinition[] = []
+
+  const register: ToolRegistrar = (name, description, shape, handler) => {
+    handlers[name] = handler
+    definitions.push({ name, description, schema: shapeToJsonSchema(shape) })
+    server.tool(name, description, shape, async (args) => {
+      const result = await handler(args)
+      // `isError` viaja junto al contenido: sin el, un cliente MCP externo lee
+      // los fallos como exitos.
+      return {
+        content: result.content.map((c) => ({ type: 'text' as const, text: c.text })),
+        isError: result.isError ?? false,
+      }
+    })
+  }
+
+  return { register, handlers, definitions }
+}
+
 /** Crea un servidor MCP con tools de diagnostico OBD-II y, opcionalmente, de conocimiento RAG. */
 export function createMcpServer(
   repo: ObdRepository,
@@ -51,28 +86,7 @@ export function createMcpServer(
     version: MCP_SERVER_VERSION,
   })
 
-  const handlers: Record<string, ToolHandler> = {}
-  const toolDefinitions: McpToolDefinition[] = []
-
-  /** Registra una tool en el servidor MCP y guarda su definición para listTools. */
-  function registerTool(
-    name: string,
-    description: string,
-    shape: Record<string, z.ZodTypeAny>,
-    handler: ToolHandler,
-  ): void {
-    handlers[name] = handler
-    toolDefinitions.push({ name, description, schema: shapeToJsonSchema(shape) })
-    server.tool(name, description, shape, async (args) => {
-      const result = await handler(args)
-      // `isError` viaja junto al contenido: sin el, un cliente MCP externo lee
-      // los fallos como exitos.
-      return {
-        content: result.content.map((c) => ({ type: 'text' as const, text: c.text })),
-        isError: result.isError ?? false,
-      }
-    })
-  }
+  const { register: registerTool, handlers, definitions } = createToolRegistry(server)
 
   registerDiagnosticTools(registerTool, repo, vehicleRepo, sessionContext)
 
@@ -93,6 +107,6 @@ export function createMcpServer(
       if (!handler) throw new ToolNotFoundError(name)
       return handler(args)
     },
-    listTools: () => toolDefinitions,
+    listTools: () => definitions,
   }
 }

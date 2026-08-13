@@ -1,10 +1,5 @@
 import { z } from 'zod'
-import {
-  Elm327ConnectionError,
-  Elm327NoDataError,
-  Elm327ParseError,
-} from '@/infrastructure/elm327/errors.js'
-import { WebSearchProviderError } from '@/infrastructure/web-search/WebSearchProviderError.js'
+import { categoryOf } from '@/application/shared/errorCategory.js'
 
 /** Resultado de invocar una tool MCP (siempre contenido de tipo texto). */
 export interface ToolCallResult {
@@ -22,9 +17,6 @@ export type ToolRegistrar = (
   shape: Record<string, z.ZodTypeAny>,
   handler: ToolHandler,
 ) => void
-
-/** Categoria de error MCP segun best practices: permite al LLM decidir si reintentar. */
-type ToolErrorCategory = 'client_error' | 'server_error' | 'external_error'
 
 /** Crea un bloque de texto para el contenido de una tool MCP. */
 export function text(content: string): ToolCallResult {
@@ -66,22 +58,19 @@ export function shapeToJsonSchema(shape: Record<string, z.ZodTypeAny>): Record<s
   return { type: 'object', properties, required }
 }
 
-/** Clasifica un error de tool para que el LLM pueda decidir si merece la pena reintentar. */
-function categorizeError(err: unknown): ToolErrorCategory {
-  if (err instanceof Elm327ConnectionError) return 'external_error'
-  if (err instanceof Elm327NoDataError) return 'client_error'
-  if (err instanceof Elm327ParseError) return 'server_error'
-  if (err instanceof WebSearchProviderError) return 'external_error'
-  return 'server_error'
-}
-
-/** Envuelve un handler para convertir excepciones en errores de ejecucion MCP categorizados. */
+/**
+ * Envuelve un handler para convertir excepciones en errores de ejecucion MCP categorizados.
+ *
+ * La categoria la declara cada error implementando `CategorizedError`; este
+ * modulo no conoce ningun tipo de error concreto. Anadir una fuente de errores
+ * (otro transporte, otro proveedor) no obliga a tocar el toolkit.
+ */
 export function withErrorHandling(handler: ToolHandler): ToolHandler {
   return async (args) => {
     try {
       return await handler(args)
     } catch (err) {
-      const category = categorizeError(err)
+      const category = categoryOf(err)
       const message = err instanceof Error ? err.message : 'Unknown error'
       const stack = err instanceof Error ? err.stack : undefined
       if (stack) {
