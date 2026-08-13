@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildPidRows,
+  buildSelectablePidRows,
   mergePidRows,
   pidObservationToRow,
   togglePid,
@@ -211,5 +212,39 @@ describe('mergePidRows', () => {
 
     expect(mergePidRows(fixed, null)).toEqual(fixed)
     expect(mergePidRows(fixed, [])).toEqual(fixed)
+  })
+})
+
+describe('buildSelectablePidRows', () => {
+  const CATALOG = [
+    { code: '01 0C', name: 'Engine RPM', unit: 'rpm' },
+    { code: '01 05', name: 'Engine Coolant Temperature', unit: '°C' },
+    { code: '01 11', name: 'Throttle Position', unit: '%' },
+  ]
+
+  it('overlays the deterministic value + verdict for the 4 fixed PIDs', () => {
+    const rows = buildSelectablePidRows(CATALOG, PARSED_VALUES, null)
+
+    const rpm = rows.find((r) => r.code === '01 0C')!
+    expect(rpm.value).toBe('850 RPM')
+    expect(rpm.status).toBe('ok')
+    expect(rpm.source).toBe('fixed')
+  })
+
+  it('renders non-fixed catalog PIDs as `—` without verdict when there is no reading', () => {
+    const rows = buildSelectablePidRows(CATALOG, PARSED_VALUES, null)
+
+    const throttle = rows.find((r) => r.code === '01 11')!
+    expect(throttle.value).toBe('—')
+    expect(throttle.status).toBeNull()
+    expect(throttle.source).toBe('catalog')
+  })
+
+  it('fills a non-fixed catalog PID with its live reading', () => {
+    const readings = [{ code: '01 11', name: 'Throttle Position', unit: '%', value: 14 }]
+
+    const rows = buildSelectablePidRows(CATALOG, PARSED_VALUES, readings)
+
+    expect(rows.find((r) => r.code === '01 11')!.value).toBe('14 %')
   })
 })

@@ -11,6 +11,7 @@ const {
   mockUseVehicleAutoDetect,
   mockUseCapabilities,
   mockUseCognitiveDiagnosis,
+  mockUseAvailablePids,
 } = vi.hoisted(() => ({
   mockAuthStatus: { value: "anonymous" as "loading" | "authed" | "anonymous" },
   mockLogout: vi.fn(),
@@ -20,6 +21,7 @@ const {
   mockUseVehicleAutoDetect: vi.fn(),
   mockUseCapabilities: vi.fn(),
   mockUseCognitiveDiagnosis: vi.fn(),
+  mockUseAvailablePids: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", () => {
@@ -66,6 +68,9 @@ vi.mock("../../../src/components/dashboard/useCapabilities", () => ({
 }));
 vi.mock("../../../src/components/dashboard/useCognitiveDiagnosis", () => ({
   useCognitiveDiagnosis: () => mockUseCognitiveDiagnosis(),
+}));
+vi.mock("../../../src/components/dashboard/useAvailablePids", () => ({
+  useAvailablePids: () => mockUseAvailablePids(),
 }));
 vi.mock("../../../src/components/dashboard/useEcuInfo", () => ({
   useEcuInfo: () => ({ ecus: [], loading: false, error: null }),
@@ -202,6 +207,7 @@ describe("DashboardPage", () => {
       recommendations: null,
       conversationHistory: [],
     });
+    mockUseAvailablePids.mockReturnValue([]);
   });
 
   afterEach(() => {

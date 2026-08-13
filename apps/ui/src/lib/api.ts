@@ -2,6 +2,7 @@ import { ApiHttpError } from '@/lib/api-errors'
 import type {
   AuthTokens,
   AuthUser,
+  AvailablePid,
   ChangePasswordInput,
   DiagnosisHistoryResponse,
   DiagnosisSessionDetail,
@@ -434,6 +435,14 @@ export const api = {
     await assertOk(res, GENERIC_ERROR_MESSAGE)
     const data = (await res.json()) as ScenariosResponse
     return data.scenarios
+  },
+
+  /** GET /api/available-pids — returns the Mode 01 PID catalog for the selector. */
+  async getAvailablePids(): Promise<AvailablePid[]> {
+    const res = await apiFetch('/api/available-pids')
+    await assertOk(res, GENERIC_ERROR_MESSAGE)
+    const data = (await res.json()) as { pids: AvailablePid[] }
+    return data.pids
   },
 
   /** POST /api/diagnosis — runs OBD diagnosis for a scenario. */

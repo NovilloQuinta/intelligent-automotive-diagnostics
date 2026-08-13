@@ -64,6 +64,13 @@ export type PidReading = {
   readonly value: number | null
 }
 
+/** Selectable Mode 01 PID from the `GET /api/available-pids` catalog. */
+export type AvailablePid = {
+  readonly code: string
+  readonly name: string
+  readonly unit: string
+}
+
 /** OBD-II freeze frame snapshot as returned by GET /api/freeze-frame. */
 export type FreezeFrame = {
   dtcCode: string

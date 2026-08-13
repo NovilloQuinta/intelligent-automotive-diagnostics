@@ -337,6 +337,27 @@ describe("api", () => {
     });
   });
 
+  describe("getAvailablePids", () => {
+    it("adds Bearer header and unwraps { pids }", async () => {
+      setStoredTokens();
+      const pids = [{ code: "01 0C", name: "Engine RPM", unit: "rpm" }];
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ pids }),
+      });
+      vi.stubGlobal("fetch", mockFetch);
+
+      const result = await api.getAvailablePids();
+
+      expect(result).toEqual(pids);
+      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("/api/available-pids");
+      expect(init.headers).toMatchObject({
+        Authorization: "Bearer access-abc",
+      });
+    });
+  });
+
   // -----------------------------------------------------------------------
   // refreshAccessToken (exercised through apiFetch)
   // -----------------------------------------------------------------------

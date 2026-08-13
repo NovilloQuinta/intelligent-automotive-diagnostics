@@ -157,6 +157,11 @@ export class DiagnosisController {
     res.status(200).json({ scenarios: this.service.listScenarios() })
   }
 
+  /** GET /api/available-pids — catalogo de PIDs Mode 01 seleccionables en telemetria en vivo. */
+  availablePids = (_req: Request, res: Response): void => {
+    res.status(200).json({ pids: this.service.listAvailablePids() })
+  }
+
   /** GET /api/mcp/capabilities — informa de las capacidades disponibles del servicio. */
   capabilities = (_req: Request, res: Response): void => {
     res.status(200).json({ cognitiveDiagnosis: this.service.hasCognitiveDiagnosis })

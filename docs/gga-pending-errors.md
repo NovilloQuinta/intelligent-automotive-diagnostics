@@ -12,6 +12,25 @@ Cada entrada debe corregirse en una rama `fix/gga-*` antes del siguiente milesto
 - **Archivo:linea** — descripcion del error
 -->
 
+### 2026-08-13 — fix/live-data-pid-selector
+
+Preexistente (GGA re-audita el repo entero, no solo el diff de este fix). El bug de historial ya
+estaba documentado abajo (entrada 2026-08-09); se re-confirma. Nuevo hallazgo grave: DRY en el
+controlador.
+
+- **`apps/core-api/src/infrastructure/http/controllers/DiagnosisController.ts`** — 8 handlers
+  duplican el patrón parse→`safeParse`→400→`try/call`→`respond`→catch→`respondIfCommonError`→
+  `respondUnexpected` (`freezeFrame`, `ecuInfo`, `vehicleInfo`, `liveData`, `clearDtc`,
+  `pendingDtc`, `permanentDtc`, `vehicleStatus`). Solo difieren esquema/llamada/contexto. Extraer
+  helper tipo `handleQuery(...)`. También `req.userId`→401 duplicado en `listHistory`/`getHistoryDetail`.
+- **`apps/ui/src/lib/api.ts` (`getDiagnosisHistory`/`getDiagnosisHistoryDetail`)** — bug de contrato
+  ya registrado (ver entrada 2026-08-09).
+
+Warnings no bloqueantes: `catch {}` en `readPids` (elm327Adapter.ts) traga también errores de
+transporte (degradación intencionada); regex mágica `/7F\s/i` en `getFreezeFrame`; guard
+`vehicleRepo` duplicado en `diagnosisService.ts`; `activePids` recalculado en cada render en
+`PidsTable.ts`; `rawData: ''`/`ts: Date.now()` obsoletos en `useLiveTelemetry.ts`.
+
 ### 2026-08-09 — merge origin/develop -> pwd-recovery-integration
 
 Preexistente en `origin/develop` (feature `add-diagnosis-history`), no tocado por este merge — GGA

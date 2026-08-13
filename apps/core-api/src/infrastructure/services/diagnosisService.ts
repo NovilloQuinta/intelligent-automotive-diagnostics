@@ -188,6 +188,16 @@ export interface PidReading {
   readonly value: number | null
 }
 
+/** PID Mode 01 disponible en el selector de telemetría en vivo. */
+export interface AvailablePid {
+  /** Clave compuesta modo + PID separados por espacio (ej. "01 0C"). */
+  readonly code: string
+  /** Nombre legible del PID (del catálogo `ALL_SEED_PIDS`). */
+  readonly name: string
+  /** Unidad física del valor (ej. "rpm", "°C"). */
+  readonly unit: string
+}
+
 /** Rol de un turno dentro de la conversación persistida del diagnóstico. */
 type ConversationRole = 'user' | 'assistant'
 
@@ -362,6 +372,24 @@ export class DiagnosisService {
       })
     }
     return { ...result, readings }
+  }
+
+  /**
+   * Lista los PIDs Mode 01 del catalogo SAE J1979 disponibles para el selector
+   * de telemetria en vivo.
+   *
+   * Es un catalogo global (no depende del vehiculo conectado): si un coche no
+   * soporta un PID, la lectura degrada a `null` en {@link getLiveData} y el
+   * gauge muestra `—`.
+   *
+   * @returns Los 16 PIDs Mode 01 con su nombre y unidad, en orden de catalogo.
+   */
+  listAvailablePids(): AvailablePid[] {
+    return Array.from(PID_METADATA.entries()).map(([pid, meta]) => ({
+      code: `${MODE_CURRENT_DATA} ${pid}`,
+      name: meta.name,
+      unit: meta.unit,
+    }))
   }
 
   /**

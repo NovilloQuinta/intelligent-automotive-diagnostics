@@ -23,9 +23,9 @@ test.describe("Authentication", () => {
     await page.locator("#reg-password").fill(TEST_USER.password);
     await page.getByRole("button", { name: "Crear cuenta" }).click();
 
-    // Should redirect to dashboard
+    // Should redirect to dashboard (vehicle identification wizard first)
     await expect(page).toHaveURL("/");
-    await expect(page.getByText("Telemetría en vivo")).toBeVisible();
+    await expect(page.getByText("Identificación del vehículo")).toBeVisible();
   });
 
   test("should login with valid credentials", async ({ page }) => {
@@ -35,10 +35,9 @@ test.describe("Authentication", () => {
     await page.getByPlaceholder("••••••••").fill(TEST_USER.password);
     await page.locator('button[type="submit"]').click();
 
-    // Should redirect to dashboard
+    // Should redirect to dashboard (vehicle identification wizard first)
     await expect(page).toHaveURL("/");
-    await expect(page.getByText("Telemetría en vivo")).toBeVisible();
-    await expect(page.getByText("Conectado")).toBeVisible();
+    await expect(page.getByText("Identificación del vehículo")).toBeVisible();
   });
 
   test("should show error with invalid credentials", async ({ page }) => {

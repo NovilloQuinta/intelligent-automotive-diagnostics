@@ -37,7 +37,11 @@ async function registerAndLogin(page: Page, suffix: string) {
 async function switchVehicle(page: Page, current: RegExp, next: RegExp) {
   await page.getByRole("button", { name: current }).first().click();
   await page.getByRole("button", { name: next }).first().click();
-  await identifyVehicle(page, next);
+  // The dropdown selection already triggers the VIN read; go straight to confirm.
+  const enterBtn = page.getByRole("button", { name: "Entrar a diagnóstico" });
+  await expect(enterBtn).toBeVisible({ timeout: 15000 });
+  await enterBtn.click();
+  await expect(page.getByText("Telemetría en vivo")).toBeVisible({ timeout: 15000 });
 }
 
 test.describe("Dashboard", () => {
@@ -73,7 +77,7 @@ test.describe("Dashboard", () => {
     await registerAndLogin(page, `switch_${SUFFIX}`);
 
     // Verify default vehicle
-    await expect(page.getByText("Audi A3 al ralentí").first()).toBeVisible();
+    await expect(page.getByText("Audi A3 2.0 TDI").first()).toBeVisible();
 
     // Changing vehicle goes through the identification wizard again
     await switchVehicle(page, /Audi A3/, /Kawasaki Z900/);
@@ -90,12 +94,14 @@ test.describe("Dashboard", () => {
     // Run diagnosis
     await page.getByRole("button", { name: "Iniciar diagnóstico" }).click();
 
-    // Wait for DTC result
+    // Open the DTC section — the diagnosis populates the stored codes
+    await page.getByRole("button", { name: /Códigos DTC/ }).click();
     await expect(page.getByText("P0301").first()).toBeVisible({
       timeout: 15000,
     });
-    await expect(page.getByText("ALTA").first()).toBeVisible();
-    await expect(page.getByText("1 registrado")).toBeVisible();
+    await expect(page.getByText("P0401").first()).toBeVisible();
+    await expect(page.getByText("P2002").first()).toBeVisible();
+    await expect(page.getByText("3 registrados")).toBeVisible();
   });
 
   test("should run diagnosis on Kawasaki (no DTCs)", async ({ page }) => {
@@ -104,34 +110,34 @@ test.describe("Dashboard", () => {
     // Switch to Kawasaki through the wizard
     await switchVehicle(page, /Audi A3/, /Kawasaki Z900/);
 
-    // Run diagnosis
+    // Run diagnosis and wait for it to complete
     await page.getByRole("button", { name: "Iniciar diagnóstico" }).click();
+    await expect(page.getByText("Diagnóstico completado")).toBeVisible({
+      timeout: 15000,
+    });
 
-    // Wait for result — Kawasaki has no DTCs
-    await page.waitForTimeout(5000);
-    // Should NOT show DTC code P0301
-    const dtcElement = page.getByText("P0301").first();
-    await expect(dtcElement)
-      .not.toBeVisible({ timeout: 5000 })
-      .catch(() => {});
+    // Open the DTC section — Kawasaki has no stored DTCs
+    await page.getByRole("button", { name: /Códigos DTC/ }).click();
+    await expect(page.getByText(/Ningún código de error/)).toBeVisible();
   });
 
-  test("should show the no-freeze-frame state when selecting a DTC on Audi", async ({
+  test("should show the freeze frame snapshot when selecting a DTC on Audi", async ({
     page,
   }) => {
     await registerAndLogin(page, `ff_${SUFFIX}`);
 
     // Run diagnosis to surface the DTC list
     await page.getByRole("button", { name: "Iniciar diagnóstico" }).click();
+    await page.getByRole("button", { name: /Códigos DTC/ }).click();
     await expect(page.getByText("P0301").first()).toBeVisible({
       timeout: 15000,
     });
 
-    // Select the DTC row — Audi has no freeze frame seeded, so the panel reports it
+    // Select the DTC row — the Audi scenario seeds a freeze frame for P0301
     await page.getByText("P0301").first().click();
-    await expect(
-      page.getByText("Sin freeze frame para este código"),
-    ).toBeVisible({
+
+    // The freeze frame snapshot shows the RPM captured at misfire time (2100 rpm)
+    await expect(page.getByText("2100").first()).toBeVisible({
       timeout: 15000,
     });
   });

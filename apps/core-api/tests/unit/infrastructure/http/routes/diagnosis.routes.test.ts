@@ -114,6 +114,7 @@ type ServiceStub = Pick<
   | 'isDirectConnection'
   | 'hasCognitiveDiagnosis'
   | 'listScenarios'
+  | 'listAvailablePids'
   | 'diagnose'
   | 'cognitiveDiagnosis'
   | 'callMcpTool'
@@ -134,6 +135,7 @@ function createServiceStub(overrides: Partial<ServiceStub> = {}): DiagnosisServi
     isDirectConnection: false,
     hasCognitiveDiagnosis: false,
     listScenarios: vi.fn(() => mockScenarios),
+    listAvailablePids: vi.fn(() => [{ code: '01 0C', name: 'Engine RPM', unit: 'rpm' }]),
     diagnose: vi.fn(async () => diagnoseOutput),
     cognitiveDiagnosis: vi.fn(async () => cognitiveOutput),
     callMcpTool: vi.fn(async () => '750'),
@@ -196,6 +198,16 @@ describe('diagnosisRoutes', () => {
       expect(res.status).toBe(200)
       expect(res.body.scenarios).toHaveLength(1)
       expect(res.body.scenarios[0]).toMatchObject({ id: 'tcp' })
+    })
+  })
+
+  describe('GET /api/available-pids', () => {
+    it('should return the Mode 01 PID catalog from the service', async () => {
+      const { app } = createApp()
+      const res = await request(app).get('/api/available-pids')
+
+      expect(res.status).toBe(200)
+      expect(res.body.pids).toEqual([{ code: '01 0C', name: 'Engine RPM', unit: 'rpm' }])
     })
   })
 

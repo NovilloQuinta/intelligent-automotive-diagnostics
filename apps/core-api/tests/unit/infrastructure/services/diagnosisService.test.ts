@@ -505,6 +505,27 @@ describe('DiagnosisService', () => {
     })
   })
 
+  describe('listAvailablePids', () => {
+    it('returns the 16 Mode 01 PIDs with name and unit, without touching the repository', () => {
+      const repos = createMockObdRepos()
+      const repo = repos.get('audi-a3-idle')!
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: repos,
+        logger: createMockLogger(),
+      })
+
+      const pids = service.listAvailablePids()
+
+      expect(pids).toHaveLength(16)
+      expect(pids).toContainEqual({ code: '01 0C', name: 'Engine RPM', unit: 'rpm' })
+      expect(pids).toContainEqual({ code: '01 05', name: 'Engine Coolant Temperature', unit: '°C' })
+      expect(pids).toContainEqual({ code: '01 42', name: 'Control Module Voltage', unit: 'V' })
+      expect(repo.readPid).not.toHaveBeenCalled()
+      expect(repo.getSupportedPids).not.toHaveBeenCalled()
+    })
+  })
+
   describe('getFreezeFrame', () => {
     it('should delegate to the repository getFreezeFrame with the dtc in TCP mode', async () => {
       const frame = new FreezeFrame({ dtcCode: 'P0301', pidValues: { rpm: 750 } })

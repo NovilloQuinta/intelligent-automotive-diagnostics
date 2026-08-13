@@ -25,6 +25,7 @@ export function createDiagnosisRoutes(controller: DiagnosisController): Router {
   const router = Router()
 
   router.get('/scenarios', controller.listScenarios)
+  router.get('/available-pids', controller.availablePids)
   router.get('/mcp/capabilities', controller.capabilities)
   router.post('/diagnosis', controller.diagnose)
   router.get('/freeze-frame', controller.freezeFrame)
