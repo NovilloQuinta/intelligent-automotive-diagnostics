@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Network } from 'lucide-react'
-import type { EcuInfo } from './types'
+import { COLORS, type EcuInfo } from './types'
 import { PanelState } from './PanelState'
 import { ECU_PANEL_MESSAGES } from './ecuMessages'
 import { getEcuTopologyColor } from './ecuTopologyColors'
@@ -102,7 +102,8 @@ function EcuNode({ ecu, position, selected, onSelect, index }: EcuNodeProps) {
         y2={TOPOLOGY.BUS_Y - position.y}
         stroke={color}
         strokeWidth={TOPOLOGY.STUB_WIDTH}
-        opacity={0.5}
+        className={selected ? undefined : 'stub-pulse'}
+        opacity={selected ? 0.9 : 0.5}
       />
       <circle
         r={radius}
@@ -193,6 +194,12 @@ export function TopologyMapPanel({ ecus, loading, error, selectedId }: Props) {
               role="img"
               aria-label="Mapa de topología del bus CAN"
             >
+              {/*
+                Dos lineas superpuestas: la base da el cuerpo del bus y la capa
+                de trazos animada simula el trafico de datos. Separadas porque
+                animar el dash de la propia base la dejaria discontinua cuando
+                el usuario pide menos movimiento.
+              */}
               <line
                 x1={TOPOLOGY.BUS_MARGIN_X / 2}
                 y1={TOPOLOGY.BUS_Y}
@@ -201,6 +208,18 @@ export function TopologyMapPanel({ ecus, loading, error, selectedId }: Props) {
                 stroke={BUS_STROKE}
                 strokeWidth={4}
                 strokeLinecap="round"
+              />
+              <line
+                x1={TOPOLOGY.BUS_MARGIN_X / 2}
+                y1={TOPOLOGY.BUS_Y}
+                x2={TOPOLOGY.VIEWBOX_WIDTH - TOPOLOGY.BUS_MARGIN_X / 2}
+                y2={TOPOLOGY.BUS_Y}
+                stroke={COLORS.primary}
+                strokeWidth={2}
+                strokeLinecap="round"
+                className="bus-flow"
+                opacity={0.7}
+                aria-hidden="true"
               />
               {ecus.map((ecu, index) => (
                 <EcuNode

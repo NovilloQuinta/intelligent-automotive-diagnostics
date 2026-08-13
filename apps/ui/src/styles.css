@@ -179,3 +179,44 @@
     transform: rotate(360deg);
   }
 }
+
+/* Flujo de datos por la linea de bus (TopologyMapPanel) */
+@keyframes bus-flow {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+.bus-flow {
+  stroke-dasharray: 6 8;
+  animation: bus-flow 1.1s linear infinite;
+}
+
+/* Pulso del conector de cada ECU hacia el bus */
+@keyframes stub-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.75;
+  }
+}
+.stub-pulse {
+  animation: stub-pulse 2.4s ease-in-out infinite;
+}
+
+/*
+ * Accesibilidad: quien pide menos movimiento no ve ninguna de las animaciones
+ * decorativas del dashboard. No es solo para la topologia — cubre tambien
+ * led-pulse, scan-sweep, border-scan y fade-up.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .bus-flow,
+  .stub-pulse,
+  .led-pulse,
+  .scan-sweep::after,
+  .scanning,
+  .fade-up {
+    animation: none !important;
+  }
+}
