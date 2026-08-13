@@ -1,7 +1,10 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import type { ReactNode } from 'react'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { SessionReportPanel } from '@/components/dashboard/SessionReportPanel'
 import { useDiagnosisHistoryDetail } from '@/components/history/useDiagnosisHistoryDetail'
+import { Header } from '@/components/layout/Header'
+import { FooterSection } from '@/components/landing/FooterSection'
 import type { Scenario } from '@/components/dashboard/types'
 
 /** Extrae la identidad del vehículo del snapshot inmutable `resultJson`. */
@@ -28,59 +31,69 @@ function HistoryDetailRoute() {
 
   if (Number.isNaN(id)) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+      <PageShell>
         <BackLink />
         <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           ID de sesión inválido
         </div>
-      </div>
+      </PageShell>
     )
   }
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+      <PageShell>
         <BackLink />
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
           <span className="ml-3 text-sm text-muted-foreground">Cargando informe…</span>
         </div>
-      </div>
+      </PageShell>
     )
   }
 
   if (isError || !session) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+      <PageShell>
         <BackLink />
         <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           Error al cargar el informe: {error?.message ?? 'Desconocido'}
         </div>
-      </div>
+      </PageShell>
     )
   }
 
   if (!reportState) {
     return (
-      <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+      <PageShell>
         <BackLink />
         <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           Los datos del informe no están disponibles o están dañados.
         </div>
-      </div>
+      </PageShell>
     )
   }
 
   const vehicleInfo = vehicleInfoFromSnapshot(session.resultJson)
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">
+    <PageShell>
       <BackLink />
       <SessionReportPanel
         snapshot={reportState}
         vehicleInfo={vehicleInfo}
         generatedAt={session.startedAt}
       />
+    </PageShell>
+  )
+}
+
+function PageShell({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex min-h-screen flex-col">
+      <Header showAuthActions={false} />
+      <div className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-4 py-8">{children}</div>
+      <FooterSection />
     </div>
   )
 }

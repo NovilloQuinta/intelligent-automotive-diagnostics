@@ -120,6 +120,18 @@ describe("HistoryPage", () => {
     expect(screen.getByRole("combobox", { name: /severidad/i })).toBeDefined();
   });
 
+  it("should render the shared header and footer", async () => {
+    const { HistoryPage } = await import(
+      "../../../../src/components/history/HistoryPage"
+    );
+    render(<HistoryPage />);
+
+    expect(screen.getByText("IADiagnostics")).toBeDefined();
+    expect(screen.getByText("Términos")).toBeDefined();
+    expect(screen.getByText("Privacidad")).toBeDefined();
+    expect(screen.getByText("Contacto")).toBeDefined();
+  });
+
   // 5.5 — shortcuts
   it("should render date shortcut buttons: Hoy, 7 días, 30 días", async () => {
     const { HistoryPage } = await import(

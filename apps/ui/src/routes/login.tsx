@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/select'
 import { Car, Wrench } from 'lucide-react'
 import { PASSWORD_REGEX, PasswordStrengthIndicator } from '@/components/auth/PasswordStrength'
+import { Header } from '@/components/layout/Header'
+import { FooterSection } from '@/components/landing/FooterSection'
 
 // ---------------------------------------------------------------------------
 // Zod schemas
@@ -93,60 +95,64 @@ function AuthPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0d1117] px-4">
-      <Card className="w-full max-w-md border-white/10 bg-[#161b22]">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <Car className="h-6 w-6 text-primary" />
-          </div>
-          <CardTitle className="text-xl">Intelligent Automotive Diagnostics</CardTitle>
-          <CardDescription>Conecta al sistema de diagnóstico OBD-II</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs
-            value={tab}
-            onValueChange={(v) => {
-              setTab(v as 'login' | 'register')
-              setServerError(null)
-            }}
-          >
-            <TabsList className="mb-6 grid w-full grid-cols-2">
-              <TabsTrigger value="login">Iniciar sesión</TabsTrigger>
-              <TabsTrigger value="register">Registrarse</TabsTrigger>
-            </TabsList>
+    <div className="flex min-h-screen flex-col bg-[#0d1117]">
+      <Header showAuthActions={false} />
+      <div className="flex flex-1 items-center justify-center px-4 py-10">
+        <Card className="w-full max-w-md border-white/10 bg-[#161b22]">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <Car className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="text-xl">Intelligent Automotive Diagnostics</CardTitle>
+            <CardDescription>Conecta al sistema de diagnóstico OBD-II</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs
+              value={tab}
+              onValueChange={(v) => {
+                setTab(v as 'login' | 'register')
+                setServerError(null)
+              }}
+            >
+              <TabsList className="mb-6 grid w-full grid-cols-2">
+                <TabsTrigger value="login">Iniciar sesión</TabsTrigger>
+                <TabsTrigger value="register">Registrarse</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="login">
-              <LoginForm
-                onSubmit={async (data) => {
-                  try {
-                    setServerError(null)
-                    await auth.login(data)
-                    navigate({ to: '/', replace: true })
-                  } catch (e) {
-                    setServerError(e instanceof Error ? e.message : 'Error al iniciar sesión')
-                  }
-                }}
-                serverError={serverError}
-              />
-            </TabsContent>
+              <TabsContent value="login">
+                <LoginForm
+                  onSubmit={async (data) => {
+                    try {
+                      setServerError(null)
+                      await auth.login(data)
+                      navigate({ to: '/', replace: true })
+                    } catch (e) {
+                      setServerError(e instanceof Error ? e.message : 'Error al iniciar sesión')
+                    }
+                  }}
+                  serverError={serverError}
+                />
+              </TabsContent>
 
-            <TabsContent value="register">
-              <RegisterForm
-                onSubmit={async (data) => {
-                  try {
-                    setServerError(null)
-                    await auth.register(data)
-                    navigate({ to: '/', replace: true })
-                  } catch (e) {
-                    setServerError(e instanceof Error ? e.message : 'Error al registrarse')
-                  }
-                }}
-                serverError={serverError}
-              />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+              <TabsContent value="register">
+                <RegisterForm
+                  onSubmit={async (data) => {
+                    try {
+                      setServerError(null)
+                      await auth.register(data)
+                      navigate({ to: '/', replace: true })
+                    } catch (e) {
+                      setServerError(e instanceof Error ? e.message : 'Error al registrarse')
+                    }
+                  }}
+                  serverError={serverError}
+                />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
+      <FooterSection />
     </div>
   )
 }

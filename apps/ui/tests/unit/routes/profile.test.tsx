@@ -95,6 +95,15 @@ describe("ProfilePage", () => {
     expect(screen.queryByLabelText(/^email$/i)).toBeNull();
   });
 
+  it("renders the shared header (without auth actions) and footer", () => {
+    render(<ProfilePage />);
+
+    expect(screen.getByText("IADiagnostics")).toBeDefined();
+    expect(screen.getByText("Términos")).toBeDefined();
+    expect(screen.getByText("Privacidad")).toBeDefined();
+    expect(screen.getByText("Contacto")).toBeDefined();
+  });
+
   it("does not show workshop fields for an individual user", () => {
     render(<ProfilePage />);
     expect(screen.queryByLabelText(/Nombre del taller/i)).toBeNull();

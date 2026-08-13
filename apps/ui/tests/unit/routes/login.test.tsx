@@ -49,6 +49,15 @@ describe("AuthPage", () => {
     expect(screen.getByRole("tab", { name: /Registrarse/i })).toBeDefined();
   });
 
+  it("renders the shared header (without auth actions) and footer", () => {
+    render(<AuthPage />);
+
+    expect(screen.getByText("IADiagnostics")).toBeDefined();
+    expect(screen.getByText("Términos")).toBeDefined();
+    expect(screen.getByText("Privacidad")).toBeDefined();
+    expect(screen.getByText("Contacto")).toBeDefined();
+  });
+
   it("shows register form when tab clicked", async () => {
     render(<AuthPage />);
     fireEvent.mouseDown(screen.getByText("Registrarse"));

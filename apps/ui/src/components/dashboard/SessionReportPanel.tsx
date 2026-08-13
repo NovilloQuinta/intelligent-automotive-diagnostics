@@ -3,6 +3,8 @@ import { useSessionReport, type SessionReportState } from './useSessionReport'
 import { severityMeta } from './severityMeta'
 import { EcuTable } from './EcuInfoPanel'
 import { FrameTable } from './FreezeFramePanel'
+import { useAvailablePids } from './useAvailablePids'
+import { buildPidLabelMap, type PidLabel } from './pidCatalog'
 import { COLORS } from './types'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -234,7 +236,13 @@ function EcuSection({ state }: { readonly state: SessionReportState }) {
 // Section: Freeze frame
 // ---------------------------------------------------------------------------
 
-function FreezeFrameSection({ state }: { readonly state: SessionReportState }) {
+function FreezeFrameSection({
+  state,
+  pidInfo,
+}: {
+  readonly state: SessionReportState
+  readonly pidInfo: ReadonlyMap<string, PidLabel>
+}) {
   const { freezeFrame, freezeFrameLoading } = state
 
   if (freezeFrame === null && !freezeFrameLoading) return null
@@ -247,7 +255,7 @@ function FreezeFrameSection({ state }: { readonly state: SessionReportState }) {
           <div className="mono text-xs text-muted-foreground">
             DTC: <span className="text-foreground/80">{freezeFrame.dtcCode}</span>
           </div>
-          <FrameTable pidValues={freezeFrame.pidValues} />
+          <FrameTable pidValues={freezeFrame.pidValues} pidInfo={pidInfo} />
         </div>
       )}
       {!freezeFrame && !freezeFrameLoading && (
@@ -421,9 +429,15 @@ interface SessionReportContentProps {
   readonly state: SessionReportState
   readonly vehicleInfo?: Scenario['vehicleInfo']
   readonly generatedAt?: string
+  readonly pidInfo: ReadonlyMap<string, PidLabel>
 }
 
-function SessionReportContent({ state, vehicleInfo, generatedAt }: SessionReportContentProps) {
+function SessionReportContent({
+  state,
+  vehicleInfo,
+  generatedAt,
+  pidInfo,
+}: SessionReportContentProps) {
   return (
     <div className="space-y-6">
       <h2 className="text-lg font-bold uppercase tracking-wider text-foreground/90">
@@ -434,7 +448,7 @@ function SessionReportContent({ state, vehicleInfo, generatedAt }: SessionReport
       </div>
       <DeterministicSection state={state} />
       <EcuSection state={state} />
-      <FreezeFrameSection state={state} />
+      <FreezeFrameSection state={state} pidInfo={pidInfo} />
       <CognitiveSection state={state} />
     </div>
   )
@@ -457,25 +471,36 @@ function SessionReportContent({ state, vehicleInfo, generatedAt }: SessionReport
 export function SessionReportPanel(props: SessionReportPanelProps) {
   const { scenarioId, vehicleInfo, snapshot, generatedAt } = props
 
+  const pidInfo = buildPidLabelMap(useAvailablePids())
+
   // History mode — render directly from snapshot (no network calls)
   if (snapshot) {
     return (
-      <SessionReportContent state={snapshot} vehicleInfo={vehicleInfo} generatedAt={generatedAt} />
+      <SessionReportContent
+        state={snapshot}
+        vehicleInfo={vehicleInfo}
+        generatedAt={generatedAt}
+        pidInfo={pidInfo}
+      />
     )
   }
 
   // Live mode — fetch data via hook
-  return <SessionReportPanelLive scenarioId={scenarioId!} vehicleInfo={vehicleInfo} />
+  return (
+    <SessionReportPanelLive scenarioId={scenarioId!} vehicleInfo={vehicleInfo} pidInfo={pidInfo} />
+  )
 }
 
 function SessionReportPanelLive({
   scenarioId,
   vehicleInfo,
+  pidInfo,
 }: {
   readonly scenarioId: string
   readonly vehicleInfo?: Scenario['vehicleInfo']
+  readonly pidInfo: ReadonlyMap<string, PidLabel>
 }) {
   const state = useSessionReport(scenarioId)
 
-  return <SessionReportContent state={state} vehicleInfo={vehicleInfo} />
+  return <SessionReportContent state={state} vehicleInfo={vehicleInfo} pidInfo={pidInfo} />
 }
