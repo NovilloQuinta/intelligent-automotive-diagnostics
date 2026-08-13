@@ -66,7 +66,7 @@ const sampleFreezeFrame: FreezeFrame = {
 const sampleCognitiveOutputWithTools: CognitiveOutput = {
   diagnosis:
     "El fallo de encendido en el cilindro 1 sugiere problemas con bujía o bobina.",
-  severity: "alta",
+  severity: "high",
   confidence: 0.92,
   recommendations: [
     "Inspeccionar bujía del cilindro 1",
@@ -83,7 +83,7 @@ const sampleCognitiveOutputWithTools: CognitiveOutput = {
 
 const sampleCognitiveOutputNoTools: CognitiveOutput = {
   diagnosis: "Diagnóstico rápido sin herramientas externas.",
-  severity: "baja",
+  severity: "low",
   confidence: 0.65,
   recommendations: ["Revisar estado general del motor."],
   toolCalls: [],
@@ -261,7 +261,7 @@ describe("SessionReportPanel", () => {
     expect(
       screen.getByText("Diagnóstico rápido sin herramientas externas."),
     ).toBeDefined();
-    // Severity translated: "baja" → "BAJA"
+    // Severity translated: "low" → "BAJA"
     expect(screen.getByText("BAJA")).toBeDefined();
     // Confidence (text split across nodes: "Confianza: " + "65" + " %")
     expect(screen.getByText(/Confianza: 65\s*%/)).toBeDefined();
@@ -509,5 +509,47 @@ describe("SessionReportPanel", () => {
     expect(
       screen.getByText(/generado el 9 de agosto de 2026/i),
     ).toBeDefined();
+  });
+
+  // ------------------------------------------------------------------
+  // 12. Cognitive severity comes from the backend enum, in English
+  // ------------------------------------------------------------------
+
+  it("should translate the backend severity enum instead of leaking it raw", () => {
+    mockUseSessionReport.mockReturnValue(
+      setState({
+        cognitive: { ...sampleCognitiveOutputNoTools, severity: "critical" },
+      }),
+    );
+
+    render(
+      <SessionReportPanel
+        scenarioId="audi-a3-idle"
+        vehicleInfo={sampleVehicleInfo}
+      />,
+    );
+
+    expect(screen.getByText("CRÍTICO")).toBeDefined();
+    expect(screen.queryByText("CRITICAL")).toBeNull();
+  });
+
+  it("should not render two different severities the same way", () => {
+    mockUseSessionReport.mockReturnValue(
+      setState({
+        cognitive: { ...sampleCognitiveOutputNoTools, severity: "high" },
+      }),
+    );
+
+    render(
+      <SessionReportPanel
+        scenarioId="audi-a3-idle"
+        vehicleInfo={sampleVehicleInfo}
+      />,
+    );
+
+    // Con el mapa en espanol, "high" caia al mismo respaldo que cualquier otro
+    // valor desconocido: severidades distintas se pintaban igual.
+    expect(screen.getByText("ALTA")).toBeDefined();
+    expect(screen.queryByText("HIGH")).toBeNull();
   });
 });

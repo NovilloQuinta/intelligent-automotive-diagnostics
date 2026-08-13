@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import type { ConversationItem } from '@/lib/api'
 import type { CognitiveDiagnosisError } from './useCognitiveDiagnosis'
+import { isSeverity } from './severityMeta'
+import type { Severity } from './types'
 
 interface DiagnosisChatProps {
   readonly severity: string | null
@@ -17,7 +19,12 @@ interface DiagnosisChatProps {
   readonly canLaunch: boolean
 }
 
-type SeverityKey = 'low' | 'medium' | 'high' | 'critical'
+/**
+ * El chat mantiene sus propias etiquetas y variantes: aquí se pintan en caja
+ * baja y con el sistema de `variant` de shadcn, no con los colores del informe.
+ * Lo que sí se comparte es el guard, que es donde estaba la duplicación real.
+ */
+type SeverityKey = Severity
 
 const SEVERITY_LABELS: Record<SeverityKey, string> = {
   low: 'Baja',
@@ -31,10 +38,6 @@ const SEVERITY_VARIANTS: Record<SeverityKey, 'default' | 'secondary' | 'destruct
   medium: 'secondary',
   high: 'destructive',
   critical: 'destructive',
-}
-
-function isSeverityKey(v: string): v is SeverityKey {
-  return v === 'low' || v === 'medium' || v === 'high' || v === 'critical'
 }
 
 /**
@@ -75,7 +78,7 @@ export function DiagnosisChat({
     [handleSend],
   )
 
-  const severityKey = severity && isSeverityKey(severity) ? severity : null
+  const severityKey = severity && isSeverity(severity) ? severity : null
   const showInput = loading || conversationHistory.length > 0
 
   return (

@@ -2,6 +2,17 @@ import { AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react'
 import type { Severity, SeverityMeta } from './types'
 import { COLORS } from './types'
 
+/**
+ * Estrecha a `Severity` un valor que llega como `string`.
+ *
+ * El DTO del backend tipa la severidad como `string`, así que cada pantalla que
+ * la pinta necesita este guard. Vive aquí, junto al mapa visual, para que no se
+ * vuelva a duplicar con otras claves.
+ */
+export function isSeverity(value: string): value is Severity {
+  return value === 'low' || value === 'medium' || value === 'high' || value === 'critical'
+}
+
 /** Maps a Severity level to its visual metadata (color, icon, label, background). */
 export function severityMeta(sev: Severity): SeverityMeta {
   switch (sev) {

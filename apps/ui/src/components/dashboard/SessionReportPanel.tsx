@@ -1,6 +1,6 @@
 import { Activity, Brain, Cpu, FileText, Loader2, Snowflake, Wrench } from 'lucide-react'
 import { useSessionReport, type SessionReportState } from './useSessionReport'
-import { severityMeta } from './severityMeta'
+import { severityMeta, isSeverity } from './severityMeta'
 import { EcuTable } from './EcuInfoPanel'
 import { FrameTable } from './FreezeFramePanel'
 import { useAvailablePids } from './useAvailablePids'
@@ -45,24 +45,19 @@ interface SessionReportPanelProps {
 }
 
 // ---------------------------------------------------------------------------
-// Severity display mapping (cognitive uses Spanish labels)
+// Severity display mapping
 // ---------------------------------------------------------------------------
 
-const COGNITIVE_SEVERITY_MAP: Record<string, { label: string; color: string }> = {
-  alta: { label: 'ALTA', color: COLORS.destructive },
-  media: { label: 'MEDIA', color: COLORS.warning },
-  baja: { label: 'BAJA', color: COLORS.accent },
-  crítica: { label: 'CRÍTICO', color: COLORS.destructive },
-  critica: { label: 'CRÍTICO', color: COLORS.destructive },
-}
-
+/**
+ * Traduce la severidad que llega del backend, que es `string` en el DTO.
+ *
+ * Reusa `severityMeta`, el mismo mapa que ya usan el chat y el historial: aquí
+ * había una tabla propia con las claves en español que nunca casaba con el enum
+ * en inglés, así que toda severidad caía al mismo color de respaldo.
+ */
 function cognitiveSeverityBadge(sev: string): { label: string; color: string } {
-  return (
-    COGNITIVE_SEVERITY_MAP[sev.toLowerCase()] ?? {
-      label: sev.toUpperCase(),
-      color: COLORS.accent,
-    }
-  )
+  const { label, color } = severityMeta(isSeverity(sev) ? sev : 'low')
+  return { label, color }
 }
 
 // ---------------------------------------------------------------------------
