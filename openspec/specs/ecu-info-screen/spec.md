@@ -7,7 +7,7 @@ Pantalla "Información de ECU" en el dashboard: lista las unidades de control el
 ## Requirements
 
 ### Requirement: ObdRepository expone getEcuInfo()
-El sistema SHALL exponer `getEcuInfo(): Promise<EcuInfo[]>` en el puerto `ObdRepository`, implementado por `ObdSimulatorRepository` (desde `SimulationScenario.ecus`) y por `Elm327TcpRepository` (ECU sintética fija de motor).
+El sistema SHALL exponer `getEcuInfo(): Promise<EcuInfo[]>` en el puerto `ObdRepository`, implementado por `ObdSimulatorRepository` (desde `SimulationScenario.ecus`) y por `Elm327TcpRepository` (auto-scan CAN por functional addressing).
 
 #### Scenario: Escenario simulado con ECUs definidas
 - **GIVEN** un `SimulationScenario` con `ecus: [{ name: 'ECM', requestAddr: '7E0', responseAddr: '7E8', ... }]`
@@ -20,9 +20,9 @@ El sistema SHALL exponer `getEcuInfo(): Promise<EcuInfo[]>` en el puerto `ObdRep
 - **THEN** devuelve `[]` (no lanza error)
 
 #### Scenario: Modo TCP directo
-- **GIVEN** un `Elm327TcpRepository` conectado
+- **GIVEN** un `Elm327TcpRepository` conectado a un bus CAN
 - **WHEN** se invoca `getEcuInfo()`
-- **THEN** devuelve un array con una única `EcuInfo` sintética (`Engine Control Unit`, `7E0`/`7E8`, `ISO 15765-4 (CAN 11/500)`)
+- **THEN** devuelve las ECUs realmente descubiertas por el auto-scan (≥1 según el bus), mapeando `7E8` a ECM y el resto a `UNKNOWN`
 
 ---
 
@@ -60,7 +60,7 @@ El sistema SHALL exponer `GET /api/ecu-info?scenarioId=` que devuelva `{ ecus: E
 #### Scenario: Modo TCP directo sin scenarioId
 - **GIVEN** un servidor con `obdRepo` (modo TCP directo)
 - **WHEN** se hace `GET /api/ecu-info` sin query param
-- **THEN** responde 200 con la ECU sintética del adaptador TCP
+- **THEN** responde 200 con las ECUs descubiertas por el auto-scan del adaptador TCP
 
 ---
 
