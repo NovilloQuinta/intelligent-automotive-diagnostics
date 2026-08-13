@@ -47,7 +47,15 @@ export function buildResetPasswordEmail(resetUrl: string): ResetPasswordEmail {
   <div style="padding:32px 16px;">
     <div style="max-width:600px;margin:0 auto;background-color:${APP_CARD};border:1px solid rgba(255,255,255,0.1);border-radius:8px;overflow:hidden;">
       <div style="padding:24px 32px;border-bottom:1px solid rgba(255,255,255,0.1);">
-        <span style="font-size:20px;font-weight:bold;color:${APP_ACCENT};">Recupera tu contraseña</span>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+          <tr>
+            <td style="width:32px;height:32px;border:1px solid rgba(255,255,255,0.1);border-radius:6px;background-color:rgba(255,255,255,0.05);text-align:center;vertical-align:middle;font-size:16px;line-height:32px;">
+              🔧
+            </td>
+            <td style="padding-left:10px;font-size:15px;font-weight:bold;color:${APP_TEXT};vertical-align:middle;">IADiagnostics</td>
+          </tr>
+        </table>
+        <p style="margin:16px 0 0;font-size:20px;font-weight:bold;color:${APP_ACCENT};">Recupera tu contraseña</p>
       </div>
       <div style="padding:24px 32px;color:${APP_TEXT};font-size:15px;line-height:1.6;">
         <p style="margin:0 0 16px;">Hemos recibido una solicitud para restablecer la contraseña de tu cuenta.</p>
