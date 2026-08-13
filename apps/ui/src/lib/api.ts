@@ -584,8 +584,7 @@ export const api = {
   async getDiagnosisHistoryDetail(id: number): Promise<DiagnosisSessionDetail> {
     const res = await apiFetch(`/api/diagnosis-history/${id}`)
     await assertOk(res, GENERIC_ERROR_MESSAGE)
-    const data = (await res.json()) as { session: DiagnosisSessionDetail }
-    return data.session
+    return (await res.json()) as DiagnosisSessionDetail
   },
 
   // ---- Admin ----
