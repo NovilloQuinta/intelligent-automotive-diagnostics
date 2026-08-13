@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import { Severity } from '@/domain/value-objects/diagnosisResult.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import { parseCognitiveDiagnosis, JSON_BLOCK_REGEX } from '@/application/llm/extractLlmDiagnosis.js'
@@ -42,6 +43,7 @@ const PID_LEARNING_INSTRUCTIONS = [
   '- Si no existe, regístralo con index_pid: usa source: "web", y embeddedText describiendo qué crees que mide y por qué.',
   '- Incluye manufacturer/model del vehículo actual.',
   '- Si puedes inferir la fórmula de conversión, incluye mode, pid, formula y dataBytes (y opcionalmente minValue/maxValue) para que se valide contra el vehículo conectado.',
+  '- La fórmula usa A, B, C... para los bytes de la respuesta (A = primer byte) y los operadores + - * / | & << >> con paréntesis; p.ej. (A*256+B)/4, A-40, (A<<24|B<<16|C<<8|D)/10. `raw` vale como entero big-endian de todos los bytes.',
   '- Usa web_search para buscar documentación de PIDs propietarios de la marca si hace falta.',
 ]
 
@@ -135,7 +137,7 @@ function toDiagnosisEntry(
   vehicleContext: VehicleInfo | undefined,
 ): DiagnosisKnowledgeEntry {
   return {
-    id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
+    id: crypto.randomUUID(),
     embeddedText: text,
     manufacturer: vehicleContext?.make ?? UNKNOWN_VALUE,
     model: vehicleContext?.model ?? UNKNOWN_VALUE,
@@ -172,6 +174,13 @@ export class ExecuteCognitiveDiagnosisUseCase {
    */
   constructor(private readonly options: ExecuteCognitiveDiagnosisUseCaseOptions) {}
 
+  /**
+   * Ejecuta el diagnostico cognitivo: recupera casos similares, envia el prompt al LLM con
+   * tool calling, parsea el bloque JSON final e indexa el caso resuelto.
+   *
+   * @param input — Consulta del usuario, contexto del vehiculo e historial de conversacion
+   * @returns Diagnostico (narrativa + severidad + confianza + recomendaciones) y traza de tools
+   */
   async execute(input: ExecuteCognitiveDiagnosisInput): Promise<ExecuteCognitiveDiagnosisOutput> {
     const { userQuery, vehicleContext, conversationHistory } = input
 

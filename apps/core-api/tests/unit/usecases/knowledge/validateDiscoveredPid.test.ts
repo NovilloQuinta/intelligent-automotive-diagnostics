@@ -112,6 +112,20 @@ describe('ValidateDiscoveredPidUseCase', () => {
     expect(result.entry).toEqual(entry)
   })
 
+  it('degrada sin excepcion cuando la formula descubierta no es parseable', async () => {
+    const badFormula: PidFormulaSource = { ...formula, formula: '[A]*256+[B]' }
+
+    const result = await useCase.execute(
+      entry,
+      badFormula,
+      { minValue: 0, maxValue: 5000 },
+      mockRepo(vi.fn().mockResolvedValue([0x0c, 0x80])),
+    )
+
+    expect(result.outcome).toBe('invalid_formula')
+    expect(result.entry).toEqual(entry)
+  })
+
   it('rechaza una clave de PID malformada en vez de leer un PID undefined', async () => {
     const malformed: PidFormulaSource = { ...formula, pidCode: { key: '22F40C' } }
 

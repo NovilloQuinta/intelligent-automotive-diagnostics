@@ -4,6 +4,7 @@ import type { PidFormulaSource } from '@/application/dto/diagnosis/PidFormulaSou
 import { PidRawReadNotSupportedError } from '@/application/obd/obdErrors.js'
 import { markValidated } from '@/application/knowledge/confidenceScale.js'
 import { Formula } from '@/domain/value-objects/formula.js'
+import { PidParseError } from '@/domain/services/pidFormula.js'
 import type { ValidationResult } from '@/application/dto/knowledge/ValidationResult.js'
 
 /** Rango fisico plausible de un PID. Cada extremo ausente deja ese lado abierto. */
@@ -59,19 +60,44 @@ export class ValidateDiscoveredPidUseCase {
 
     const [mode, pid] = splitPidKey(formula.pidCode.key)
 
-    let bytes: number[]
+    const bytes = await this.readRawBytes(mode, pid, formula.dataBytes, obdRepo)
+    if (bytes === 'unsupported') return { entry, outcome: 'unsupported' }
+
+    const value = this.evaluateFormula(formula.formula.toString(), bytes)
+    if (value === 'invalid_formula') return { entry, outcome: 'invalid_formula' }
+
+    if (!isWithinRange(value, range)) return { entry, outcome: 'out_of_range' }
+    return { entry: markValidated(entry), outcome: 'validated' }
+  }
+
+  /**
+   * Lee los bytes crudos del PID, degradando a `'unsupported'` cuando el adaptador no soporta
+   * la lectura cruda. Un fallo real de conexion o timeout se propaga.
+   */
+  private async readRawBytes(
+    mode: string,
+    pid: string,
+    dataBytes: number,
+    obdRepo: ObdRepository,
+  ): Promise<number[] | 'unsupported'> {
     try {
-      bytes = await obdRepo.readPidRaw(mode, pid, formula.dataBytes)
+      return await obdRepo.readPidRaw(mode, pid, dataBytes)
     } catch (err) {
-      // Solo "este adaptador no puede leerlo" degrada. Un fallo de conexion o un timeout es
-      // una condicion excepcional real y debe propagarse.
-      if (err instanceof PidRawReadNotSupportedError) return { entry, outcome: 'unsupported' }
+      if (err instanceof PidRawReadNotSupportedError) return 'unsupported'
       throw err
     }
+  }
 
-    const value = new Formula(formula.formula.toString()).evaluate(bytes)
-    if (!isWithinRange(value, range)) return { entry, outcome: 'out_of_range' }
-
-    return { entry: markValidated(entry), outcome: 'validated' }
+  /**
+   * Evalua la formula descubierta contra los bytes leidos, degradando a `'invalid_formula'`
+   * cuando no parsea o no se puede evaluar (input no confiable del LLM/web).
+   */
+  private evaluateFormula(formulaText: string, bytes: number[]): number | 'invalid_formula' {
+    try {
+      return new Formula(formulaText).evaluate(bytes)
+    } catch (err) {
+      if (err instanceof PidParseError) return 'invalid_formula'
+      throw err
+    }
   }
 }
