@@ -49,7 +49,9 @@ async function main(): Promise<void> {
   console.log(`Dimensiones: ${muestra.length}`)
 
   const norma = Math.sqrt(muestra.reduce((acc, v) => acc + v * v, 0))
-  console.log(`Norma L2: ${norma.toFixed(6)} ${Math.abs(norma - 1) < 0.01 ? '(normalizado ✓)' : '(NO normalizado ✗)'}\n`)
+  console.log(
+    `Norma L2: ${norma.toFixed(6)} ${Math.abs(norma - 1) < 0.01 ? '(normalizado ✓)' : '(NO normalizado ✗)'}\n`,
+  )
 
   const connection = await initLanceDb(dbPath)
   const store = await createLanceVectorStore(connection.db, DTCS_TABLE_CONFIG)
@@ -69,6 +71,8 @@ async function main(): Promise<void> {
       model: 'Generico',
       confidence: 0.8,
       source: KnowledgeSource.Mechanic,
+      // Conocimiento de taller sin lectura OBD que lo confirme (ADR-007 §4).
+      validated: false,
     })
   }
   console.log('Listo\n')

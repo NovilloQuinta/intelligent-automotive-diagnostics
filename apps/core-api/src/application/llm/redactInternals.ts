@@ -43,6 +43,17 @@ const SECRET_PATTERN = /\bsk-[A-Za-z0-9_-]{8,}/g
 /** Puntuacion o parentesis que quedan huerfanos al borrar un fragmento intermedio. */
 const DANGLING_PUNCTUATION = /[ \t]*,\s*([.;)])/g
 const EMPTY_PARENS = /\(\s*\)/g
+
+/** Coma duplicada al borrar un inciso entero ("el caso previo, distancia 0.31, encaja"). */
+const REPEATED_COMMAS = /,(\s*,)+/g
+
+/**
+ * Espacio huerfano delante de la puntuacion, del fragmento que se acaba de borrar.
+ *
+ * Sin esto la narrativa queda con " ." o " ,", que delata que hay una tuberia
+ * detras igual que delataba el identificador que se acaba de quitar.
+ */
+const SPACE_BEFORE_PUNCTUATION = /[ \t]+([.,;:!?)])/g
 const REPEATED_SPACES = /[ \t]{2,}/g
 const REPEATED_BLANK_LINES = /\n{3,}/g
 
@@ -62,6 +73,8 @@ export function redactInternals(text: string): string {
     .replace(SECRET_PATTERN, '')
     .replace(EMPTY_PARENS, '')
     .replace(DANGLING_PUNCTUATION, '$1')
+    .replace(REPEATED_COMMAS, ',')
+    .replace(SPACE_BEFORE_PUNCTUATION, '$1')
     .replace(REPEATED_SPACES, ' ')
     .replace(REPEATED_BLANK_LINES, '\n\n')
     .split('\n')
