@@ -4,6 +4,7 @@ import type { PasswordResetTokenRepository } from '@/application/ports/PasswordR
 import type { EmailSenderPort } from '@/application/ports/EmailSenderPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import { hashToken } from '@/application/shared/hashToken.js'
+import { buildResetPasswordEmail } from '@/application/templates/resetPasswordEmail.js'
 import {
   forgotPasswordSchema,
   type ForgotPasswordInput,
@@ -15,17 +16,6 @@ const RESET_TOKEN_BYTES = 32
 export interface ForgotPasswordConfig {
   readonly ttlMinutes: number
   readonly appBaseUrl: string
-}
-
-/** Construye el asunto y cuerpo (HTML + texto plano) del email de reseteo de contraseña. */
-function buildResetEmail(
-  to: string,
-  resetUrl: string,
-): { subject: string; html: string; text: string } {
-  const subject = 'Password reset request'
-  const html = `<p>We received a request to reset the password for your account.</p><p><a href="${resetUrl}">${resetUrl}</a></p><p>If you did not request this, you can safely ignore this email.</p>`
-  const text = `We received a request to reset the password for your account. Visit the following link to reset it: ${resetUrl}. If you did not request this, you can safely ignore this email.`
-  return { subject, html: `<p>To: ${to}</p>${html}`, text }
 }
 
 /**
@@ -59,7 +49,7 @@ export class ForgotPasswordUseCase {
     await this.tokenRepo.save(user.id, tokenHash, expiresAt)
 
     const resetUrl = `${this.config.appBaseUrl}/reset-password?token=${token}`
-    const message = buildResetEmail(parsed.email, resetUrl)
+    const message = buildResetPasswordEmail(resetUrl)
 
     try {
       await this.emailSender.send({ to: parsed.email, ...message })

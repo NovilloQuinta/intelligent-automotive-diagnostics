@@ -7,9 +7,9 @@
 > tenerla mezclada con las reglas obligaba a recargar el fichero entero en cada agente.
 
 - **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura + deploy a produccion
-- **Ultimo paso**: `add-topology-mapping-screen` implementado y **archivado** (spec sincronizada en `openspec/specs/topology-mapping-screen/`). Nueva pestana "Topologia": `TopologyMapPanel` dibuja en SVG las mismas `EcuInfo` que ya alimentan `EcuInfoPanel` — nodos coloreados por tipo sobre una linea de bus con flujo de datos animado, seleccionables (raton y teclado) con tarjeta de detalle. Sin dato ni endpoint nuevo.
-- **Pendiente de esa pantalla**: tarea 10.3 (caso e2e en `dashboard.spec.ts`), no hecha por requerir el emulador OBD levantado. Verificada en Chromium con el componente **aislado**, no integrada en la app con un vehiculo real.
-- **Coche real**: sesion aplazada a manana. `develop` verde y verificada.
+- **Ultimo paso**: `fix/ui-auth-header-navigation` **mergeado a develop** (8e8a69a). `Header` ahora es auth-aware: navegacion (Inicio/Historial/Perfil/Cerrar sesion) en perfil/historial/detalle; `RequiredLabel` extraido a `components/auth/` y aplicado al email de recuperar contraseña. `pnpm verify` verde (incluye `chore` prettier de `ValidationResult.ts`, que estaba sin formatear en develop).
+- **Pendiente (trabajo paralelo sin commitear)**: en el worktree principal hay cambios **sin commitear** en `ForgotPasswordUseCase.ts` + `templates/resetPasswordEmail.ts` + tests (extraccion del email de reset). No tocar sin coordinar.
+- **Coche real**: sesion aplazada a manana.
 - **OpenSpec changes activos**: `add-connection-type-selector` (13 tareas, el mas relevante para la demo por cable), `add-dtc-repair-tips-screen` (49 tareas).
 - **Flujo de ramas**: `develop` es la rama de integración; toda `feat.*`/`fix.*` sale de `develop` y se mergea ahí. `main` = releases (deploy CI). **Ojo**: hay agentes paralelos en el repo principal (rama cambia sola) — verificar `git branch --show-current` antes de commitear.
 - **Rama base**: `develop` (no == `main`; deploy via `main`).
