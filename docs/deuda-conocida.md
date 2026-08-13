@@ -77,6 +77,19 @@ Va **despues** de `build` a proposito: `src/routeTree.gen.ts` lo genera el plugi
 de router durante el build y esta gitignored, asi que en un clon limpio tsc no
 compila hasta que build lo ha creado.
 
+## Los tests de la UI no se lintan ni se formatean
+
+`apps/ui` tiene `lint: eslint src/` y `format: prettier --check "src/**"`: los 64
+ficheros de `tests/` quedan fuera de ambos. Por eso usan comillas dobles cuando
+la config de prettier pide simples — pasar `eslint tests/` hoy da ~1129 errores
+de `prettier/prettier`.
+
+No es urgente (son tests, y TypeScript + vitest ya los validan), pero conviene
+saberlo antes de "arreglarlo": ampliar los globs genera un diff enorme de
+reformateo. Hacerlo en un commit aislado y solo de formato.
+
+En `core-api` no pasa: alli lint y format ya cubren `src/` y `tests/`.
+
 ## Vectorial
 
 Migrar a schema con columna JSON metadata para evitar migraciones futuras.
