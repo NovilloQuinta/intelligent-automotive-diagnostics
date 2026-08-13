@@ -19,7 +19,14 @@ const TOPOLOGY = {
   /** Separacion vertical de los nodos respecto a la linea de bus, alternando arriba/abajo. */
   NODE_OFFSET_Y: 58,
   STUB_WIDTH: 2,
-  LABEL_DY: 42,
+  /**
+   * La etiqueta va al lado OPUESTO al bus: si fuera siempre debajo, en los nodos
+   * de la fila superior el conector al bus le pasaria por encima al texto.
+   */
+  LABEL_DY_BELOW: 42,
+  LABEL_DY_ABOVE: -36,
+  /** Alto util cuando no hay ningun nodo por debajo del bus (caso de una sola ECU). */
+  VIEWBOX_HEIGHT_TOP_ONLY: 160,
 } as const
 
 const BUS_STROKE = 'rgba(255,255,255,0.18)'
@@ -58,6 +65,11 @@ interface EcuNodeProps {
   readonly selected: boolean
   readonly onSelect: (index: number) => void
   readonly index: number
+}
+
+/** Un nodo esta por encima del bus cuando su y es menor que la linea. */
+function isAboveBus(position: NodePosition): boolean {
+  return position.y < TOPOLOGY.BUS_Y
 }
 
 /**
@@ -108,7 +120,7 @@ function EcuNode({ ecu, position, selected, onSelect, index }: EcuNodeProps) {
       </text>
       <text
         textAnchor="middle"
-        dy={TOPOLOGY.LABEL_DY}
+        dy={isAboveBus(position) ? TOPOLOGY.LABEL_DY_ABOVE : TOPOLOGY.LABEL_DY_BELOW}
         className="pointer-events-none fill-current text-[10px] text-foreground/80"
       >
         {ecu.name}
@@ -146,6 +158,9 @@ export function TopologyMapPanel({ ecus, loading, error, selectedId }: Props) {
   const [selectedNode, setSelectedNode] = useState<number | null>(null)
 
   const showMap = Boolean(selectedId) && !loading && !error && ecus.length > 0
+  // Los nodos impares son los que caen por debajo del bus: con una sola ECU no
+  // hay ninguno y la mitad inferior del lienzo quedaria vacia.
+  const viewBoxHeight = ecus.length > 1 ? TOPOLOGY.VIEWBOX_HEIGHT : TOPOLOGY.VIEWBOX_HEIGHT_TOP_ONLY
   // El indice puede quedar fuera de rango si cambia el vehiculo: se deriva en
   // render en vez de sincronizarse con un efecto.
   const activeEcu = selectedNode !== null ? (ecus[selectedNode] ?? null) : null
@@ -173,7 +188,7 @@ export function TopologyMapPanel({ ecus, loading, error, selectedId }: Props) {
         {showMap && (
           <>
             <svg
-              viewBox={`0 0 ${TOPOLOGY.VIEWBOX_WIDTH} ${TOPOLOGY.VIEWBOX_HEIGHT}`}
+              viewBox={`0 0 ${TOPOLOGY.VIEWBOX_WIDTH} ${viewBoxHeight}`}
               className="h-auto w-full"
               role="img"
               aria-label="Mapa de topología del bus CAN"
