@@ -54,10 +54,12 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327Transport 
     destroy: (socket) => socket.destroy(),
     shutdown: (socket) => socket.destroy(),
     describeError: (err) => (err as NodeJS.ErrnoException).code ?? err.message,
-    connectionErrorMessage: (detail) => `ELM327 connection error (${detail}) on ${target} — reconnecting`,
+    connectionErrorMessage: (detail) =>
+      `ELM327 connection error (${detail}) on ${target} — reconnecting`,
     connectionClosedMessage: () => `ELM327 connection closed on ${target} — reconnecting`,
     notConnectedMessage: () => 'ELM327 socket not connected',
-    commandTimeoutMessage: (cmd, ms) => `ELM327 timeout (${ms}ms) after command "${cmd}" on ${target}`,
+    commandTimeoutMessage: (cmd, ms) =>
+      `ELM327 timeout (${ms}ms) after command "${cmd}" on ${target}`,
   }
 
   return createReliableTransport(io, { timeoutMs, maxRetries, backoffMs })

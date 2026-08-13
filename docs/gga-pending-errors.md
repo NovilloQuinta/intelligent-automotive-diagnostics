@@ -17,16 +17,6 @@ Cada entrada debe corregirse en una rama `fix/gga-*` antes del siguiente milesto
 Preexistente en `origin/develop` (feature `add-diagnosis-history`), no tocado por este merge — GGA
 bloquea el commit porque re-audita el repo entero. Documentado aquí en vez de rehacer la feature.
 
-- **`apps/ui/src/lib/api.ts` (`getDiagnosisHistory`)** — lee `response.sessions`, pero
-  `DiagnosisController.listHistory` responde `{ items, total }`. La lista de historial
-  siempre se renderiza vacía.
-- **`apps/ui/src/lib/api.ts` (`getDiagnosisHistoryDetail`)** — lee `data.session`, pero
-  `DiagnosisController.getHistoryDetail` devuelve el objeto de sesión sin envolver.
-  `data.session` es siempre `undefined` → la página de detalle siempre cae en el error.
-- **`apps/ui/src/components/dashboard/types.ts`** — `DiagnosisSession`/`DiagnosisSessionDetail`
-  declaran `vehicleMake`/`vehicleModel`, pero el controller solo proyecta `vehicleId`. Esos
-  campos siempre llegan `undefined` al frontend.
-
 Warnings no bloqueantes también reportados: mensajes de error duplicados sin constante en
 `DiagnosisController.ts`, `endSession` con `Record<string, unknown>` en `vehicleRepository.ts`,
 `console.error` crudo en `mcpServer.ts` en vez de `LoggerPort`, cálculos repetidos en
@@ -54,4 +44,17 @@ la página activa (`Math.min(totalPages, 5)`).
 ## Corregidos
 
 <!-- Mover aqui cuando se resuelvan -->
+
+### 2026-08-13 — fix/gga-pending-errors
+
+- **`apps/core-api/src/infrastructure/http/controllers/DiagnosisController.ts`** — extraído
+  helper `runDiagnosisHandler` que dedupe el patrón `safeParse`→400→`try/call`→`respond`→catch de
+  los 8 handlers de lectura/escritura (`freezeFrame`, `ecuInfo`, `vehicleInfo`, `liveData`,
+  `clearDtc`, `pendingDtc`, `permanentDtc`, `vehicleStatus`). Sin cambio de comportamiento
+  (69 tests de `diagnosis.routes.test.ts` en verde).
+- **Contrato de historial** — alineado frontend al backend: `api.getDiagnosisHistory` lee `items`
+  (no `sessions`), `api.getDiagnosisHistoryDetail` devuelve el objeto plano (no `{ session }`),
+  `DiagnosisSession` usa `vehicleId`/`scenarioId`/`endedAt` (se eliminaron `vehicleMake`/
+  `vehicleModel`), `resultJson` nullable, `HistoryPage` muestra `scenarioId` y
+  `history.$sessionId` deriva la identidad del vehículo del snapshot `resultJson`.
 

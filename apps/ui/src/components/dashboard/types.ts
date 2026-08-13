@@ -64,6 +64,13 @@ export type PidReading = {
   readonly value: number | null
 }
 
+/** Selectable Mode 01 PID from the `GET /api/available-pids` catalog. */
+export type AvailablePid = {
+  readonly code: string
+  readonly name: string
+  readonly unit: string
+}
+
 /** OBD-II freeze frame snapshot as returned by GET /api/freeze-frame. */
 export type FreezeFrame = {
   dtcCode: string
@@ -253,21 +260,21 @@ export type SeverityMeta = {
 /** Session summary as returned by the diagnosis history list endpoint. */
 export type DiagnosisSession = {
   readonly id: number
+  readonly vehicleId: number | null
   readonly scenarioId: string | null
-  readonly vehicleMake: string
-  readonly vehicleModel: string
-  readonly dtcCount: number
-  readonly severity: string
   readonly startedAt: string
+  readonly endedAt: string | null
+  readonly severity: string | null
+  readonly dtcCount: number | null
 }
 
 /** Paginated response from GET /api/diagnosis-history. */
 export type DiagnosisHistoryResponse = {
-  readonly sessions: DiagnosisSession[]
+  readonly items: DiagnosisSession[]
   readonly total: number
 }
 
 /** Session detail as returned by GET /api/diagnosis-history/:id. */
 export type DiagnosisSessionDetail = DiagnosisSession & {
-  readonly resultJson: string
+  readonly resultJson: string | null
 }

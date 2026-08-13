@@ -236,7 +236,7 @@ export function HistoryPage() {
                     {formatDate(session.startedAt)}
                   </TableCell>
                   <TableCell className="font-medium text-foreground/90">
-                    {session.vehicleMake} {session.vehicleModel}
+                    {session.scenarioId ?? '—'}
                   </TableCell>
                   <TableCell className="text-sm">{session.dtcCount}</TableCell>
                   <TableCell>

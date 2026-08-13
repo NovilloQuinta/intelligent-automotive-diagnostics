@@ -37,21 +37,21 @@ vi.mock("../../../../src/lib/auth-context", () => ({
 const SAMPLE_SESSIONS: DiagnosisSession[] = [
   {
     id: 1,
+    vehicleId: 1,
     scenarioId: "audi-a3-idle",
-    vehicleMake: "Audi",
-    vehicleModel: "A3",
-    dtcCount: 3,
-    severity: "high",
     startedAt: "2026-08-09T10:30:00.000Z",
+    endedAt: "2026-08-09T10:31:00.000Z",
+    severity: "high",
+    dtcCount: 3,
   },
   {
     id: 2,
+    vehicleId: 2,
     scenarioId: "seat-leon",
-    vehicleMake: "Seat",
-    vehicleModel: "León",
-    dtcCount: 1,
-    severity: "low",
     startedAt: "2026-08-09T09:00:00.000Z",
+    endedAt: "2026-08-09T09:01:00.000Z",
+    severity: "low",
+    dtcCount: 1,
   },
 ];
 
@@ -95,12 +95,12 @@ describe("HistoryPage", () => {
     expect(screen.getByRole("columnheader", { name: "Severidad" })).toBeDefined();
 
     // First row
-    expect(screen.getByText("Audi A3")).toBeDefined();
+    expect(screen.getByText("audi-a3-idle")).toBeDefined();
     expect(screen.getByText("3")).toBeDefined();
     expect(screen.getByText("ALTA")).toBeDefined();
 
     // Second row
-    expect(screen.getByText("Seat León")).toBeDefined();
+    expect(screen.getByText("seat-leon")).toBeDefined();
     expect(screen.getByText("1")).toBeDefined();
     expect(screen.getByText("BAJA")).toBeDefined();
   });

@@ -18,7 +18,6 @@ import { Elm327ConnectionError, Elm327NoDataError, Elm327ParseError } from './er
 import {
   formatCommand,
   parseModeResponse,
-  parseModeResponseEntries,
   parseMode22Response,
   parseVinResponse,
   parseDtcResponse,
@@ -101,14 +100,17 @@ export class Elm327TcpRepository implements ObdRepository {
   }
 
   async readPids(mode: string, pids: readonly string[]): Promise<Map<string, number>> {
-    const raw = await this.client.sendCommand(formatCommand(mode, pids.join(' ')))
-    const entries = parseModeResponseEntries(raw)
+    // Lectura secuencial (un comando por PID), no multi-PID en un solo comando:
+    // el ELM327-emulator (y muchos adaptadores) no soporta "01 0C 05 0D 0F" y
+    // responde "NO DATA". Se delega en readPid, que ya normaliza el caso y
+    // aplica la fórmula del catálogo.
     const result = new Map<string, number>()
-    for (const { pid, bytes } of entries) {
+    for (const pid of pids) {
       try {
-        result.set(pid, this.pidFormulas.apply(mode, pid, bytes))
+        result.set(pid, await this.readPid(mode, pid))
       } catch {
-        // Degradación por PID: una fórmula que falla no invalida el resto del Map
+        // Degradación por PID: un PID no soportado (NO DATA) o sin fórmula
+        // no invalida el resto del Map.
       }
     }
     return result

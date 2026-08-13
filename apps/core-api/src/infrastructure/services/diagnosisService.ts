@@ -69,13 +69,12 @@ const COGNITIVE_DIAGNOSIS_TIMEOUT_MS = 60_000
  * (español) porque este último solo define 7 PIDs y la respuesta genérica
  * `readings` debe cubrir los 16 Mode 01 para poder mostrar un gauge por PID.
  */
-const PID_METADATA: ReadonlyMap<string, { readonly name: string; readonly unit: string }> =
-  new Map(
-    ALL_SEED_PIDS.filter((p) => p.pidCode.mode === MODE_CURRENT_DATA).map((p) => [
-      p.pidCode.pid,
-      { name: p.name, unit: p.unit ?? '' },
-    ]),
-  )
+const PID_METADATA: ReadonlyMap<string, { readonly name: string; readonly unit: string }> = new Map(
+  ALL_SEED_PIDS.filter((p) => p.pidCode.mode === MODE_CURRENT_DATA).map((p) => [
+    p.pidCode.pid,
+    { name: p.name, unit: p.unit ?? '' },
+  ]),
+)
 
 /** Nombre de la tool MCP que devuelve los códigos DTC detectados en el vehículo. */
 const GET_DTC_CODES_TOOL = 'get_dtc_codes'
@@ -186,6 +185,16 @@ export interface PidReading {
   readonly unit: string
   /** Valor físico resuelto; `null` si la lectura falló (NO DATA). */
   readonly value: number | null
+}
+
+/** PID Mode 01 disponible en el selector de telemetría en vivo. */
+export interface AvailablePid {
+  /** Clave compuesta modo + PID separados por espacio (ej. "01 0C"). */
+  readonly code: string
+  /** Nombre legible del PID (del catálogo `ALL_SEED_PIDS`). */
+  readonly name: string
+  /** Unidad física del valor (ej. "rpm", "°C"). */
+  readonly unit: string
 }
 
 /** Rol de un turno dentro de la conversación persistida del diagnóstico. */
@@ -362,6 +371,24 @@ export class DiagnosisService {
       })
     }
     return { ...result, readings }
+  }
+
+  /**
+   * Lista los PIDs Mode 01 del catalogo SAE J1979 disponibles para el selector
+   * de telemetria en vivo.
+   *
+   * Es un catalogo global (no depende del vehiculo conectado): si un coche no
+   * soporta un PID, la lectura degrada a `null` en {@link getLiveData} y el
+   * gauge muestra `—`.
+   *
+   * @returns Los 16 PIDs Mode 01 con su nombre y unidad, en orden de catalogo.
+   */
+  listAvailablePids(): AvailablePid[] {
+    return Array.from(PID_METADATA.entries()).map(([pid, meta]) => ({
+      code: `${MODE_CURRENT_DATA} ${pid}`,
+      name: meta.name,
+      unit: meta.unit,
+    }))
   }
 
   /**
@@ -549,8 +576,11 @@ export class DiagnosisService {
     const repository = this.resolveRepository(scenarioId)
     const vehicleInfo = await repository.getVehicleInfo()
 
-    const { followUpSession, sessionId: resolvedSessionId, vehicleId } =
-      await this.resolveDiagnosisSession(sessionId, userId, vehicleInfo)
+    const {
+      followUpSession,
+      sessionId: resolvedSessionId,
+      vehicleId,
+    } = await this.resolveDiagnosisSession(sessionId, userId, vehicleInfo)
 
     const llmClient = this.requireLlmClient()
 

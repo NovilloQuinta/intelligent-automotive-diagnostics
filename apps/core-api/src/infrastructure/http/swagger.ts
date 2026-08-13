@@ -195,6 +195,34 @@ export const openApiSpec = {
         },
       },
     },
+    '/api/available-pids': {
+      get: {
+        tags: ['Diagnosis'],
+        summary: 'List selectable Mode 01 PIDs',
+        description:
+          'Returns the SAE J1979 Mode 01 PIDs available for the live-telemetry selector, with name and unit. Requires authentication.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          '200': {
+            description: 'List of available Mode 01 PIDs',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    pids: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/AvailablePid' },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '401': { description: 'Access token required' },
+        },
+      },
+    },
     '/api/freeze-frame': {
       get: {
         tags: ['Diagnosis'],
@@ -1023,6 +1051,14 @@ export const openApiSpec = {
           coolantTemp: { type: 'number', example: 90 },
           speed: { type: 'number', example: 0 },
           intakeTemp: { type: 'number', example: 25 },
+        },
+      },
+      AvailablePid: {
+        type: 'object',
+        properties: {
+          code: { type: 'string', example: '01 0C' },
+          name: { type: 'string', example: 'Engine RPM' },
+          unit: { type: 'string', example: 'rpm' },
         },
       },
       DtcCode: {

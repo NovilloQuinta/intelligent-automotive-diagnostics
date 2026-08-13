@@ -14,7 +14,7 @@ test.describe("Logout", () => {
     await page.locator("#reg-password").fill("Password123!");
     await page.getByRole("button", { name: "Crear cuenta" }).click();
     await expect(page).toHaveURL("/", { timeout: 15000 });
-    await expect(page.getByText("Telemetría en vivo")).toBeVisible();
+    await expect(page.getByText("Identificación del vehículo")).toBeVisible();
 
     // Click logout
     await page.getByRole("button", { name: "Cerrar sesión" }).click();

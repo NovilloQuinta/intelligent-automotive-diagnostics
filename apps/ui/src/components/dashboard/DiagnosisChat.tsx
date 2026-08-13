@@ -42,9 +42,12 @@ function isSeverityKey(v: string): v is SeverityKey {
  * mismas señales que ya tenía el chat: `conversationHistory` y `loading`:
  *
  * - vacío: sin historial ni loading → CTA "Lanzar diagnóstico IA" + contexto.
- * - generando: `loading` → spinner + texto; el input queda deshabilitado.
+ * - generando (primer diagnóstico): `loading` sin historial → spinner + texto;
+ *   el input queda deshabilitado.
  * - diagnóstico: historial > 0 → el output del LLM es el primer mensaje y el
  *   input queda habilitado para el follow-up.
+ * - follow-up en curso: historial > 0 y `loading` → el hilo se mantiene visible
+ *   y el indicador de carga aparece debajo, sin reemplazar la conversación.
  */
 export function DiagnosisChat({
   severity,
@@ -81,17 +84,22 @@ export function DiagnosisChat({
         Diagnóstico IA
       </h3>
 
-      {loading ? (
-        <GeneratingState />
-      ) : conversationHistory.length === 0 ? (
-        <EmptyState canLaunch={canLaunch} onLaunchDiagnosis={onLaunchDiagnosis} />
+      {conversationHistory.length === 0 ? (
+        loading ? (
+          <GeneratingState />
+        ) : (
+          <EmptyState canLaunch={canLaunch} onLaunchDiagnosis={onLaunchDiagnosis} />
+        )
       ) : (
-        <ConversationThread
-          conversationHistory={conversationHistory}
-          severity={severity}
-          severityKey={severityKey}
-          confidence={confidence}
-        />
+        <>
+          <ConversationThread
+            conversationHistory={conversationHistory}
+            severity={severity}
+            severityKey={severityKey}
+            confidence={confidence}
+          />
+          {loading && <GeneratingState />}
+        </>
       )}
 
       {error && !loading && (
@@ -153,7 +161,7 @@ function ConversationThread({
   readonly confidence: number | null
 }) {
   return (
-    <div className="flex min-h-0 flex-col gap-2 pr-1">
+    <div className="flex max-h-[26rem] min-h-0 flex-col gap-2 overflow-y-auto pr-1">
       {conversationHistory.map((item, i) => {
         if (item.__type === 'user_message' && item.content) {
           return (

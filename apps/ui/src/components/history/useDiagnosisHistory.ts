@@ -36,7 +36,7 @@ export function useDiagnosisHistory(filters: DiagnosisHistoryFilters): Diagnosis
     queryKey: ['diagnosis-history', filters],
     queryFn: () => api.getDiagnosisHistory(filters),
     select: (response) => ({
-      sessions: response.sessions,
+      sessions: response.items,
       total: response.total,
     }),
   })

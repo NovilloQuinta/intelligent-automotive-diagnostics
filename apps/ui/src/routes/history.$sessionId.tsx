@@ -2,6 +2,18 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import { SessionReportPanel } from '@/components/dashboard/SessionReportPanel'
 import { useDiagnosisHistoryDetail } from '@/components/history/useDiagnosisHistoryDetail'
+import type { Scenario } from '@/components/dashboard/types'
+
+/** Extrae la identidad del vehículo del snapshot inmutable `resultJson`. */
+function vehicleInfoFromSnapshot(resultJson: string | null): Scenario['vehicleInfo'] | undefined {
+  if (!resultJson) return undefined
+  try {
+    const parsed = JSON.parse(resultJson) as { vehicle?: Scenario['vehicleInfo'] }
+    return parsed.vehicle
+  } catch {
+    return undefined
+  }
+}
 
 export const Route = createFileRoute('/history/$sessionId')({
   component: HistoryDetailRoute,
@@ -59,13 +71,7 @@ function HistoryDetailRoute() {
     )
   }
 
-  const vehicleInfo = {
-    make: session.vehicleMake,
-    model: session.vehicleModel,
-    year: 0,
-    engineType: '',
-    vin: session.scenarioId ?? '',
-  }
+  const vehicleInfo = vehicleInfoFromSnapshot(session.resultJson)
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-8">

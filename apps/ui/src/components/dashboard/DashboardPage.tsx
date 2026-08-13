@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Navigate } from '@tanstack/react-router'
 import { useAuth } from '@/lib/auth-context'
 import { useScenarios } from './useScenarios'
+import { useAvailablePids } from './useAvailablePids'
 import { DEFAULT_LIVE_PIDS } from './pidCatalog'
 import { useVehicleAutoDetect } from './useVehicleAutoDetect'
 import { VehicleAutoDetectWizard } from './VehicleAutoDetectWizard'
@@ -19,6 +20,7 @@ export function DashboardPage() {
 
   const { scenarios, selectedId, setSelectedId, scenariosError } = useScenarios()
   const selectedScenario = scenarios.find((s) => s.id === selectedId) ?? null
+  const availablePids = useAvailablePids()
   const [selectedPids, setSelectedPids] = useState<readonly string[]>(DEFAULT_LIVE_PIDS)
   const { live, streamOk, readings } = useLiveTelemetry(selectedId, selectedPids)
   const { loading, result, runDiagnosis } = useDiagnosis(selectedId)
@@ -137,7 +139,7 @@ export function DashboardPage() {
         selectedId={selectedId}
         selectedScenario={selectedScenario}
         telemetry={{ rpm, coolant, speed, intake, rawSummary, pids: selectedPids, readings }}
-        pidSelection={{ selectedPids, onPidsChange: setSelectedPids }}
+        pidSelection={{ selectedPids, onPidsChange: setSelectedPids, availablePids }}
         diagnosis={{ loading, streamOk, result, dtcCodes, selectedDtc }}
         cognitive={{
           severity: cognitive.severity,

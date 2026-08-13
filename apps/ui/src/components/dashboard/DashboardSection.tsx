@@ -8,7 +8,14 @@ import { SessionReportPanel } from './SessionReportPanel'
 import { VehicleStatusPanel } from './VehicleStatusPanel'
 import type { SidebarSection } from '@/components/layout/Sidebar'
 import type { CognitiveDiagnosisError } from './useCognitiveDiagnosis'
-import type { DtcCode, EcuInfo, Scenario, DiagnosisResponse, PidReading } from './types'
+import type {
+  DtcCode,
+  EcuInfo,
+  Scenario,
+  DiagnosisResponse,
+  PidReading,
+  AvailablePid,
+} from './types'
 import type { PidRow } from './pidCatalog'
 import type { ConversationItem } from '@/lib/api'
 
@@ -28,7 +35,8 @@ export interface TelemetryConfig {
 
 export interface PidSelectionConfig {
   readonly selectedPids: readonly string[]
-  readonly onPidsChange: (pids: string[]) => void
+  readonly onPidsChange: (pids: readonly string[]) => void
+  readonly availablePids: readonly AvailablePid[]
 }
 
 export interface DiagnosisState {
@@ -116,6 +124,8 @@ export function DashboardSection({
             selectable
             selectedPids={pidSelection.selectedPids}
             onPidsChange={pidSelection.onPidsChange}
+            availablePids={pidSelection.availablePids}
+            readings={readings}
           />
         </div>
       )

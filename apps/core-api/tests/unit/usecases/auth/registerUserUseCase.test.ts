@@ -47,7 +47,12 @@ function createTokenStore(): RefreshTokenRepository {
 describe('RegisterUserUseCase', () => {
   it('should create the user with role "user" by default, without the caller passing it', async () => {
     const userRepo = createUserRepo()
-    const useCase = new RegisterUserUseCase(userRepo, createAuthService(), createTokenStore(), 604800000)
+    const useCase = new RegisterUserUseCase(
+      userRepo,
+      createAuthService(),
+      createTokenStore(),
+      604800000,
+    )
 
     const result = await useCase.execute({
       username: 'juan',

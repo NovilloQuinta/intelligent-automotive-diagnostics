@@ -332,3 +332,74 @@ describe('PidsTable — selectable', () => {
     })
   })
 })
+
+describe('PidsTable — catalog', () => {
+  const CATALOG = [
+    { code: '01 0C', name: 'Engine RPM', unit: 'rpm' },
+    { code: '01 05', name: 'Engine Coolant Temperature', unit: '°C' },
+    { code: '01 0D', name: 'Vehicle Speed', unit: 'km/h' },
+    { code: '01 0F', name: 'Intake Air Temperature', unit: '°C' },
+    { code: '01 11', name: 'Throttle Position', unit: '%' },
+    { code: '01 42', name: 'Control Module Voltage', unit: 'V' },
+  ]
+
+  it('renders every catalog Mode 01 PID as a selectable row', () => {
+    render(
+      <PidsTable
+        parsedValues={NORMAL_VALUES}
+        empty={false}
+        selectable
+        availablePids={CATALOG}
+        readings={null}
+      />,
+    )
+
+    expect(screen.getAllByTestId('pid-row')).toHaveLength(6)
+    expect(screen.getAllByRole('checkbox')).toHaveLength(6)
+    expect(screen.getByText('6 registrados')).toBeDefined()
+    expect(screen.getByText('Throttle Position')).toBeDefined()
+  })
+
+  it('keeps the 4 default PIDs checked and renders non-fixed catalog PIDs without verdict', () => {
+    render(
+      <PidsTable
+        parsedValues={NORMAL_VALUES}
+        empty={false}
+        selectable
+        availablePids={CATALOG}
+        readings={null}
+      />,
+    )
+
+    const checked = screen
+      .getAllByRole('checkbox')
+      .filter((c) => (c as HTMLInputElement).checked)
+      .map((c) => (c as HTMLInputElement).getAttribute('aria-label'))
+    expect(checked).toEqual([
+      'Seleccionar PID 0C',
+      'Seleccionar PID 05',
+      'Seleccionar PID 0D',
+      'Seleccionar PID 0F',
+    ])
+    // Catalog-only rows (e.g. 01 11) have no OK/Revisar verdict: value `—`.
+    expect(screen.getByText('01 11')).toBeDefined()
+  })
+
+  it('emits the newly selected catalog PID through onPidsChange', () => {
+    const onPidsChange = vi.fn()
+    render(
+      <PidsTable
+        parsedValues={NORMAL_VALUES}
+        empty={false}
+        selectable
+        availablePids={CATALOG}
+        readings={null}
+        onPidsChange={onPidsChange}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Seleccionar PID 11' }))
+
+    expect(onPidsChange).toHaveBeenLastCalledWith(['0C', '05', '0D', '0F', '11'])
+  })
+})

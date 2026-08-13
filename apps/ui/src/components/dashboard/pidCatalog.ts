@@ -1,18 +1,19 @@
 import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import type { PidObservation } from '@/lib/api'
-import type { DiagnosisResponse } from './types'
+import type { DiagnosisResponse, PidReading } from './types'
 import { COLORS, GAUGE } from './types'
 
 export type PidStatus = 'ok' | 'review'
 
-/** Origin of a PID row: the 4 fixed readings of the diagnosis, or a PID discovered by the AI. */
-export type PidSource = 'fixed' | 'ai'
+/** Origin of a PID row: the 4 fixed readings, a catalog PID, or one discovered by the AI. */
+export type PidSource = 'fixed' | 'ai' | 'catalog'
 
 export type PidRow = {
   code: string
   description: string
   value: string
-  status: PidStatus
+  /** `null` for catalog PIDs without a diagnosis verdict (no OK/Revisar badge). */
+  status: PidStatus | null
   source: PidSource
 }
 
@@ -72,8 +73,9 @@ export type PidStatusMeta = {
   icon: typeof CheckCircle2 | typeof AlertTriangle
 }
 
-/** Maps a PID status to its visual metadata (color, icon, label, background). */
-export function pidStatusMeta(status: PidStatus): PidStatusMeta {
+/** Maps a PID status to its visual metadata (color, icon, label, background). `null` → no badge. */
+export function pidStatusMeta(status: PidStatus | null): PidStatusMeta | null {
+  if (status === null) return null
   if (status === 'review') {
     return {
       label: 'Revisar',
@@ -137,19 +139,51 @@ export function pidObservationToRow(obs: PidObservation): PidRow {
 }
 
 /**
- * Appends the AI-discovered rows after the fixed ones, dropping any code already
- * rendered as a fixed PID and deduplicating the AI rows by code (last read wins).
+ * Appends the AI-discovered rows after the base ones, dropping any code already
+ * rendered as a base PID and deduplicating the AI rows by code (last read wins).
  */
-export function mergePidRows(fixedRows: PidRow[], aiRows: PidRow[] | null): PidRow[] {
-  if (!aiRows || aiRows.length === 0) return fixedRows
+export function mergePidRows(baseRows: PidRow[], aiRows: PidRow[] | null): PidRow[] {
+  if (!aiRows || aiRows.length === 0) return baseRows
 
+  const seen = new Set(baseRows.map((row) => row.code))
   const byCode = new Map<string, PidRow>()
   for (const row of aiRows) {
-    if (FIXED_PID_CODES.has(row.code)) continue
+    if (seen.has(row.code)) continue
     byCode.set(row.code, row)
   }
 
-  return [...fixedRows, ...byCode.values()]
+  return [...baseRows, ...byCode.values()]
+}
+
+/**
+ * Builds the selectable PID rows from the Mode 01 catalog, overlaying the
+ * deterministic value (and verdict) for the 4 fixed PIDs and the live reading
+ * for the rest. Catalog PIDs without a live reading render `—` with no verdict.
+ */
+export function buildSelectablePidRows(
+  availablePids: readonly { code: string; name: string; unit: string }[],
+  parsedValues: DiagnosisResponse['parsedValues'] | null,
+  readings: readonly PidReading[] | null | undefined,
+): PidRow[] {
+  const fixedRows = parsedValues ? buildPidRows(parsedValues) : []
+  const fixedByCode = new Map(fixedRows.map((row) => [row.code, row]))
+  const readingByCode = new Map((readings ?? []).map((r) => [r.code.toUpperCase(), r]))
+
+  return availablePids.map((pid) => {
+    const code = pid.code.toUpperCase()
+    const fixed = fixedByCode.get(code)
+    if (fixed) return fixed
+
+    const reading = readingByCode.get(code)
+    const value = reading?.value
+    return {
+      code,
+      description: pid.name,
+      value: value == null ? '—' : reading?.unit ? `${value} ${reading.unit}` : `${value}`,
+      status: null,
+      source: 'catalog',
+    }
+  })
 }
 
 /**

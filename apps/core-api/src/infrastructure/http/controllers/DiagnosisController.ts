@@ -157,6 +157,11 @@ export class DiagnosisController {
     res.status(200).json({ scenarios: this.service.listScenarios() })
   }
 
+  /** GET /api/available-pids — catalogo de PIDs Mode 01 seleccionables en telemetria en vivo. */
+  availablePids = (_req: Request, res: Response): void => {
+    res.status(200).json({ pids: this.service.listAvailablePids() })
+  }
+
   /** GET /api/mcp/capabilities — informa de las capacidades disponibles del servicio. */
   capabilities = (_req: Request, res: Response): void => {
     res.status(200).json({ cognitiveDiagnosis: this.service.hasCognitiveDiagnosis })
@@ -237,148 +242,100 @@ export class DiagnosisController {
   }
 
   /** GET /api/freeze-frame — freeze frame del DTC seleccionado. 400 query invalida, 404 escenario inexistente. */
-  freezeFrame = async (req: Request, res: Response): Promise<void> => {
-    const schema = this.selectSchema(FreezeFrameQuerySchema, FreezeFrameQueryTcpSchema)
-    const parsed = schema.safeParse(req.query)
-    if (!parsed.success) {
-      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
-      return
-    }
-
-    try {
-      const result = await this.service.getFreezeFrame(parsed.data.scenarioId, parsed.data.dtc)
-      res.status(200).json({ freezeFrame: result })
-    } catch (err) {
-      if (this.respondIfCommonError(err, res)) return
-      this.respondUnexpected(err, res, 'Freeze frame fetch failed')
-    }
-  }
+  freezeFrame = (req: Request, res: Response): Promise<void> =>
+    this.runDiagnosisHandler(
+      req,
+      res,
+      this.selectSchema(FreezeFrameQuerySchema, FreezeFrameQueryTcpSchema),
+      'query',
+      'Freeze frame fetch failed',
+      (data) => this.service.getFreezeFrame(data.scenarioId, data.dtc),
+      (result) => res.status(200).json({ freezeFrame: result }),
+    )
 
   /** GET /api/ecu-info — ECUs descubiertas en el vehiculo. 400 query invalida, 404 escenario inexistente. */
-  ecuInfo = async (req: Request, res: Response): Promise<void> => {
-    const schema = this.selectSchema(EcuInfoQuerySchema, EcuInfoQueryTcpSchema)
-    const parsed = schema.safeParse(req.query)
-    if (!parsed.success) {
-      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
-      return
-    }
-
-    try {
-      const result = await this.service.getEcuInfo(parsed.data.scenarioId)
-      res.status(200).json({ ecus: result })
-    } catch (err) {
-      if (this.respondIfCommonError(err, res)) return
-      this.respondUnexpected(err, res, 'ECU info fetch failed')
-    }
-  }
+  ecuInfo = (req: Request, res: Response): Promise<void> =>
+    this.runDiagnosisHandler(
+      req,
+      res,
+      this.selectSchema(EcuInfoQuerySchema, EcuInfoQueryTcpSchema),
+      'query',
+      'ECU info fetch failed',
+      (data) => this.service.getEcuInfo(data.scenarioId),
+      (result) => res.status(200).json({ ecus: result }),
+    )
 
   /** GET /api/vehicle-info — VIN y datos del vehiculo. 400 query invalida, 404 escenario inexistente. */
-  vehicleInfo = async (req: Request, res: Response): Promise<void> => {
-    const schema = this.selectSchema(VehicleInfoQuerySchema, VehicleInfoQueryTcpSchema)
-    const parsed = schema.safeParse(req.query)
-    if (!parsed.success) {
-      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
-      return
-    }
-
-    try {
-      const result = await this.service.getVehicleInfo(parsed.data.scenarioId)
-      res.status(200).json(result)
-    } catch (err) {
-      if (this.respondIfCommonError(err, res)) return
-      this.respondUnexpected(err, res, 'Vehicle info fetch failed')
-    }
-  }
+  vehicleInfo = (req: Request, res: Response): Promise<void> =>
+    this.runDiagnosisHandler(
+      req,
+      res,
+      this.selectSchema(VehicleInfoQuerySchema, VehicleInfoQueryTcpSchema),
+      'query',
+      'Vehicle info fetch failed',
+      (data) => this.service.getVehicleInfo(data.scenarioId),
+      (result) => res.status(200).json(result),
+    )
 
   /** GET /api/live-data — telemetria en vivo de los 4 PIDs del dashboard. 400 query invalida, 404 escenario inexistente. */
-  liveData = async (req: Request, res: Response): Promise<void> => {
-    const schema = this.selectSchema(LiveDataQuerySchema, LiveDataQueryTcpSchema)
-    const parsed = schema.safeParse(req.query)
-    if (!parsed.success) {
-      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
-      return
-    }
-
-    try {
-      const result = await this.service.getLiveData(parsed.data.scenarioId, parsed.data.pids)
-      res.status(200).json(result)
-    } catch (err) {
-      if (this.respondIfCommonError(err, res)) return
-      this.respondUnexpected(err, res, 'Live data fetch failed')
-    }
-  }
+  liveData = (req: Request, res: Response): Promise<void> =>
+    this.runDiagnosisHandler(
+      req,
+      res,
+      this.selectSchema(LiveDataQuerySchema, LiveDataQueryTcpSchema),
+      'query',
+      'Live data fetch failed',
+      (data) => this.service.getLiveData(data.scenarioId, data.pids),
+      (result) => res.status(200).json(result),
+    )
 
   /** POST /api/clear-dtc — borra DTCs almacenados (Mode 04). 400 body invalido, 404 escenario inexistente. */
-  clearDtc = async (req: Request, res: Response): Promise<void> => {
-    const schema = this.selectSchema(ClearDtcBodySchema, ClearDtcBodyTcpSchema)
-    const parsed = schema.safeParse(req.body)
-    if (!parsed.success) {
-      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
-      return
-    }
-
-    try {
-      await this.service.clearDtcCodes(parsed.data.scenarioId)
-      res.status(200).json({ cleared: true })
-    } catch (err) {
-      if (this.respondIfCommonError(err, res)) return
-      this.respondUnexpected(err, res, 'Clear DTC failed')
-    }
-  }
+  clearDtc = (req: Request, res: Response): Promise<void> =>
+    this.runDiagnosisHandler(
+      req,
+      res,
+      this.selectSchema(ClearDtcBodySchema, ClearDtcBodyTcpSchema),
+      'body',
+      'Clear DTC failed',
+      (data) => this.service.clearDtcCodes(data.scenarioId),
+      () => res.status(200).json({ cleared: true }),
+    )
 
   /** GET /api/pending-dtc — lee DTCs pendientes (Mode 07). 400 query invalida, 404 escenario inexistente. */
-  pendingDtc = async (req: Request, res: Response): Promise<void> => {
-    const schema = this.selectSchema(PendingDtcQuerySchema, PendingDtcQueryTcpSchema)
-    const parsed = schema.safeParse(req.query)
-    if (!parsed.success) {
-      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
-      return
-    }
-
-    try {
-      const result = await this.service.readPendingDtcCodes(parsed.data.scenarioId)
-      res.status(200).json({ dtcCodes: result })
-    } catch (err) {
-      if (this.respondIfCommonError(err, res)) return
-      this.respondUnexpected(err, res, 'Pending DTC fetch failed')
-    }
-  }
+  pendingDtc = (req: Request, res: Response): Promise<void> =>
+    this.runDiagnosisHandler(
+      req,
+      res,
+      this.selectSchema(PendingDtcQuerySchema, PendingDtcQueryTcpSchema),
+      'query',
+      'Pending DTC fetch failed',
+      (data) => this.service.readPendingDtcCodes(data.scenarioId),
+      (result) => res.status(200).json({ dtcCodes: result }),
+    )
 
   /** GET /api/permanent-dtc — lee DTCs permanentes (Mode 0A). 400 query invalida, 404 escenario inexistente. */
-  permanentDtc = async (req: Request, res: Response): Promise<void> => {
-    const schema = this.selectSchema(PermanentDtcQuerySchema, PermanentDtcQueryTcpSchema)
-    const parsed = schema.safeParse(req.query)
-    if (!parsed.success) {
-      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
-      return
-    }
-
-    try {
-      const result = await this.service.readPermanentDtcCodes(parsed.data.scenarioId)
-      res.status(200).json({ dtcCodes: result })
-    } catch (err) {
-      if (this.respondIfCommonError(err, res)) return
-      this.respondUnexpected(err, res, 'Permanent DTC fetch failed')
-    }
-  }
+  permanentDtc = (req: Request, res: Response): Promise<void> =>
+    this.runDiagnosisHandler(
+      req,
+      res,
+      this.selectSchema(PermanentDtcQuerySchema, PermanentDtcQueryTcpSchema),
+      'query',
+      'Permanent DTC fetch failed',
+      (data) => this.service.readPermanentDtcCodes(data.scenarioId),
+      (result) => res.status(200).json({ dtcCodes: result }),
+    )
 
   /** GET /api/vehicle-status — testigo MIL y monitores de emisiones (Mode 01 PID 01). 400 query invalida, 404 escenario inexistente. */
-  vehicleStatus = async (req: Request, res: Response): Promise<void> => {
-    const schema = this.selectSchema(VehicleStatusQuerySchema, VehicleStatusQueryTcpSchema)
-    const parsed = schema.safeParse(req.query)
-    if (!parsed.success) {
-      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
-      return
-    }
-
-    try {
-      const result = await this.service.getVehicleStatus(parsed.data.scenarioId)
-      res.status(200).json(result)
-    } catch (err) {
-      if (this.respondIfCommonError(err, res)) return
-      this.respondUnexpected(err, res, 'Vehicle status fetch failed')
-    }
-  }
+  vehicleStatus = (req: Request, res: Response): Promise<void> =>
+    this.runDiagnosisHandler(
+      req,
+      res,
+      this.selectSchema(VehicleStatusQuerySchema, VehicleStatusQueryTcpSchema),
+      'query',
+      'Vehicle status fetch failed',
+      (data) => this.service.getVehicleStatus(data.scenarioId),
+      (result) => res.status(200).json(result),
+    )
 
   /** GET /api/diagnosis-history — listado paginado de sesiones del usuario autenticado. */
   listHistory = async (req: Request, res: Response): Promise<void> => {
@@ -470,6 +427,38 @@ export class DiagnosisController {
     optional: z.ZodType<T, z.ZodTypeDef, unknown>,
   ): z.ZodType<T, z.ZodTypeDef, unknown> {
     return this.service.isDirectConnection ? optional : required
+  }
+
+  /**
+   * Mecánica compartida por los handlers de lectura/escritura del vehículo:
+   * valida `query`/`body` con el esquema, ejecuta la llamada al servicio y
+   * responde 200; en caso de error, delega en los manejadores comunes.
+   *
+   * Elimina la duplicación del patrón `safeParse`→400→`try/call`→`respond`→
+   * `catch`→`respondIfCommonError`/`respondUnexpected` presente en los 8
+   * handlers de diagnosis.
+   */
+  private async runDiagnosisHandler<TData, TResult>(
+    req: Request,
+    res: Response,
+    schema: z.ZodType<TData, z.ZodTypeDef, unknown>,
+    source: 'query' | 'body',
+    context: string,
+    call: (data: TData) => Promise<TResult>,
+    respond: (result: TResult) => void,
+  ): Promise<void> {
+    const parsed = schema.safeParse(req[source])
+    if (!parsed.success) {
+      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
+      return
+    }
+
+    try {
+      respond(await call(parsed.data))
+    } catch (err) {
+      if (this.respondIfCommonError(err, res)) return
+      this.respondUnexpected(err, res, context)
+    }
   }
 
   /**

@@ -8,9 +8,10 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table'
-import type { DiagnosisResponse } from './types'
+import type { DiagnosisResponse, AvailablePid, PidReading } from './types'
 import {
   buildPidRows,
+  buildSelectablePidRows,
   mergePidRows,
   pidStatusMeta,
   togglePid,
@@ -25,6 +26,7 @@ import type { CognitiveDiagnosisError } from './useCognitiveDiagnosis'
 
 type Props = {
   parsedValues: DiagnosisResponse['parsedValues'] | null
+  /** True when there is nothing to show yet (no diagnosis, no catalog). */
   empty: boolean
   /** PIDs discovered by the cognitive diagnosis, or null while unavailable. */
   aiRows?: PidRow[] | null
@@ -37,14 +39,18 @@ type Props = {
   /** Controlled selection of short PID codes (no mode prefix). Defaults to {@link DEFAULT_LIVE_PIDS}. */
   selectedPids?: readonly string[]
   /** Emits the full selected short-code list whenever the selection changes. */
-  onPidsChange?: (pids: string[]) => void
+  onPidsChange?: (pids: readonly string[]) => void
+  /** Mode 01 catalog from `GET /api/available-pids`; when present the table lists all of them. */
+  availablePids?: readonly AvailablePid[] | null
+  /** Live per-PID readings used to fill the value of non-fixed catalog PIDs. */
+  readings?: readonly PidReading[] | null
 }
 
 /** Selection state shared by every selectable row in the table. */
 interface PidSelection {
   readonly selectable: boolean
   readonly selectedPids: readonly string[]
-  readonly onPidsChange?: (pids: string[]) => void
+  readonly onPidsChange?: (pids: readonly string[]) => void
 }
 
 /** Discreet badge marking a row as discovered by the AI rather than read by the fixed diagnosis. */
@@ -169,17 +175,21 @@ function PidRowView({ row, index, selection }: PidRowViewProps) {
       <TableCell className="text-sm text-foreground/90">{row.description}</TableCell>
       <TableCell className="mono text-sm text-foreground/90">{row.value}</TableCell>
       <TableCell className="text-right">
-        <span
-          className="mono inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-          style={{
-            color: meta.color,
-            borderColor: meta.border,
-            background: meta.bg,
-          }}
-        >
-          <meta.icon className="h-3 w-3" style={{ color: meta.color }} />
-          {meta.label}
-        </span>
+        {meta ? (
+          <span
+            className="mono inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+            style={{
+              color: meta.color,
+              borderColor: meta.border,
+              background: meta.bg,
+            }}
+          >
+            <meta.icon className="h-3 w-3" style={{ color: meta.color }} />
+            {meta.label}
+          </span>
+        ) : (
+          <span className="mono text-xs text-muted-foreground">—</span>
+        )}
       </TableCell>
     </TableRow>
   )
@@ -227,7 +237,7 @@ function PidRowsTable({ rows, aiLoading, aiError, selection }: PidRowsTableProps
   )
 }
 
-/** Panel listing every OBD-II PID read during the current diagnosis session with an OK/Revisar verdict per PID. */
+/** Panel listing the selectable Mode 01 PIDs (catalog + diagnosis readings) with a selection checkbox. */
 export function PidsTable({
   parsedValues,
   empty,
@@ -237,9 +247,16 @@ export function PidsTable({
   selectable = false,
   selectedPids = DEFAULT_LIVE_PIDS,
   onPidsChange,
+  availablePids = null,
+  readings = null,
 }: Props) {
-  const fixedRows = parsedValues ? buildPidRows(parsedValues) : null
-  const rows = fixedRows ? mergePidRows(fixedRows, aiRows) : null
+  const hasCatalog = availablePids !== null && availablePids.length > 0
+  const baseRows = hasCatalog
+    ? buildSelectablePidRows(availablePids, parsedValues, readings)
+    : parsedValues
+      ? buildPidRows(parsedValues)
+      : null
+  const rows = baseRows ? mergePidRows(baseRows, aiRows) : null
 
   const visibleShortCodes = (rows ?? [])
     .filter((row) => isMode01PidCode(row.code))
@@ -267,10 +284,11 @@ export function PidsTable({
         </span>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
-        {empty && <EmptyPrompt />}
-        {!empty && rows && (
+        {rows ? (
           <PidRowsTable rows={rows} aiLoading={aiLoading} aiError={aiError} selection={selection} />
-        )}
+        ) : empty ? (
+          <EmptyPrompt />
+        ) : null}
       </div>
     </div>
   )

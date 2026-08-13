@@ -62,6 +62,32 @@ describe("DiagnosisChat", () => {
     ).toBeDisabled();
   });
 
+  it("keeps the previous thread visible while a follow-up is loading, with an inline indicator", () => {
+    render(
+      <DiagnosisChat
+        {...defaultProps}
+        loading={true}
+        conversationHistory={[
+          { __type: "raw_response", data: { text: "Fallo de encendido." } },
+        ]}
+      />,
+    );
+
+    // El hilo previo NO desaparece durante el follow-up.
+    expect(screen.getByText("Fallo de encendido.")).toBeDefined();
+    // El indicador de carga se muestra inline (debajo del hilo).
+    expect(screen.getByText("Analizando datos OBD-II con IA…")).toBeDefined();
+    // Y nunca se muestra el CTA de primer diagnóstico.
+    expect(screen.queryByText("Lanzar diagnóstico IA")).toBeNull();
+  });
+
+  it("shows the generating state without the CTA while loading without history", () => {
+    render(<DiagnosisChat {...defaultProps} loading={true} />);
+
+    expect(screen.getByText("Analizando datos OBD-II con IA…")).toBeDefined();
+    expect(screen.queryByText("Lanzar diagnóstico IA")).toBeNull();
+  });
+
   // -------------------------------------------------------------------------
   // Estado diagnóstico
   // -------------------------------------------------------------------------
@@ -80,6 +106,23 @@ describe("DiagnosisChat", () => {
     expect(
       screen.getByPlaceholderText("Pregunta al mecánico..."),
     ).toBeEnabled();
+  });
+
+  it("constrains the conversation thread with an internal scroll container", () => {
+    render(
+      <DiagnosisChat
+        {...defaultProps}
+        conversationHistory={[
+          { __type: "raw_response", data: { text: "Fallo de encendido." } },
+        ]}
+      />,
+    );
+
+    const thread = screen
+      .getByText("Fallo de encendido.")
+      .closest(".overflow-y-auto");
+    expect(thread).not.toBeNull();
+    expect(thread?.className).toContain("max-h-[26rem]");
   });
 
   // -------------------------------------------------------------------------

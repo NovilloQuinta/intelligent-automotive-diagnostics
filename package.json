@@ -16,12 +16,17 @@
     "obd:scan": "tsx scripts/scan-pids.ts",
     "test": "cd apps/core-api && pnpm test",
     "test:ui": "cd apps/ui && pnpm test",
+    "test:all": "pnpm test && pnpm test:ui",
     "test:watch": "cd apps/core-api && pnpm test:watch",
     "test:coverage": "cd apps/core-api && pnpm test:coverage",
+    "test:coverage:ui": "cd apps/ui && pnpm test:coverage",
     "lint": "cd apps/core-api && pnpm lint",
     "lint:ui": "cd apps/ui && pnpm lint",
+    "lint:all": "pnpm lint && pnpm lint:ui",
     "format": "cd apps/core-api && pnpm format",
-    "format:fix": "cd apps/core-api && pnpm format:fix"
+    "format:ui": "cd apps/ui && pnpm format",
+    "format:fix": "cd apps/core-api && pnpm format:fix",
+    "verify": "pnpm lint:all && pnpm format && pnpm format:ui && pnpm test:all && pnpm build && pnpm build:ui"
   },
   "devDependencies": {
     "tsx": "^4.23.1"

@@ -12,9 +12,18 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['./tests/setup.ts'],
     include: ['tests/**/*.test.ts'],
+    // 'dot' emite una linea por fichero en vez de un arbol de 1600 casos.
+    // Los fallos se siguen imprimiendo enteros. VITEST_VERBOSE=1 para el arbol.
+    reporters: process.env.VITEST_VERBOSE ? ['default'] : ['dot'],
+    // Los tests que pasan escupen logs de pino y del SDK a stderr. Silenciarlos
+    // deja solo la salida de los que fallan, que es la unica accionable.
+    silent: process.env.VITEST_VERBOSE ? false : 'passed-only',
     coverage: {
       provider: 'v8',
       reportsDirectory: 'coverage',
+      // 'text' imprime una fila por fichero (~195). 'text-summary' son 6 lineas
+      // y los ficheros bajo umbral se siguen reportando como error.
+      reporter: ['text-summary', 'json-summary', 'html'],
       include: ['src/**/*.ts'],
       exclude: [
         'src/main.ts',

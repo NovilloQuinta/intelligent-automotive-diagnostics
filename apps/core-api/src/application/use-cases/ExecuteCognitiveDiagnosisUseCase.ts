@@ -60,6 +60,8 @@ const MECHANIC_STYLE_INSTRUCTIONS = [
   'Responde en español, de forma concisa: prioriza pasos accionables sobre explicaciones largas.',
   'Usa bullets o una lista numerada para las acciones a realizar.',
   'El destinatario es un mecánico en el taller, no un particular sin conocimientos — puedes usar términos técnicos, pero sin rodeos innecesarios.',
+  'La narrativa (antes del bloque ---JSON---) no debe superar ~200 palabras y debe ir directa a los pasos accionables; nada de introducciones, resúmenes repetidos ni relleno.',
+  'Máximo 5 recomendaciones, cada una de una línea.',
 ]
 
 /** Instrucciones sobre contenido no confiable proveniente de fuentes web. */
