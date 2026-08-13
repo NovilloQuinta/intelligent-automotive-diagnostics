@@ -46,7 +46,7 @@ function mockVehicleRepo(overrides: Partial<VehicleRepository> = {}): VehicleRep
     findEcusByVehicle: vi.fn(),
     insertPidDefinition: vi.fn(),
     findPidDefinition: vi.fn().mockResolvedValue(null),
-    findPidsByVehicle: vi.fn(),
+    findPidsByManufacturerModel: vi.fn().mockResolvedValue([]),
     findPidsByMode: vi.fn(),
     insertPidReading: vi.fn(),
     createSession: vi.fn(),
@@ -58,6 +58,8 @@ function mockVehicleRepo(overrides: Partial<VehicleRepository> = {}): VehicleRep
     findDtcDefinitionByCode: vi.fn().mockResolvedValue(null),
     findEcuByAddress: vi.fn(),
     updateEcuDiscoveredAt: vi.fn(),
+    findEcuDefinitionByAddress: vi.fn().mockResolvedValue(null),
+    upsertEcuDefinition: vi.fn(),
     ...overrides,
   }
 }
@@ -549,12 +551,43 @@ describe('Elm327TcpRepository', () => {
     expect(createConnection).toHaveBeenCalledTimes(1)
   })
 
-  it('getEcuInfo should return an empty array (no synthetic ECU stub)', async () => {
-    const repo = makeRepo()
+  it('getEcuInfo delega en discoverEcus: emite secuencia AT + 01 00, restaura el estado y devuelve la ECU descubierta', async () => {
+    const repo = makeRepo(100)
+    const promise = repo.getEcuInfo()
 
-    const ecus = await repo.getEcuInfo()
+    for (let i = 1; i <= 5; i++) {
+      await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(i))
+      respond('OK\r>')
+    }
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(6))
+    respond('7E8 06 41 00 BE 3F A8 13\r>')
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(7))
+    respond('OK\r>')
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(8))
+    respond('OK\r>')
 
-    expect(ecus).toEqual([])
+    const ecus = await promise
+    expect(ecus).toMatchObject([
+      {
+        id: 0,
+        vehicleId: 0,
+        name: 'Engine Control Module',
+        requestAddr: '7E0',
+        responseAddr: '7E8',
+        type: 'ECM',
+        protocol: 'CAN_11_500',
+      },
+    ])
+    expect(lastSocket().write.mock.calls.map((call) => call[0])).toEqual([
+      'AT E0\r\n',
+      'AT L0\r\n',
+      'AT H1\r\n',
+      'AT SP 6\r\n',
+      'AT SH 7DF\r\n',
+      '01 00\r\n',
+      'AT H0\r\n',
+      'AT SH 7E0\r\n',
+    ])
   })
 
   describe('readPidRaw', () => {

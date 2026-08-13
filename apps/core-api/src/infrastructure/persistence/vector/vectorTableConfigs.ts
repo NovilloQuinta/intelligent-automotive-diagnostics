@@ -53,3 +53,22 @@ export const DIAGNOSES_TABLE_CONFIG: LanceVectorStoreConfig = {
     { name: 'source', type: 'string' },
   ],
 }
+
+/** Catalogo de definiciones de ECU aprendidas (direcciones CAN → nombre/tipo/sistema). */
+export const ECUS_TABLE_CONFIG: LanceVectorStoreConfig = {
+  table: 'ecus_index',
+  dimensions: EMBEDDING_DIMENSIONS,
+  columns: [
+    { name: 'id', type: 'string' },
+    { name: 'embeddedText', type: 'string' },
+    { name: 'manufacturer', type: 'string' },
+    { name: 'model', type: 'string' },
+    { name: 'responseAddr', type: 'string' },
+    { name: 'requestAddr', type: 'string' },
+    { name: 'name', type: 'string' },
+    { name: 'type', type: 'string' },
+    { name: 'system', type: 'string' },
+    { name: 'confidence', type: 'float32' },
+    { name: 'source', type: 'string' },
+  ],
+}

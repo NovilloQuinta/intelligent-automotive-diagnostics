@@ -39,6 +39,23 @@ Warnings no bloqueantes: doc-comments huérfanos en `api.ts:248-249`, `severityM
 varias veces en `SessionReportPanel.tsx`, paginación de `HistoryPage.tsx` no centra el rango en
 la página activa (`Math.min(totalPages, 5)`).
 
+### 2026-08-13 — commit secciones 6-7 `add-ecu-discovery-and-system-catalog`
+
+GGA `STRICT_MODE` falla con "ambiguous response" (la línea `STATUS:` no va en las primeras 30
+líneas del output del proveedor) — bug del hook, no del código. Build/lint/test/format/security
+en verde. Violaciones de estilo reportadas:
+
+- **`apps/core-api/src/infrastructure/mcp/mcpServer.ts:786-900`** — `registerKnowledgeTools`
+  115 líneas (>40, declarativa). Preexistente; agravada por +2 tools (`search_similar_ecus`/
+  `index_ecu`). Requiere disable `max-lines-per-function` razonado o registro data-driven.
+- **`apps/core-api/src/infrastructure/mcp/mcpServer.ts:502-545`** — `registerDiagnosticTools`
+  44 líneas (declarativa). Preexistente.
+- **`apps/core-api/src/infrastructure/mcp/mcpServer.ts:327-328`** — `persistDtcs`: magic
+  `confidence: 0.5` y `source: 'auto'` sin constantes nombradas. Preexistente.
+- **`apps/core-api/src/infrastructure/mcp/mcpServer.ts:211-212`** — `persistPidReading`:
+  fallbacks `?? 2` (dataBytes) y `rawHex = '00'` sin constantes nombradas. Introducido en
+  este cambio (sección 6).
+
 ---
 
 ## Corregidos

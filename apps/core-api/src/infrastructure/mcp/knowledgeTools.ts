@@ -1,15 +1,18 @@
 import { z } from 'zod'
 import crypto from 'node:crypto'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
+import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
 import { initialConfidenceFor } from '@/application/knowledge/confidenceScale.js'
+import { EcuDefinition } from '@/domain/entities/ecuDefinition.js'
 import type { PidFormulaSource } from '@/application/dto/diagnosis/PidFormulaSource.js'
 import { ValidateDiscoveredPidUseCase } from '@/application/use-cases/ValidateDiscoveredPidUseCase.js'
 import { ValidateDiscoveredDtcUseCase } from '@/application/use-cases/ValidateDiscoveredDtcUseCase.js'
 import type { PidKnowledgeEntry } from '@/application/dto/knowledge/PidKnowledgeEntry.js'
 import type { DtcKnowledgeEntry } from '@/application/dto/knowledge/DtcKnowledgeEntry.js'
 import type { DiagnosisKnowledgeEntry } from '@/application/dto/knowledge/DiagnosisKnowledgeEntry.js'
+import type { EcuKnowledgeEntry } from '@/application/dto/knowledge/EcuKnowledgeEntry.js'
 import {
   text,
   withErrorHandling,
@@ -201,6 +204,53 @@ function handleIndexDiagnosis(stack: KnowledgeStack): ToolHandler {
 }
 
 /**
+ * Persiste una definicion de ECU aprendida en ambos niveles del catalogo:
+ * `ecu_definitions` (SQLite) y `ecus_index` (LanceDB). Las ECUs no admiten
+ * validacion OBD, asi que la confianza sale de la fuente (`initialConfidenceFor`).
+ */
+function handleIndexEcu(
+  stack: KnowledgeStack,
+  vehicleRepo: VehicleRepository | undefined,
+): ToolHandler {
+  return async (args) => {
+    const source = resolveKnowledgeSource(args)
+    const definition = new EcuDefinition({
+      id: 0,
+      manufacturer: args.manufacturer as string,
+      model: args.model as string,
+      responseAddr: args.responseAddr as string,
+      requestAddr: args.requestAddr as string,
+      name: args.name as string,
+      type: args.type as string,
+      system: args.system as string | undefined,
+      confidence: initialConfidenceFor(source),
+      source,
+    })
+
+    const entry: EcuKnowledgeEntry = {
+      id: crypto.randomUUID(),
+      embeddedText: args.embeddedText as string,
+      manufacturer: definition.manufacturer,
+      model: definition.model,
+      responseAddr: definition.responseAddr,
+      requestAddr: definition.requestAddr,
+      name: definition.name,
+      type: definition.type,
+      system: definition.system,
+      confidence: definition.confidence,
+      source,
+    }
+
+    await Promise.all([
+      vehicleRepo ? vehicleRepo.upsertEcuDefinition(definition) : Promise.resolve(),
+      stack.ecusIndex.index(entry),
+    ])
+
+    return text(`Indexed ECU ${entry.id} (confidence ${entry.confidence}, source ${source})`)
+  }
+}
+
+/**
  * Registra las tools MCP de conocimiento sobre los indices vectoriales inyectados.
  *
  * Misma forma que {@link registerDiagnosticTools}: recibe un `register` y un `stack`.
@@ -212,6 +262,7 @@ export function registerKnowledgeTools(
   register: ToolRegistrar,
   stack: KnowledgeStack,
   repo: ObdRepository,
+  vehicleRepo: VehicleRepository | undefined,
 ): void {
   const searchShape = {
     query: z.string(),
@@ -250,6 +301,17 @@ export function registerKnowledgeTools(
       handleSearchSimilar<DiagnosisKnowledgeEntry>(
         (query, opts) => stack.diagnosisIndex.search(query, opts),
         'No diagnoses found.',
+      ),
+    ),
+  )
+  register(
+    'search_similar_ecus',
+    'Search ECU knowledge base by semantic similarity. Returns distance + fields.',
+    searchShape,
+    withErrorHandling(
+      handleSearchSimilar<EcuKnowledgeEntry>(
+        (query, opts) => stack.ecusIndex.search(query, opts),
+        'No ECUs found.',
       ),
     ),
   )
@@ -293,5 +355,21 @@ export function registerKnowledgeTools(
       pidsInvolved: z.array(z.string()),
     },
     withErrorHandling(handleIndexDiagnosis(stack)),
+  )
+  register(
+    'index_ecu',
+    'Index a learned ECU definition (manufacturer, model, CAN addresses, name/type) into the relational catalog and the vector index.',
+    {
+      embeddedText: z.string(),
+      manufacturer: z.string(),
+      model: z.string(),
+      source: z.string(),
+      responseAddr: z.string(),
+      requestAddr: z.string(),
+      name: z.string(),
+      type: z.string(),
+      system: z.string().optional(),
+    },
+    withErrorHandling(handleIndexEcu(stack, vehicleRepo)),
   )
 }

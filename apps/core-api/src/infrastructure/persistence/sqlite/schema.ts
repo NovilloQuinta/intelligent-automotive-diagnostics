@@ -39,8 +39,6 @@ export const pidDefinitions = sqliteTable(
   'pid_definitions',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
-    vehicleId: integer('vehicle_id').references(() => vehicles.id),
-    ecuId: integer('ecu_id').references(() => ecus.id),
     mode: text('mode').notNull(),
     pidCode: text('pid_code').notNull(),
     name: text('name').notNull(),
@@ -53,6 +51,7 @@ export const pidDefinitions = sqliteTable(
     maxValue: real('max_value'),
     manufacturer: text('manufacturer'),
     model: text('model'),
+    system: text('system'),
     confidence: real('confidence').notNull().default(1.0),
     source: text('source').notNull().default('manual'),
     createdAt: text('created_at').notNull().default("datetime('now')"),
@@ -68,14 +67,24 @@ export const pidDefinitions = sqliteTable(
 )
 
 /** Lecturas historicas de PIDs con valor parseado y raw hex. */
-export const pidReadings = sqliteTable('pid_readings', {
-  id: integer('id').primaryKey({ autoIncrement: true }),
-  pidDefId: integer('pid_def_id').references(() => pidDefinitions.id),
-  sessionId: text('session_id').notNull(),
-  rawHex: text('raw_hex').notNull(),
-  parsedValue: real('parsed_value'),
-  timestamp: text('timestamp').notNull().default("datetime('now')"),
-})
+export const pidReadings = sqliteTable(
+  'pid_readings',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    sessionId: integer('session_id')
+      .notNull()
+      .references(() => diagnosisSessions.id),
+    mode: text('mode').notNull(),
+    pidCode: text('pid_code').notNull(),
+    pidDefId: integer('pid_def_id').references(() => pidDefinitions.id),
+    rawHex: text('raw_hex').notNull(),
+    parsedValue: real('parsed_value'),
+    timestamp: text('timestamp').notNull().default("datetime('now')"),
+  },
+  (table) => ({
+    sessionIdIdx: index('idx_pid_readings_session_id').on(table.sessionId),
+  }),
+)
 
 /** Sesiones de diagnostico vinculadas a un vehiculo y escenario.
  *  El resultado se guarda como snapshot immutable (JSON) para preservar
@@ -180,5 +189,31 @@ export const dtcDefinitions = sqliteTable(
   },
   (table) => ({
     unq: unique('dtc_manufacturer_model_code').on(table.manufacturer, table.model, table.code),
+  }),
+)
+
+/** Catalogo auto-expansivo de definiciones de ECU por fabricante, modelo y
+ *  direccion CAN. Nace vacio y se llena por aprendizaje (web / mecanico). */
+export const ecuDefinitions = sqliteTable(
+  'ecu_definitions',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    manufacturer: text('manufacturer').notNull(),
+    model: text('model').notNull(),
+    responseAddr: text('response_addr').notNull(),
+    requestAddr: text('request_addr').notNull(),
+    name: text('name').notNull(),
+    type: text('type').notNull(),
+    system: text('system'),
+    confidence: real('confidence').notNull().default(0.3),
+    source: text('source').notNull().default('web'),
+    createdAt: text('created_at').notNull().default("datetime('now')"),
+  },
+  (table) => ({
+    unq: unique('ecu_manufacturer_model_response_addr').on(
+      table.manufacturer,
+      table.model,
+      table.responseAddr,
+    ),
   }),
 )

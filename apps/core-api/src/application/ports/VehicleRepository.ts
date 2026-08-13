@@ -4,6 +4,7 @@ import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import type { PidReading } from '@/domain/entities/pidReading.js'
 import type { DtcDefinition } from '@/domain/entities/dtcDefinition.js'
+import type { EcuDefinition } from '@/domain/entities/ecuDefinition.js'
 
 /** Resultado de una consulta paginada de sesiones de diagnostico. */
 export interface DiagnosisSessionPage {
@@ -58,8 +59,9 @@ export interface VehicleRepository {
     model?: string,
   ): Promise<PidDefinition | null>
 
-  /** Devuelve todos los PIDs conocidos para un vehículo. */
-  findPidsByVehicle(vehicleId: number): Promise<PidDefinition[]>
+  /** Devuelve los PIDs del catálogo para un fabricante/modelo, incluyendo las
+   *  definiciones universales (sin fabricante/modelo). */
+  findPidsByManufacturerModel(manufacturer: string, model: string): Promise<PidDefinition[]>
 
   /** Devuelve todos los PIDs de un modo (ej. '22') desde el catálogo global,
    *  sin filtrar por vehículo ni fabricante/modelo. */
@@ -112,4 +114,16 @@ export interface VehicleRepository {
 
   /** Actualiza la marca de tiempo de descubrimiento de una ECU. */
   updateEcuDiscoveredAt(ecuId: number): Promise<void>
+
+  /** Busca una definición de ECU del catálogo auto-expansivo por fabricante,
+   * modelo y dirección de respuesta. Retorna null si no existe. */
+  findEcuDefinitionByAddress(
+    manufacturer: string,
+    model: string,
+    responseAddr: string,
+  ): Promise<EcuDefinition | null>
+
+  /** Inserta una definición de ECU o actualiza la existente por la clave única
+   * (manufacturer, model, response_addr). */
+  upsertEcuDefinition(def: Omit<EcuDefinition, 'id' | 'createdAt'>): Promise<EcuDefinition>
 }

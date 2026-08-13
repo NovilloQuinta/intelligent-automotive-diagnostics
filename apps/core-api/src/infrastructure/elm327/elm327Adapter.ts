@@ -23,6 +23,7 @@ import {
   parseDtcResponse,
   parseSupportedPidBitmask,
 } from './protocol.js'
+import { discoverEcus } from './ecuDiscovery.js'
 
 /** Re-export de compatibilidad — errores ELM327 desde {@link ./errors.ts}. */
 export { Elm327ConnectionError, Elm327NoDataError, Elm327ParseError }
@@ -234,9 +235,11 @@ export class Elm327TcpRepository implements ObdRepository {
     // No-op: el adaptador no controla la alimentación del hardware
   }
 
+  /**
+   * Descubre las ECUs del bus CAN delegando en {@link discoverEcus}: el adapter
+   * solo reutiliza el transporte inyectado, sin lógica de scan propia.
+   */
   async getEcuInfo(): Promise<EcuInfo[]> {
-    // Sin ECU hardcodeada: el descubrimiento real de ECUs se hace en la capa de
-    // diagnóstico (scan CAN), no con un stub sintético del adaptador.
-    return []
+    return discoverEcus(this.client)
   }
 }

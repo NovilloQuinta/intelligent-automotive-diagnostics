@@ -1,21 +1,25 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { eq } from 'drizzle-orm'
 import * as schema from '@/infrastructure/persistence/sqlite/schema.js'
 import { SqliteVehicleRepository } from '@/infrastructure/persistence/sqlite/vehicleRepository.js'
 import { VinDecodeError, Vin } from '@/domain/value-objects/vin.js'
-import type { VehicleProfile } from '@/domain/value-objects/vehicleInfo.js'
+import type { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
 import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import type { PidDefinition, PidReading } from '@/domain/entities/pidDefinition.js'
+import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
+import type { PidReading } from '@/domain/entities/pidReading.js'
 import type { DtcDefinition } from '@/domain/entities/dtcDefinition.js'
+import type { EcuDefinition } from '@/domain/entities/ecuDefinition.js'
 import { PidCode } from '@/domain/value-objects/pidCode.js'
 
 describe('SqliteVehicleRepository', () => {
   let db: ReturnType<typeof drizzle>
   let repo: SqliteVehicleRepository
+  let sqlite: InstanceType<typeof Database>
 
   beforeAll(() => {
-    const sqlite = new Database(':memory:')
+    sqlite = new Database(':memory:')
     sqlite.pragma('journal_mode = WAL')
     sqlite.pragma('foreign_keys = ON')
 
@@ -44,8 +48,6 @@ describe('SqliteVehicleRepository', () => {
 
       CREATE TABLE IF NOT EXISTS pid_definitions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        vehicle_id INTEGER REFERENCES vehicles(id),
-        ecu_id INTEGER REFERENCES ecus(id),
         mode TEXT NOT NULL,
         pid_code TEXT NOT NULL,
         name TEXT NOT NULL,
@@ -58,19 +60,14 @@ describe('SqliteVehicleRepository', () => {
         max_value REAL,
         manufacturer TEXT,
         model TEXT,
+        system TEXT,
         confidence REAL NOT NULL DEFAULT 1.0,
         source TEXT NOT NULL DEFAULT 'manual',
         created_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
 
-      CREATE TABLE IF NOT EXISTS pid_readings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        pid_def_id INTEGER REFERENCES pid_definitions(id),
-        session_id TEXT NOT NULL,
-        raw_hex TEXT NOT NULL,
-        parsed_value REAL,
-        timestamp TEXT NOT NULL DEFAULT (datetime('now'))
-      );
+      CREATE UNIQUE INDEX IF NOT EXISTS pid_definitions_mode_pid_manufacturer_model_unique
+        ON pid_definitions (mode, pid_code, manufacturer, model);
 
       CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -102,6 +99,20 @@ describe('SqliteVehicleRepository', () => {
       CREATE INDEX IF NOT EXISTS idx_diagnosis_sessions_user_started
         ON diagnosis_sessions (user_id, started_at);
 
+      CREATE TABLE IF NOT EXISTS pid_readings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        pid_def_id INTEGER REFERENCES pid_definitions(id),
+        session_id INTEGER NOT NULL REFERENCES diagnosis_sessions(id),
+        mode TEXT NOT NULL,
+        pid_code TEXT NOT NULL,
+        raw_hex TEXT NOT NULL,
+        parsed_value REAL,
+        timestamp TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_pid_readings_session_id
+        ON pid_readings (session_id);
+
       CREATE TABLE IF NOT EXISTS dtc_definitions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         manufacturer TEXT NOT NULL,
@@ -112,6 +123,21 @@ describe('SqliteVehicleRepository', () => {
         source TEXT NOT NULL DEFAULT 'web',
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         UNIQUE(manufacturer, model, code)
+      );
+
+      CREATE TABLE IF NOT EXISTS ecu_definitions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        manufacturer TEXT NOT NULL,
+        model TEXT NOT NULL,
+        response_addr TEXT NOT NULL,
+        request_addr TEXT NOT NULL,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        system TEXT,
+        confidence REAL NOT NULL DEFAULT 0.3,
+        source TEXT NOT NULL DEFAULT 'web',
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        UNIQUE(manufacturer, model, response_addr)
       );
     `)
 
@@ -221,27 +247,8 @@ describe('SqliteVehicleRepository', () => {
   })
 
   describe('pidDefinitions', () => {
-    let vehicleId: number
-    let ecuId: number
-
-    beforeAll(async () => {
-      const vehicle = await repo.upsertVehicle(toyotaAuris)
-      vehicleId = vehicle.id!
-      const ecu = await repo.insertEcu({
-        vehicleId,
-        name: 'ECM',
-        requestAddr: '7E0',
-        responseAddr: '7E8',
-        type: 'ECM',
-        protocol: 'CAN_11_500',
-      })
-      ecuId = ecu.id!
-    })
-
     function rpmPid(): PidDefinition {
       return {
-        vehicleId,
-        ecuId,
         pidCode: new PidCode('01', '0C'),
         name: 'Engine RPM',
         description: 'Revolutions per minute',
@@ -264,6 +271,29 @@ describe('SqliteVehicleRepository', () => {
       expect(result.confidence).toBe(1.0)
     })
 
+    it('should persist the system label and not write vehicle_id/ecu_id columns', async () => {
+      const inserted = await repo.insertPidDefinition({
+        ...rpmPid(),
+        manufacturer: 'Audi',
+        model: 'A3',
+        system: 'Engine',
+      })
+
+      const row = await db
+        .select()
+        .from(schema.pidDefinitions)
+        .where(eq(schema.pidDefinitions.id, inserted.id))
+        .limit(1)
+
+      expect(row[0].system).toBe('Engine')
+      const columns = sqlite
+        .prepare(`SELECT name FROM pragma_table_info('pid_definitions')`)
+        .all()
+        .map((c) => (c as { name: string }).name)
+      expect(columns).not.toContain('vehicle_id')
+      expect(columns).not.toContain('ecu_id')
+    })
+
     it('should find a PID definition by mode, pidCode and manufacturer/model', async () => {
       await repo.insertPidDefinition({ ...rpmPid(), manufacturer: 'Toyota', model: 'Auris' })
 
@@ -281,7 +311,11 @@ describe('SqliteVehicleRepository', () => {
     })
 
     it('should find a PID by mode and code without manufacturer/model filter', async () => {
-      await repo.insertPidDefinition(rpmPid())
+      await repo.insertPidDefinition({
+        ...rpmPid(),
+        manufacturer: 'Ford',
+        model: 'Focus',
+      })
 
       const result = await repo.findPidDefinition('01', '0C')
 
@@ -292,46 +326,54 @@ describe('SqliteVehicleRepository', () => {
     it('should store and find a PID definition with manufacturer/model', async () => {
       await repo.insertPidDefinition({
         ...rpmPid(),
-        manufacturer: 'Toyota',
-        model: 'Auris',
+        manufacturer: 'VW',
+        model: 'Golf',
       })
 
       // Should find with matching manufacturer/model
-      const found = await repo.findPidDefinition('01', '0C', 'Toyota', 'Auris')
+      const found = await repo.findPidDefinition('01', '0C', 'VW', 'Golf')
       expect(found).not.toBeNull()
-      expect(found!.manufacturer).toBe('Toyota')
-      expect(found!.model).toBe('Auris')
+      expect(found!.manufacturer).toBe('VW')
+      expect(found!.model).toBe('Golf')
 
       // Should NOT find with different manufacturer/model
-      const notFound = await repo.findPidDefinition('01', '0C', 'Ford', 'Focus')
+      const notFound = await repo.findPidDefinition('01', '0C', 'Honda', 'Civic')
       expect(notFound).toBeNull()
     })
 
-    it('should find all PIDs for a vehicle', async () => {
+    it('should find PIDs by manufacturer/model including universal definitions', async () => {
       await repo.insertPidDefinition({
-        vehicleId,
-        ecuId,
-        pidCode: new PidCode('01', '05'),
-        name: 'Coolant Temperature',
-        formula: 'A-40',
-        unit: '°C',
-        dataBytes: 1,
-        pidType: 'formula',
-        confidence: 1.0,
-        source: 'manual',
+        ...rpmPid(),
+        pidCode: new PidCode('01', '0D'),
+        manufacturer: 'Audi',
+        model: 'A3',
+        name: 'Engine RPM (Audi)',
+        system: 'Engine',
+      })
+      await repo.insertPidDefinition({
+        ...rpmPid(),
+        pidCode: new PidCode('22', 'F40D'),
+        manufacturer: 'Audi',
+        model: 'A3',
+        name: 'Battery Voltage',
+        system: 'Battery',
+      })
+      await repo.insertPidDefinition({
+        ...rpmPid(),
+        pidCode: new PidCode('22', 'AAAA'),
+        name: 'Universal Engine RPM',
+        system: 'Engine',
       })
 
-      const pids = await repo.findPidsByVehicle(vehicleId)
+      const pids = await repo.findPidsByManufacturerModel('Audi', 'A3')
 
-      expect(pids.length).toBeGreaterThanOrEqual(2)
-      expect(pids.map((p) => p.name)).toContain('Coolant Temperature')
-      expect(pids.map((p) => p.name)).toContain('Engine RPM')
+      expect(pids.map((p) => p.name)).toContain('Engine RPM (Audi)')
+      expect(pids.map((p) => p.name)).toContain('Battery Voltage')
+      expect(pids.map((p) => p.name)).toContain('Universal Engine RPM')
     })
 
     it('should store an LLM-guessed PID with lower confidence', async () => {
       const llmPid: PidDefinition = {
-        vehicleId,
-        ecuId,
         pidCode: new PidCode('22', '0300'),
         name: 'TCU Odometer',
         formula: '(A<<24|B<<16|C<<8|D)/10',
@@ -372,8 +414,6 @@ describe('SqliteVehicleRepository', () => {
 
     it('findPidDefinition without manufacturer/model returns the highest-confidence match deterministically', async () => {
       await repo.insertPidDefinition({
-        vehicleId,
-        ecuId,
         pidCode: new PidCode('22', '1234'),
         name: 'Unknown DID',
         formula: 'A*256+B',
@@ -404,36 +444,38 @@ describe('SqliteVehicleRepository', () => {
 
   describe('pidReadings', () => {
     let pidDefId: number
+    let sessionId: number
 
     beforeAll(async () => {
       const vehicle = await repo.upsertVehicle(toyotaAuris)
-      const ecu = await repo.insertEcu({
-        vehicleId: vehicle.id!,
-        name: 'ECM',
-        requestAddr: '7E0',
-        responseAddr: '7E8',
-        type: 'ECM',
-        protocol: 'CAN_11_500',
-      })
       const pid = await repo.insertPidDefinition({
-        vehicleId: vehicle.id!,
-        ecuId: ecu.id!,
-        pidCode: new PidCode('01', '0C'),
-        name: 'Engine RPM',
-        formula: '(A*256+B)/4',
-        unit: 'rpm',
-        dataBytes: 2,
+        pidCode: new PidCode('01', '0D'),
+        name: 'Vehicle Speed',
+        formula: 'A',
+        unit: 'km/h',
+        dataBytes: 1,
         pidType: 'formula',
         confidence: 1.0,
         source: 'manual',
+        manufacturer: 'Toyota',
+        model: 'Auris Hybrid',
       })
       pidDefId = pid.id!
+      const session = await repo.createSession({
+        id: 0,
+        vehicleId: vehicle.id,
+        scenarioId: 'pid-readings',
+        startedAt: new Date().toISOString(),
+      })
+      sessionId = session.id
     })
 
-    it('should insert a PID reading', async () => {
+    it('should insert a PID reading and persist mode/pidCode/sessionId as int', async () => {
       const reading: PidReading = {
         pidDefId,
-        sessionId: 'session-001',
+        mode: '01',
+        pidCode: '0D',
+        sessionId,
         rawHex: '0C7B',
         parsedValue: 797.75,
       }
@@ -443,6 +485,18 @@ describe('SqliteVehicleRepository', () => {
       expect(result.id).toBeGreaterThan(0)
       expect(result.rawHex).toBe('0C7B')
       expect(result.parsedValue).toBeCloseTo(797.75)
+
+      const row = await db
+        .select()
+        .from(schema.pidReadings)
+        .where(eq(schema.pidReadings.id, result.id))
+        .limit(1)
+
+      expect(row[0].mode).toBe('01')
+      expect(row[0].pidCode).toBe('0D')
+      expect(row[0].sessionId).toBe(sessionId)
+      expect(typeof row[0].sessionId).toBe('number')
+      expect(row[0].pidDefId).toBe(pidDefId)
     })
   })
 
@@ -764,6 +818,62 @@ describe('SqliteVehicleRepository', () => {
       expect(result).not.toBeNull()
       expect(result!.manufacturer).toBe('VW')
       expect(result!.confidence).toBe(0.9)
+    })
+  })
+
+  describe('ecuDefinitions', () => {
+    const sampleEcu: Omit<EcuDefinition, 'id' | 'createdAt'> = {
+      manufacturer: 'Audi',
+      model: 'A3',
+      responseAddr: '7E9',
+      requestAddr: '7E1',
+      name: 'Transmission Control Module',
+      type: 'TCM',
+      system: 'Transmission',
+      confidence: 0.8,
+      source: 'mechanic',
+    }
+
+    it('upsertEcuDefinition inserts a new definition and normalizes addresses', async () => {
+      const result = await repo.upsertEcuDefinition(sampleEcu)
+
+      expect(result.id).toBeGreaterThan(0)
+      expect(result.responseAddr).toBe('7E9')
+      expect(result.requestAddr).toBe('7E1')
+      expect(result.name).toBe('Transmission Control Module')
+      expect(result.confidence).toBe(0.8)
+      expect(result.source).toBe('mechanic')
+    })
+
+    it('upsertEcuDefinition updates existing on duplicate (manufacturer, model, response_addr)', async () => {
+      const first = await repo.upsertEcuDefinition(sampleEcu)
+
+      const second = await repo.upsertEcuDefinition({
+        ...sampleEcu,
+        name: 'Gearbox Control Unit',
+        confidence: 0.9,
+      })
+
+      expect(second.id).toBe(first.id)
+      expect(second.name).toBe('Gearbox Control Unit')
+      expect(second.confidence).toBe(0.9)
+    })
+
+    it('findEcuDefinitionByAddress returns the matching definition', async () => {
+      await repo.upsertEcuDefinition(sampleEcu)
+
+      const result = await repo.findEcuDefinitionByAddress('Audi', 'A3', '7E9')
+
+      expect(result).not.toBeNull()
+      expect(result!.name).toBe('Transmission Control Module')
+      expect(result!.type).toBe('TCM')
+      expect(result!.system).toBe('Transmission')
+    })
+
+    it('findEcuDefinitionByAddress returns null for unknown address', async () => {
+      const result = await repo.findEcuDefinitionByAddress('Audi', 'A3', '7DA')
+
+      expect(result).toBeNull()
     })
   })
 

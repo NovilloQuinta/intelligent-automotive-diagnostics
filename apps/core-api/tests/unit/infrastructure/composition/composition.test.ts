@@ -55,7 +55,7 @@ describe('createKnowledgeStack', () => {
     vi.clearAllMocks()
   })
 
-  it('should create three knowledge indices from LanceDB configs', { timeout: 15000 }, async () => {
+  it('should create four knowledge indices from LanceDB configs', { timeout: 15000 }, async () => {
     // Dynamically import after mocks are set up
     const { createKnowledgeStack } = await import('@/infrastructure/composition/composition.js')
 
@@ -75,8 +75,9 @@ describe('createKnowledgeStack', () => {
     expect(stack!.pidsIndex).toBeDefined()
     expect(stack!.dtcsIndex).toBeDefined()
     expect(stack!.diagnosisIndex).toBeDefined()
+    expect(stack!.ecusIndex).toBeDefined()
     expect(initLanceDb).toHaveBeenCalledWith('/tmp/test-lancedb')
-    expect(createLanceVectorStore).toHaveBeenCalledTimes(3)
+    expect(createLanceVectorStore).toHaveBeenCalledTimes(4)
   })
 
   it('should also expose the three raw vector stores for admin stats (count/sample)', async () => {
@@ -87,10 +88,12 @@ describe('createKnowledgeStack', () => {
     const pidsStore = mockVectorStore()
     const dtcsStore = mockVectorStore()
     const diagnosesStore = mockVectorStore()
+    const ecusStore = mockVectorStore()
     vi.mocked(createLanceVectorStore)
       .mockResolvedValueOnce(pidsStore)
       .mockResolvedValueOnce(dtcsStore)
       .mockResolvedValueOnce(diagnosesStore)
+      .mockResolvedValueOnce(ecusStore)
     vi.mocked(createEmbedding).mockResolvedValue([0.1, 0.2, 0.3])
     const logger = createMockLogger()
 

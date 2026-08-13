@@ -17,16 +17,16 @@ import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import type { PidReading } from '@/domain/entities/pidReading.js'
 import type { DtcDefinition } from '@/domain/entities/dtcDefinition.js'
+import { EcuDefinition } from '@/domain/entities/ecuDefinition.js'
 
 type PidDefinitionRow = typeof schema.pidDefinitions.$inferSelect
 type DtcDefinitionRow = typeof schema.dtcDefinitions.$inferSelect
+type EcuDefinitionRow = typeof schema.ecuDefinitions.$inferSelect
 
 /** Mapea una fila de `pid_definitions` a la entidad de dominio {@link PidDefinition}. */
 function toPidDefinition(r: PidDefinitionRow): PidDefinition {
   return {
     id: r.id,
-    vehicleId: r.vehicleId ?? undefined,
-    ecuId: r.ecuId ?? undefined,
     pidCode: new PidCode(r.mode, r.pidCode),
     name: r.name,
     description: r.description ?? undefined,
@@ -38,6 +38,7 @@ function toPidDefinition(r: PidDefinitionRow): PidDefinition {
     maxValue: r.maxValue ?? undefined,
     manufacturer: r.manufacturer || undefined,
     model: r.model || undefined,
+    system: r.system ?? undefined,
     confidence: r.confidence,
     source: r.source as PidDefinition['source'],
     createdAt: r.createdAt ?? undefined,
@@ -56,6 +57,23 @@ function toDtcDefinition(r: DtcDefinitionRow): DtcDefinition {
     source: r.source,
     createdAt: r.createdAt ?? undefined,
   }
+}
+
+/** Mapea una fila de `ecu_definitions` a la entidad de dominio {@link EcuDefinition}. */
+function toEcuDefinition(r: EcuDefinitionRow): EcuDefinition {
+  return new EcuDefinition({
+    id: r.id,
+    manufacturer: r.manufacturer,
+    model: r.model,
+    responseAddr: r.responseAddr,
+    requestAddr: r.requestAddr,
+    name: r.name,
+    type: r.type,
+    system: r.system ?? undefined,
+    confidence: r.confidence,
+    source: r.source,
+    createdAt: r.createdAt ?? undefined,
+  })
 }
 
 /** Implementación de {@link VehicleRepository} con SQLite via Drizzle ORM. */
@@ -159,8 +177,6 @@ export class SqliteVehicleRepository implements VehicleRepository {
     const result = await this.db
       .insert(schema.pidDefinitions)
       .values({
-        vehicleId: pid.vehicleId ?? null,
-        ecuId: pid.ecuId ?? null,
         mode: pid.pidCode.mode,
         pidCode: pid.pidCode.pid,
         name: pid.name,
@@ -173,6 +189,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
         maxValue: pid.maxValue ?? null,
         manufacturer: pid.manufacturer ?? '',
         model: pid.model ?? '',
+        system: pid.system ?? null,
         confidence: pid.confidence,
         source: pid.source,
         createdAt: new Date().toISOString(),
@@ -214,11 +231,17 @@ export class SqliteVehicleRepository implements VehicleRepository {
     return toPidDefinition(rows[0])
   }
 
-  async findPidsByVehicle(vehicleId: number): Promise<PidDefinition[]> {
+  async findPidsByManufacturerModel(manufacturer: string, model: string): Promise<PidDefinition[]> {
+    const scopeManufacturer = manufacturer ?? ''
+    const scopeModel = model ?? ''
+
     const rows = await this.db
       .select()
       .from(schema.pidDefinitions)
-      .where(eq(schema.pidDefinitions.vehicleId, vehicleId))
+      .where(
+        sql`(${schema.pidDefinitions.manufacturer} = ${scopeManufacturer} AND ${schema.pidDefinitions.model} = ${scopeModel}) OR (${schema.pidDefinitions.manufacturer} = '' AND ${schema.pidDefinitions.model} = '')`,
+      )
+      .orderBy(desc(schema.pidDefinitions.confidence), schema.pidDefinitions.id)
 
     return rows.map((r) => toPidDefinition(r))
   }
@@ -238,6 +261,8 @@ export class SqliteVehicleRepository implements VehicleRepository {
       .values({
         pidDefId: reading.pidDefId ?? null,
         sessionId: reading.sessionId,
+        mode: reading.mode,
+        pidCode: reading.pidCode,
         rawHex: reading.rawHex,
         parsedValue: reading.parsedValue ?? null,
         timestamp: new Date().toISOString(),
@@ -470,5 +495,77 @@ export class SqliteVehicleRepository implements VehicleRepository {
       .update(schema.ecus)
       .set({ discoveredAt: new Date().toISOString() })
       .where(eq(schema.ecus.id, ecuId))
+  }
+
+  async findEcuDefinitionByAddress(
+    manufacturer: string,
+    model: string,
+    responseAddr: string,
+  ): Promise<EcuDefinition | null> {
+    const normalized = responseAddr.trim().toUpperCase()
+    const rows = await this.db
+      .select()
+      .from(schema.ecuDefinitions)
+      .where(
+        sql`${schema.ecuDefinitions.manufacturer} = ${manufacturer} AND ${schema.ecuDefinitions.model} = ${model} AND ${schema.ecuDefinitions.responseAddr} = ${normalized}`,
+      )
+      .limit(1)
+
+    if (rows.length === 0) return null
+
+    return toEcuDefinition(rows[0])
+  }
+
+  async upsertEcuDefinition(def: Omit<EcuDefinition, 'id' | 'createdAt'>): Promise<EcuDefinition> {
+    const definition = new EcuDefinition({ id: 0, ...def })
+    const existing = await this.findEcuDefinitionByAddress(
+      definition.manufacturer,
+      definition.model,
+      definition.responseAddr,
+    )
+    if (existing) {
+      const updated = await this.db
+        .update(schema.ecuDefinitions)
+        .set({
+          requestAddr: definition.requestAddr,
+          name: definition.name,
+          type: definition.type,
+          system: definition.system ?? null,
+          confidence: definition.confidence,
+          source: definition.source,
+        })
+        .where(eq(schema.ecuDefinitions.id, existing.id))
+        .returning()
+      return toEcuDefinition(updated[0])
+    }
+
+    try {
+      const result = await this.db
+        .insert(schema.ecuDefinitions)
+        .values({
+          manufacturer: definition.manufacturer,
+          model: definition.model,
+          responseAddr: definition.responseAddr,
+          requestAddr: definition.requestAddr,
+          name: definition.name,
+          type: definition.type,
+          system: definition.system ?? null,
+          confidence: definition.confidence,
+          source: definition.source,
+          createdAt: new Date().toISOString(),
+        })
+        .returning()
+      return toEcuDefinition(result[0])
+    } catch (err) {
+      // Carrera con un insert concurrente de la misma clave única
+      // (manufacturer + model + response_addr): re-consultar y devolver la fila ganadora.
+      const raced = await this.findEcuDefinitionByAddress(
+        definition.manufacturer,
+        definition.model,
+        definition.responseAddr,
+      )
+      if (raced) return raced
+      throw err
+    }
   }
 }

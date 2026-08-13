@@ -77,7 +77,7 @@ export function createMcpServer(
   registerDiagnosticTools(registerTool, repo, vehicleRepo, sessionContext)
 
   if (knowledgeStack) {
-    registerKnowledgeTools(registerTool, knowledgeStack, repo)
+    registerKnowledgeTools(registerTool, knowledgeStack, repo, vehicleRepo)
   }
 
   if (webSearch) {
