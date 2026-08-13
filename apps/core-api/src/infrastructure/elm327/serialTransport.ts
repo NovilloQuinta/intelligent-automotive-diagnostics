@@ -56,7 +56,8 @@ export function createElm327SerialClient(config: SerialConfig): Elm327Transport 
     connectionErrorMessage: (detail) => `ELM327 serial error (${detail}) on ${path} — reconnecting`,
     connectionClosedMessage: () => `ELM327 serial connection closed on ${path} — reconnecting`,
     notConnectedMessage: () => 'ELM327 serial port not connected',
-    commandTimeoutMessage: (cmd, ms) => `ELM327 timeout (${ms}ms) after command "${cmd}" on ${path}`,
+    commandTimeoutMessage: (cmd, ms) =>
+      `ELM327 timeout (${ms}ms) after command "${cmd}" on ${path}`,
   }
 
   return createReliableTransport(io, { timeoutMs, maxRetries, backoffMs })

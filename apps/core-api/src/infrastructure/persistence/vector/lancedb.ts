@@ -1,7 +1,19 @@
 import { connect } from '@lancedb/lancedb'
 import type { Connection } from '@lancedb/lancedb'
 import type { Table } from '@lancedb/lancedb'
-import { Bool, Field, FixedSizeList, Float32, Float64, Int32, Int64, Int8, Int16, Schema, Utf8 } from 'apache-arrow'
+import {
+  Bool,
+  Field,
+  FixedSizeList,
+  Float32,
+  Float64,
+  Int32,
+  Int64,
+  Int8,
+  Int16,
+  Schema,
+  Utf8,
+} from 'apache-arrow'
 import type { DataType } from 'apache-arrow'
 import { z } from 'zod'
 
@@ -81,7 +93,13 @@ export function assertVectorDimensions(vector: readonly number[], dimensions: nu
 function defaultValueForField(field: Field): unknown {
   const type = field.type
   if (type instanceof Float32 || type instanceof Float64) return 0.0
-  if (type instanceof Int8 || type instanceof Int16 || type instanceof Int32 || type instanceof Int64) return 0
+  if (
+    type instanceof Int8 ||
+    type instanceof Int16 ||
+    type instanceof Int32 ||
+    type instanceof Int64
+  )
+    return 0
   if (type instanceof Utf8) return ''
   if (type instanceof Bool) return false
   if (type instanceof FixedSizeList) return []

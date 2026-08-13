@@ -1,3 +1,8 @@
+---
+name: clean-architecture
+description: Reglas de capa domain/application/infrastructure del proyecto — disciplina estricta de Clean Architecture
+---
+
 # Skill: clean-architecture
 
 Load this skill before creating or moving files between layers. Enforces strict Clean Architecture discipline across `domain/`, `application/`, and `infrastructure/`.

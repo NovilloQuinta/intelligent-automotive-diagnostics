@@ -69,13 +69,12 @@ const COGNITIVE_DIAGNOSIS_TIMEOUT_MS = 60_000
  * (español) porque este último solo define 7 PIDs y la respuesta genérica
  * `readings` debe cubrir los 16 Mode 01 para poder mostrar un gauge por PID.
  */
-const PID_METADATA: ReadonlyMap<string, { readonly name: string; readonly unit: string }> =
-  new Map(
-    ALL_SEED_PIDS.filter((p) => p.pidCode.mode === MODE_CURRENT_DATA).map((p) => [
-      p.pidCode.pid,
-      { name: p.name, unit: p.unit ?? '' },
-    ]),
-  )
+const PID_METADATA: ReadonlyMap<string, { readonly name: string; readonly unit: string }> = new Map(
+  ALL_SEED_PIDS.filter((p) => p.pidCode.mode === MODE_CURRENT_DATA).map((p) => [
+    p.pidCode.pid,
+    { name: p.name, unit: p.unit ?? '' },
+  ]),
+)
 
 /** Nombre de la tool MCP que devuelve los códigos DTC detectados en el vehículo. */
 const GET_DTC_CODES_TOOL = 'get_dtc_codes'
@@ -577,8 +576,11 @@ export class DiagnosisService {
     const repository = this.resolveRepository(scenarioId)
     const vehicleInfo = await repository.getVehicleInfo()
 
-    const { followUpSession, sessionId: resolvedSessionId, vehicleId } =
-      await this.resolveDiagnosisSession(sessionId, userId, vehicleInfo)
+    const {
+      followUpSession,
+      sessionId: resolvedSessionId,
+      vehicleId,
+    } = await this.resolveDiagnosisSession(sessionId, userId, vehicleInfo)
 
     const llmClient = this.requireLlmClient()
 

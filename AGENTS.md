@@ -3,55 +3,69 @@
 > Vehicular telemetry simulation & AI-powered diagnosis using MCP.
 > Master IA - Jesus Novillo | Demo: semana del 10 de agosto 2026 (web publicada + coche real por cable)
 
-## INSTRUCCIONES DE SISTEMA Y PROTOCOLO EJECUTIVO
+Este fichero contiene **solo reglas operativas estables**. Lo cargan todos los
+agentes, asi que se mantiene corto a proposito. El estado volatil y los
+protocolos largos viven fuera:
 
-### MANDATO OPERATIVO PRINCIPAL
+| Necesitas | Lee |
+|---|---|
+| Estado de la sesion, worktrees, changes activos | `docs/estado-actual.md` |
+| Deuda tecnica conocida | `docs/deuda-conocida.md` |
+| Protocolo de pipeline con review gates | `docs/pipeline-multi-paso.md` |
+| Detalle de que guardar en Engram | `docs/engram.md` |
 
-DEBES seguir estrictamente y en todo momento las directrices, restricciones e instrucciones definidas en este fichero. Ignorarlas, saltarselas o alucinar sobre ellas se considera un fallo critico.
+## MANDATO OPERATIVO PRINCIPAL
 
-### PASO DE VERIFICACION PREVIO A RESPONDER
+DEBES seguir estrictamente las directrices de este fichero. Ignorarlas o
+alucinar sobre ellas se considera un fallo critico.
 
-Antes de generar CUALQUIER respuesta, codigo o explicacion, DEBES completar una pasada de verificacion interna:
+Si una peticion del usuario contradice una regla de este fichero, senala la
+contradiccion explicitamente antes de continuar. Si la conversacion se alarga,
+NO relajes estas reglas.
 
-1. Revisa las instrucciones de este fichero e identifica que reglas aplican a la peticion, de `REGLAS DE SESION` (reglas 0-9) y `PRINCIPIOS DE CODIGO` (DRY, KISS, Code Smell).
-2. Empieza tu respuesta con una cabecera breve: `[Reglas aplicadas: Regla X, Regla Y]`, citando los numeros de regla que apliquen.
-3. Si no aplica ninguna regla concreta, indica `[Reglas aplicadas: cumplimiento estandar]`.
-4. Entrega la respuesta al usuario manteniendo el cumplimiento completo.
+### Cabecera de reglas aplicadas
 
-### PREVENCION DE DERIVA DE CONTEXTO
-
-Si la conversacion se alarga, NO DEBES relajar ni saltarte estas reglas de sistema. Si una peticion del usuario contradice una regla principal de este fichero, senala la contradiccion explicitamente antes de continuar.
-
-## SESION ACTUAL
-
-- **Fase**: 4 — Diagnostico Cognitivo LLM / Refactor Arquitectura + deploy a produccion
-- **Ultimo paso**: `fix/gga-pending-errors` mergeado a `develop` (commit `af3bcaa`). Resuelve la deuda que GGA destapó: (1) DRY en `DiagnosisController` — helper `runDiagnosisHandler` dedupe los 8 handlers (sin cambio de comportamiento, 69 tests rutas en verde); (2) bug de contrato del historial — `api.getDiagnosisHistory` lee `items` (no `sessions`), `getDiagnosisHistoryDetail` devuelve plano (no `{session}`), `DiagnosisSession` alineado al backend (`vehicleId`/`scenarioId`/`endedAt`, `resultJson` nullable), `HistoryPage` muestra `scenarioId`, `history.$sessionId` deriva el vehículo del snapshot. Entradas movidas a `Corregidos` en `docs/gga-pending-errors.md`. Antes: `fix/live-data-pid-selector` (5fbdc91) — readPids secuencial + `GET /api/available-pids` + selector de 16 PIDs + e2e docker 12/12.
-- **Flujo de ramas**: `develop` es la rama de integración; toda `feat.*`/`fix.*` sale de `develop` y se mergea ahí. `main` = releases (deploy CI). **Ojo**: hay agentes paralelos en el repo principal (rama cambia sola) — verificar `git branch --show-current` antes de commitear.
-- **Rama base**: `develop` (no == `main`; deploy via `main`).
-- **Worktrees activos** en `.claude/worktrees/`: `add-ecu-discovery-and-system-catalog` (`feat/add-ecu-discovery-and-system-catalog`), `deployment` (`feat/deployment`, obsoleto).
-- **OpenSpec changes activos**: add-connection-type-selector, add-topology-mapping-screen, add-dtc-repair-tips-screen, add-ecu-discovery-and-system-catalog (propuestos).
-- **Deuda `brace-expansion`**: RESUELTA.
-- **Deuda coverage thresholds**: `test:coverage` falla por archivos bajo umbral (composition.ts ~32%, simulatorAdapter, lancedb, AdminController, ProfileController...).
-- **Deuda GGA vs lint/prettier**: archivos no tocados se reformatean en commits.
-- **Deuda vectorial**: migrar a schema con columna JSON metadata para evitar migraciones futuras.
+En tareas que **tocan codigo, specs o configuracion**, empieza la respuesta con
+`[Reglas aplicadas: Regla X, Regla Y]`. En preguntas, exploracion y respuestas
+conversacionales no hace falta: la cabecera es para dejar traza de decisiones,
+no un peaje por mensaje.
 
 ## REGLAS DE SESION
 
-0. **Guardar en Engram** — tras cada accion no trivial (bugfix, decision de diseno, descubrimiento, nuevo patron), llama a `mem_save` INMEDIATAMENTE. No esperes al cierre de sesion. Si tienes duda, guarda.
-1. **Orquestar antes de actuar** — ante cualquier tarea, delega en `@orchestrator`. El emite JSON de enrutamiento (agente + skills). Si el orquestador no emite JSON estructurado, es un bug — no continues sin enrutamiento explicito. **Aplica TAMBIEN a flujos OpenSpec** (`/opsx-apply`, `/opsx-archive`, ...): el CLI planifica el QUE, pero el COMO (agente + skills) lo decide `@orchestrator` antes de tocar codigo. Prohibido implementar tareas de un cambio sin enrutamiento previo.
-2. **Descubrir antes de crear** — carga skills (`skill`), busca en Engram (`mem_search`), revisa el codebase. Prohibido reescribir logica que ya exista. Los agentes orquestan skills; no escriben logica monolítica.
+0. **Guardar en Engram** — tras cada accion no trivial (bugfix, decision de diseno, descubrimiento, nuevo patron), llama a `mem_save` INMEDIATAMENTE. No esperes al cierre de sesion. Si tienes duda, guarda. Detalle en `docs/engram.md`.
+1. **Orquestar segun el tamano de la tarea** — `@orchestrator` cuesta un arranque de agente en frio (~8.5k tokens) para devolver un JSON de enrutamiento. Usalo cuando aporte:
+   - **Obligatorio**: cambios multi-modulo, tareas de un change OpenSpec, cualquier trabajo en modo pipeline, o cuando no tengas claro que agente/skill toca.
+   - **Opcional (saltatelo)**: tareas de 1-2 ficheros donde el agente y la skill son evidentes, correcciones de un test que falla, docs, chore y style. En estos casos delega directo al agente correcto y di en una linea por que te lo saltas.
+   - Si lo invocas y no emite JSON estructurado, es un bug — no continues sin enrutamiento explicito.
+2. **Descubrir antes de crear** — carga skills con la tool `Skill` (por nombre, NO leas el SKILL.md con `Read`), busca en Engram (`mem_search`), revisa el codebase. Prohibido reescribir logica que ya exista.
 3. **1 paso a la vez** — no mezclar responsabilidades, no adelantar trabajo
-4. **TDD estricto**: RED (test que falla) → GREEN (codigo minimo) → REFACTOR
-5. **Trabajar en ramas; `develop` es la rama de integración** — cada cambio en su rama (`git checkout -b feat/xxx` o `fix/xxx`), **siempre desde `develop`**. Solo merge a `develop` cuando CI pase verde. Cambios menores (docs, chore, style) directo a `develop`. `main` queda reservada para releases (deploy en CI se añadirá más adelante): no se mergea a `main` salvo petición explicita de release.
+4. **TDD estricto**: RED (test que falla) → GREEN (codigo minimo) → REFACTOR. Durante el ciclo corre SOLO el test en curso (`npx vitest run <fichero>`), nunca la suite entera.
+5. **Trabajar en ramas; `develop` es la rama de integración** — cada cambio en su rama (`git checkout -b feat/xxx` o `fix/xxx`), **siempre desde `develop`**. Solo merge a `develop` cuando CI pase verde. Cambios menores (docs, chore, style) directo a `develop`. `main` queda reservada para releases: no se mergea a `main` salvo petición explicita de release.
 5b. **Verificar ruta del worktree antes de escribir** — si trabajas en un worktree (`.claude/worktrees/xxx/`), TODO agente y toda operacion `Write`/`Edit` DEBE usar la ruta del worktree, NUNCA la del repo principal. Antes de escribir un archivo, confirma que el path contiene `.claude/worktrees/`. Si un agente escribe en el repo principal estando en un worktree, es un fallo critico.
-6. **Checks pre-push**: `pnpm lint && pnpm format && pnpm test && pnpm build`
+6. **Checks pre-push**: `pnpm verify` (lint + format + test + build de core-api y ui). No encadenes los scripts a mano: `pnpm test` solo cubre core-api.
 7. **Preguntar antes de commitear/pushear** — mostrar resumen de cambios, esperar OK humano
-8. **Al cerrar un cambio**: actualizar `SESION ACTUAL` en este fichero. Maximo 15 lineas, solo estado presente. El historial va a git, a `openspec/changes/archive/` y a Engram — nunca aqui.
+8. **Al cerrar un cambio**: actualizar `docs/estado-actual.md`. Maximo 15 lineas, solo estado presente. El historial va a git, a `openspec/changes/archive/` y a Engram — nunca ahi.
 9. **Auto-auditoria post-tarea** — al terminar una tarea no trivial: skills usadas, agentes delegados, codigo nuevo estrictamente necesario.
+
+## ECONOMIA DE CONTEXTO
+
+Cada sub-agente arranca **en frio**: no hereda la conversacion y vuelve a pagar
+este fichero + sus skills + su definicion (~8.5k tokens) antes de leer una linea
+de codigo. Reglas que se derivan de eso:
+
+- **Pasa los ficheros ya leidos en el payload del handoff** (rutas + rangos de
+  lineas tocados). Un agente que recibe "revisa `foo.ts:120-180`" no relee el modulo entero.
+- **No leas ficheros enteros para cambios puntuales** — usa `Grep`/`Glob` para
+  localizar y lee solo el rango. Los modulos grandes (`diagnosisService.ts`,
+  `mcpServer.ts`, `api.ts`) mas su test rondan los 20k tokens por lectura.
+- **La suite entera solo en el pre-push.** Durante el ciclo, un fichero de test.
+- **No leas los SKILL.md con `Read`** — invocalos con la tool `Skill`.
+- **OpenSpec**: no releas los cuatro artifacts de un change en cada sub-agente.
+  Un change activo ronda los 15k tokens. Pasa el extracto relevante en el payload.
 
 ## AGENTES DISPONIBLES
 
-Invoca con `@nombre` o via Task tool. Definidos en `.opencode/agents/`.
+Invoca con `@nombre` o via Task tool. Fuente en `.opencode/agents/`, adaptados en `.claude/agents/`.
 
 | Agente | Modelo | Rol |
 |---|---|---|
@@ -63,100 +77,26 @@ Invoca con `@nombre` o via Task tool. Definidos en `.opencode/agents/`.
 | `@quality` | haiku | Ejecuta lint + test + coverage + audit y reporta |
 | `@security` | haiku | Audita reglas OWASP: CORS, helmet, JWT, rate-limit, Zod (read-only) |
 
-## PIPELINE MULTI-PASO
-
-El modo pipeline permite ejecutar tareas de forma secuencial con review gates entre
-cada paso: writer → reviewer → (corregir si FAIL) → siguiente tarea.
-
-### Activación
-
-Usa keywords como `pipeline`, `multi-paso`, `paso a paso`, `con revisión`,
-`review gate`, o `tdd con review`. El `@orchestrator` detecta estas keywords y
-emite un JSON con `mode: "pipeline"` y un `pipeline_plan`.
-
-### Flujo
-
-```
-Usuario: "implementa las tareas con pipeline"
-           ↓
-   @orchestrator (mode: pipeline)
-     - Diseña pipeline_plan con steps alternados (implement → review → ...)
-     - Guarda plan en .opencode/pipeline-state.json
-     - Emite step 1 → delega a @writer
-           ↓
-   @writer (modo pipeline — 1 módulo)
-     - Implementa task del step actual
-     - Reporta con ---pipeline_context---
-           ↓
-   @orchestrator (re-invocación)
-     - Lee pipeline-state.json + evalúa gate
-     - Si gate_after: emite step review → delega a @reviewer
-           ↓
-   @reviewer (modo pipeline — solo files_to_review)
-     - Revisa archivos indicados
-     - Reporta con ---gate_result---
-           ↓
-   @orchestrator (evalúa gate)
-     - FAIL (violaciones graves) → re-emite step implement (misma task)
-     - PASS_WITH_WARNINGS → emite siguiente step (con warnings)
-     - PASS → emite siguiente step
-           ↓
-   ... (ciclo se repite hasta completar pipeline_plan)
-           ↓
-   @orchestrator elimina pipeline-state.json → pipeline completado
-```
-
-### Review Gate Decision Tree
-
-| gate_result.result | Condición | Acción |
-|---|---|---|
-| `FAIL` | Violaciones graves > max_grave_violations | Re-implementar misma task |
-| `PASS_WITH_WARNINGS` | graves = 0, warnings > 0 pero <= max_warnings | Avanzar (con warnings en payload) |
-| `PASS` | graves = 0, warnings = 0 | Avanzar |
-
-### Archivo de estado
-
-- **`.opencode/pipeline-state.json`**: creado por el orquestador al iniciar pipeline,
-  eliminado al completar. Contiene `pipeline_plan`, `current_step`, `completed_steps`,
-  `gate_results`, y timestamps.
-
-### Reglas de delegación actualizadas
-
-- **1 tarea = 1 agente en 1 step.** No se delegan múltiples agentes en paralelo.
-- **Pipeline secuencial SÍ está permitido**: un agente tras otro, con review gates validados por el orquestador.
-- Si un sub-agente se desvía de su fase (ej. writer intenta revisar), el orquestador cancela y re-enruta.
-
 ## SKILLS
 
-| Skill | Path | Cuando cargar |
-|---|---|---|
-| `clean-architecture` | `.opencode/skills/clean-architecture/` | Antes de crear/mover ficheros entre capas |
-| `typescript-best-practices` | `.opencode/skills/typescript-best-practices/` | Al escribir o revisar TypeScript |
-| `tdd-workflow` | `.opencode/skills/tdd-workflow/` | Antes de escribir tests o ciclo Red-Green-Refactor |
-| `tsdoc-jsdoc-documentation` | `.opencode/skills/tsdoc-jsdoc-documentation/` | Antes de crear o revisar TSDoc en exports publicos |
-| `coverage-strategy` | `.opencode/skills/coverage-strategy/` | Al configurar thresholds, revisar coverage, o decidir que testear |
-| `openspec-propose` | `.opencode/skills/openspec-propose/` | Al proponer un cambio nuevo (design + specs + tasks) |
-| `openspec-apply-change` | `.opencode/skills/openspec-apply-change/` | Al implementar tareas de un cambio OpenSpec |
-| `openspec-archive-change` | `.opencode/skills/openspec-archive-change/` | Al archivar un cambio completado |
-| `openspec-explore` | `.opencode/skills/openspec-explore/` | Modo exploracion — pensar sin implementar |
-| `openspec-update-change` | `.opencode/skills/openspec-update-change/` | Al actualizar artifacts de un cambio existente |
-| `openspec-sync-specs` | `.opencode/skills/openspec-sync-specs/` | Al sincronizar delta specs con main specs |
+Invocalas por nombre con la tool `Skill`. Fuente unica en `.opencode/skills/`
+(`.claude/skills/` son symlinks a esa fuente).
 
-## MEMORIA PERSISTENTE (Engram)
-
-Engram es un "segundo cerebro". Guarda lo que **no es obvio** del codigo.
-Antes de trabajar en un area nueva, busca contexto con `mem_search`.
-
-**Que guardar** (proactivo, regla #0 — NO esperar):
-- Bugs y sus causas raiz (el "por que pasaba", no el diff — eso ya esta en git)
-- Decisiones de diseno no obvias (ej. "factory functions vs clases porque...")
-- Discoveries / gotchas (ej. "SQLite no soporta X, asi que usamos Y")
-- Cambios de reglas de sesion o preferencias del usuario
-
-**Que NO guardar**:
-- Artifacts OpenSpec — ya estan en `openspec/changes/`
-- Tareas completadas — para eso esta `mem_session_summary`
-- Cosas que cualquier agente puede deducir leyendo el codigo
+| Skill | Cuando cargar |
+|---|---|
+| `clean-architecture` | Antes de crear/mover ficheros entre capas |
+| `typescript-best-practices` | Al escribir o revisar TypeScript |
+| `tdd-workflow` | Antes de escribir tests o ciclo Red-Green-Refactor |
+| `react-best-practices` | Al tocar componentes o hooks en `apps/ui/` |
+| `tsdoc-jsdoc-documentation` | Antes de crear o revisar TSDoc en exports publicos |
+| `coverage-strategy` | Al configurar thresholds, revisar coverage, o decidir que testear |
+| `dev-workflow` | Al iniciar un desarrollo nuevo y al mergear a develop |
+| `openspec-propose` | Al proponer un cambio nuevo (design + specs + tasks) |
+| `openspec-apply-change` | Al implementar tareas de un cambio OpenSpec |
+| `openspec-archive-change` | Al archivar un cambio completado |
+| `openspec-explore` | Modo exploracion — pensar sin implementar |
+| `openspec-update-change` | Al actualizar artifacts de un cambio existente |
+| `openspec-sync-specs` | Al sincronizar delta specs con main specs |
 
 ## PRINCIPIOS DE CODIGO
 
@@ -169,6 +109,13 @@ Antes de trabajar en un area nueva, busca contexto con `mem_search`.
 ## Scripts
 
 ```bash
+# Verificacion (raiz)
+pnpm verify                             # gate pre-push completo (core-api + ui)
+pnpm test:all                           # tests de core-api + ui
+pnpm test:coverage                      # coverage core-api
+pnpm test:coverage:ui                   # coverage ui
+VITEST_VERBOSE=1 pnpm test              # arbol de tests + logs (solo para depurar)
+
 # OBD (raiz)
 pnpm tsx scripts/send-obd.ts "01 0C"    # enviar comando OBD al emulador
 pnpm tsx scripts/scan-pids.ts           # escanear PIDs soportados
@@ -176,12 +123,4 @@ pnpm tsx scripts/scan-pids.ts           # escanear PIDs soportados
 # DB (apps/core-api)
 pnpm drizzle-kit generate               # generar migraciones desde schema.ts
 pnpm drizzle-kit migrate                # aplicar migraciones a SQLite
-
-# Tests
-pnpm test                               # vitest run
-pnpm test:coverage                      # coverage (Features >=80% + Core 100%)
 ```
-
-## DEUDA CONOCIDA
-
-- **Coverage thresholds** (test:coverage falla, no por brace-expansion): `composition.ts` (~32% lines), `simulatorAdapter.ts`, `lancedb.ts`, `AdminController.ts`, `ProfileController.ts`, `diagnosisService.ts` (funciones ~88% vs 90%), `elm327Adapter.ts` (funciones ~89% vs 90%). Subir tests o ajustar umbrales por archivo.

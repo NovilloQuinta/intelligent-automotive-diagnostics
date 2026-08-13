@@ -120,7 +120,12 @@ describe('Auth integration', () => {
         ttlMinutes: 60,
         appBaseUrl: APP_BASE_URL,
       }),
-      resetPassword: new ResetPasswordUseCase(passwordResetTokenRepo, userRepo, authService, tokenStore),
+      resetPassword: new ResetPasswordUseCase(
+        passwordResetTokenRepo,
+        userRepo,
+        authService,
+        tokenStore,
+      ),
     })
 
     const profileController = new ProfileController(

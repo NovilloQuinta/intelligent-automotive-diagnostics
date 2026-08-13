@@ -1,0 +1,10 @@
+# Generado por @tanstack/router-plugin en cada build y gitignored:
+# nunca puede estar "formateado" en el repo, asi que no se chequea.
+src/routeTree.gen.ts
+
+# Salidas de build
+.output/
+.vinxi/
+.tanstack/
+dist/
+test-results/

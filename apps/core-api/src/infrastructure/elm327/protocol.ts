@@ -63,7 +63,11 @@ export function parseMultiLineResponse(raw: string, linePrefix: RegExp): number[
   for (const line of raw.split(/\r\n?|\n/)) {
     const idx = line.indexOf(':')
     if (idx === -1) continue // salta echo, cabecera y prompt
-    const dataHex = line.slice(idx + 1).trim().replace(linePrefix, '').trim()
+    const dataHex = line
+      .slice(idx + 1)
+      .trim()
+      .replace(linePrefix, '')
+      .trim()
     if (dataHex) payload.push(...parseHexBytes(dataHex))
   }
   return payload
