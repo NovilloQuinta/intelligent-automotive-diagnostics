@@ -32,7 +32,7 @@
 - **Archivos**: `apps/core-api/tests/unit/domain/ecuAddressCatalog.test.ts` (crear)
 - **Descripción**: Tests para el catálogo ISO 15765-4 (solo estándar, sin inventar nombres):
   - `resolveEcuAddress('7E8')` → `{ type: 'ECM', name: 'Engine Control Module', requestAddr: '7E0' }`
-  - `resolveEcuAddress('7E9')`, `'7DA'`, `'768'`, `'728'` → todas `{ type: 'UNKNOWN', name: 'ECU <addr>', requestAddr: <addr − 8> }` (NO se asignan TCM/SRS/ABS/IPC)
+   - `resolveEcuAddress('7E9')`, `'7EA'`, `'7EB'`, `'7ED'` → todas `{ type: 'UNKNOWN', name: 'ECU <addr>', requestAddr: <addr − 8> }` (NO se asignan TCM/SRS/ABS/IPC)
   - Dirección desconocida (`'7EC'`) → `{ type: 'UNKNOWN', name: 'ECU 7EC', requestAddr: '7E4' }` (derivada `response − 8`)
   - `requestAddr` derivado aritméticamente: `responseAddr − 8` en hex
 - **Tests**: `ecuAddressCatalog.test.ts` — 5-6 tests
@@ -126,7 +126,7 @@
 - **Archivos**: `apps/core-api/tests/unit/infrastructure/elm327/ecuDiscovery.test.ts` (crear)
 - **Descripción**: Con un mock `Elm327Transport` que guiona respuestas, verificar:
   - `discoverEcus(transport)` emite la secuencia AT exacta (`AT E0`, `AT L0`, `AT H1`, `AT SP 6`, `AT SH 7DF`) en orden, luego `01 00`
-  - Con respuesta broadcast multi-ECU (`7E8`, `7E9`, `7DA`) devuelve 3 `EcuInfo`: `7E8` → ECM, `7E9`/`7DA` → `UNKNOWN` (con `requestAddr` derivado `response − 8`)
+  - Con respuesta broadcast multi-ECU (`7E8`, `7E9`, `7EA`) devuelve 3 `EcuInfo`: `7E8` → ECM, `7E9`/`7EA` → `UNKNOWN` (con `requestAddr` derivado `response − 8`)
   - Con broadcast vacío, cae al fallback: emite `AT SH 7E0` + `09 0A` y devuelve 1 ECM (7E0/7E8)
   - Con broadcast vacío y 09 0A también vacío/`NO DATA`, devuelve `[]`
   - El mock registra los comandos emitidos (assert de secuencia)

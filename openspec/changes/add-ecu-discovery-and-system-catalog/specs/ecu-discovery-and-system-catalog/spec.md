@@ -67,7 +67,7 @@ El sistema SHALL resolver dirección CAN → nombre/tipo de ECU mediante un cat�
 - **THEN** devuelve `type = 'ECM'`, `name = 'Engine Control Module'`, `requestAddr = '7E0'`
 
 #### Scenario: Dirección no estandarizada se devuelve como UNKNOWN
-- **GIVEN** los headers `7E9`, `768`, `7C8`, `7DA`, `728`
+- **GIVEN** los headers `7E9`, `7EA`, `7EB`, `7EC`, `7ED`
 - **WHEN** se resuelven
 - **THEN** cada una devuelve `type = 'UNKNOWN'` y `name = 'ECU <response_addr>'`
 - **AND** no se asignan nombres tipo TCM/ABS/BCM/SRS/IPC
@@ -105,9 +105,9 @@ El sistema SHALL resolver las ECUs `UNKNOWN` descubiertas en el auto-scan buscan
 - **THEN** la `EcuInfo` de `7E9` se devuelve con `name = 'Transmission Control Module'`, `type = 'TCM'`
 
 #### Scenario: UNKNOWN sin match se mantiene
-- **GIVEN** un scan que devuelve `7DA` como `UNKNOWN`, y `ecu_definitions` no tiene entrada para `(Audi, A3, 7DA)`
+- **GIVEN** un scan que devuelve `7EB` como `UNKNOWN`, y `ecu_definitions` no tiene entrada para `(Audi, A3, 7EB)`
 - **WHEN** se invoca `handleGetEcuInfo`
-- **THEN** la `EcuInfo` de `7DA` se mantiene `UNKNOWN` (`name = 'ECU 7DA'`)
+- **THEN** la `EcuInfo` de `7EB` se mantiene `UNKNOWN` (`name = 'ECU 7EB'`)
 
 #### Scenario: Confianza baja no resuelve
 - **GIVEN** `ecu_definitions` tiene `(Audi, A3, 7E9)` con `confidence = 0.3` (web, sin validar)

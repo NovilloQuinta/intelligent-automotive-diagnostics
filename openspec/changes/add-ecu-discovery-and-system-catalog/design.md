@@ -70,7 +70,7 @@ Con `AT H1`, cada línea de respuesta empieza por el CAN ID de la ECU que respon
 |---|---|---|---|
 | 7E8 | 7E0 | ECM | Engine Control Module |
 
-Toda dirección de respuesta distinta de `7E8` → `type = 'UNKNOWN'`, `name = 'ECU <response_addr>'` y `request = response − 8` (derivación aritmética ISO 15765-4). **Nunca se inventa un nombre ni un tipo** para direcciones no estandarizadas: un header `7E9`, `768`, `7DA`, `728`… se devuelve como `UNKNOWN`, no como "TCM"/"ABS"/"SRS"/"IPC".
+Toda dirección de respuesta distinta de `7E8` → `type = 'UNKNOWN'`, `name = 'ECU <response_addr>'` y `request = response − 8` (derivación aritmética ISO 15765-4). **Nunca se inventa un nombre ni un tipo** para direcciones no estandarizadas: un header `7E9`, `7EA`, `7EB`… se devuelve como `UNKNOWN`, no como "TCM"/"ABS"/"SRS"/"IPC".
 
 La implementación vive en una constante pura de dominio (`domain/ecuAddressCatalog.ts`) con una única entrada estándar y una función `resolveEcuAddress(responseAddr)` que: (a) devuelve la entrada estándar si existe, (b) si no, deriva `request = response − 8` y devuelve `UNKNOWN`.
 
@@ -78,7 +78,7 @@ La implementación vive en una constante pura de dominio (`domain/ecuAddressCata
 
 **Rechazado**: hardcodear las direcciones que el simulador interno (`seedScenarios.ts`) modela (`7E9` TCM, `768` ABS, `7C8` BCM, `7DA` SRS, `728` IPC) como si fueran un "catálogo estándar". No lo son: fuera de `7E0/7E8`, las direcciones físicas las asigna cada fabricante y no hay convención universal. Inventar nombres en producción violaría "nunca inventes" (principio del catálogo auto-expansivo, ADR 007).
 
-**Rechazado**: **pre-seedear** una tabla `ecu_type_catalog` (manufacturer/model/response_addr → type/name) en BD con direcciones específicas de fabricante (`7E9` TCM, `768` ABS, …). No hay dataset fiable y violaría "nunca inventes" (ADR 007). El aprendizaje de direcciones por fabricante se cubre con el catálogo auto-expansivo de la **Decisión 8** (`ecu_definitions` + `ecus_index`, que nacen vacíos y se llenan con `web_search`/mecánico), no con un seed precargado.
+**Rechazado**: **pre-seedear** una tabla `ecu_type_catalog` (manufacturer/model/response_addr → type/name) en BD con direcciones específicas de fabricante (`7E9` TCM, `7EA` ABS, …). No hay dataset fiable y violaría "nunca inventes" (ADR 007). El aprendizaje de direcciones por fabricante se cubre con el catálogo auto-expansivo de la **Decisión 8** (`ecu_definitions` + `ecus_index`, que nacen vacíos y se llenan con `web_search`/mecánico), no con un seed precargado.
 
 ### Decision 3: Nivel "sistema" como campo `system` en `pid_definitions` (no tabla `systems`)
 
