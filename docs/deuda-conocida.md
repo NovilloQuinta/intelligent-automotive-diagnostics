@@ -62,6 +62,21 @@ sirve de patron: factories con `overrides` parciales.
 Candidatos siguientes: `apps/ui/tests/unit/lib/api.test.ts` (1862 L) y los hooks
 de UI con 20+ `vi.mock` por fichero (`useSessionReport`, `DashboardPage`).
 
+## Typecheck de la UI — RESUELTO
+
+`apps/ui` tenia un error de TypeScript (`src/routes/admin.tsx`) que nadie
+detectaba: `pnpm build` de la UI es `vite build`, que transpila pero NO
+typechequea, y CI corria `build`. El backend si estaba cubierto porque su build
+es `tsc && tsc-alias`.
+
+Corregido el error (`exact` declarado en todos los `NAV_ITEMS`: con `as const`,
+una propiedad presente solo en algunos elementos produce una union donde no
+existe) y anadido `pnpm typecheck` a ambas apps, a `pnpm verify` y al CI.
+
+Va **despues** de `build` a proposito: `src/routeTree.gen.ts` lo genera el plugin
+de router durante el build y esta gitignored, asi que en un clon limpio tsc no
+compila hasta que build lo ha creado.
+
 ## Vectorial
 
 Migrar a schema con columna JSON metadata para evitar migraciones futuras.

@@ -47,6 +47,13 @@ jobs:
 
       - run: pnpm build
 
+      # Despues de build a proposito: en la UI, src/routeTree.gen.ts lo genera
+      # el plugin de router durante el build y esta gitignored, asi que en un
+      # clon limpio tsc no compila hasta que build lo ha creado.
+      # `vite build` transpila pero NO typechequea: sin este paso, un error de
+      # tipos en apps/ui pasa el CI sin que nadie se entere.
+      - run: pnpm typecheck
+
       - name: Audit
         run: pnpm audit --audit-level=critical
         working-directory: .

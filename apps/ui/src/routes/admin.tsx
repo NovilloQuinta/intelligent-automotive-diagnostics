@@ -2,12 +2,18 @@ import { createFileRoute, Link, Navigate, Outlet, useLocation } from '@tanstack/
 import { useAuth } from '@/lib/auth-context'
 import { FileText, Home, LayoutDashboard, ScrollText, Shield, Users } from 'lucide-react'
 
+/**
+ * `exact` va en TODOS los items a proposito: con `as const`, un array donde solo
+ * algunos elementos declaran la propiedad produce una union en la que `exact` no
+ * existe, y `item.exact` no compila. Se mantiene `as const` porque `Link to`
+ * exige los literales de ruta.
+ */
 const NAV_ITEMS = [
   { to: '/admin', label: 'Overview', icon: LayoutDashboard, exact: true },
-  { to: '/admin/logs', label: 'Logs', icon: ScrollText },
-  { to: '/admin/audit', label: 'Auditoría', icon: FileText },
-  { to: '/admin/users', label: 'Usuarios', icon: Users },
-  { to: '/admin/knowledge', label: 'Knowledge', icon: Shield },
+  { to: '/admin/logs', label: 'Logs', icon: ScrollText, exact: false },
+  { to: '/admin/audit', label: 'Auditoría', icon: FileText, exact: false },
+  { to: '/admin/users', label: 'Usuarios', icon: Users, exact: false },
+  { to: '/admin/knowledge', label: 'Knowledge', icon: Shield, exact: false },
 ] as const
 
 export const Route = createFileRoute('/admin')({
