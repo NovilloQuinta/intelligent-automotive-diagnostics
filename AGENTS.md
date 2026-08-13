@@ -34,8 +34,9 @@ no un peaje por mensaje.
 
 0. **Guardar en Engram** — tras cada accion no trivial (bugfix, decision de diseno, descubrimiento, nuevo patron), llama a `mem_save` INMEDIATAMENTE. No esperes al cierre de sesion. Si tienes duda, guarda. Detalle en `docs/engram.md`.
 1. **Orquestar segun el tamano de la tarea** — `@orchestrator` cuesta un arranque de agente en frio (~8.5k tokens) para devolver un JSON de enrutamiento. Usalo cuando aporte:
-   - **Obligatorio**: cambios multi-modulo, tareas de un change OpenSpec, cualquier trabajo en modo pipeline, o cuando no tengas claro que agente/skill toca.
+   - **Obligatorio**: cambios multi-modulo, cualquier trabajo en modo pipeline, o cuando no tengas claro que agente/skill toca.
    - **Opcional (saltatelo)**: tareas de 1-2 ficheros donde el agente y la skill son evidentes, correcciones de un test que falla, docs, chore y style. En estos casos delega directo al agente correcto y di en una linea por que te lo saltas.
+   - **Changes OpenSpec: se orquesta UNA VEZ por change, no por tarea.** Al abrir el change, `@orchestrator` emite el enrutamiento y ese JSON queda vigente para todas las tareas del `tasks.md`. Las tareas siguientes se delegan directo al agente ya enrutado. Solo se vuelve a orquestar si cambia la naturaleza del trabajo: salto de backend a `apps/ui/` (`@writer` → `@ui`), una tarea que exige rediseno de spec (`@architect`), o una auditoria de seguridad (`@security`). Re-enrutar tarea a tarea paga ~8.5k tokens por redescubrir una decision que ya estaba tomada.
    - Si lo invocas y no emite JSON estructurado, es un bug — no continues sin enrutamiento explicito.
 2. **Descubrir antes de crear** — carga skills con la tool `Skill` (por nombre, NO leas el SKILL.md con `Read`), busca en Engram (`mem_search`), revisa el codebase. Prohibido reescribir logica que ya exista.
 3. **1 paso a la vez** — no mezclar responsabilidades, no adelantar trabajo
