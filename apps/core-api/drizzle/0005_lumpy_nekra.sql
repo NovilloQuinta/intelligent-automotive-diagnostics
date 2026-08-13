@@ -13,7 +13,12 @@ CREATE TABLE `ecu_definitions` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `ecu_manufacturer_model_response_addr` ON `ecu_definitions` (`manufacturer`,`model`,`response_addr`);--> statement-breakpoint
-PRAGMA foreign_keys=OFF;--> statement-breakpoint
+-- `pid_readings` se vacia a proposito: las lecturas son efimeras y no hay valor
+-- en migrar `session_id` text -> integer de filas antiguas sin sesion real asociada.
+-- Se dropea ANTES de `pid_definitions` para no violar su FK (pid_def_id) durante
+-- la reconstruccion: drizzle ejecuta la migracion en una transaccion y
+-- `PRAGMA foreign_keys=OFF` es un no-op dentro de ella.
+DROP TABLE `pid_readings`;--> statement-breakpoint
 CREATE TABLE `__new_pid_definitions` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`mode` text NOT NULL,
@@ -51,9 +56,5 @@ CREATE TABLE `__new_pid_readings` (
 	FOREIGN KEY (`pid_def_id`) REFERENCES `pid_definitions`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
--- `pid_readings` se vacia a proposito: las lecturas son efimeras y no hay valor
--- en migrar `session_id` text -> integer de filas antiguas sin sesion real asociada.
-DROP TABLE `pid_readings`;--> statement-breakpoint
 ALTER TABLE `__new_pid_readings` RENAME TO `pid_readings`;--> statement-breakpoint
-PRAGMA foreign_keys=ON;--> statement-breakpoint
 CREATE INDEX `idx_pid_readings_session_id` ON `pid_readings` (`session_id`);
