@@ -9,6 +9,14 @@ export class EcuDefinitionError extends Error {
 /** Formato valido de direccion CAN: uno o mas digitos hexadecimales. */
 const CAN_ADDR_REGEX = /^[0-9A-Fa-f]+$/
 
+/** Convierte la procedencia cruda a su union valida; lanza si no es `web` ni `mechanic` (ADR-007 §4). */
+function toEcuSource(value: string): 'web' | 'mechanic' {
+  if (value !== 'web' && value !== 'mechanic') {
+    throw new EcuDefinitionError(`Invalid ECU source: "${value}"`)
+  }
+  return value
+}
+
 /**
  * Definicion de una ECU aprendida en el catalogo auto-expansivo (ADR-007, opcion B).
  *
@@ -27,13 +35,14 @@ export class EcuDefinition {
   readonly type: string
   readonly system?: string
   readonly confidence: number
-  readonly source: string
+  readonly source: 'web' | 'mechanic'
   readonly createdAt?: string
 
   /**
    * @param params - Propiedades de la definicion de ECU.
    * @throws {EcuDefinitionError} Si `name` esta vacio, las direcciones no son
-   *   hexadecimales, o `confidence` esta fuera del rango [0, 1].
+   *   hexadecimales, `confidence` esta fuera del rango [0, 1], o `source` no
+   *   es `'web'` ni `'mechanic'`.
    */
   constructor(params: {
     id: number
@@ -58,6 +67,7 @@ export class EcuDefinition {
     if (params.confidence < 0 || params.confidence > 1) {
       throw new EcuDefinitionError(`confidence must be between 0 and 1, got ${params.confidence}`)
     }
+    const source = toEcuSource(params.source)
     this.id = params.id
     this.manufacturer = params.manufacturer
     this.model = params.model
@@ -67,7 +77,7 @@ export class EcuDefinition {
     this.type = params.type
     this.system = params.system
     this.confidence = params.confidence
-    this.source = params.source
+    this.source = source
     this.createdAt = params.createdAt
   }
 }

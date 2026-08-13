@@ -46,7 +46,7 @@ function mockVehicleRepo(overrides: Partial<VehicleRepository> = {}): VehicleRep
     findEcusByVehicle: vi.fn(),
     insertPidDefinition: vi.fn(),
     findPidDefinition: vi.fn().mockResolvedValue(null),
-    findPidsByVehicle: vi.fn(),
+    findPidsByManufacturerModel: vi.fn().mockResolvedValue([]),
     findPidsByMode: vi.fn(),
     insertPidReading: vi.fn(),
     createSession: vi.fn(),
@@ -58,6 +58,8 @@ function mockVehicleRepo(overrides: Partial<VehicleRepository> = {}): VehicleRep
     findDtcDefinitionByCode: vi.fn().mockResolvedValue(null),
     findEcuByAddress: vi.fn(),
     updateEcuDiscoveredAt: vi.fn(),
+    findEcuDefinitionByAddress: vi.fn().mockResolvedValue(null),
+    upsertEcuDefinition: vi.fn(),
     ...overrides,
   }
 }

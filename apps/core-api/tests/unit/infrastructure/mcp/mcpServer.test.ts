@@ -55,7 +55,7 @@ function mockVehicleRepo(overrides: Partial<VehicleRepository> = {}): VehicleRep
     findEcusByVehicle: vi.fn(),
     insertPidDefinition: vi.fn(),
     findPidDefinition: vi.fn(),
-    findPidsByVehicle: vi.fn().mockResolvedValue([]),
+    findPidsByManufacturerModel: vi.fn().mockResolvedValue([]),
     findPidsByMode: vi.fn().mockResolvedValue([]),
     insertPidReading: vi.fn(),
     createSession: vi.fn(),
@@ -79,10 +79,7 @@ const sampleFreezeFrame: FreezeFrame = new FreezeFrame({
 const samplePids: PidDefinition[] = [
   {
     id: 1,
-    vehicleId: 1,
-    ecuId: 1,
-    mode: '01',
-    pidCode: '0C',
+    pidCode: new PidCode('01', '0C'),
     name: 'Engine RPM',
     formula: '(A*256+B)/4',
     unit: 'rpm',
@@ -93,10 +90,7 @@ const samplePids: PidDefinition[] = [
   },
   {
     id: 2,
-    vehicleId: 1,
-    ecuId: 2,
-    mode: '22',
-    pidCode: '0300',
+    pidCode: new PidCode('22', '0300'),
     name: 'TCU Odometer',
     formula: '(A<<24|B<<16|C<<8|D)/10',
     unit: 'km',
@@ -200,24 +194,27 @@ describe('McpServer', () => {
   })
 
   describe('Cap 2 — VehicleRepository tools', () => {
-    it('get_available_pids should list all PIDs', async () => {
-      const vRepo = mockVehicleRepo({ findPidsByVehicle: vi.fn().mockResolvedValue(samplePids) })
-      const mcp = createMcpServer(mockObdRepo(), vRepo)
+    it('get_available_pids should list manufacturer/model catalog PIDs', async () => {
+      const vRepo = mockVehicleRepo({
+        findPidsByManufacturerModel: vi.fn().mockResolvedValue(samplePids),
+      })
+      const ctx = { manufacturer: 'Audi', model: 'A3' }
+      const mcp = createMcpServer(mockObdRepo(), vRepo, undefined, undefined, ctx)
 
-      const result = await mcp.callTool('get_available_pids', { vehicleId: 1 })
+      const result = await mcp.callTool('get_available_pids', {})
 
+      expect(vRepo.findPidsByManufacturerModel).toHaveBeenCalledWith('Audi', 'A3')
       expect(result.content[0].text).toContain('Engine RPM')
       expect(result.content[0].text).toContain('TCU Odometer')
     })
 
     it('get_available_pids should return Mode 01 scan + Mode 22 catalog', async () => {
       const vRepo = mockVehicleRepo({
-        findPidsByVehicle: vi.fn().mockResolvedValue([]),
         findPidsByMode: vi.fn().mockResolvedValue(sampleMode22Pids),
       })
       const mcp = createMcpServer(mockObdRepo(), vRepo)
 
-      const result = await mcp.callTool('get_available_pids', { vehicleId: 1 })
+      const result = await mcp.callTool('get_available_pids', {})
 
       expect(vRepo.findPidsByMode).toHaveBeenCalledWith('22')
       expect(result.content[0].text).toContain('01 0C')
@@ -330,7 +327,7 @@ describe('McpServer', () => {
     it('an empty result is not an error: PIDs with catalog fallback is legitimate', async () => {
       const mcp = createMcpServer(mockObdRepo(), undefined)
 
-      const result = await mcp.callTool('get_available_pids', { vehicleId: 1 })
+      const result = await mcp.callTool('get_available_pids', {})
 
       expect(result.isError).toBeFalsy()
       expect(result.content[0].text).toContain('01 0C')
@@ -360,7 +357,7 @@ describe('McpServer', () => {
         required: ['mode', 'pid'],
       })
       expect(byName.get_available_pids).toMatchObject({
-        properties: { vehicleId: { type: 'number' } },
+        properties: {},
         required: [],
       })
       expect(byName.get_freeze_frame).toMatchObject({
@@ -820,8 +817,35 @@ describe('McpServer', () => {
       expect(vRepo.findPidDefinition).toHaveBeenCalledWith('01', '0C')
       expect(vRepo.insertPidReading).toHaveBeenCalledTimes(1)
       const reading = (vRepo.insertPidReading as ReturnType<typeof vi.fn>).mock.calls[0][0]
-      expect(reading.sessionId).toBe('1')
+      expect(reading.mode).toBe('01')
+      expect(reading.pidCode).toBe('0C')
+      expect(reading.sessionId).toBe(1)
+      expect(reading.pidDefId).toBe(99)
       expect(reading.parsedValue).toBe(750)
+      expect(reading.rawHex).toBe('0BB8')
+    })
+
+    it('handleReadPid persists reading with pidDefId undefined when definition not found', async () => {
+      const repo = mockObdRepo({
+        readPid: vi.fn().mockResolvedValue(750),
+        readPidRaw: vi.fn().mockResolvedValue([0x0b, 0xb8]),
+      })
+      const vRepo = mockVehicleRepo({
+        findPidDefinition: vi.fn().mockResolvedValue(null),
+      })
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined, sessionContext)
+
+      await mcp.callTool('read_pid', { mode: '01', pid: '0C' })
+
+      // Flush fire-and-forget microtasks
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(vRepo.insertPidReading).toHaveBeenCalledTimes(1)
+      const reading = (vRepo.insertPidReading as ReturnType<typeof vi.fn>).mock.calls[0][0]
+      expect(reading.mode).toBe('01')
+      expect(reading.pidCode).toBe('0C')
+      expect(reading.sessionId).toBe(1)
+      expect(reading.pidDefId).toBeUndefined()
     })
 
     it('handleReadPid does not persist reading without sessionContext', async () => {
@@ -1137,7 +1161,7 @@ describe('McpServer', () => {
       const vRepo = mockVehicleRepo()
       const mcp = createMcpServer(mockObdRepo(), vRepo, stack)
 
-      await mcp.callTool('index_ecu', {
+      const result = await mcp.callTool('index_ecu', {
         embeddedText: 'Audi A3 transmission control module at response address 7E9',
         manufacturer: 'Audi',
         model: 'A3',
@@ -1151,7 +1175,13 @@ describe('McpServer', () => {
 
       expect(vRepo.upsertEcuDefinition).toHaveBeenCalledTimes(1)
       const definition = (vRepo.upsertEcuDefinition as ReturnType<typeof vi.fn>).mock
-        .calls[0][0] as { responseAddr: string; requestAddr: string; name: string; confidence: number; source: string }
+        .calls[0][0] as {
+        responseAddr: string
+        requestAddr: string
+        name: string
+        confidence: number
+        source: string
+      }
       expect(definition.responseAddr).toBe('7E9')
       expect(definition.requestAddr).toBe('7E1')
       expect(definition.name).toBe('Transmission Control Module')
@@ -1164,6 +1194,11 @@ describe('McpServer', () => {
       expect(indexed.manufacturer).toBe('Audi')
       expect(indexed.responseAddr).toBe('7E9')
       expect(indexed.source).toBe(KnowledgeSource.Mechanic)
+
+      // Las ECUs no admiten validacion OBD: el mensaje no debe insinuar que
+      // estan "pendientes de validar", sino reportar la fuente de la confianza.
+      expect(result.content[0].text).toContain('source mechanic')
+      expect(result.content[0].text).not.toContain('unvalidated')
     })
 
     it('7.3 index_ecu with web source gets lower confidence (0.3)', async () => {
@@ -1256,6 +1291,37 @@ describe('McpServer', () => {
 
       expect(result.content[0].text).toContain('ECU 7E9')
       expect(vRepo.findEcuDefinitionByAddress).not.toHaveBeenCalled()
+    })
+
+    it('8.3 dedupes UNKNOWN response addresses before catalog lookup', async () => {
+      const ecuA = new EcuInfo({
+        id: 0,
+        vehicleId: 0,
+        name: 'ECU 7E9',
+        requestAddr: '7E1',
+        responseAddr: '7E9',
+        type: 'UNKNOWN',
+        protocol: 'CAN_11_500',
+      })
+      const ecuB = new EcuInfo({
+        id: 0,
+        vehicleId: 0,
+        name: 'ECU 7E9',
+        requestAddr: '7E1',
+        responseAddr: '7E9',
+        type: 'UNKNOWN',
+        protocol: 'CAN_11_500',
+      })
+      const repo = mockObdRepo({ getEcuInfo: vi.fn().mockResolvedValue([ecuA, ecuB]) })
+      const vRepo = mockVehicleRepo({
+        findEcuDefinitionByAddress: vi.fn().mockResolvedValue(null),
+      })
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined, ecuCatalogCtx)
+
+      await mcp.callTool('get_ecu_info', {})
+
+      expect(vRepo.findEcuDefinitionByAddress).toHaveBeenCalledTimes(1)
+      expect(vRepo.findEcuDefinitionByAddress).toHaveBeenCalledWith('Audi', 'A3', '7E9')
     })
   })
 })

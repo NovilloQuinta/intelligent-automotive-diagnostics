@@ -41,4 +41,13 @@ describe('EcuDefinition', () => {
     expect(() => buildEcuDefinition({ confidence: 1.5 })).toThrow(EcuDefinitionError)
     expect(() => buildEcuDefinition({ confidence: -0.1 })).toThrow(EcuDefinitionError)
   })
+
+  it('should accept web and mechanic as source', () => {
+    expect(buildEcuDefinition({ source: 'web' }).source).toBe('web')
+    expect(buildEcuDefinition({ source: 'mechanic' }).source).toBe('mechanic')
+  })
+
+  it('should throw EcuDefinitionError when source is not web or mechanic', () => {
+    expect(() => buildEcuDefinition({ source: 'seed' })).toThrow(EcuDefinitionError)
+  })
 })

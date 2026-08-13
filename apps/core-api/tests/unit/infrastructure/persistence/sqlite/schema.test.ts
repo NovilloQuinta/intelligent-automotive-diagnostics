@@ -86,14 +86,8 @@ describe('schema.ecuDefinitions', () => {
 
   it('has a unique constraint on (manufacturer, model, response_addr)', () => {
     const cfg = getTableConfig(schema.ecuDefinitions)
-    const unq = cfg.uniqueConstraints.find(
-      (u) => u.name === 'ecu_manufacturer_model_response_addr',
-    )
+    const unq = cfg.uniqueConstraints.find((u) => u.name === 'ecu_manufacturer_model_response_addr')
     expect(unq).toBeDefined()
-    expect(unq!.columns.map((c) => c.name)).toEqual([
-      'manufacturer',
-      'model',
-      'response_addr',
-    ])
+    expect(unq!.columns.map((c) => c.name)).toEqual(['manufacturer', 'model', 'response_addr'])
   })
 })

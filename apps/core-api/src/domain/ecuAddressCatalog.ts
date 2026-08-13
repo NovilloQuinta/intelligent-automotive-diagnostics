@@ -1,6 +1,12 @@
+/** Tipo de la ECU estandarizada ISO 15765-4 (`7E0`/`7E8` = Engine Control Module). */
+export const ECU_TYPE_ECM = 'ECM' as const
+
+/** Tipo reservado para direcciones CAN fisicas no estandarizadas por ISO 15765-4. */
+export const ECU_TYPE_UNKNOWN = 'UNKNOWN' as const
+
 /** Resultado de resolver una direccion CAN de respuesta a su tipo/nombre/direccion de peticion. */
 export interface EcuAddressResolution {
-  readonly type: 'ECM' | 'UNKNOWN'
+  readonly type: typeof ECU_TYPE_ECM | typeof ECU_TYPE_UNKNOWN
   readonly name: string
   readonly requestAddr: string
 }
@@ -31,7 +37,7 @@ const CAN_ADDRESS_REGEX = /^[0-9A-Fa-f]{3}$/
  * (`response - 8`). Nunca se inventa un nombre ni un tipo.
  */
 const STANDARD_ECU_ADDRESSES: Readonly<Record<string, EcuAddressResolution>> = {
-  '7E8': { type: 'ECM', name: 'Engine Control Module', requestAddr: '7E0' },
+  '7E8': { type: ECU_TYPE_ECM, name: 'Engine Control Module', requestAddr: '7E0' },
 }
 
 /** Deriva la direccion de peticion ISO 15765-4 (`request = response - 8`). */
@@ -59,7 +65,7 @@ export function resolveEcuAddress(responseAddr: string): EcuAddressResolution {
   const standard = STANDARD_ECU_ADDRESSES[normalized]
   if (standard) return standard
   return {
-    type: 'UNKNOWN',
+    type: ECU_TYPE_UNKNOWN,
     name: `ECU ${normalized}`,
     requestAddr: deriveRequestAddress(normalized),
   }

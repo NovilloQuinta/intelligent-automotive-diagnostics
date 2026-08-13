@@ -231,10 +231,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
     return toPidDefinition(rows[0])
   }
 
-  async findPidsByManufacturerModel(
-    manufacturer: string,
-    model: string,
-  ): Promise<PidDefinition[]> {
+  async findPidsByManufacturerModel(manufacturer: string, model: string): Promise<PidDefinition[]> {
     const scopeManufacturer = manufacturer ?? ''
     const scopeModel = model ?? ''
 
@@ -519,9 +516,7 @@ export class SqliteVehicleRepository implements VehicleRepository {
     return toEcuDefinition(rows[0])
   }
 
-  async upsertEcuDefinition(
-    def: Omit<EcuDefinition, 'id' | 'createdAt'>,
-  ): Promise<EcuDefinition> {
+  async upsertEcuDefinition(def: Omit<EcuDefinition, 'id' | 'createdAt'>): Promise<EcuDefinition> {
     const definition = new EcuDefinition({ id: 0, ...def })
     const existing = await this.findEcuDefinitionByAddress(
       definition.manufacturer,

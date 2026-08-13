@@ -11,8 +11,6 @@ import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 const DDL = `
   CREATE TABLE IF NOT EXISTS pid_definitions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    vehicle_id INTEGER,
-    ecu_id INTEGER,
     mode TEXT NOT NULL,
     pid_code TEXT NOT NULL,
     name TEXT NOT NULL,
@@ -25,6 +23,7 @@ const DDL = `
     max_value REAL,
     manufacturer TEXT,
     model TEXT,
+    system TEXT,
     confidence REAL NOT NULL DEFAULT 1.0,
     source TEXT NOT NULL DEFAULT 'manual',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -135,5 +134,27 @@ describe('seedManufacturerCatalog', () => {
     expect(byPid.get('1132')!.maxValue).toBe(655.35)
     expect(byPid.get('1410')!.maxValue).toBe(655.35)
     expect(byPid.get('1462')!.maxValue).toBe(655.35)
+  })
+
+  it('labels each seeded Mode 22 PID with its system', async () => {
+    await seedManufacturerCatalog(repo, logger)
+
+    const mode22 = await repo.findPidsByMode('22')
+    const byPid = new Map(mode22.map((p) => [p.pidCode.pid, p]))
+
+    expect(byPid.get('0300')!.system).toBe('Transmission') // TCU Odometer
+    expect(byPid.get('0400')!.system).toBe('Engine') // ECM Odometer
+    expect(byPid.get('7A76')!.system).toBe('Battery') // Hybrid Battery SoC
+    expect(byPid.get('1410')!.system).toBe('Exhaust') // DPF Soot Mass
+    expect(byPid.get('1035')!.system).toBe('Emissions') // EGR Duty Cycle
+    expect(byPid.get('F40D')!.system).toBe('Vehicle') // Vehicle Speed
+  })
+
+  it('assigns a system label to every seeded Mode 22 PID', async () => {
+    await seedManufacturerCatalog(repo, logger)
+
+    const mode22 = await repo.findPidsByMode('22')
+    const labeled = mode22.filter((p) => p.system !== undefined && p.system !== '')
+    expect(labeled).toHaveLength(20)
   })
 })

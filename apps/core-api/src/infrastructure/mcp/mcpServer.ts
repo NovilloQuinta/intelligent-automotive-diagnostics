@@ -17,6 +17,7 @@ import { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import { PidReading } from '@/domain/entities/pidReading.js'
 import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { EcuDefinition } from '@/domain/entities/ecuDefinition.js'
+import { ECU_TYPE_UNKNOWN } from '@/domain/ecuAddressCatalog.js'
 import { resolveEcuDefinitions } from '@/application/ecu-catalog/resolveEcuDefinitions.js'
 import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
 import { initialConfidenceFor } from '@/application/knowledge/confidenceScale.js'
@@ -201,6 +202,8 @@ interface PidPersistenceContext {
  * se persiste con `rawHex = '00'` (fallback: "sin datos crudos disponibles").
  */
 function persistPidReading(ctx: PidPersistenceContext): void {
+  const sessionId = ctx.sessionContext.sessionId
+  if (sessionId === undefined) return
   void ctx.vehicleRepo
     .findPidDefinition(ctx.modeStr, ctx.pidStr)
     .then(async (definition) => {
@@ -217,7 +220,9 @@ function persistPidReading(ctx: PidPersistenceContext): void {
         new PidReading({
           id: 0,
           pidDefId,
-          sessionId: String(ctx.sessionContext.sessionId),
+          mode: ctx.modeStr,
+          pidCode: ctx.pidStr,
+          sessionId,
           rawHex,
           parsedValue: ctx.value,
         }),
@@ -420,9 +425,9 @@ async function loadEcuDefinitionLookup(
   model: string,
   ecus: readonly EcuInfo[],
 ): Promise<(responseAddr: string) => EcuDefinition | undefined> {
-  const unknownAddresses = ecus
-    .filter((ecu) => ecu.type === 'UNKNOWN')
-    .map((ecu) => ecu.responseAddr)
+  const unknownAddresses = [
+    ...new Set(ecus.filter((ecu) => ecu.type === ECU_TYPE_UNKNOWN).map((ecu) => ecu.responseAddr)),
+  ]
 
   const definitions = await Promise.all(
     unknownAddresses.map((address) =>
@@ -438,43 +443,56 @@ async function loadEcuDefinitionLookup(
   return (responseAddr) => byAddress.get(responseAddr)
 }
 
+function formatPidLine(p: PidDefinition): string {
+  return `${p.pidCode.mode} ${p.pidCode.pid}: ${p.name} (${p.formula.toString()}) [${p.unit ?? ''}]`
+}
+
+/** Escanea los PIDs Mode 01 soportados (J1979 PID 00) y los formatea como lineas. */
+async function scanSupportedPidLines(repo: ObdRepository): Promise<string[]> {
+  try {
+    const supported = await repo.getSupportedPids()
+    return supported.map((p) => `${p} (Mode 01)`)
+  } catch {
+    // Escaneo fallido (ej. coche no conectado) — continuamos con la BD
+    return []
+  }
+}
+
+/** Formatea los PIDs del fabricante/modelo de la sesion (vacio si no hay sesion o falta el scope). */
+async function scopedPidLines(
+  vehicleRepo: VehicleRepository,
+  sessionContext: SessionContext | undefined,
+): Promise<string[]> {
+  if (sessionContext === undefined) return []
+  if (!sessionContext.manufacturer || !sessionContext.model) return []
+  return (
+    await vehicleRepo.findPidsByManufacturerModel(sessionContext.manufacturer, sessionContext.model)
+  ).map(formatPidLine)
+}
+
+/** Formatea los PIDs del catalogo desde BD: Mode 22 global + fabricante/modelo de la sesion. */
+async function catalogPidLines(
+  vehicleRepo: VehicleRepository | undefined,
+  sessionContext: SessionContext | undefined,
+): Promise<string[]> {
+  if (!vehicleRepo) return []
+
+  const lines = (await vehicleRepo.findPidsByMode('22')).map(formatPidLine)
+  lines.push(...(await scopedPidLines(vehicleRepo, sessionContext)))
+
+  return lines
+}
+
 function handleGetAvailablePids(
   repo: ObdRepository,
   vehicleRepo: VehicleRepository | undefined,
+  sessionContext?: SessionContext,
 ): ToolHandler {
-  return async ({ vehicleId }) => {
-    const lines: string[] = []
-
-    // 1. Escanear el vehículo real: Mode 01 PIDs soportados (J1979 PID 00)
-    try {
-      const supported = await repo.getSupportedPids()
-      if (supported.length > 0) {
-        lines.push(...supported.map((p) => `${p} (Mode 01)`))
-      }
-    } catch {
-      // Escaneo fallido (ej. coche no conectado) — continuamos con la BD
-    }
-
-    // 2. Mostrar PIDs Mode 22 conocidos del catálogo (propietarios, desde BD)
-    if (vehicleRepo) {
-      const mode22Pids = await vehicleRepo.findPidsByMode('22')
-      for (const p of mode22Pids) {
-        lines.push(
-          `${p.pidCode.mode} ${p.pidCode.pid}: ${p.name} (${p.formula.toString()}) [${p.unit ?? ''}]`,
-        )
-      }
-    }
-
-    // 3. Consultar BD: PIDs almacenados por vehículo
-    if (vehicleRepo && vehicleId != null) {
-      const stored = await vehicleRepo.findPidsByVehicle(vehicleId as number)
-      for (const p of stored) {
-        lines.push(
-          `${p.pidCode.mode} ${p.pidCode.pid}: ${p.name} (${p.formula.toString()}) [${p.unit ?? ''}]`,
-        )
-      }
-    }
-
+  return async () => {
+    const lines = [
+      ...(await scanSupportedPidLines(repo)),
+      ...(await catalogPidLines(vehicleRepo, sessionContext)),
+    ]
     if (lines.length === 0) return text('No PIDs discovered. Try read_pid with specific mode/pid.')
     return text(lines.join('\n'))
   }
@@ -515,8 +533,8 @@ function registerDiagnosticTools(
   register(
     'get_available_pids',
     'List PIDs supported by the connected vehicle. Scans Mode 01 via PID 00 bitmask and reads stored Mode 22 PIDs from catalog.',
-    { vehicleId: z.number().optional() },
-    withErrorHandling(handleGetAvailablePids(repo, vehicleRepo)),
+    {},
+    withErrorHandling(handleGetAvailablePids(repo, vehicleRepo, sessionContext)),
   )
   register(
     'get_ecu_info',
@@ -754,7 +772,7 @@ function handleIndexEcu(
       stack.ecusIndex.index(entry),
     ])
 
-    return text(formatIndexedMessage('ECU', entry, false))
+    return text(`Indexed ECU ${entry.id} (confidence ${entry.confidence}, source ${source})`)
   }
 }
 

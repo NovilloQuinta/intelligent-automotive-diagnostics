@@ -1,5 +1,6 @@
 import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { EcuDefinition } from '@/domain/entities/ecuDefinition.js'
+import { ECU_TYPE_UNKNOWN } from '@/domain/ecuAddressCatalog.js'
 
 /** Confianza mínima para resolver una ECU `UNKNOWN` a su nombre/tipo reales (ADR-007, opción B). */
 export const RESOLVE_CONFIDENCE_THRESHOLD = 0.7
@@ -25,7 +26,7 @@ export function resolveEcuDefinitions(
   lookup: EcuDefinitionLookup,
 ): EcuInfo[] {
   return ecus.map((ecu) => {
-    if (ecu.type !== 'UNKNOWN') return ecu
+    if (ecu.type !== ECU_TYPE_UNKNOWN) return ecu
     const definition = lookup(ecu.responseAddr)
     if (!definition || definition.confidence < RESOLVE_CONFIDENCE_THRESHOLD) return ecu
     return new EcuInfo({

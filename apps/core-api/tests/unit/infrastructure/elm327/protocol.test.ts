@@ -241,8 +241,7 @@ describe('protocol', () => {
     })
 
     it('should accept the ISO 15765-4 response range 7E8-7EF', () => {
-      const raw =
-        '7E8 06 41 00 BE 3F A8 13\r7E9 06 41 00 80 00 00 00\r7EF 06 41 00 00 00 00 00\r>'
+      const raw = '7E8 06 41 00 BE 3F A8 13\r7E9 06 41 00 80 00 00 00\r7EF 06 41 00 00 00 00 00\r>'
       expect(parseCanHeaders(raw)).toEqual(['7E8', '7E9', '7EF'])
     })
 
