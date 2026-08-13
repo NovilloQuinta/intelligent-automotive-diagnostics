@@ -22,6 +22,35 @@ docker compose down elm327
 
 El emulador escucha en `localhost:35000`.
 
+### Sin Docker (entornos sin daemon)
+
+`ELM327-emulator` es un paquete pip: el contenedor solo lo envuelve. En un
+entorno sin daemon de Docker (CI, contenedores remotos) se puede levantar
+directamente, que es como se valido el stack completo el 13/08:
+
+```bash
+python3 -m venv /tmp/elmvenv
+/tmp/elmvenv/bin/pip install --upgrade pip "setuptools<67" wheel
+/tmp/elmvenv/bin/pip install --no-build-isolation ELM327-emulator
+
+# Un proceso por escenario. `tail -f /dev/null` mantiene stdin abierto:
+# sin el, el emulador termina al arrancar (misma razon que el CMD del Dockerfile).
+cd docker/elm327
+tail -f /dev/null | /tmp/elmvenv/bin/python run_audi.py      # :35000
+tail -f /dev/null | /tmp/elmvenv/bin/python run_kawasaki.py  # :35001
+tail -f /dev/null | /tmp/elmvenv/bin/python run_toyota.py    # :35002
+```
+
+Los defaults de `.env.example` ya apuntan a `localhost:35000-35002`, asi que
+`OBD_MODE=docker` funciona sin cambios.
+
+**Acepta una sola conexion TCP a la vez.** Si el backend esta levantado, otra
+sonda contra el mismo puerto se queda colgada — no es un fallo del emulador.
+
+**Requisito no obvio**: `apps/core-api/data/` debe existir o el backend aborta
+al arrancar (`Cannot open database because the directory does not exist`). El
+directorio esta gitignored, asi que en un clon limpio hay que crearlo.
+
 ## Probar conexión
 
 ### PowerShell (rápido)
@@ -151,6 +180,32 @@ ELM327_PORT=35000       # Puerto TCP
 ```
 
 Definidas en `.env` (raíz del proyecto).
+
+## Limitacion: no implementa functional addressing (7DF)
+
+**El descubrimiento de ECUs no se puede probar contra el emulador.** Verificado
+el 13/08: `GET /api/ecu-info` devuelve `{"ecus":[]}` y la pantalla de topologia
+sale vacia, mientras `live-data` y `vehicle-info` (que exige ISO-TP multi-frame)
+funcionan perfectamente contra el mismo emulador.
+
+No es un bug de la app. El escenario `audi_a3_tdi.py` no tiene **ninguna**
+entrada con `7DF` ni con `09 0A`, asi que `discoverEcus` hace lo documentado:
+broadcast → nada, fallback Mode 09 → nada, devuelve `[]`. Ademas el escenario
+define una sola ECU (`ECU_R_ADDR_E`).
+
+**Por que no basta con anadir una entrada de broadcast**: `elm.py` NUNCA lee el
+campo `Header` de las entradas de `ObdMessage` — no hay una sola referencia en
+el codigo del emulador. Dos entradas con el mismo `Request` (`^0100`) no se
+pueden diferenciar por header: la nueva acaba respondiendo tambien a las
+lecturas dirigidas y las rompe (probado y revertido).
+
+**Camino viable** (sin hacer): el emulador si trackea el header actual en
+`self.counters['cmd_header']`, y el campo `Response` admite invocables (ver el
+patron `ResponseHeader`). Una respuesta que ramifique segun el header podria
+emitir las tres tramas solo cuando la peticion viene por 7DF.
+
+**Consecuencia practica**: topologia y descubrimiento de ECUs solo se pueden
+demostrar con un vehiculo real, que si responde a functional addressing.
 
 ## Troubleshooting
 

@@ -90,6 +90,29 @@ reformateo. Hacerlo en un commit aislado y solo de formato.
 
 En `core-api` no pasa: alli lint y format ya cubren `src/` y `tests/`.
 
+## Cabo suelto: `live-data` devolvio null en pruebas locales (13/08)
+
+Levantando el stack contra el emulador (ver `docs/infrastructure/elm327-emulator.md`),
+la primera ejecucion dio valores reales (RPM 770, coolant 90, VIN leido). Tras
+reiniciar emulador y backend varias veces, `GET /api/live-data` empezo a devolver
+`null` en los cuatro campos de forma **consistente**, incluso con emulador recien
+arrancado y BD limpia.
+
+**No se identifico la causa.** Descartado: no eran PIDs auto-registrados (0 con
+`source='auto'` en BD) ni un cambio en el escenario (revertido y verificado).
+Sospecha sin confirmar: estado de la conexion TCP del emulador tras un scan de
+ECUs que deja `AT H1`/`AT SH 7DF` puestos, aunque `discoverEcus` restaura en
+`finally`.
+
+Merece un vistazo si aparecen lecturas intermitentes con el coche real. No afecta
+al repo: fue un entorno de pruebas local, y ninguna suite lo reproduce.
+
+## Arranque en clon limpio: `apps/core-api/data/` no existe
+
+El backend aborta con `Cannot open database because the directory does not exist`.
+El directorio esta gitignored y nadie lo crea. Candidatos: crearlo en `predev`, o
+que `getDb` haga `mkdir -p` del directorio de `DB_PATH`.
+
 ## Vectorial
 
 Migrar a schema con columna JSON metadata para evitar migraciones futuras.

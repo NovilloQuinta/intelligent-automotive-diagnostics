@@ -37,6 +37,10 @@ pnpm-debug.log*
 # Temp
 .tmp/
 
+# Python (el emulador ELM327 compila los escenarios al arrancar)
+__pycache__/
+*.pyc
+
 # SQLite
 data/
 *.db
