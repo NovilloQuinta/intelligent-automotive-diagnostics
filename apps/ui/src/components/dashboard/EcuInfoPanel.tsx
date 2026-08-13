@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/table'
 import type { EcuInfo } from './types'
 import { PanelState } from './PanelState'
+import { ECU_PANEL_MESSAGES } from './ecuMessages'
 
 type Props = {
   ecus: EcuInfo[]
@@ -69,13 +70,13 @@ export function EcuInfoPanel({ ecus, loading, error, selectedId }: Props) {
         <span className="mono text-[10px] text-muted-foreground">{selectedId ?? '—'}</span>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
-        {!selectedId && (
-          <PanelState state="empty" message="Selecciona un vehículo para ver sus ECUs" />
+        {!selectedId && <PanelState state="empty" message={ECU_PANEL_MESSAGES.noVehicle} />}
+        {selectedId && loading && (
+          <PanelState state="loading" message={ECU_PANEL_MESSAGES.loading} />
         )}
-        {selectedId && loading && <PanelState state="loading" message="Cargando ECUs…" />}
         {selectedId && !loading && error && <PanelState state="error" message={error} />}
         {selectedId && !loading && !error && ecus.length === 0 && (
-          <PanelState state="empty" message="Sin ECUs descubiertas" />
+          <PanelState state="empty" message={ECU_PANEL_MESSAGES.noEcus} />
         )}
         {selectedId && !loading && !error && ecus.length > 0 && <EcuTable ecus={ecus} />}
       </div>

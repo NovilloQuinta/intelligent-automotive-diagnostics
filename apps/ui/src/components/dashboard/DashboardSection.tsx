@@ -3,6 +3,7 @@ import { PidsTable } from './PidsTable'
 import { DtcPanel } from './DtcPanel'
 import { FreezeFramePanel } from './FreezeFramePanel'
 import { EcuInfoPanel } from './EcuInfoPanel'
+import { TopologyMapPanel } from './TopologyMapPanel'
 import { DiagnosisChat } from './DiagnosisChat'
 import { SessionReportPanel } from './SessionReportPanel'
 import { VehicleStatusPanel } from './VehicleStatusPanel'
@@ -150,6 +151,15 @@ export function DashboardSection({
           loading={ecusLoading}
           error={ecusError}
           selectedId={selectedId!}
+        />
+      )
+    case 'topology':
+      return (
+        <TopologyMapPanel
+          ecus={ecus ?? []}
+          loading={ecusLoading}
+          error={ecusError}
+          selectedId={selectedId}
         />
       )
     case 'diagnosis':

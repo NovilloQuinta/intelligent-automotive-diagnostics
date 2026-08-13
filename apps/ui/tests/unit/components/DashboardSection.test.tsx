@@ -98,3 +98,44 @@ describe("DashboardSection — diagnosis", () => {
     ).toBeDefined();
   });
 });
+
+describe("DashboardSection — topology", () => {
+  const ECUS = [
+    {
+      id: 1,
+      vehicleId: 1,
+      name: "Motor",
+      requestAddr: "7E0",
+      responseAddr: "7E8",
+      type: "ECM",
+      protocol: "ISO 15765-4 CAN",
+    },
+  ];
+
+  it("renders the topology map with the ECUs already held in `ecu`", () => {
+    render(
+      <DashboardSection
+        {...baseProps({
+          activeSection: "topology" as SidebarSection,
+          ecu: { ecus: ECUS, loading: false, error: null },
+        })}
+      />,
+    );
+
+    expect(screen.getByText("Topología del Bus")).toBeDefined();
+    expect(screen.getByRole("button", { name: /motor/i })).toBeDefined();
+  });
+
+  it("propagates the ECU loading state to the topology panel", () => {
+    render(
+      <DashboardSection
+        {...baseProps({
+          activeSection: "topology" as SidebarSection,
+          ecu: { ecus: null, loading: true, error: null },
+        })}
+      />,
+    );
+
+    expect(screen.getByText(/cargando ecus/i)).toBeDefined();
+  });
+});

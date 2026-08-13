@@ -123,4 +123,18 @@ describe("Sidebar", () => {
     expect(screen.getAllByTitle("Diagnóstico")).toHaveLength(1);
     expect(screen.queryByTitle("Chat IA")).toBeNull();
   });
+  it("should expose a Topología section", () => {
+    render(<Sidebar active="vehicle" onChange={vi.fn()} />);
+
+    expect(screen.getByTitle("Topología")).toBeDefined();
+  });
+
+  it("should call onChange with 'topology' when the Topología item is clicked", () => {
+    const onChange = vi.fn();
+    render(<Sidebar active="vehicle" onChange={onChange} />);
+
+    screen.getByTitle("Topología").click();
+
+    expect(onChange).toHaveBeenCalledWith("topology");
+  });
 });

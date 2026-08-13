@@ -1,7 +1,16 @@
-import { Car, Activity, AlertTriangle, Snowflake, Cpu, Stethoscope, FileText } from 'lucide-react'
+import {
+  Car,
+  Activity,
+  AlertTriangle,
+  Snowflake,
+  Cpu,
+  Network,
+  Stethoscope,
+  FileText,
+} from 'lucide-react'
 
 export type SidebarSection =
-  'vehicle' | 'live-data' | 'dtc' | 'freeze-frame' | 'ecu' | 'diagnosis' | 'report'
+  'vehicle' | 'live-data' | 'dtc' | 'freeze-frame' | 'ecu' | 'topology' | 'diagnosis' | 'report'
 
 interface SidebarItem {
   readonly id: SidebarSection
@@ -15,6 +24,7 @@ const SECTIONS: SidebarItem[] = [
   { id: 'dtc', label: 'Códigos DTC', icon: AlertTriangle },
   { id: 'freeze-frame', label: 'Freeze Frame', icon: Snowflake },
   { id: 'ecu', label: 'Unidades Control', icon: Cpu },
+  { id: 'topology', label: 'Topología', icon: Network },
   { id: 'diagnosis', label: 'Diagnóstico', icon: Stethoscope },
   { id: 'report', label: 'Informe', icon: FileText },
 ]
