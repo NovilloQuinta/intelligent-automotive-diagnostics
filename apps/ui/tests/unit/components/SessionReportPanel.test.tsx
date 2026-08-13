@@ -21,6 +21,14 @@ vi.mock("../../../src/components/dashboard/useSessionReport", () => ({
   useSessionReport: mockUseSessionReport,
 }));
 
+const { mockUseAvailablePids } = vi.hoisted(() => ({
+  mockUseAvailablePids: vi.fn(),
+}));
+
+vi.mock("../../../src/components/dashboard/useAvailablePids", () => ({
+  useAvailablePids: mockUseAvailablePids,
+}));
+
 // ---------------------------------------------------------------------------
 // Sample data
 // ---------------------------------------------------------------------------
@@ -133,6 +141,7 @@ describe("SessionReportPanel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseSessionReport.mockReturnValue(defaultState);
+    mockUseAvailablePids.mockReturnValue([]);
   });
 
   // ------------------------------------------------------------------
@@ -383,6 +392,36 @@ describe("SessionReportPanel", () => {
 
     expect(screen.getByText("Freeze Frame")).toBeDefined();
     expect(screen.getByText("P0301")).toBeDefined();
+  });
+
+  // ------------------------------------------------------------------
+  // 10b. Freeze frame renders name + unit when the PID catalog is available
+  // ------------------------------------------------------------------
+
+  it("should render freeze frame PIDs by name + unit when the catalog is available", () => {
+    mockUseSessionReport.mockReturnValue(
+      setState({
+        freezeFrame: sampleFreezeFrame,
+        freezeFrameLoading: false,
+      }),
+    );
+    mockUseAvailablePids.mockReturnValue([
+      { code: "01 0C", name: "Engine RPM", unit: "rpm" },
+      { code: "01 05", name: "Coolant Temperature", unit: "°C" },
+    ]);
+
+    render(
+      <SessionReportPanel
+        scenarioId="audi-a3-idle"
+        vehicleInfo={sampleVehicleInfo}
+      />,
+    );
+
+    expect(screen.getByText("Engine RPM")).toBeDefined();
+    expect(screen.getByText("850 rpm")).toBeDefined();
+    expect(screen.getByText("Coolant Temperature")).toBeDefined();
+    expect(screen.getByText("90 °C")).toBeDefined();
+    expect(screen.queryByText("0C")).toBeNull();
   });
 
   // ------------------------------------------------------------------

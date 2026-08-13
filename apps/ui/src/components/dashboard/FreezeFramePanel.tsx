@@ -8,6 +8,8 @@ import {
   TableCell,
 } from '@/components/ui/table'
 import { useFreezeFrame } from './useFreezeFrame'
+import { useAvailablePids } from './useAvailablePids'
+import { buildPidLabelMap, type PidLabel } from './pidCatalog'
 import { PanelState } from './PanelState'
 
 type Props = {
@@ -16,7 +18,16 @@ type Props = {
   dtc: string | null
 }
 
-export function FrameTable({ pidValues }: { pidValues: Record<string, number> }) {
+const EMPTY_PID_LABELS: ReadonlyMap<string, PidLabel> = new Map()
+
+export function FrameTable({
+  pidValues,
+  pidInfo = EMPTY_PID_LABELS,
+}: {
+  pidValues: Record<string, number>
+  /** Mapa short-PID → {name, unit}. Sin él se degrada a hex crudo + valor. */
+  pidInfo?: ReadonlyMap<string, PidLabel>
+}) {
   return (
     <Table>
       <TableHeader>
@@ -30,16 +41,23 @@ export function FrameTable({ pidValues }: { pidValues: Record<string, number> })
         </TableRow>
       </TableHeader>
       <TableBody>
-        {Object.entries(pidValues).map(([pid, value], i) => (
-          <TableRow
-            key={pid}
-            className="fade-up border-white/5 hover:bg-white/[0.02]"
-            style={{ animationDelay: `${i * 60}ms` }}
-          >
-            <TableCell className="mono text-xs font-bold text-foreground/90">{pid}</TableCell>
-            <TableCell className="mono text-right text-sm text-foreground/90">{value}</TableCell>
-          </TableRow>
-        ))}
+        {Object.entries(pidValues).map(([pid, value], i) => {
+          const info = pidInfo.get(pid)
+          return (
+            <TableRow
+              key={pid}
+              className="fade-up border-white/5 hover:bg-white/[0.02]"
+              style={{ animationDelay: `${i * 60}ms` }}
+            >
+              <TableCell className="mono text-xs font-bold text-foreground/90">
+                {info?.name ?? pid}
+              </TableCell>
+              <TableCell className="mono text-right text-sm text-foreground/90">
+                {info ? (info.unit ? `${value} ${info.unit}` : `${value}`) : `${value}`}
+              </TableCell>
+            </TableRow>
+          )
+        })}
       </TableBody>
     </Table>
   )
@@ -48,6 +66,8 @@ export function FrameTable({ pidValues }: { pidValues: Record<string, number> })
 /** Panel showing the OBD-II freeze frame snapshot for the selected DTC. */
 export function FreezeFramePanel({ scenarioId, dtc }: Props) {
   const { loading, frame, error } = useFreezeFrame(scenarioId, dtc)
+  const availablePids = useAvailablePids()
+  const pidInfo = buildPidLabelMap(availablePids)
 
   return (
     <div className="panel flex min-h-0 flex-col p-4">
@@ -67,7 +87,9 @@ export function FreezeFramePanel({ scenarioId, dtc }: Props) {
         {dtc && !loading && !error && !frame && (
           <PanelState state="empty" message="Sin freeze frame para este código" />
         )}
-        {dtc && !loading && !error && frame && <FrameTable pidValues={frame.pidValues} />}
+        {dtc && !loading && !error && frame && (
+          <FrameTable pidValues={frame.pidValues} pidInfo={pidInfo} />
+        )}
       </div>
     </div>
   )

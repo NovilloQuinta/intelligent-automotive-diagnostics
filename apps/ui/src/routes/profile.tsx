@@ -15,6 +15,8 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { User } from 'lucide-react'
 import { PASSWORD_REGEX, PasswordStrengthIndicator } from '@/components/auth/PasswordStrength'
+import { Header } from '@/components/layout/Header'
+import { FooterSection } from '@/components/landing/FooterSection'
 
 // ---------------------------------------------------------------------------
 // Zod schemas
@@ -89,32 +91,36 @@ function ProfileContent({
   onLogout: () => Promise<void>
 }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0d1117] px-4 py-10">
-      <Card className="w-full max-w-lg border-white/10 bg-[#161b22]">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <User className="h-6 w-6 text-primary" />
-          </div>
-          <CardTitle className="text-xl">Mi perfil</CardTitle>
-          <CardDescription>{user.email}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="data">
-            <TabsList className="mb-6 grid w-full grid-cols-2">
-              <TabsTrigger value="data">Datos</TabsTrigger>
-              <TabsTrigger value="password">Contraseña</TabsTrigger>
-            </TabsList>
+    <div className="flex min-h-screen flex-col bg-[#0d1117]">
+      <Header showAuthActions={false} />
+      <div className="flex flex-1 items-center justify-center px-4 py-10">
+        <Card className="w-full max-w-lg border-white/10 bg-[#161b22]">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <User className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="text-xl">Mi perfil</CardTitle>
+            <CardDescription>{user.email}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="data">
+              <TabsList className="mb-6 grid w-full grid-cols-2">
+                <TabsTrigger value="data">Datos</TabsTrigger>
+                <TabsTrigger value="password">Contraseña</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="data">
-              <ProfileDataForm user={user} onRefreshUser={onRefreshUser} />
-            </TabsContent>
+              <TabsContent value="data">
+                <ProfileDataForm user={user} onRefreshUser={onRefreshUser} />
+              </TabsContent>
 
-            <TabsContent value="password">
-              <ChangePasswordForm onLogout={onLogout} />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+              <TabsContent value="password">
+                <ChangePasswordForm onLogout={onLogout} />
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
+      <FooterSection />
     </div>
   )
 }

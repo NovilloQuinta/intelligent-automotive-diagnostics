@@ -1,6 +1,6 @@
 import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import type { PidObservation } from '@/lib/api'
-import type { DiagnosisResponse, PidReading } from './types'
+import type { AvailablePid, DiagnosisResponse, PidReading } from './types'
 import { COLORS, GAUGE } from './types'
 
 export type PidStatus = 'ok' | 'review'
@@ -63,6 +63,26 @@ export function isMode01PidCode(code: string): boolean {
 /** Extracts the short PID code from a full `"01 0C"` code (drops the mode prefix). */
 export function shortPidCode(code: string): string {
   return code.split(' ')[1] ?? code
+}
+
+/** Nombre + unidad de un PID Mode 01, para render legible (no hex). */
+export type PidLabel = {
+  name: string
+  unit: string
+}
+
+/**
+ * Construye un mapa short-PID → `{ name, unit }` a partir del catálogo Mode 01
+ * (`GET /api/available-pids`, códigos `"01 XX"`). Las claves de lectura (freeze
+ * frame, telemetría) son cortas (`"0C"`), así que se normalizan con
+ * {@link shortPidCode}. Los PIDs ausentes del catálogo quedan sin entrada.
+ */
+export function buildPidLabelMap(availablePids: readonly AvailablePid[]): Map<string, PidLabel> {
+  const map = new Map<string, PidLabel>()
+  for (const pid of availablePids) {
+    map.set(shortPidCode(pid.code), { name: pid.name, unit: pid.unit })
+  }
+  return map
 }
 
 export type PidStatusMeta = {
