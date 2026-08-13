@@ -312,6 +312,7 @@ function handleGetAvailablePids(
 }
 
 /** Registra las tools de diagnostico OBD-II sobre el repositorio inyectado. */
+// eslint-disable-next-line max-lines-per-function -- lista declarativa de registro (complejidad 1)
 export function registerDiagnosticTools(
   register: ToolRegistrar,
   repo: ObdRepository,

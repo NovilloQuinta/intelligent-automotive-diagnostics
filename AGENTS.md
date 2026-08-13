@@ -107,6 +107,37 @@ Invocalas por nombre con la tool `Skill`. Fuente unica en `.opencode/skills/`
 - **KISS** — La solucion mas simple posible. Sin abstracciones prematuras, sin factory de factories. Una funcion = una responsabilidad clara.
 - **Code Smell** — Funciones >40 lineas, parametros >4, anidamiento >3 niveles, comentarios explicando QUE hace el codigo, magic strings/numbers sin nombre, imports no usados.
 
+### Excepciones al limite de 40 lineas
+
+El limite lo aplica ESLint (`max-lines-per-function`, warn). Hay funciones que
+legitimamente no bajan de 40 lineas: las **declarativas**, que no son logica sino
+una lista plana de datos o de llamadas de registro (`registerDiagnosticTools`,
+`registerKnowledgeTools`). Partirlas no mejora nada — solo reparte una lista en
+dos sitios.
+
+Una funcion larga es excepcion legitima si cumple **las dos**:
+
+1. **No dispara warning de `complexity`** (limite 5). Es la senal objetiva: una
+   lista declarativa tiene complejidad 1; si ademas ramifica, es logica larga.
+2. **El cuerpo es una lista plana** de llamadas o de datos, sin ramificacion ni
+   estado intermedio.
+
+Se marca con el disable de ESLint **y su razon**, en la linea justo anterior a
+la declaracion:
+
+```ts
+// eslint-disable-next-line max-lines-per-function -- lista declarativa de registro
+export function registerDiagnosticTools(...) {
+```
+
+**El marcador NO sirve para acallar deuda.** Una funcion larga que ADEMAS dispara
+`complexity` es deuda, no excepcion: se deja avisando o se parte. Ejemplo actual:
+`createMcpServer` (46 lineas) no lleva disable a proposito — contiene el closure
+`registerTool`, que es logica.
+
+`@reviewer` y GGA leen este fichero: una funcion larga **con** disable razonado
+no se reporta; **sin** el, si.
+
 ## Scripts
 
 ```bash

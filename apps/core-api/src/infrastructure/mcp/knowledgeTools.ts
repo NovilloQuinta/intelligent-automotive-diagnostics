@@ -207,6 +207,7 @@ function handleIndexDiagnosis(stack: KnowledgeStack): ToolHandler {
  * Si el stack esta ausente esta funcion nunca se invoca — no hay codigo de guarda
  * redundante dentro de ella.
  */
+// eslint-disable-next-line max-lines-per-function -- lista declarativa de registro (complejidad 1)
 export function registerKnowledgeTools(
   register: ToolRegistrar,
   stack: KnowledgeStack,

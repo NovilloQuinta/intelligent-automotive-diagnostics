@@ -19,6 +19,20 @@ export default tseslint.config(
     },
   },
   {
+    // Limite de 40 lineas de AGENTS.md, hasta ahora solo en prosa: lo aplicaban
+    // @reviewer y GGA a ojo. Mecanizarlo da un marcador estandar para las
+    // excepciones legitimas: `eslint-disable-next-line max-lines-per-function -- razon`.
+    // Ver "Excepciones al limite de 40 lineas" en AGENTS.md para cuando vale.
+    //
+    // Solo en src/: en tests cada `describe` es una funcion, y un bloque con 20
+    // casos supera 40 lineas por definicion. Aplicarlo alli son ~145 falsos
+    // positivos que enterrarian los avisos reales de produccion.
+    files: ['src/**/*.ts'],
+    rules: {
+      'max-lines-per-function': ['warn', { max: 40, skipBlankLines: true, skipComments: true }],
+    },
+  },
+  {
     files: ['src/**/*.ts', 'tests/**/*.ts'],
   },
   {
