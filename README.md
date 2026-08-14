@@ -72,9 +72,11 @@ pnpm preview      # previsualizar build
 ## Variables de entorno (`.env`)
 
 ```env
-OBD_MODE=sync                  # sync = simulador | tcp = emulador
-ELM327_HOST=localhost
+OBD_MODE=docker                # docker = emulador | serial = ELM327 USB | tcp = ELM327 WiFi
+ELM327_HOST=localhost          # solo OBD_MODE=tcp
 ELM327_PORT=35000
+SERIAL_PORT_PATH=/dev/ttyUSB0  # solo OBD_MODE=serial — descubrelo con `pnpm obd:probe`
+SERIAL_BAUD_RATE=38400
 DB_PATH=data/diagnostics.db
 ACCESS_TOKEN_SECRET=
 REFRESH_TOKEN_SECRET=

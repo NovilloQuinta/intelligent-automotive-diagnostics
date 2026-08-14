@@ -14,6 +14,8 @@ const configSchema = z.object({
   ELM327_KAWASAKI_PORT: z.coerce.number().int().positive().default(35001),
   ELM327_TOYOTA_HOST: z.string().default('localhost'),
   ELM327_TOYOTA_PORT: z.coerce.number().int().positive().default(35002),
+  /** Traza cada intercambio con el adaptador por consola. Solo para seguimiento en vivo. */
+  OBD_TRACE: z.preprocess((v) => v === 'true' || v === true, z.boolean()).default(false),
   SERIAL_PORT_PATH: z.string().default('/dev/ttyUSB0'),
   SERIAL_BAUD_RATE: z.coerce.number().int().positive().default(38400),
   ALLOWED_ORIGINS: z.string().default('http://localhost:5173,http://localhost:4173'),

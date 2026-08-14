@@ -22,6 +22,25 @@ export class Elm327NoDataError extends Error implements CategorizedError {
   }
 }
 
+/**
+ * El adaptador responde, pero el bus del vehiculo no coopera.
+ *
+ * Se separa de {@link Elm327ParseError} porque la causa y la accion son otras:
+ * aqui no hay nada que arreglar en el parser, sino en el coche o en la conexion
+ * fisica (contacto quitado, conector flojo, bus saturado). El mensaje va
+ * redactado para que el mecanico sepa que hacer, y arrastra la respuesta cruda
+ * detras para poder depurarlo.
+ */
+export class Elm327BusError extends Error implements CategorizedError {
+  /** El bus es un tercero y el fallo suele ser transitorio: reintentable. */
+  readonly errorCategory: ErrorCategory = 'external_error'
+
+  constructor(reason: string, raw: string) {
+    super(`${reason} (respuesta del adaptador: "${raw.trim()}")`)
+    this.name = 'Elm327BusError'
+  }
+}
+
 /** Respuesta ELM327 ilegible o malformada. */
 export class Elm327ParseError extends Error implements CategorizedError {
   /** Sabemos leer el protocolo: si no parsea, el fallo es nuestro. */

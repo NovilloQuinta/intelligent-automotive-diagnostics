@@ -14,7 +14,12 @@ import { ALL_SEED_PIDS } from '../persistence/sqlite/seed-pids.js'
 import { dtcDescribe } from '@/domain/dtcCatalog.js'
 
 import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
-import { Elm327ConnectionError, Elm327NoDataError, Elm327ParseError } from './errors.js'
+import {
+  Elm327BusError,
+  Elm327ConnectionError,
+  Elm327NoDataError,
+  Elm327ParseError,
+} from './errors.js'
 import {
   formatCommand,
   parseModeResponse,
@@ -26,7 +31,7 @@ import {
 import { discoverEcus } from './ecuDiscovery.js'
 
 /** Re-export de compatibilidad — errores ELM327 desde {@link ./errors.ts}. */
-export { Elm327ConnectionError, Elm327NoDataError, Elm327ParseError }
+export { Elm327BusError, Elm327ConnectionError, Elm327NoDataError, Elm327ParseError }
 /** Re-export de compatibilidad — config TCP desde {@link ./tcpTransport.ts}. */
 export type { Elm327TcpConfig } from './tcpTransport.js'
 

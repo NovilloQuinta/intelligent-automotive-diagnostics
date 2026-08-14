@@ -3,6 +3,7 @@ import { createConnection } from 'node:net'
 import { createElm327TcpClient } from '@/infrastructure/elm327/tcpTransport.js'
 import {
   Elm327TcpRepository,
+  Elm327BusError,
   Elm327ConnectionError,
   Elm327NoDataError,
   Elm327ParseError,
@@ -514,8 +515,17 @@ describe('Elm327TcpRepository', () => {
     const repo = makeRepo()
     const promise = repo.readPid('01', '0C')
     expectSent('01 0C')
-    respond('CAN ERROR\r\r>')
+    respond('ZZ ZZ ZZ\r\r>')
     await expect(promise).rejects.toBeInstanceOf(Elm327ParseError)
+  })
+
+  it('Fallo del bus: mock responde CAN ERROR → Elm327BusError con mensaje accionable', async () => {
+    const repo = makeRepo()
+    const promise = repo.readPid('01', '0C')
+    expectSent('01 0C')
+    respond('CAN ERROR\r\r>')
+    await expect(promise).rejects.toBeInstanceOf(Elm327BusError)
+    await expect(promise).rejects.toThrow(/CAN/i)
   })
 
   it('PID no soportado: mock responde "NO DATA" → Elm327NoDataError', async () => {
@@ -648,7 +658,7 @@ describe('Elm327TcpRepository', () => {
       const repo = makeRepo()
       const promise = repo.getVehicleStatus()
       expectSent('01 01')
-      respond('CAN ERROR\r\r>')
+      respond('ZZ ZZ ZZ\r\r>')
       await expect(promise).rejects.toBeInstanceOf(Elm327ParseError)
     })
   })
