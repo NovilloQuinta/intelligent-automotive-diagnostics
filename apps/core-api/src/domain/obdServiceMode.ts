@@ -13,8 +13,18 @@
  * (Bluetooth, J2534) debe respetarla igual.
  */
 
-/** Error lanzado cuando se intenta emitir un modo OBD que no es de solo lectura. */
+/**
+ * Error lanzado cuando se intenta emitir un modo OBD que no es de solo lectura.
+ *
+ * Declara `client_error` estructuralmente, sin importar `CategorizedError`: el
+ * contrato vive en `application/shared` y el dominio no puede depender de la capa
+ * de aplicacion. La categoria importa porque es lo que le dice al LLM que la
+ * peticion era invalida y no debe reintentarla — el `server_error` por defecto
+ * le sugeriria justo lo contrario.
+ */
 export class UnsafeObdModeError extends Error {
+  readonly errorCategory = 'client_error'
+
   constructor(message: string) {
     super(message)
     this.name = 'UnsafeObdModeError'

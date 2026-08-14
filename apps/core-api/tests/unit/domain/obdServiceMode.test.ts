@@ -5,6 +5,7 @@ import {
   assertReadOnlyObdMode,
   isReadOnlyObdMode,
 } from '@/domain/obdServiceMode.js'
+import { categoryOf } from '@/application/shared/errorCategory.js'
 
 describe('obdServiceMode', () => {
   describe('isReadOnlyObdMode', () => {
@@ -55,6 +56,13 @@ describe('obdServiceMode', () => {
   describe('assertReadOnlyObdMode', () => {
     it('should not throw for a read-only mode', () => {
       expect(() => assertReadOnlyObdMode('01')).not.toThrow()
+    })
+
+    it('should categorise the rejection as a client error, not a retryable fault', () => {
+      // Sin categoria, `categoryOf` asume `server_error` y el LLM entiende
+      // "fallo propio, reintenta" — justo lo contrario de lo que debe hacer.
+      expect(() => assertReadOnlyObdMode('2F')).toThrow(UnsafeObdModeError)
+      expect(categoryOf(new UnsafeObdModeError('blocked'))).toBe('client_error')
     })
 
     it('should throw UnsafeObdModeError naming the rejected mode', () => {
