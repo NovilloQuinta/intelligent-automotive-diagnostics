@@ -12,6 +12,7 @@ import type { PidFormulaCatalog } from '@/application/ports/PidFormulaCatalog.js
 import { toFormulaEntries } from '@/application/shared/formulaEntries.js'
 import { ALL_SEED_PIDS } from '../persistence/sqlite/seed-pids.js'
 import { dtcDescribe } from '@/domain/dtcCatalog.js'
+import { assertReadOnlyObdMode, UnsafeObdModeError } from '@/domain/obdServiceMode.js'
 
 import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
 import {
@@ -43,6 +44,21 @@ const FREEZE_FRAME_PIDS = ['04', '05', '0C', '0D', '11']
 /** Modo 22 (UDS ReadDataByIdentifier): su respuesta se parsea distinto a la de los modos SAE. */
 const MODE_UDS = '22'
 
+/** Modo 04 (ClearDiagnosticInformation): unica escritura que el adaptador puede emitir. */
+const MODE_CLEAR_DTC = '04'
+
+/** Politica de seguridad del adaptador frente al vehiculo. */
+export interface Elm327RepositoryOptions {
+  /**
+   * Bloquea tambien el borrado de DTC (Mode 04), la unica escritura del adaptador.
+   *
+   * Los modos de control (`2F`, `31`, `11`...) estan siempre bloqueados, con
+   * independencia de esta opcion. Por defecto `false`, que preserva el borrado
+   * de averias desde la UI.
+   */
+  readonly readOnly?: boolean
+}
+
 /**
  * Adaptador OBD-II sobre transporte ELM327 (TCP, Serial o Bluetooth).
  *
@@ -57,10 +73,17 @@ export class Elm327TcpRepository implements ObdRepository {
   private readonly client: Elm327Transport
   private readonly pidFormulas: PidFormulaCatalog
   private readonly vehicleRepo?: VehicleRepository
+  private readonly readOnly: boolean
 
-  constructor(transport: Elm327Transport, vehicleRepo?: VehicleRepository, logger?: LoggerPort) {
+  constructor(
+    transport: Elm327Transport,
+    vehicleRepo?: VehicleRepository,
+    logger?: LoggerPort,
+    options?: Elm327RepositoryOptions,
+  ) {
     this.client = transport
     this.vehicleRepo = vehicleRepo
+    this.readOnly = options?.readOnly ?? false
     this.pidFormulas = createPidFormulaCatalog(toFormulaEntries(ALL_SEED_PIDS))
     this.client.connect().catch((err: unknown) => {
       const message = '[Elm327TcpRepository] eager connect failed'
@@ -77,8 +100,17 @@ export class Elm327TcpRepository implements ObdRepository {
     await this.client.close()
   }
 
-  /** Envia el PID y extrae sus bytes de datos, sin resolver ninguna formula. */
+  /**
+   * Envia el PID y extrae sus bytes de datos, sin resolver ninguna formula.
+   *
+   * Unico punto por el que salen al bus los comandos con modo elegido por el
+   * llamante (LLM o cliente HTTP), y por tanto donde se aplica la allowlist de
+   * {@link assertReadOnlyObdMode}: el comando se descarta antes de tocar el socket.
+   *
+   * @throws {UnsafeObdModeError} Si el modo no es de solo lectura.
+   */
   private async fetchPidBytes(mode: string, pid: string, dataBytes: number): Promise<number[]> {
+    assertReadOnlyObdMode(mode)
     const raw = await this.client.sendCommand(formatCommand(mode, pid))
     return mode === MODE_UDS ? parseMode22Response(raw, dataBytes) : parseModeResponse(raw)
   }
@@ -195,8 +227,20 @@ export class Elm327TcpRepository implements ObdRepository {
     return this.fetchDtcCodes('0A')
   }
 
+  /**
+   * Borra los DTC almacenados (Mode 04). Es la unica escritura del adaptador y es
+   * irreversible en un vehiculo real: elimina codigos y freeze frames y reinicia
+   * los monitores de emisiones.
+   *
+   * @throws {UnsafeObdModeError} Si el adaptador se construyo con `readOnly: true`.
+   */
   async clearDtcCodes(): Promise<void> {
-    await this.client.sendCommand('04')
+    if (this.readOnly) {
+      throw new UnsafeObdModeError(
+        `OBD mode "${MODE_CLEAR_DTC}" (clear DTC) is blocked: this adapter is configured as read-only.`,
+      )
+    }
+    await this.client.sendCommand(MODE_CLEAR_DTC)
   }
 
   async readVin(): Promise<string> {

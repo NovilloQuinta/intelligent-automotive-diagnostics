@@ -6,6 +6,9 @@ const configSchema = z.object({
   DB_PATH: z.string().default('data/diagnostics.db'),
   LANCEDB_PATH: z.string().min(1).default('data/lancedb'),
   OBD_MODE: z.enum(['docker', 'tcp', 'serial']).default('docker'),
+  // Bloquea el borrado de DTC (Mode 04) frente a un vehiculo real. Los modos de
+  // control UDS estan siempre bloqueados por la allowlist del dominio.
+  OBD_READ_ONLY: z.preprocess((v) => v === 'true' || v === true, z.boolean()).default(false),
   ELM327_HOST: z.string().default('localhost'),
   ELM327_PORT: z.coerce.number().int().positive().default(35000),
   ELM327_AUDI_HOST: z.string().default('localhost'),

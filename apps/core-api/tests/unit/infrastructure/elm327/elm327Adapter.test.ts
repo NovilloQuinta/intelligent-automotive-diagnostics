@@ -11,6 +11,7 @@ import {
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import { PidCode } from '@/domain/value-objects/pidCode.js'
+import { UnsafeObdModeError } from '@/domain/obdServiceMode.js'
 import { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 
 vi.mock('node:net', () => {
@@ -660,6 +661,78 @@ describe('Elm327TcpRepository', () => {
       expectSent('01 01')
       respond('ZZ ZZ ZZ\r\r>')
       await expect(promise).rejects.toBeInstanceOf(Elm327ParseError)
+    })
+  })
+
+  describe('safety guard', () => {
+    /** Crea un repositorio con la politica de solo-lectura activada. */
+    function makeReadOnlyRepo(): Elm327TcpRepository {
+      const transport = createElm327TcpClient({ host: HOST, port: PORT, maxRetries: 0 })
+      return new Elm327TcpRepository(transport, undefined, undefined, { readOnly: true })
+    }
+
+    it.each(['2F', '31', '11', '2E', '10', '27', '34', '85', '04', '08'])(
+      'should reject readPid with control mode %s without writing to the bus',
+      async (mode) => {
+        const repo = makeRepo()
+
+        await expect(repo.readPid(mode, '01')).rejects.toBeInstanceOf(UnsafeObdModeError)
+        expect(lastSocket().write).not.toHaveBeenCalled()
+      },
+    )
+
+    it('should reject readPidRaw with a control mode without writing to the bus', async () => {
+      const repo = makeRepo()
+
+      await expect(repo.readPidRaw('2F', '01', 2)).rejects.toBeInstanceOf(UnsafeObdModeError)
+      expect(lastSocket().write).not.toHaveBeenCalled()
+    })
+
+    it('should reject a transposed mode/pid before it reaches the vehicle', async () => {
+      const repo = makeRepo()
+
+      // {mode:"2F", pid:"01"} es la transposicion de {mode:"01", pid:"2F"}:
+      // nivel de combustible como PID, control de actuadores como modo.
+      await expect(repo.readPid('2F', '01')).rejects.toThrow(/mode "01"/)
+      expect(lastSocket().write).not.toHaveBeenCalled()
+    })
+
+    it('should still allow reads on Mode 01 with PID 2F', async () => {
+      const repo = makeRepo()
+
+      const promise = repo.readPid('01', '2F')
+      expectSent('01 2F')
+      respond('01 2F\r41 2F 7F \r\r>')
+
+      await expect(promise).resolves.toBeCloseTo(49.8, 1)
+    })
+
+    it('should still allow reads on Mode 22 (UDS ReadDataByIdentifier)', async () => {
+      const vRepo = mockVehicleRepo({ findPidDefinition: vi.fn().mockResolvedValue(VAG_RPM_DID) })
+      const repo = makeRepo(undefined, vRepo)
+
+      const promise = repo.readPid('22', '1130')
+      await vi.waitFor(() => expectSent('22 11 30'))
+      respond(RESPONSES['22 11 30'])
+
+      await expect(promise).resolves.toBe(800)
+    })
+
+    it('should send Mode 04 from clearDtcCodes by default', async () => {
+      const repo = makeRepo()
+
+      const promise = repo.clearDtcCodes()
+      expectSent('04')
+      respond('04\r44\r\r>')
+
+      await expect(promise).resolves.toBeUndefined()
+    })
+
+    it('should block clearDtcCodes when the repository is read-only', async () => {
+      const repo = makeReadOnlyRepo()
+
+      await expect(repo.clearDtcCodes()).rejects.toBeInstanceOf(UnsafeObdModeError)
+      expect(lastSocket().write).not.toHaveBeenCalled()
     })
   })
 })

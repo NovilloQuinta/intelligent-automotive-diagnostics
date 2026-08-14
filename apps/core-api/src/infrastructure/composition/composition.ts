@@ -345,6 +345,7 @@ function createObdRepoMap(
   vehicleRepo: VehicleRepository,
   logger: LoggerPort,
   trace = false,
+  readOnly = false,
 ): Map<string, ObdRepository> {
   const map = new Map<string, ObdRepository>()
   for (const s of scenarios) {
@@ -353,7 +354,7 @@ function createObdRepoMap(
       port: s.port,
       onTrace: trace ? createConsoleTracer(s.id) : undefined,
     })
-    map.set(s.id, new Elm327TcpRepository(transport, vehicleRepo, logger))
+    map.set(s.id, new Elm327TcpRepository(transport, vehicleRepo, logger, { readOnly }))
   }
   return map
 }
@@ -515,7 +516,13 @@ function createDiagnosisService(opts: CreateDiagnosisServiceOptions): DiagnosisS
   const { config, llmClient, knowledgeStack, webSearch, vehicleRepo, logger } = opts
   if (config.OBD_MODE === 'docker') {
     const scenarios = createDockerScenarios(config)
-    const obdRepos = createObdRepoMap(scenarios, vehicleRepo, logger, config.OBD_TRACE)
+    const obdRepos = createObdRepoMap(
+      scenarios,
+      vehicleRepo,
+      logger,
+      config.OBD_TRACE,
+      config.OBD_READ_ONLY,
+    )
     return new DiagnosisService({
       scenarios,
       obdRepos,
@@ -534,7 +541,9 @@ function createDiagnosisService(opts: CreateDiagnosisServiceOptions): DiagnosisS
       initTimeoutMs: ELM327_INIT_TIMEOUT_MS,
       onTrace: config.OBD_TRACE ? createConsoleTracer('serie') : undefined,
     })
-    const obdRepo = new Elm327TcpRepository(transport, vehicleRepo, logger)
+    const obdRepo = new Elm327TcpRepository(transport, vehicleRepo, logger, {
+      readOnly: config.OBD_READ_ONLY,
+    })
     return new DiagnosisService({
       scenarios: [],
       obdRepo,
@@ -555,7 +564,9 @@ function createDiagnosisService(opts: CreateDiagnosisServiceOptions): DiagnosisS
     initTimeoutMs: ELM327_INIT_TIMEOUT_MS,
     onTrace: config.OBD_TRACE ? createConsoleTracer('wifi') : undefined,
   })
-  const obdRepo = new Elm327TcpRepository(transport, vehicleRepo, logger)
+  const obdRepo = new Elm327TcpRepository(transport, vehicleRepo, logger, {
+    readOnly: config.OBD_READ_ONLY,
+  })
   return new DiagnosisService({
     scenarios: [],
     obdRepo,

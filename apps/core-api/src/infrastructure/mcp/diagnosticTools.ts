@@ -410,7 +410,9 @@ export function registerDiagnosticTools(
 ): void {
   register(
     'read_pid',
-    'Read an OBD-II PID value. Mode 01, 22 for manufacturer-specific.',
+    'Read an OBD-II PID value. Read-only services only: 01, 02, 03, 05, 06, 07, 09, 0A, 22 ' +
+      '(22 for manufacturer-specific DIDs). Control services such as 2F, 31 or 11 are rejected — ' +
+      'a PID code always goes in "pid", never in "mode".',
     { mode: z.string(), pid: z.string() },
     withErrorHandling(handleReadPid(repo, vehicleRepo, sessionContext)),
   )

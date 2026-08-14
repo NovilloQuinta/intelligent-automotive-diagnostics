@@ -110,3 +110,34 @@ describe('loadConfig — TTL de tokens JWT', () => {
     expect(() => loadConfig()).toThrow()
   })
 })
+
+describe('loadConfig — OBD_READ_ONLY', () => {
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    process.env = { ...originalEnv }
+    delete process.env.OBD_READ_ONLY
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  it('desactiva el modo solo-lectura por defecto', () => {
+    expect(loadConfig().OBD_READ_ONLY).toBe(false)
+  })
+
+  it('activa el modo solo-lectura con OBD_READ_ONLY=true', () => {
+    process.env.OBD_READ_ONLY = 'true'
+
+    expect(loadConfig().OBD_READ_ONLY).toBe(true)
+  })
+
+  it('trata cualquier otro valor como desactivado', () => {
+    process.env.OBD_READ_ONLY = 'false'
+    expect(loadConfig().OBD_READ_ONLY).toBe(false)
+
+    process.env.OBD_READ_ONLY = '0'
+    expect(loadConfig().OBD_READ_ONLY).toBe(false)
+  })
+})
