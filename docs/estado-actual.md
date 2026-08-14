@@ -19,4 +19,4 @@
 - **Worktrees activos** en `.claude/worktrees/`: `deployment` (`feat/deployment`, obsoleto).
 - **CI**: corre en `push`/`PR` a `main` y `develop`, matriz `core-api` + `ui`, con `typecheck` tras el build.
 - **Gate local**: `pnpm verify` (lint + format + test + build + typecheck de ambas apps).
-- **Deuda**: en `docs/deuda-conocida.md`, con cifras medidas. Rama `origin/refactor/split-mcp-server` pendiente de borrar desde la UI de GitHub (el proxy de git del entorno remoto no lo permite).
+- **Deuda**: en `docs/deuda-conocida.md`, con cifras medidas. Pendientes de borrar desde la UI de GitHub (el proxy de git del entorno remoto responde 403 al `push --delete`, y el MCP de GitHub no expone borrado de ramas): `refactor/split-mcp-server`, `claude/client-profile-password-recovery-2fwi91` y `claude/preparacion-conectar-coche-m8kt2c` — las tres ya contenidas en `develop`. `feat/deployment` tiene 2 commits sin mergear, pero su contenido ya esta en `main` por otra via: obsoleta, borrable tambien.
