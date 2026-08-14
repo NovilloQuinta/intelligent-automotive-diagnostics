@@ -37,3 +37,11 @@ export class DiagnosisSessionNotFoundError extends Error {
     this.name = 'DiagnosisSessionNotFoundError'
   }
 }
+
+/** Error lanzado cuando se intenta identificar un vehiculo sin persistencia configurada. */
+export class VehicleIdentificationUnavailableError extends Error {
+  constructor(message: string = 'Vehicle identification is not available') {
+    super(message)
+    this.name = 'VehicleIdentificationUnavailableError'
+  }
+}

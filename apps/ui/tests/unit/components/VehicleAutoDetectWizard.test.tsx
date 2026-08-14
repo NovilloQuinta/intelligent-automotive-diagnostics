@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { VehicleAutoDetectWizard } from "../../../src/components/dashboard/VehicleAutoDetectWizard";
 import type {
   Scenario,
@@ -63,6 +63,7 @@ function renderWizard(
     onRetry: vi.fn(),
     onBack: vi.fn(),
     onConfirm: vi.fn(),
+    onSaveIdentity: vi.fn(),
     ...overrides,
   };
   render(<VehicleAutoDetectWizard {...props} />);
@@ -167,6 +168,121 @@ describe("VehicleAutoDetectWizard", () => {
       fireEvent.click(screen.getByText("Entrar a diagnóstico"));
 
       expect(props.onConfirm).toHaveBeenCalledWith("audi-a3-idle");
+    });
+  });
+
+  describe("step: confirming — corrección del mecánico", () => {
+    /** Coche que la cascada no supo identificar: el caso que abre el formulario. */
+    const unidentified: VehicleInfoResponse = {
+      vin: "VR3ABCDEFM1234567",
+      make: "unknown",
+      model: "unknown",
+      year: 2021,
+      engineType: "unknown",
+      manufacturer: null,
+      region: { country: "France", region: "Europe" },
+      modelYearDecoded: 2021,
+    };
+
+    it("ofrece corregir cuando el vehículo no se ha identificado", () => {
+      renderWizard({ step: "confirming", scenarioId: "tcp", vehicle: unidentified });
+
+      expect(screen.getByText("Identificar a mano")).toBeDefined();
+    });
+
+    it("no molesta con el formulario cuando el coche ya está identificado", () => {
+      renderWizard({ step: "confirming", scenarioId: "audi-a3-idle", vehicle });
+
+      expect(screen.queryByText("Identificar a mano")).toBeNull();
+    });
+
+    it("envía marca y modelo, y el VIN leído del coche", async () => {
+      const onSaveIdentity = vi.fn().mockResolvedValue({
+        vehicle: { make: "Peugeot", model: "208", year: 2021, engineType: "unknown" },
+        promoted: true,
+        warnings: [],
+      });
+      renderWizard({
+        step: "confirming",
+        scenarioId: "tcp",
+        vehicle: unidentified,
+        onSaveIdentity,
+      });
+
+      fireEvent.click(screen.getByText("Identificar a mano"));
+      fireEvent.change(screen.getByLabelText("Marca"), {
+        target: { value: "Peugeot" },
+      });
+      fireEvent.change(screen.getByLabelText("Modelo"), { target: { value: "208" } });
+      fireEvent.click(screen.getByText("Guardar identificación"));
+
+      await waitFor(() =>
+        expect(onSaveIdentity).toHaveBeenCalledWith({
+          vin: "VR3ABCDEFM1234567",
+          make: "Peugeot",
+          model: "208",
+        }),
+      );
+    });
+
+    it("no deja guardar sin marca: es la única clave del catálogo", () => {
+      const onSaveIdentity = vi.fn();
+      renderWizard({
+        step: "confirming",
+        scenarioId: "tcp",
+        vehicle: unidentified,
+        onSaveIdentity,
+      });
+
+      fireEvent.click(screen.getByText("Identificar a mano"));
+      fireEvent.click(screen.getByText("Guardar identificación"));
+
+      expect(onSaveIdentity).not.toHaveBeenCalled();
+    });
+
+    it("avisa cuando el servidor conserva la marca que ya conocía", async () => {
+      const onSaveIdentity = vi.fn().mockResolvedValue({
+        vehicle: { make: "Peugeot", model: "208", year: 2021, engineType: "unknown" },
+        promoted: false,
+        conflict: { known: "Peugeot", claimed: "Ferrari" },
+        warnings: [],
+      });
+      renderWizard({
+        step: "confirming",
+        scenarioId: "tcp",
+        vehicle: unidentified,
+        onSaveIdentity,
+      });
+
+      fireEvent.click(screen.getByText("Identificar a mano"));
+      fireEvent.change(screen.getByLabelText("Marca"), {
+        target: { value: "Ferrari" },
+      });
+      fireEvent.click(screen.getByText("Guardar identificación"));
+
+      expect(await screen.findByText(/ya está registrado como Peugeot/)).toBeDefined();
+    });
+
+    it("muestra los avisos de incoherencia que devuelve el servidor", async () => {
+      const onSaveIdentity = vi.fn().mockResolvedValue({
+        vehicle: { make: "Peugeot", model: "208", year: 2015, engineType: "unknown" },
+        promoted: true,
+        warnings: ["El año indicado (2015) no coincide con el que codifica el VIN (2021)."],
+      });
+      renderWizard({
+        step: "confirming",
+        scenarioId: "tcp",
+        vehicle: unidentified,
+        onSaveIdentity,
+      });
+
+      fireEvent.click(screen.getByText("Identificar a mano"));
+      fireEvent.change(screen.getByLabelText("Marca"), {
+        target: { value: "Peugeot" },
+      });
+      fireEvent.click(screen.getByText("Guardar identificación"));
+
+      expect(await screen.findByText(/no coincide con el que codifica el VIN/)).toBeDefined();
     });
   });
 });

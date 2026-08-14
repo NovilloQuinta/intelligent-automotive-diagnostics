@@ -1,4 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
+import { VehicleIdentificationUnavailableError } from '@/infrastructure/services/errors.js'
+import { VehicleIdentityError } from '@/domain/entities/vehicleIdentity.js'
 import request from 'supertest'
 import express from 'express'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
@@ -157,6 +159,11 @@ function createServiceStub(overrides: Partial<ServiceStub> = {}): DiagnosisServi
     readPermanentDtcCodes: vi.fn(async () => [
       { code: 'P0401', description: 'EGR Flow Insufficient' },
     ]),
+    confirmVehicleIdentity: vi.fn(async () => ({
+      vehicle: { id: 5, make: 'Peugeot', model: '208', year: 2021, engineType: '1.5 BlueHDi' },
+      promoted: true,
+      warnings: [],
+    })),
     listDiagnosisSessions: vi.fn(async () => ({ items: [], total: 0 })),
     getDiagnosisSession: vi.fn(async () => null),
     ...overrides,
@@ -436,6 +443,75 @@ describe('diagnosisRoutes', () => {
       expect(res.status).toBe(200)
       expect(res.body.ecus).toHaveLength(1)
       expect(service.getEcuInfo).toHaveBeenCalledWith(undefined)
+    })
+  })
+
+  describe('POST /api/vehicle-identity', () => {
+    it('acepta la identificación del mecánico y devuelve qué se promocionó', async () => {
+      const service = createServiceStub()
+      const { app } = createApp(service)
+
+      const res = await request(app)
+        .post('/api/vehicle-identity')
+        .send({ vin: 'VR3ABCDEFM1234567', make: 'Peugeot', model: '208' })
+
+      expect(res.status).toBe(200)
+      expect(res.body.promoted).toBe(true)
+      expect(service.confirmVehicleIdentity).toHaveBeenCalledWith({
+        vin: 'VR3ABCDEFM1234567',
+        make: 'Peugeot',
+        model: '208',
+      })
+    })
+
+    it('rechaza un VIN que no tenga 17 caracteres', async () => {
+      const { app } = createApp()
+
+      const res = await request(app)
+        .post('/api/vehicle-identity')
+        .send({ vin: 'VR3', make: 'Peugeot' })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('rechaza una marca vacía', async () => {
+      const { app } = createApp()
+
+      const res = await request(app)
+        .post('/api/vehicle-identity')
+        .send({ vin: 'VR3ABCDEFM1234567', make: '' })
+
+      expect(res.status).toBe(400)
+    })
+
+    it('devuelve 404 cuando no hay persistencia configurada', async () => {
+      const service = createServiceStub({
+        confirmVehicleIdentity: vi.fn(async () => {
+          throw new VehicleIdentificationUnavailableError()
+        }),
+      })
+      const { app } = createApp(service)
+
+      const res = await request(app)
+        .post('/api/vehicle-identity')
+        .send({ vin: 'VR3ABCDEFM1234567', make: 'Peugeot' })
+
+      expect(res.status).toBe(404)
+    })
+
+    it('devuelve 400 cuando el dominio rechaza la marca', async () => {
+      const service = createServiceStub({
+        confirmVehicleIdentity: vi.fn(async () => {
+          throw new VehicleIdentityError('manufacturer must not be empty')
+        }),
+      })
+      const { app } = createApp(service)
+
+      const res = await request(app)
+        .post('/api/vehicle-identity')
+        .send({ vin: 'VR3ABCDEFM1234567', make: '...' })
+
+      expect(res.status).toBe(400)
     })
   })
 

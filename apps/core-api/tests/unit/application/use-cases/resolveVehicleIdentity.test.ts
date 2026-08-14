@@ -74,17 +74,15 @@ describe('ResolveVehicleIdentityUseCase', () => {
 
   it('paso 2: si el WMI está en el catálogo, no gasta una búsqueda web', async () => {
     const vehicleRepo = repoStub({
-      findVehicleIdentityByWmi: vi
-        .fn()
-        .mockResolvedValue(
-          new VehicleIdentity({
-            id: 1,
-            wmi: 'VR3',
-            manufacturer: 'Peugeot',
-            confidence: 0.3,
-            source: 'web',
-          }),
-        ),
+      findVehicleIdentityByWmi: vi.fn().mockResolvedValue(
+        new VehicleIdentity({
+          id: 1,
+          wmi: 'VR3',
+          manufacturer: 'Peugeot',
+          confidence: 0.3,
+          source: 'web',
+        }),
+      ),
     })
     const webSearch = webStub('lo que sea')
     const useCase = new ResolveVehicleIdentityUseCase({
@@ -120,17 +118,15 @@ describe('ResolveVehicleIdentityUseCase', () => {
 
   it('el año sale del VIN aunque el fabricante venga del catálogo', async () => {
     const vehicleRepo = repoStub({
-      findVehicleIdentityByWmi: vi
-        .fn()
-        .mockResolvedValue(
-          new VehicleIdentity({
-            id: 1,
-            wmi: 'VR3',
-            manufacturer: 'Peugeot',
-            confidence: 0.9,
-            source: 'seed',
-          }),
-        ),
+      findVehicleIdentityByWmi: vi.fn().mockResolvedValue(
+        new VehicleIdentity({
+          id: 1,
+          wmi: 'VR3',
+          manufacturer: 'Peugeot',
+          confidence: 0.9,
+          source: 'seed',
+        }),
+      ),
     })
     const useCase = new ResolveVehicleIdentityUseCase({ vehicleRepo, logger: testLogger })
 

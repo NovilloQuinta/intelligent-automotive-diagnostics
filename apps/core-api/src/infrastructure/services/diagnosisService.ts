@@ -20,6 +20,7 @@ import {
   CognitiveDiagnosisUnavailableError,
   CognitiveDiagnosisTimeoutError,
   DiagnosisSessionNotFoundError,
+  VehicleIdentificationUnavailableError,
 } from '@/infrastructure/services/errors.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
@@ -34,6 +35,10 @@ import {
   ResolveVehicleIdentityUseCase,
   UNKNOWN_VEHICLE_FIELD,
 } from '@/application/use-cases/ResolveVehicleIdentityUseCase.js'
+import {
+  ConfirmVehicleIdentityUseCase,
+  type ConfirmVehicleIdentityOutput,
+} from '@/application/use-cases/ConfirmVehicleIdentityUseCase.js'
 import type { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
@@ -359,6 +364,29 @@ export class DiagnosisService {
       vinStatus,
       ...(await this.decodeVin(vin)),
     }
+  }
+
+  /**
+   * Registra la identificacion que aporta el mecanico cuando la cascada no saca
+   * el coche.
+   *
+   * @throws {VehicleIdentificationUnavailableError} Si no hay repositorio configurado.
+   * @throws {VinDecodeError} Si el VIN no cumple el formato ISO 3779.
+   * @throws {VehicleIdentityError} Si la marca no tiene forma de nombre de fabricante.
+   */
+  async confirmVehicleIdentity(input: {
+    vin: string
+    make: string
+    model?: string
+    year?: number
+    engineType?: string
+  }): Promise<ConfirmVehicleIdentityOutput> {
+    if (!this.vehicleRepo) throw new VehicleIdentificationUnavailableError()
+    const useCase = new ConfirmVehicleIdentityUseCase({
+      vehicleRepo: this.vehicleRepo,
+      logger: this.logger,
+    })
+    return useCase.execute({ ...input, vin: new Vin(input.vin) })
   }
 
   /**
