@@ -21,6 +21,7 @@
     "db:studio": "drizzle-kit studio",
     "verify:semantic": "tsx scripts/verify-semantic-search.ts",
     "eval:agent": "tsx scripts/eval-agent.ts",
+    "probe:serial": "tsx scripts/probe-serial.ts",
     "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json"
   },
   "dependencies": {

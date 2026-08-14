@@ -14,6 +14,7 @@
     "build:ui": "cd apps/ui && pnpm build",
     "obd:send": "tsx scripts/send-obd.ts",
     "obd:scan": "tsx scripts/scan-pids.ts",
+    "obd:probe": "cd apps/core-api && pnpm probe:serial",
     "test": "cd apps/core-api && pnpm test",
     "test:ui": "cd apps/ui && pnpm test",
     "test:all": "pnpm test && pnpm test:ui",
