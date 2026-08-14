@@ -6,10 +6,12 @@
  * app no, el fallo esta en la app; si la sonda falla, el fallo es el cable, el
  * driver o los permisos del puerto.
  *
- * Uso: pnpm obd:probe [--port /dev/ttyUSB0] [--baud 38400]
- * Sin argumentos escanea todos los puertos serie y prueba los bauds habituales.
+ * Uso: pnpm obd:probe [--port /dev/ttyUSB0] [--baud 38400] [--all]
+ * Sin argumentos escanea los puertos con pinta de adaptador y prueba los bauds
+ * habituales. `--all` incluye tambien los puertos internos del sistema.
  */
 import { SerialPort } from 'serialport'
+import { selectAdapterCandidates } from './probeCandidates.js'
 
 /** Bauds de fabrica mas comunes en ELM327 originales y clones CH340/STN. */
 const BAUD_CANDIDATES = [38400, 9600, 115200, 57600, 500000]
@@ -32,6 +34,8 @@ const PRINTABLE_RATIO = 0.9
 interface ProbeArgs {
   readonly port: string | undefined
   readonly baud: number | undefined
+  /** Prueba tambien los puertos internos del sistema, descartados por defecto. */
+  readonly all: boolean
 }
 
 interface ProbeHit {
@@ -47,6 +51,7 @@ function parseArgs(argv: string[]): ProbeArgs {
   return {
     port: portIdx === -1 ? undefined : argv[portIdx + 1],
     baud: rawBaud !== undefined && Number.isFinite(rawBaud) ? rawBaud : undefined,
+    all: argv.includes('--all'),
   }
 }
 
@@ -203,7 +208,7 @@ function printEnvBlock(hit: ProbeHit): void {
 }
 
 /** Lista los puertos del sistema; devuelve los paths en orden de descubrimiento. */
-async function listPorts(): Promise<string[]> {
+async function listPorts(includeAll: boolean): Promise<string[]> {
   let ports: Awaited<ReturnType<typeof SerialPort.list>>
   try {
     ports = await SerialPort.list()
@@ -218,18 +223,54 @@ async function listPorts(): Promise<string[]> {
     console.log('No hay puertos serie. Enchufa el adaptador y revisa "dmesg | tail".')
     return []
   }
-  console.log('Puertos serie detectados:')
+  const all = ports.map((p) => p.path)
+  const candidates = includeAll ? all : selectAdapterCandidates(all)
+  const shown = candidates.length > 0 ? candidates : all
+
+  console.log(`Puertos serie detectados (${all.length}):`)
   for (const p of ports) {
+    if (!shown.includes(p.path)) continue
     const vendor = p.manufacturer ?? p.vendorId ?? 'desconocido'
-    console.log(`  ${p.path.padEnd(20)} ${vendor}`)
+    console.log(`  ${p.path.padEnd(24)} ${vendor}`)
   }
-  return ports.map((p) => p.path)
+
+  if (candidates.length === 0) {
+    reportNoCandidates(all.length)
+    return []
+  }
+  if (candidates.length < all.length) {
+    console.log(`Descartados ${all.length - candidates.length} puertos internos del sistema.`)
+  }
+  return candidates
+}
+
+/**
+ * Ningun puerto tiene pinta de adaptador. Casi siempre no es un problema de la
+ * sonda sino de que el dongle no ha llegado al sistema donde corre este proceso.
+ */
+function reportNoCandidates(total: number): void {
+  console.error(`\nNinguno de los ${total} puertos es un adaptador USB o Bluetooth.`)
+  console.error('Los /dev/ttyS* de Linux son puertos internos: existen siempre, haya o no cable.\n')
+  console.error('Por orden de probabilidad:')
+  if (process.platform === 'linux') {
+    console.error('  1. El proceso corre en un contenedor o VM sin el USB pasado por dentro.')
+    console.error('     El dongle esta en el anfitrion, no aqui. Corre la sonda fuera del')
+    console.error('     contenedor, o pasa el dispositivo con --device=/dev/ttyUSB0.')
+    console.error('  2. El driver no ha creado el nodo. Enchufa el cable y mira:')
+    console.error('     dmesg | tail    (deberia aparecer ch341/cp210x/ftdi_sio y ttyUSB0)')
+    console.error('     lsusb           (deberia listar el conversor USB-serie)')
+  } else if (process.platform === 'darwin') {
+    console.error('  1. Falta el driver del conversor (CH340/CP210x no vienen de serie).')
+    console.error('  2. Mira si el sistema lo ve:  ls /dev/cu.*')
+  }
+  console.error('\nSi sabes cual es, saltate la deteccion: pnpm obd:probe --port <ruta>')
+  console.error('Para probarlos todos de todas formas: pnpm obd:probe --all')
 }
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2))
   const bauds = args.baud !== undefined ? [args.baud] : BAUD_CANDIDATES
-  const paths = args.port !== undefined ? [args.port] : await listPorts()
+  const paths = args.port !== undefined ? [args.port] : await listPorts(args.all)
   if (paths.length === 0) process.exit(1)
 
   console.log(`\nProbando ${paths.length} puerto(s) con bauds [${bauds.join(', ')}]...`)
