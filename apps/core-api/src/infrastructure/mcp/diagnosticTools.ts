@@ -67,12 +67,28 @@ function autoRegisterPid(
 
 /** Datos necesarios para persistir una lectura de PID en sesion activa. */
 interface PidPersistenceContext {
-  readonly repo: ObdRepository
   readonly vehicleRepo: VehicleRepository
   readonly sessionContext: SessionContext
   readonly modeStr: string
   readonly pidStr: string
   readonly value: number
+  /** Bytes crudos de la misma lectura: no se vuelve a preguntar al vehiculo por ellos. */
+  readonly bytes: readonly number[]
+}
+
+/** Bytes de datos que se asumen cuando el PID no esta en el catalogo. */
+const DEFAULT_PID_DATA_BYTES = 2
+
+/**
+ * Hex crudo de una lectura, recortado a los bytes que el PID declara.
+ *
+ * Devuelve `'00'` cuando no hay bytes: un adaptador que no los entrega no debe
+ * impedir que se guarde el valor, que es lo que el mecanico acaba viendo.
+ */
+function toRawHex(bytes: readonly number[], dataBytes: number): string {
+  const sliced = dataBytes > 0 ? bytes.slice(0, dataBytes) : bytes
+  const hex = sliced.map((b) => b.toString(16).padStart(2, '0')).join('')
+  return hex === '' ? '00' : hex
 }
 
 /**
@@ -89,14 +105,7 @@ function persistPidReading(ctx: PidPersistenceContext): void {
     .findPidDefinition(ctx.modeStr, ctx.pidStr)
     .then(async (definition) => {
       const pidDefId = definition?.id
-      const dataBytes = definition?.dataBytes ?? 2
-      let rawHex = '00'
-      try {
-        const rawData = await ctx.repo.readPidRaw(ctx.modeStr, ctx.pidStr, dataBytes)
-        rawHex = rawData.map((b) => b.toString(16).padStart(2, '0')).join('')
-      } catch {
-        // best-effort: persist with fallback rawHex
-      }
+      const rawHex = toRawHex(ctx.bytes, definition?.dataBytes ?? DEFAULT_PID_DATA_BYTES)
       await ctx.vehicleRepo.insertPidReading(
         new PidReading({
           id: 0,
@@ -153,12 +162,13 @@ async function persistEcus(
 
 /** Lo observado al leer un PID, con el repositorio de persistencia si lo hay. */
 interface PidObservation {
-  readonly repo: ObdRepository
   readonly vehicleRepo: VehicleRepository | undefined
   readonly sessionContext: SessionContext | undefined
   readonly modeStr: string
   readonly pidStr: string
   readonly value: number
+  /** Bytes crudos de la misma lectura, para persistir el hex sin releer el PID. */
+  readonly bytes: readonly number[]
 }
 
 /**
@@ -170,13 +180,13 @@ interface PidObservation {
  * decision se toma una vez aqui en lugar de en cada guarda.
  */
 function recordPidObservation(observation: PidObservation): void {
-  const { repo, vehicleRepo, sessionContext, modeStr, pidStr, value } = observation
+  const { vehicleRepo, sessionContext, modeStr, pidStr, value, bytes } = observation
   if (!vehicleRepo) return
 
   autoRegisterIfProprietary(vehicleRepo, modeStr, pidStr, sessionContext)
 
   if (sessionContext?.sessionId === undefined) return
-  persistPidReading({ repo, vehicleRepo, sessionContext, modeStr, pidStr, value })
+  persistPidReading({ vehicleRepo, sessionContext, modeStr, pidStr, value, bytes })
 }
 
 /** Auto-registra en el catalogo los PID propietarios (todo lo que no es Mode 01). */
@@ -198,9 +208,11 @@ function handleReadPid(
   return async ({ mode, pid }) => {
     const modeStr = `${mode}`
     const pidStr = `${pid}`
-    const value = await repo.readPid(modeStr, pidStr)
+    // Una sola interrogacion al vehiculo: el valor para el mecanico y los bytes
+    // para el historial salen de la misma respuesta.
+    const { value, bytes } = await repo.readPidWithBytes(modeStr, pidStr)
 
-    recordPidObservation({ repo, vehicleRepo, sessionContext, modeStr, pidStr, value })
+    recordPidObservation({ vehicleRepo, sessionContext, modeStr, pidStr, value, bytes })
 
     return text(String(value))
   }

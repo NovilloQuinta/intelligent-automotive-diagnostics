@@ -59,14 +59,19 @@ const mockScenarios: SimulationScenario[] = [
 ]
 
 function createMockRepo(rpm: number, coolantTemp: number): ObdRepository {
+  const readPid = vi.fn(async (_mode: string, pid: string) => {
+    if (pid === '0C') return rpm
+    if (pid === '05') return coolantTemp
+    if (pid === '0D') return 0
+    if (pid === '0F') return 25
+    return 0
+  })
   return {
-    readPid: vi.fn(async (_mode: string, pid: string) => {
-      if (pid === '0C') return rpm
-      if (pid === '05') return coolantTemp
-      if (pid === '0D') return 0
-      if (pid === '0F') return 25
-      return 0
-    }),
+    readPid,
+    readPidWithBytes: vi.fn(async (mode: string, pid: string) => ({
+      value: await readPid(mode, pid),
+      bytes: [0x00, 0x00],
+    })),
     getSupportedPids: vi.fn(async () => []),
     getFreezeFrame: vi.fn(async () => null),
     readDtcCodes: vi.fn(async () => {

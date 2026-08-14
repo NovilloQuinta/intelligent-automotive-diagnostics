@@ -4,6 +4,14 @@ import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import type { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 
+/** Lectura de un PID resuelta en una sola pasada: valor fisico y bytes de origen. */
+export interface PidReadResult {
+  /** Valor fisico tras aplicar la formula del PID. */
+  readonly value: number
+  /** Bytes de datos crudos de la respuesta, antes de la formula. */
+  readonly bytes: readonly number[]
+}
+
 /** Contrato para la adquisición de datos OBD-II desde el hardware. */
 export interface ObdRepository {
   /** Service 01 — Lee un PID OBD-II genérico por modo y código.
@@ -12,6 +20,20 @@ export interface ObdRepository {
    * @returns Valor físico del PID (tras aplicar la fórmula)
    */
   readPid(mode: string, pid: string): Promise<number>
+
+  /**
+   * Lee un PID devolviendo **a la vez** su valor fisico y los bytes crudos de los
+   * que sale, en una sola interrogacion al vehiculo.
+   *
+   * Existe para quien necesita ambas cosas — leer el valor y persistir el hex
+   * original — sin preguntar dos veces por el mismo PID: en un bus real eso es
+   * el doble de trafico en la operacion mas frecuente del diagnostico.
+   *
+   * @param mode — Modo OBD (01, 02, 09, 22, ...)
+   * @param pid — Codigo del PID (0C, 05, 0300, ...)
+   * @returns Valor fisico ya resuelto por la formula, y los bytes de datos crudos
+   */
+  readPidWithBytes(mode: string, pid: string): Promise<PidReadResult>
 
   /**
    * Service 01 — Lee varios PIDs en un único comando multi-PID.

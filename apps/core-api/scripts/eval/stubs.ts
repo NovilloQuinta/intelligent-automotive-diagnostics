@@ -64,6 +64,10 @@ const DEFAULT_DTCS = [new DtcCode({ code: 'P0301', description: 'Cylinder 1 Misf
 export function createStubObdRepository(): ObdRepository {
   return {
     readPid: async (_mode, pid) => DEFAULT_PID_VALUES[pid.toUpperCase()] ?? 0,
+    readPidWithBytes: async (_mode, pid) => ({
+      value: DEFAULT_PID_VALUES[pid.toUpperCase()] ?? 0,
+      bytes: [0x00, 0x00],
+    }),
     readPids: async (_mode, pids) =>
       new Map(pids.map((p) => [p.toUpperCase(), DEFAULT_PID_VALUES[p.toUpperCase()] ?? 0])),
     readPidRaw: async () => [0x00, 0x00],

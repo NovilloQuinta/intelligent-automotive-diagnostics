@@ -1,4 +1,4 @@
-import type { ObdRepository } from '@/application/ports/ObdRepository.js'
+import type { ObdRepository, PidReadResult } from '@/application/ports/ObdRepository.js'
 import { DtcCode } from '@/domain/value-objects/dtcCode.js'
 import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
@@ -12,6 +12,13 @@ export class ObdSimulatorRepository implements ObdRepository {
 
   async readPid(mode: string, pid: string): Promise<number> {
     return this.simulator.readPidValue(mode, pid)
+  }
+
+  async readPidWithBytes(mode: string, pid: string): Promise<PidReadResult> {
+    return {
+      value: this.simulator.readPidValue(mode, pid),
+      bytes: this.simulator.readPidRawBytes(mode, pid),
+    }
   }
 
   /**

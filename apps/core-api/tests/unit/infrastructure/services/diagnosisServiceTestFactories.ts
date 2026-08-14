@@ -55,12 +55,17 @@ export function createMockObdRepo(sensorOverrides?: {
   coolantTemp?: number
   ecus?: EcuInfo[]
 }): ObdRepository {
+  const readPid = vi.fn(async (_mode: string, pid: string) => {
+    if (pid === '0C') return sensorOverrides?.rpm ?? 800
+    if (pid === '05') return sensorOverrides?.coolantTemp ?? 90
+    return 90
+  })
   return {
-    readPid: vi.fn(async (_mode: string, pid: string) => {
-      if (pid === '0C') return sensorOverrides?.rpm ?? 800
-      if (pid === '05') return sensorOverrides?.coolantTemp ?? 90
-      return 90
-    }),
+    readPid,
+    readPidWithBytes: vi.fn(async (mode: string, pid: string) => ({
+      value: await readPid(mode, pid),
+      bytes: [0x00, 0x00],
+    })),
     readPids: vi.fn(async () => new Map<string, number>()),
     readPidRaw: vi.fn(async () => [0x00, 0x00]),
     getSupportedPids: vi.fn(async () => ['01 0C']),

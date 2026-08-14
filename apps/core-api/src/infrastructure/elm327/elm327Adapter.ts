@@ -1,4 +1,4 @@
-import type { ObdRepository } from '@/application/ports/ObdRepository.js'
+import type { ObdRepository, PidReadResult } from '@/application/ports/ObdRepository.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import { DtcCode } from '@/domain/value-objects/dtcCode.js'
@@ -116,6 +116,10 @@ export class Elm327TcpRepository implements ObdRepository {
   }
 
   async readPid(mode: string, pid: string): Promise<number> {
+    return (await this.readPidWithBytes(mode, pid)).value
+  }
+
+  async readPidWithBytes(mode: string, pid: string): Promise<PidReadResult> {
     // Normaliza a mayúsculas para ser coherente con `pidKey` del catálogo estándar
     // (case-insensitive) y con los PidCodes almacenados en BD (uppercase).
     const modeUpper = mode.toUpperCase()
@@ -128,12 +132,12 @@ export class Elm327TcpRepository implements ObdRepository {
       const definition = await this.vehicleRepo.findPidDefinition(modeUpper, pidUpper)
       if (definition) {
         const bytes = await this.fetchPidBytes(modeUpper, pidUpper, definition.dataBytes)
-        return definition.formula.evaluate(bytes)
+        return { value: definition.formula.evaluate(bytes), bytes }
       }
     }
 
     const bytes = await this.fetchPidBytes(modeUpper, pidUpper, entry?.dataBytes ?? 0)
-    return this.pidFormulas.apply(modeUpper, pidUpper, bytes)
+    return { value: this.pidFormulas.apply(modeUpper, pidUpper, bytes), bytes }
   }
 
   async readPids(mode: string, pids: readonly string[]): Promise<Map<string, number>> {

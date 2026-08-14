@@ -6,8 +6,11 @@ import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
 import { PidCode } from '@/domain/value-objects/pidCode.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 
+/** Bytes por defecto de una lectura simulada (0x0BB8 = 750 tras la formula de RPM). */
+const DEFAULT_RAW_BYTES = [0x0b, 0xb8]
+
 export function mockObdRepo(overrides: Partial<ObdRepository> = {}): ObdRepository {
-  return {
+  const repo: ObdRepository = {
     readPid: vi.fn().mockResolvedValue(750),
     readPidRaw: vi.fn().mockResolvedValue([0x0b, 0xb8]),
     getSupportedPids: vi.fn().mockResolvedValue(['01 0C']),
@@ -30,7 +33,20 @@ export function mockObdRepo(overrides: Partial<ObdRepository> = {}): ObdReposito
     }),
     setPower: vi.fn().mockResolvedValue(undefined),
     getEcuInfo: vi.fn().mockResolvedValue([]),
+    readPidWithBytes: vi.fn(),
     ...overrides,
+  }
+
+  // `readPidWithBytes` delega en el `readPid` del doble (sobrescrito o no): los
+  // tests que fijan `readPid` siguen controlando lo que la tool acaba viendo.
+  return {
+    ...repo,
+    readPidWithBytes:
+      overrides.readPidWithBytes ??
+      vi.fn(async (mode: string, pid: string) => ({
+        value: await repo.readPid(mode, pid),
+        bytes: DEFAULT_RAW_BYTES,
+      })),
   }
 }
 
