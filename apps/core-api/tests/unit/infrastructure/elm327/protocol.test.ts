@@ -11,7 +11,11 @@ import {
   parseHexBytes,
   parseCanHeaders,
 } from '@/infrastructure/elm327/protocol.js'
-import { Elm327NoDataError, Elm327ParseError } from '@/infrastructure/elm327/errors.js'
+import {
+  Elm327BusError,
+  Elm327NoDataError,
+  Elm327ParseError,
+} from '@/infrastructure/elm327/errors.js'
 
 describe('protocol', () => {
   describe('formatCommand', () => {
@@ -56,8 +60,8 @@ describe('protocol', () => {
       expect(() => parseModeResponse('NO DATA')).toThrow(Elm327NoDataError)
     })
 
-    it('should throw Elm327ParseError on "CAN ERROR"', () => {
-      expect(() => parseModeResponse('CAN ERROR')).toThrow(Elm327ParseError)
+    it('should throw Elm327BusError on "CAN ERROR" — el bus falla, no el parser', () => {
+      expect(() => parseModeResponse('CAN ERROR')).toThrow(Elm327BusError)
     })
 
     it('should throw Elm327ParseError on invalid input', () => {
@@ -126,8 +130,8 @@ describe('protocol', () => {
       expect(() => parseMode22Response('NO DATA', 2)).toThrow(Elm327NoDataError)
     })
 
-    it('should throw Elm327ParseError on "CAN ERROR"', () => {
-      expect(() => parseMode22Response('CAN ERROR', 2)).toThrow(Elm327ParseError)
+    it('should throw Elm327BusError on "CAN ERROR" — el bus falla, no el parser', () => {
+      expect(() => parseMode22Response('CAN ERROR', 2)).toThrow(Elm327BusError)
     })
   })
 
@@ -186,8 +190,8 @@ describe('protocol', () => {
       expect(parseDtcResponse('NO DATA')).toEqual([])
     })
 
-    it('should throw Elm327ParseError on "CAN ERROR"', () => {
-      expect(() => parseDtcResponse('CAN ERROR')).toThrow(Elm327ParseError)
+    it('should throw Elm327BusError on "CAN ERROR" — el bus falla, no el parser', () => {
+      expect(() => parseDtcResponse('CAN ERROR')).toThrow(Elm327BusError)
     })
 
     it('should throw Elm327ParseError when header does not match mode (Mode 03 with 47 header)', () => {
@@ -295,6 +299,55 @@ describe('protocol', () => {
 
     it('should throw Elm327ParseError for token longer than 2 chars', () => {
       expect(() => parseHexBytes('1FF')).toThrow(Elm327ParseError)
+    })
+  })
+
+  describe('bus errors', () => {
+    it.each([
+      ['UNABLE TO CONNECT', /contacto/i],
+      ['BUS INIT: ...ERROR', /bus/i],
+      ['CAN ERROR', /CAN/i],
+      ['BUS BUSY', /ocupado/i],
+      ['DATA ERROR', /datos/i],
+      ['BUFFER FULL', /desbord/i],
+      ['STOPPED', /interrump/i],
+      ['LV RESET', /tensi/i],
+    ])('should translate "%s" into an actionable Elm327BusError', (response, expected) => {
+      expect(() => parseModeResponse(`01 0C\r${response}\r\r>`)).toThrow(Elm327BusError)
+      expect(() => parseModeResponse(`01 0C\r${response}\r\r>`)).toThrow(expected)
+    })
+
+    it('should classify a bus error as external so the caller may retry', () => {
+      expect(new Elm327BusError('UNABLE TO CONNECT', 'raw').errorCategory).toBe('external_error')
+    })
+
+    it('should keep the raw response in the message for debugging', () => {
+      const raw = '01 0C\rCAN ERROR\r\r>'
+      expect(() => parseModeResponse(raw)).toThrow(/CAN ERROR/)
+    })
+
+    it('should throw on a bus error in DTC reads instead of reporting "no faults"', () => {
+      expect(() => parseDtcResponse('03\rUNABLE TO CONNECT\r\r>', '03')).toThrow(Elm327BusError)
+    })
+
+    it('should throw on a bus error in Mode 22 reads', () => {
+      expect(() => parseMode22Response('22 11 30\rBUS BUSY\r\r>', 2)).toThrow(Elm327BusError)
+    })
+
+    it('should throw on a bus error in VIN reads', () => {
+      expect(() => parseVinResponse('09 02\rSTOPPED\r\r>')).toThrow(Elm327BusError)
+    })
+
+    it('should throw on a bus error in multi-PID reads instead of skipping the line', () => {
+      expect(() => parseModeResponseEntries('0: CAN ERROR\r\r>')).toThrow(Elm327BusError)
+    })
+
+    it('should not confuse "NO DATA" with a bus error — it means the PID is unsupported', () => {
+      expect(() => parseModeResponse('01 0C\rNO DATA\r\r>')).toThrow(Elm327NoDataError)
+    })
+
+    it('should not flag a healthy response that happens to contain matching bytes', () => {
+      expect(parseModeResponse('01 0C\r41 0C 0C 80\r\r>')).toEqual([0x0c, 0x80])
     })
   })
 })

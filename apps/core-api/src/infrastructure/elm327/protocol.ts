@@ -1,4 +1,53 @@
-import { Elm327NoDataError, Elm327ParseError } from './errors.js'
+import { Elm327BusError, Elm327NoDataError, Elm327ParseError } from './errors.js'
+
+/**
+ * Respuestas del ELM327 que no son datos sino un fallo del enlace con el
+ * vehiculo, con la explicacion que se le enseña a quien esta delante del coche.
+ *
+ * Sin esta traduccion todas caian en {@link Elm327ParseError}, que dice
+ * "respuesta ilegible" y manda a buscar un bug inexistente en el parser.
+ */
+const BUS_ERRORS: ReadonlyArray<readonly [RegExp, string]> = [
+  [
+    /UNABLE TO CONNECT/i,
+    'El adaptador no consigue abrir el bus del vehiculo. Comprueba que el contacto este puesto y que el conector OBD asiente bien.',
+  ],
+  [
+    /BUS INIT|BUS ERROR/i,
+    'Fallo al inicializar el bus del vehiculo. Revisa el conector OBD y vuelve a intentarlo.',
+  ],
+  [/CAN ERROR/i, 'Error en el bus CAN del vehiculo. Suele ser conector flojo o protocolo erroneo.'],
+  [
+    /BUS BUSY/i,
+    'El bus del vehiculo esta ocupado y no acepta la peticion. Reintenta en unos segundos.',
+  ],
+  [
+    /DATA ERROR/i,
+    'Datos corruptos en la respuesta del vehiculo. Suele indicar interferencias o mal contacto.',
+  ],
+  [
+    /BUFFER FULL/i,
+    'Desbordamiento del buffer del adaptador: llegan mas datos de los que puede procesar.',
+  ],
+  [/STOPPED/i, 'Lectura interrumpida por el adaptador antes de completarse.'],
+  [/LV RESET/i, 'El adaptador se ha reiniciado por tension baja. Revisa la bateria del vehiculo.'],
+]
+
+/**
+ * Lanza si la respuesta cruda es un fallo del bus en vez de datos.
+ *
+ * Se comprueba antes que cualquier parseo: estas respuestas son texto plano y
+ * no encajan en ningun formato de datos, asi que llegarian al final como
+ * "ilegible" perdiendo por el camino la unica pista util.
+ *
+ * @param raw - Respuesta cruda del adaptador ELM327.
+ * @throws {Elm327BusError} Si la respuesta es uno de los fallos de bus conocidos.
+ */
+export function assertNoBusError(raw: string): void {
+  for (const [pattern, reason] of BUS_ERRORS) {
+    if (pattern.test(raw)) throw new Elm327BusError(reason, raw)
+  }
+}
 
 /** Valida que un token hexadecimal tenga exactamente 1 o 2 dígitos [0-9A-F] case-insensitive. */
 const HEX_TOKEN_RE = /^[0-9A-F]{1,2}$/i
@@ -58,6 +107,7 @@ const VIN_LINE_RE = /^49\s+02\s+01\s+/i
  * @throws {Elm327NoDataError} Si la respuesta contiene "NO DATA".
  */
 export function parseMultiLineResponse(raw: string, linePrefix: RegExp): number[] {
+  assertNoBusError(raw)
   if (/NO DATA/i.test(raw)) throw new Elm327NoDataError(raw)
   const payload: number[] = []
   for (const line of raw.split(/\r\n?|\n/)) {
@@ -102,6 +152,7 @@ export interface ModeResponseEntry {
  * @returns Entradas PID → bytes en orden de aparición.
  */
 export function parseModeResponseEntries(raw: string): ModeResponseEntry[] {
+  assertNoBusError(raw)
   const entries: ModeResponseEntry[] = []
   for (const line of raw.split(/\r\n?|\n/)) {
     const idx = line.indexOf(':')
@@ -116,6 +167,7 @@ export function parseModeResponseEntries(raw: string): ModeResponseEntry[] {
 
 /** Mode 22 UDS: extrae los bytes de payload tras `62 XX XX`. */
 export function parseMode22Response(raw: string, didLen: number): number[] {
+  assertNoBusError(raw)
   const cleaned = stripEcho(raw)
   if (/NO DATA/i.test(cleaned)) throw new Elm327NoDataError(raw)
   const match = cleaned.match(/62\s+[0-9A-F]{2}\s+[0-9A-F]{2}\s+([0-9A-F]{2}(?:\s+[0-9A-F]{2})*)/i)
@@ -145,11 +197,13 @@ export function parseVinResponse(raw: string): number[] {
  * @param mode - Modo OBD-II (`'03'`, `'07'`, `'0A'`). Por defecto `'03'`.
  * @returns Pares de bytes DTC. Array vacio si no hay codigos (`NO DATA`).
  * @throws {Elm327ParseError} Si la respuesta no contiene el header esperado.
+ * @throws {Elm327BusError} Si el bus falla — distinto de "no hay averias".
  */
 export function parseDtcResponse(
   raw: string,
   mode: '03' | '07' | '0A' = '03',
 ): Array<[number, number]> {
+  assertNoBusError(raw)
   const headerByte = (0x40 + Number.parseInt(mode, 16)).toString(16).toUpperCase()
   const cleaned = stripEcho(raw)
   if (/NO DATA/i.test(cleaned)) return []
