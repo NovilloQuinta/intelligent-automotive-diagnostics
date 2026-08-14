@@ -13,6 +13,10 @@ import type { EmailSenderPort } from '@/application/ports/EmailSenderPort.js'
 import { Elm327TcpRepository } from '@/infrastructure/elm327/elm327Adapter.js'
 import { createElm327TcpClient } from '@/infrastructure/elm327/tcpTransport.js'
 import { createElm327SerialClient } from '@/infrastructure/elm327/serialTransport.js'
+import {
+  ELM327_INIT_COMMANDS,
+  ELM327_INIT_TIMEOUT_MS,
+} from '@/infrastructure/elm327/initSequence.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import { createAnthropicClient } from '@/infrastructure/llm/anthropicClient.js'
@@ -520,6 +524,8 @@ function createDiagnosisService(opts: CreateDiagnosisServiceOptions): DiagnosisS
     const transport = createElm327SerialClient({
       path: config.SERIAL_PORT_PATH,
       baudRate: config.SERIAL_BAUD_RATE,
+      initCommands: ELM327_INIT_COMMANDS,
+      initTimeoutMs: ELM327_INIT_TIMEOUT_MS,
     })
     const obdRepo = new Elm327TcpRepository(transport, vehicleRepo, logger)
     return new DiagnosisService({
@@ -533,9 +539,13 @@ function createDiagnosisService(opts: CreateDiagnosisServiceOptions): DiagnosisS
       vehicleRepo,
     })
   }
+  // Modo tcp = dongle WiFi real: negocia igual que el serie. Los escenarios
+  // docker se construyen en createObdRepoMap y siguen sin negociar nada.
   const transport = createElm327TcpClient({
     host: config.ELM327_HOST,
     port: config.ELM327_PORT,
+    initCommands: ELM327_INIT_COMMANDS,
+    initTimeoutMs: ELM327_INIT_TIMEOUT_MS,
   })
   const obdRepo = new Elm327TcpRepository(transport, vehicleRepo, logger)
   return new DiagnosisService({

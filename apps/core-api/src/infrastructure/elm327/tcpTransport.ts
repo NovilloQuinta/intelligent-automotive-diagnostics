@@ -14,6 +14,10 @@ export interface Elm327TcpConfig {
   readonly maxRetries?: number
   /** Backoff base entre reintentos de envío en ms (default 200). */
   readonly backoffMs?: number
+  /** Comandos de negociación con el adaptador. Vacío para el emulador. */
+  readonly initCommands?: readonly string[]
+  /** Timeout de cada comando de init (default: el de comando). */
+  readonly initTimeoutMs?: number
 }
 
 /** Timeout por defecto para comandos TCP (3 segundos). */
@@ -62,5 +66,11 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327Transport 
       `ELM327 timeout (${ms}ms) after command "${cmd}" on ${target}`,
   }
 
-  return createReliableTransport(io, { timeoutMs, maxRetries, backoffMs })
+  return createReliableTransport(io, {
+    timeoutMs,
+    maxRetries,
+    backoffMs,
+    initCommands: config.initCommands,
+    initTimeoutMs: config.initTimeoutMs,
+  })
 }

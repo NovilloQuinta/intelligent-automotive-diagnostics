@@ -15,6 +15,10 @@ export interface SerialConfig {
   readonly maxRetries?: number
   /** Backoff base entre reintentos de envío en ms (default 200). */
   readonly backoffMs?: number
+  /** Comandos de negociación con el adaptador. Vacío para el emulador. */
+  readonly initCommands?: readonly string[]
+  /** Timeout de cada comando de init (default: el de comando). */
+  readonly initTimeoutMs?: number
 }
 
 /** Timeout por defecto para comandos seriales (3 segundos). */
@@ -60,5 +64,11 @@ export function createElm327SerialClient(config: SerialConfig): Elm327Transport 
       `ELM327 timeout (${ms}ms) after command "${cmd}" on ${path}`,
   }
 
-  return createReliableTransport(io, { timeoutMs, maxRetries, backoffMs })
+  return createReliableTransport(io, {
+    timeoutMs,
+    maxRetries,
+    backoffMs,
+    initCommands: config.initCommands,
+    initTimeoutMs: config.initTimeoutMs,
+  })
 }

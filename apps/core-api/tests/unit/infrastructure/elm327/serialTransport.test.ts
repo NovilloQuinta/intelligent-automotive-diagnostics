@@ -90,6 +90,38 @@ describe('createElm327SerialClient', () => {
     await expect(promise).resolves.toBe(ECHO_AT)
   })
 
+  it('negocia la sesión con el adaptador antes del primer comando de datos', async () => {
+    const client = createClient({
+      path: '/dev/ttyUSB0',
+      baudRate: 38400,
+      initCommands: ['ATZ', 'ATE0'],
+    })
+    await client.connect()
+
+    const promise = client.sendCommand('01 0C')
+
+    expectSent('ATZ')
+    respond('ATZ\rELM327 v1.5\r\r>')
+    await vi.waitFor(() => expectSent('ATE0'))
+    respond('ATE0\rOK\r\r>')
+    await vi.waitFor(() => expectSent('01 0C'))
+    respond(ECHO_RPM)
+
+    await expect(promise).resolves.toBe(ECHO_RPM)
+  })
+
+  it('sin initCommands no envía ningún AT — el emulador no negocia nada', async () => {
+    const client = createClient({ path: '/dev/ttyUSB0', baudRate: 38400 })
+    await client.connect()
+
+    const promise = client.sendCommand('01 0C')
+
+    expect(lastPort().write).toHaveBeenCalledTimes(1)
+    expectSent('01 0C')
+    respond(ECHO_RPM)
+    await expect(promise).resolves.toBe(ECHO_RPM)
+  })
+
   it('comando 01 0C responde 41 0C 0C 80', async () => {
     const client = createClient({ path: '/dev/ttyUSB0', baudRate: 38400 })
     await client.connect()

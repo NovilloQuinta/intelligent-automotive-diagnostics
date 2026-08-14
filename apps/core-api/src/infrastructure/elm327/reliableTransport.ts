@@ -69,6 +69,20 @@ export interface ReliableTransportConfig {
   readonly timeoutMs: number
   readonly maxRetries: number
   readonly backoffMs: number
+  /**
+   * Comandos enviados nada más abrir la conexión, antes de cualquier lectura, y
+   * de nuevo tras cada reconexión, porque el adaptador pierde su estado.
+   *
+   * Vacío para el emulador, que no necesita negociar nada. Un ELM327 físico sí:
+   * arranca con el echo activado y sin protocolo seleccionado.
+   */
+  readonly initCommands?: readonly string[]
+  /**
+   * Timeout de cada comando de init. Más largo que el de datos porque `ATZ`
+   * reinicia el chip y la selección de protocolo dispara `SEARCHING...`, que en
+   * un vehículo real tarda varios segundos.
+   */
+  readonly initTimeoutMs?: number
 }
 
 /**
@@ -84,8 +98,11 @@ export interface ReliableTransportConfig {
  */
 export function createReliableTransport<TConn>(
   io: TransportIoAdapter<TConn>,
-  { timeoutMs, maxRetries, backoffMs }: ReliableTransportConfig,
+  { timeoutMs, maxRetries, backoffMs, initCommands = [], initTimeoutMs }: ReliableTransportConfig,
 ): Elm327Transport {
+  const initMs = initTimeoutMs ?? timeoutMs
+  // Se rearma en cada apertura de conexión: el adaptador olvida su configuración.
+  let initPending = initCommands.length > 0
   let conn: TConn | null = null
   let reconnectState: 'connected' | 'reconnecting' | 'closed' = 'connected'
   let reconnectAttempt = 0
@@ -143,6 +160,7 @@ export function createReliableTransport<TConn>(
   }
 
   function openConnection(): TConn {
+    initPending = initCommands.length > 0
     const target = io.open()
     io.bind(target, {
       onData: (chunk) => onData(target, chunk),
@@ -192,7 +210,7 @@ export function createReliableTransport<TConn>(
     await reconnectPromise
   }
 
-  function sendCommandOnce(cmd: string): Promise<string> {
+  function sendCommandOnce(cmd: string, commandTimeoutMs: number): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       if (conn === null) {
         reject(new Elm327ConnectionError(io.notConnectedMessage()))
@@ -206,10 +224,26 @@ export function createReliableTransport<TConn>(
         activeCommand = null
         conn = null
         io.destroy(target)
-        reject(new Elm327ConnectionError(io.commandTimeoutMessage(cmd, timeoutMs)))
-      }, timeoutMs)
+        reject(new Elm327ConnectionError(io.commandTimeoutMessage(cmd, commandTimeoutMs)))
+      }, commandTimeoutMs)
       io.write(target, `${cmd}\r\n`)
     })
+  }
+
+  /**
+   * Negocia la sesión con el adaptador antes de la primera lectura. Se ejecuta
+   * dentro del drenado de la cola, de modo que un solo punto cubre tanto la
+   * conexión inicial como cada reconexión posterior.
+   *
+   * No filtra las respuestas: un clon que no reconozca un comando contesta `?`
+   * y se sigue adelante. Solo un timeout aborta, y lo hace propagando el error
+   * para que el reintento normal de la cola vuelva a intentarlo.
+   */
+  async function runInit(): Promise<void> {
+    for (const cmd of initCommands) {
+      await sendCommandOnce(cmd, initMs)
+    }
+    initPending = false
   }
 
   async function processQueue(): Promise<void> {
@@ -228,7 +262,10 @@ export function createReliableTransport<TConn>(
             await connect()
           }
         }
-        const result = await sendCommandOnce(entry.cmd)
+        // Guarda en el sitio de llamada, no dentro de runInit: sin init, el
+        // comando debe escribirse en el mismo tick, sin ceder un microtask.
+        if (initPending) await runInit()
+        const result = await sendCommandOnce(entry.cmd, timeoutMs)
         reconnectAttempt = 0
         reconnectStartedAt = 0
         reconnectState = 'connected'
