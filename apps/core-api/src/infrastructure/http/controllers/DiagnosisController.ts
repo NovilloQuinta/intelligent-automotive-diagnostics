@@ -1,5 +1,7 @@
 import type { Request, Response } from 'express'
 import { z } from 'zod'
+import { VehicleIdentityError } from '@/domain/entities/vehicleIdentity.js'
+import { VinDecodeError } from '@/domain/value-objects/vin.js'
 import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 import {
   ToolCallTimeoutError,
@@ -11,6 +13,7 @@ import {
   CognitiveDiagnosisUnavailableError,
   CognitiveDiagnosisTimeoutError,
   DiagnosisSessionNotFoundError,
+  VehicleIdentificationUnavailableError,
 } from '@/infrastructure/services/errors.js'
 import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
@@ -27,6 +30,8 @@ const ERROR_MESSAGES = {
   emptyToolResult: 'Tool returned no content',
   cognitiveTimedOut: 'Cognitive diagnosis timed out',
   cognitiveUnavailable: 'Cognitive diagnosis is not available',
+  identificationUnavailable: 'Vehicle identification is not available',
+  invalidVehicleIdentity: 'Invalid vehicle identity',
   cognitiveTooManySteps:
     'El diagnóstico necesitó demasiados pasos. Prueba con una pregunta más concreta.',
   internalError: 'Internal server error',
@@ -92,6 +97,21 @@ const { docker: FreezeFrameQuerySchema, tcp: FreezeFrameQueryTcpSchema } = scena
 const { docker: EcuInfoQuerySchema, tcp: EcuInfoQueryTcpSchema } = scenarioSchemas({})
 
 const { docker: VehicleInfoQuerySchema, tcp: VehicleInfoQueryTcpSchema } = scenarioSchemas({})
+
+/**
+ * Identificacion que aporta el mecanico desde la pantalla de confirmacion.
+ *
+ * La validacion fuerte (normalizacion del nombre, forma de marca, WMI) vive en
+ * el dominio: aqui solo se acota la forma del payload para no aceptar un JSON
+ * cualquiera. Duplicar las reglas en zod las dejaria divergir.
+ */
+const VehicleIdentityBodySchema = z.object({
+  vin: z.string().length(17),
+  make: z.string().min(1).max(64),
+  model: z.string().max(64).optional(),
+  year: z.number().int().min(1980).max(2100).optional(),
+  engineType: z.string().max(64).optional(),
+})
 
 /** Códigos de PID Mode 01 válidos (SAE J1979) según el catálogo de seed data. */
 const MODE_01_PID_CODES = new Set(
@@ -276,6 +296,36 @@ export class DiagnosisController {
       (data) => this.service.getVehicleInfo(data.scenarioId),
       (result) => res.status(200).json(result),
     )
+
+  /**
+   * POST /api/vehicle-identity — el mecanico corrige la identificacion del coche.
+   *
+   * Ultima rama de la cascada, para cuando ni el catalogo ni la web sacan el
+   * vehiculo. 400 payload invalido o marca sin forma de nombre, 404 sin
+   * persistencia configurada.
+   */
+  confirmVehicleIdentity = async (req: Request, res: Response): Promise<void> => {
+    const parsed = VehicleIdentityBodySchema.safeParse(req.body)
+    if (!parsed.success) {
+      res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
+      return
+    }
+
+    try {
+      res.status(200).json(await this.service.confirmVehicleIdentity(parsed.data))
+    } catch (err) {
+      if (err instanceof VehicleIdentificationUnavailableError) {
+        res.status(404).json({ error: ERROR_MESSAGES.identificationUnavailable })
+        return
+      }
+      // El dominio rechaza VINs y marcas mal formadas: es culpa del cliente, no del servidor.
+      if (err instanceof VehicleIdentityError || err instanceof VinDecodeError) {
+        res.status(400).json({ error: ERROR_MESSAGES.invalidVehicleIdentity, details: err.message })
+        return
+      }
+      this.respondUnexpected(err, res, 'Vehicle identity confirmation failed')
+    }
+  }
 
   /** GET /api/live-data — telemetria en vivo de los 4 PIDs del dashboard. 400 query invalida, 404 escenario inexistente. */
   liveData = (req: Request, res: Response): Promise<void> =>

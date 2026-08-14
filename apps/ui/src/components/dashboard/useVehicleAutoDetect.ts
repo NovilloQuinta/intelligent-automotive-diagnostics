@@ -1,7 +1,11 @@
 import { useCallback, useRef, useState } from 'react'
 import { api } from '@/lib/api'
 import { extractErrorMessage } from '@/lib/errors'
-import type { VehicleInfoResponse } from './types'
+import type {
+  VehicleIdentityConfirmation,
+  VehicleIdentityInput,
+  VehicleInfoResponse,
+} from './types'
 
 /** Steps of the vehicle identification wizard, in order. */
 export type VehicleAutoDetectStep = 'selecting' | 'detecting' | 'confirming' | 'done'
@@ -61,5 +65,32 @@ export function useVehicleAutoDetect() {
     setStep('selecting')
   }, [])
 
-  return { step, scenarioId, vehicle, error, detect, retry, confirm, restart }
+  /**
+   * Envía la corrección del mecánico y refleja en pantalla lo que se guardó.
+   *
+   * El servidor decide qué sube al catálogo y qué se queda en este vehículo, así
+   * que la pantalla muestra su respuesta y no lo que se tecleó: si hubo conflicto
+   * de marca, lo que vale es la que ya se conocía.
+   */
+  const saveIdentity = useCallback(
+    async (input: VehicleIdentityInput): Promise<VehicleIdentityConfirmation> => {
+      const confirmation = await api.confirmVehicleIdentity(input)
+      setVehicle((current) =>
+        current
+          ? {
+              ...current,
+              make: confirmation.vehicle.make,
+              model: confirmation.vehicle.model,
+              year: confirmation.vehicle.year,
+              engineType: confirmation.vehicle.engineType,
+              manufacturer: confirmation.vehicle.make,
+            }
+          : current,
+      )
+      return confirmation
+    },
+    [],
+  )
+
+  return { step, scenarioId, vehicle, error, detect, retry, confirm, restart, saveIdentity }
 }

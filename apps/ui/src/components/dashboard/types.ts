@@ -104,6 +104,26 @@ export type VehicleInfoResponse = {
   modelYearDecoded: number | null
 }
 
+/** Identificación que aporta el mecánico cuando la cascada no saca el coche. */
+export type VehicleIdentityInput = {
+  vin: string
+  make: string
+  model?: string
+  year?: number
+  engineType?: string
+}
+
+/** Qué acabó pasando con lo que aportó el mecánico. */
+export type VehicleIdentityConfirmation = {
+  vehicle: { make: string; model: string; year: number; engineType: string }
+  /** `true` si la marca subió al catálogo de WMI, no solo a este vehículo. */
+  promoted: boolean
+  /** Presente cuando ese WMI ya tenía otra marca: se conserva la conocida. */
+  conflict?: { known: string; claimed: string }
+  /** Incoherencias que no bloquean, para mostrarlas junto al formulario. */
+  warnings: string[]
+}
+
 // ---------------------------------------------------------------------------
 // Auth types
 // ---------------------------------------------------------------------------

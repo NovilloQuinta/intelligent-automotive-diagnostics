@@ -31,6 +31,7 @@ export function createDiagnosisRoutes(controller: DiagnosisController): Router {
   router.get('/freeze-frame', controller.freezeFrame)
   router.get('/ecu-info', controller.ecuInfo)
   router.get('/vehicle-info', controller.vehicleInfo)
+  router.post('/vehicle-identity', controller.confirmVehicleIdentity)
   router.get('/live-data', liveDataRateLimit, controller.liveData)
   router.post('/mcp/tools/:toolName', controller.mcpTool)
   router.post('/mcp/cognitive-diagnosis', controller.cognitiveDiagnosis)

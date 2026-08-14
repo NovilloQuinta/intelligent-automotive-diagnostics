@@ -5,6 +5,7 @@ import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import type { PidReading } from '@/domain/entities/pidReading.js'
 import type { DtcDefinition } from '@/domain/entities/dtcDefinition.js'
 import type { EcuDefinition } from '@/domain/entities/ecuDefinition.js'
+import type { VehicleIdentity } from '@/domain/entities/vehicleIdentity.js'
 
 /** Resultado de una consulta paginada de sesiones de diagnostico. */
 export interface DiagnosisSessionPage {
@@ -41,6 +42,22 @@ export interface VehicleRepository {
    * @throws VinDecodeError si el VIN no cumple el formato ISO 3779
    */
   findVehicleByVin(vin: string): Promise<VehicleProfile | null>
+
+  /** Busca el fabricante asociado a un WMI (3 primeros caracteres del VIN). */
+  findVehicleIdentityByWmi(wmi: string): Promise<VehicleIdentity | null>
+
+  /**
+   * Registra o actualiza la identidad de un WMI.
+   *
+   * **Nunca degrada**: si ya existe una entrada con confianza mayor o igual, la
+   * conserva y la devuelve intacta. Sin esta regla, un resultado flojo de la web
+   * (0.3) pisaría la asignación oficial sembrada (0.9).
+   *
+   * @throws VehicleIdentityError si el WMI o el fabricante no son válidos
+   */
+  upsertVehicleIdentity(
+    identity: Omit<VehicleIdentity, 'id' | 'createdAt'>,
+  ): Promise<VehicleIdentity>
 
   /** Registra una ECU asociada a un vehículo. */
   insertEcu(ecu: EcuInfo): Promise<EcuInfo>

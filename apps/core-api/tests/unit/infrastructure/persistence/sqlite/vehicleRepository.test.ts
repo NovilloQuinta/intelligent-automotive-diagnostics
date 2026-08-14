@@ -139,6 +139,15 @@ describe('SqliteVehicleRepository', () => {
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         UNIQUE(manufacturer, model, response_addr)
       );
+
+      CREATE TABLE IF NOT EXISTS vehicle_identities (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        wmi TEXT NOT NULL UNIQUE,
+        manufacturer TEXT NOT NULL,
+        confidence REAL NOT NULL DEFAULT 0.3,
+        source TEXT NOT NULL DEFAULT 'web',
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
     `)
 
     db = drizzle(sqlite, { schema })
@@ -921,6 +930,82 @@ describe('SqliteVehicleRepository', () => {
       expect(after!.name).toBe('Engine Control Module')
       expect(after!.discoveredAt).toBeDefined()
       expect(() => new Date(after!.discoveredAt!)).not.toThrow()
+    })
+  })
+
+  describe('vehicleIdentities', () => {
+    it('upsertVehicleIdentity inserts and normalizes WMI y fabricante', async () => {
+      const result = await repo.upsertVehicleIdentity({
+        wmi: 'vr3',
+        manufacturer: 'peugeot',
+        confidence: 0.3,
+        source: 'web',
+      })
+
+      expect(result.id).toBeGreaterThan(0)
+      expect(result.wmi).toBe('VR3')
+      expect(result.manufacturer).toBe('Peugeot')
+    })
+
+    it('findVehicleIdentityByWmi encuentra por WMI en minusculas', async () => {
+      await repo.upsertVehicleIdentity({
+        wmi: 'ZFA',
+        manufacturer: 'Fiat',
+        confidence: 0.9,
+        source: 'seed',
+      })
+
+      const result = await repo.findVehicleIdentityByWmi('zfa')
+
+      expect(result).not.toBeNull()
+      expect(result!.manufacturer).toBe('Fiat')
+      expect(result!.source).toBe('seed')
+    })
+
+    it('findVehicleIdentityByWmi devuelve null si el WMI no esta', async () => {
+      expect(await repo.findVehicleIdentityByWmi('XYZ')).toBeNull()
+    })
+
+    it('no degrada una entrada existente con otra de menos confianza', async () => {
+      // Lo aprendido de la web (0.3) no puede pisar lo sembrado (0.9): si no,
+      // un resultado flojo de internet degradaria el catalogo oficial.
+      await repo.upsertVehicleIdentity({
+        wmi: 'WAU',
+        manufacturer: 'Audi',
+        confidence: 0.9,
+        source: 'seed',
+      })
+
+      const result = await repo.upsertVehicleIdentity({
+        wmi: 'WAU',
+        manufacturer: 'Audi Sport',
+        confidence: 0.3,
+        source: 'web',
+      })
+
+      expect(result.manufacturer).toBe('Audi')
+      expect(result.confidence).toBe(0.9)
+      expect(result.source).toBe('seed')
+    })
+
+    it('actualiza cuando la nueva entrada tiene mas confianza', async () => {
+      await repo.upsertVehicleIdentity({
+        wmi: 'VF7',
+        manufacturer: 'Citroen',
+        confidence: 0.3,
+        source: 'web',
+      })
+
+      const result = await repo.upsertVehicleIdentity({
+        wmi: 'VF7',
+        manufacturer: 'Citroën',
+        confidence: 0.8,
+        source: 'mechanic',
+      })
+
+      expect(result.manufacturer).toBe('Citroën')
+      expect(result.confidence).toBe(0.8)
+      expect(result.source).toBe('mechanic')
     })
   })
 })

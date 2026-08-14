@@ -16,6 +16,8 @@ import type {
   Scenario,
   UpdateProfileInput,
   VehicleInfoResponse,
+  VehicleIdentityInput,
+  VehicleIdentityConfirmation,
   VehicleStatusOutput,
 } from '@/components/dashboard/types'
 import type {
@@ -237,6 +239,22 @@ export const api = {
     const res = await apiFetch(`/api/vehicle-info?scenarioId=${encodeURIComponent(scenarioId)}`)
     await assertOk(res, GENERIC_ERROR_MESSAGE)
     return (await res.json()) as VehicleInfoResponse
+  },
+
+  /**
+   * POST /api/vehicle-identity — el mecánico corrige la identificación del coche.
+   *
+   * Última rama de la cascada de identificación, para cuando ni el catálogo ni
+   * la búsqueda web sacan el vehículo.
+   */
+  async confirmVehicleIdentity(input: VehicleIdentityInput): Promise<VehicleIdentityConfirmation> {
+    const res = await apiFetch('/api/vehicle-identity', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    })
+    await assertOk(res, GENERIC_ERROR_MESSAGE)
+    return (await res.json()) as VehicleIdentityConfirmation
   },
 
   /** GET /api/pending-dtc — returns pending DTCs (Mode 07). */

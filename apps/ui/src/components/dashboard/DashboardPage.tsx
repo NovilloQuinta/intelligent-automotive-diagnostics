@@ -112,6 +112,7 @@ export function DashboardPage() {
           onRetry={wizard.retry}
           onBack={wizard.restart}
           onConfirm={handleVehicleConfirmed}
+          onSaveIdentity={wizard.saveIdentity}
         />
       </DashboardLayout>
     )
