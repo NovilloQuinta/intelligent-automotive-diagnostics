@@ -20,6 +20,18 @@ import type { ProfileController } from '@/infrastructure/http/controllers/Profil
 import type { AdminController } from '@/infrastructure/http/controllers/AdminController.js'
 import type { RequestHandler } from 'express'
 
+/** Limite de cuerpo por defecto: sobrado para cualquier peticion de la API salvo el chat. */
+const DEFAULT_BODY_LIMIT = '10kb'
+
+/** Ruta del diagnostico cognitivo, unica que recibe el hilo de conversacion completo. */
+const COGNITIVE_DIAGNOSIS_PATH = '/api/mcp/cognitive-diagnosis'
+
+/** Limite de cuerpo del chat cognitivo: acotado, pero con margen para un hilo largo. */
+const COGNITIVE_BODY_LIMIT = '1mb'
+
+/** Codigo de estado del cuerpo demasiado grande (RFC 9110). */
+const HTTP_PAYLOAD_TOO_LARGE = 413
+
 /** Dependencias del servidor Express. */
 export interface ServerDependencies {
   readonly rateLimit?: Partial<RateLimiterConfig>
@@ -56,7 +68,11 @@ function applyBaseMiddleware(app: express.Application, deps: ServerDependencies)
   )
   app.use(createRateLimiter(deps.rateLimit))
   app.use(createAuditLogger(deps.auditRepo))
-  app.use(express.json({ limit: '10kb' }))
+  // El chat cognitivo reenvia el hilo entero en cada pregunta, asi que su cuerpo
+  // crece con la conversacion y con 10 KB se agotaba a la tercera pregunta. Lleva
+  // su propio limite en lugar de aflojar el global, que protege al resto de la API.
+  app.use(COGNITIVE_DIAGNOSIS_PATH, express.json({ limit: COGNITIVE_BODY_LIMIT }))
+  app.use(express.json({ limit: DEFAULT_BODY_LIMIT }))
 }
 
 /** CORS con allowlist de origins usando el paquete `cors`. */
@@ -115,12 +131,30 @@ function mountInfoRoutes(app: express.Application, nodeEnv: string): void {
   })
 }
 
-/** Error handler global: responde 500 sin filtrar detalles internos. */
+/** Marca con la que `body-parser` senala un cuerpo mayor que el limite de la ruta. */
+const PAYLOAD_TOO_LARGE_TYPE = 'entity.too.large'
+
+/** Distingue el cuerpo demasiado grande de un fallo propio: el llamante puede corregirlo. */
+function isPayloadTooLarge(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    (err as { type?: string }).type === PAYLOAD_TOO_LARGE_TYPE
+  )
+}
+
+/** Error handler global: 500 sin filtrar detalles internos, salvo el cuerpo demasiado grande. */
 function mountErrorHandler(app: express.Application, logger: LoggerPort): void {
   app.use(
     (err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
       const message = err instanceof Error ? err.message : 'Unknown error'
       logger.error(message)
+      // Un cuerpo demasiado grande salia como 500 "Internal server error", y el
+      // cliente no podia distinguirlo de una caida: es 413 y tiene arreglo.
+      if (isPayloadTooLarge(err)) {
+        res.status(HTTP_PAYLOAD_TOO_LARGE).json({ error: 'Request body is too large' })
+        return
+      }
       res.status(500).json({ error: 'Internal server error' })
     },
   )

@@ -368,4 +368,43 @@ describe('HTTP server', () => {
       expect(body.result).toContain('P0301')
     })
   })
+
+  describe('tamano del cuerpo por ruta', () => {
+    /** Hilo de conversacion de ~40 KB: supera de largo el limite global de 10 KB. */
+    function longConversation(): unknown[] {
+      return Array.from({ length: 20 }, (_, i) => ({
+        __type: 'raw_response',
+        data: { text: `respuesta ${i} `.padEnd(2000, 'x') },
+      }))
+    }
+
+    it('should accept a long chat thread on the cognitive diagnosis route', async () => {
+      // El chat reenvia el hilo entero en cada pregunta: con el limite global
+      // de 10 KB se cortaba a la tercera con un 413 que la UI no explicaba.
+      const res = await fetch(`${baseUrl}/api/mcp/cognitive-diagnosis`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scenarioId: 'audi-a3-idle',
+          userQuery: '¿que reviso primero?',
+          conversationHistory: longConversation(),
+        }),
+      })
+
+      // Llega al controlador (404 sin LLM configurado en este servidor de test)
+      // en vez de morir en el parser con 413 ni en el handler generico con 500.
+      expect(res.status).not.toBe(413)
+      expect(res.status).not.toBe(500)
+    })
+
+    it('should keep the strict 10kb limit on the rest of the API', async () => {
+      const res = await fetch(`${baseUrl}/api/diagnosis`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenarioId: 'audi-a3-idle', padding: 'x'.repeat(20_000) }),
+      })
+
+      expect(res.status).toBe(413)
+    })
+  })
 })

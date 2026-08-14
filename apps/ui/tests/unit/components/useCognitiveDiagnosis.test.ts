@@ -2,7 +2,11 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createElement, useState } from "react";
-import { useCognitiveDiagnosis } from "../../../src/components/dashboard/useCognitiveDiagnosis";
+import {
+  useCognitiveDiagnosis,
+  trimHistoryForRequest,
+  MAX_HISTORY_BYTES,
+} from "../../../src/components/dashboard/useCognitiveDiagnosis";
 import type { CognitiveOutput, ConversationItem } from "../../../src/lib/api";
 import { ApiHttpError } from "../../../src/lib/api-errors";
 
@@ -293,6 +297,27 @@ describe("useCognitiveDiagnosis", () => {
     });
   });
 
+  it("explains a 413 instead of falling back to the generic message", async () => {
+    // El hilo se reenvia entero en cada pregunta: al crecer, el servidor
+    // rechazaba el cuerpo y el usuario veia un error sin causa aparente.
+    vi.mocked(api.getCognitiveDiagnosis).mockRejectedValue(
+      new ApiHttpError("Request body is too large", 413),
+    );
+
+    const { result } = renderHook(() => useCognitiveDiagnosis("kawa-z900"), {
+      wrapper,
+    });
+
+    await act(async () => {
+      await result.current.trigger();
+    });
+
+    await waitFor(() => {
+      expect(result.current.error?.kind).toBe("thread_too_long");
+      expect(result.current.error?.message).toMatch(/conversación|nuevo diagnóstico/i);
+    });
+  });
+
   it("exposes error.kind 'too_many_steps' on a 422 rejection", async () => {
     vi.mocked(api.getCognitiveDiagnosis).mockRejectedValue(
       new ApiHttpError(
@@ -529,5 +554,45 @@ describe("useCognitiveDiagnosis", () => {
       __type: "raw_response",
       data: { text: "Narrativa" },
     });
+  });
+});
+
+describe("trimHistoryForRequest", () => {
+  /** Turno de ~2 KB: dos de estos ya rozan el limite de cuerpo antiguo. */
+  function bulkyTurn(i: number): ConversationItem[] {
+    return [
+      { __type: "user_message", content: `pregunta ${i}` },
+      {
+        __type: "raw_response",
+        data: { text: `respuesta ${i} `.padEnd(2000, "x") },
+      },
+    ];
+  }
+
+  it("sends the whole thread when it fits the budget", () => {
+    const history = bulkyTurn(1);
+
+    expect(trimHistoryForRequest(history)).toEqual(history);
+  });
+
+  it("drops the oldest turns when the thread outgrows the budget", () => {
+    const history = Array.from({ length: 60 }, (_, i) => bulkyTurn(i)).flat();
+
+    const trimmed = trimHistoryForRequest(history);
+
+    expect(trimmed.length).toBeLessThan(history.length);
+    // Lo que se conserva es el final del hilo: el contexto reciente es el que importa.
+    expect(trimmed[trimmed.length - 1]).toEqual(history[history.length - 1]);
+    expect(JSON.stringify(trimmed).length).toBeLessThanOrEqual(
+      MAX_HISTORY_BYTES,
+    );
+  });
+
+  it("keeps at least the last item even if it alone exceeds the budget", () => {
+    const huge: ConversationItem[] = [
+      { __type: "raw_response", data: { text: "x".repeat(MAX_HISTORY_BYTES * 2) } },
+    ];
+
+    expect(trimHistoryForRequest(huge)).toHaveLength(1);
   });
 });
