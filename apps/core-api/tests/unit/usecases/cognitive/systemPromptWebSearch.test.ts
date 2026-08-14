@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT,
+  CAPABILITY_INSTRUCTIONS,
+  MECHANIC_STYLE_INSTRUCTIONS,
   SCOPE_INSTRUCTIONS,
   INTERNALS_INSTRUCTIONS,
   UNTRUSTED_CONTENT_INSTRUCTIONS,
@@ -55,6 +57,61 @@ describe('COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT', () => {
 
     it('atiende solo la parte de vehiculos en una consulta mixta', () => {
       expect(SCOPE_INSTRUCTIONS.join('\n')).toMatch(/mezcla vehículos/i)
+    })
+  })
+
+  describe('limite de capacidad', () => {
+    const capability = CAPABILITY_INSTRUCTIONS.join('\n')
+
+    // SCOPE cubre "la consulta no va de coches". Este bloque cubre el caso
+    // distinto: la consulta SI va de coches, pero pide una actuacion que el
+    // sistema no emite. Sin regla propia el modelo improvisa formato.
+    it('declara que el sistema solo lee y no ordena actuaciones', () => {
+      expect(capability).toMatch(/solo puedes LEER/i)
+      expect(capability).toMatch(/actuadores/i)
+    })
+
+    it('cubre las actuaciones que un mecanico pide de verdad', () => {
+      expect(capability).toMatch(/pistones de freno|EPB/i)
+      expect(capability).toMatch(/regenerac/i)
+      expect(capability).toMatch(/codificar|programar/i)
+    })
+
+    it('redirige a la maquina de taller en vez de dejar al mecanico sin salida', () => {
+      expect(capability).toMatch(/máquina de taller/i)
+      expect(capability).toMatch(/DTC|PID|freeze frame/i)
+    })
+
+    it('prohibe enumerar los modos OBD al declinar', () => {
+      // La respuesta real listaba "S01, S02, S05, S06, S07, S09, S0A, S22":
+      // es la fontaneria del sistema, que INTERNALS ya prohibe en general.
+      expect(capability).toMatch(/no expliques tu arquitectura|no enumeres/i)
+    })
+
+    it('exige el bloque JSON tambien al declinar una actuacion', () => {
+      expect(SCOPE_INSTRUCTIONS.join('\n')).toMatch(/declines una actuación/i)
+    })
+
+    it('se incluye en el prompt compuesto', () => {
+      for (const block of CAPABILITY_INSTRUCTIONS) {
+        expect(COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT).toContain(block)
+      }
+    })
+  })
+
+  describe('estilo de respuesta', () => {
+    const style = MECHANIC_STYLE_INSTRUCTIONS.join('\n')
+
+    it('exige espanol tambien al declinar', () => {
+      // El rechazo real empezaba en ingles: la regla de idioma solo hablaba
+      // de "responde", y el modelo no leyo una negativa como una respuesta.
+      expect(style).toMatch(/siempre en español/i)
+      expect(style).toMatch(/declines|rechaces/i)
+    })
+
+    it('prohibe las tablas markdown', () => {
+      // El panel de chat es estrecho: una tabla se rompe aunque se renderice.
+      expect(style).toMatch(/no uses tablas/i)
     })
   })
 

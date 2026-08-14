@@ -1,5 +1,6 @@
 import { useState, useCallback, type KeyboardEvent } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -209,8 +210,12 @@ function ConversationThread({
                   )}
                 </div>
               )}
-              <div className="[&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:my-0.5 [&_strong]:font-semibold [&_strong]:text-foreground/95 [&_code]:rounded [&_code]:bg-white/10 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs">
-                <ReactMarkdown>{item.data.text}</ReactMarkdown>
+              {/* `remark-gfm` habilita tablas: `react-markdown` a secas es
+                  CommonMark y las deja como un churro de barras verticales.
+                  El prompt le pide al modelo que no las use, pero eso es la
+                  capa blanda — esta es la que aguanta si se le escapa una. */}
+              <div className="overflow-x-auto [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:my-0.5 [&_strong]:font-semibold [&_strong]:text-foreground/95 [&_code]:rounded [&_code]:bg-white/10 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_table]:my-1 [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs [&_th]:border [&_th]:border-white/10 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:font-semibold [&_td]:border [&_td]:border-white/10 [&_td]:px-2 [&_td]:py-1">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{item.data.text}</ReactMarkdown>
               </div>
             </div>
           )

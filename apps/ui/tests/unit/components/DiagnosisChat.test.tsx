@@ -108,6 +108,45 @@ describe("DiagnosisChat", () => {
     ).toBeEnabled();
   });
 
+  it("renders a markdown table as a real table, not as raw pipes", () => {
+    // El prompt le pide al modelo que no use tablas, pero eso es la capa
+    // blanda: si se le escapa una, debe verse legible en vez de un churro
+    // de barras verticales.
+    const { container } = render(
+      <DiagnosisChat
+        {...defaultProps}
+        conversationHistory={[
+          {
+            __type: "raw_response",
+            data: {
+              text: "| Sí puedo | No puedo |\n| --- | --- |\n| Lectura de PID | Actuación física |",
+            },
+          },
+        ]}
+      />,
+    );
+
+    expect(container.querySelector("table")).not.toBeNull();
+    expect(screen.getByText("Actuación física")).toBeDefined();
+  });
+
+  it("lets a wide table scroll inside its bubble instead of stretching the panel", () => {
+    const { container } = render(
+      <DiagnosisChat
+        {...defaultProps}
+        conversationHistory={[
+          {
+            __type: "raw_response",
+            data: { text: "| A | B |\n| --- | --- |\n| 1 | 2 |" },
+          },
+        ]}
+      />,
+    );
+
+    const bubble = container.querySelector("table")?.closest("div");
+    expect(bubble?.className).toContain("overflow-x-auto");
+  });
+
   it("constrains the conversation thread with an internal scroll container", () => {
     render(
       <DiagnosisChat

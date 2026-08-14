@@ -198,8 +198,15 @@ export class Elm327TcpRepository implements ObdRepository {
     return definition?.description ?? ''
   }
 
-  /** Envia un comando de lectura DTC y parsea la respuesta con el header del modo indicado. */
+  /**
+   * Envia un comando de lectura DTC y parsea la respuesta con el header del modo indicado.
+   *
+   * El tipo ya restringe el modo a los tres de lectura, pero eso solo existe en
+   * compilacion: la allowlist lo vuelve a comprobar en ejecucion para que el
+   * comando no dependa de que nadie haya hecho un cast por el camino.
+   */
   private async fetchDtcCodes(mode: '03' | '07' | '0A'): Promise<DtcCode[]> {
+    assertReadOnlyObdMode(mode)
     const raw = await this.client.sendCommand(mode)
     try {
       const codes = parseDtcResponse(raw, mode).map(([b1, b2]) => DtcCode.decodeFromBytes(b1, b2))
