@@ -1,7 +1,7 @@
 import { createConnection } from 'node:net'
 import type { Socket } from 'node:net'
 import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
-import type { TransportIoAdapter } from './reliableTransport.js'
+import type { TransportIoAdapter, ReliableTransportConfig } from './reliableTransport.js'
 import { createReliableTransport } from './reliableTransport.js'
 
 /** Configuración del transporte TCP al dispositivo ELM327. */
@@ -18,6 +18,8 @@ export interface Elm327TcpConfig {
   readonly initCommands?: readonly string[]
   /** Timeout de cada comando de init (default: el de comando). */
   readonly initTimeoutMs?: number
+  /** Observador de cada intercambio, para seguir la conexion en vivo. */
+  readonly onTrace?: ReliableTransportConfig['onTrace']
 }
 
 /** Timeout por defecto para comandos TCP (3 segundos). */
@@ -72,5 +74,6 @@ export function createElm327TcpClient(config: Elm327TcpConfig): Elm327Transport 
     backoffMs,
     initCommands: config.initCommands,
     initTimeoutMs: config.initTimeoutMs,
+    onTrace: config.onTrace,
   })
 }

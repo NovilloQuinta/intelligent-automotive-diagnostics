@@ -129,6 +129,50 @@ describe('createReliableTransport — secuencia de inicialización', () => {
     expect(fake.sentOn(1)).toEqual(['ATZ', 'ATE0', 'ATSP0', '01 0D'])
   })
 
+  it('no falla cuando no hay observador de traza configurado', async () => {
+    const transport = createReliableTransport(fake.io, BASE_CONFIG)
+    await expect(transport.sendCommand('01 0C')).resolves.toContain('OK')
+  })
+
+  it('notifica cada intercambio al observador de traza, init incluido', async () => {
+    const seen: Array<{ cmd: string; raw?: string; error?: string }> = []
+    const transport = createReliableTransport(fake.io, {
+      ...BASE_CONFIG,
+      initCommands: ['ATZ'],
+      onTrace: (entry) => seen.push({ cmd: entry.cmd, raw: entry.raw, error: entry.error }),
+    })
+
+    await transport.sendCommand('01 0C')
+
+    expect(seen.map((e) => e.cmd)).toEqual(['ATZ', '01 0C'])
+    expect(seen[1].raw).toContain('OK')
+    expect(seen[1].error).toBeUndefined()
+  })
+
+  it('notifica el fallo al observador cuando un comando no responde', async () => {
+    vi.useFakeTimers()
+    try {
+      const seen: Array<{ cmd: string; error?: string }> = []
+      fake.silence(['01 0C'])
+      const transport = createReliableTransport(fake.io, {
+        ...BASE_CONFIG,
+        maxRetries: 0,
+        onTrace: (entry) => seen.push({ cmd: entry.cmd, error: entry.error }),
+      })
+
+      const promise = transport.sendCommand('01 0C')
+      const assertion = expect(promise).rejects.toThrow()
+      await vi.advanceTimersByTimeAsync(1000)
+      await assertion
+
+      expect(seen).toHaveLength(1)
+      expect(seen[0].cmd).toBe('01 0C')
+      expect(seen[0].error).toMatch(/timeout/i)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('aplica el timeout largo al init y el corto a los comandos de datos', async () => {
     vi.useFakeTimers()
     try {

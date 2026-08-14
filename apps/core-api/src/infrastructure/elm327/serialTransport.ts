@@ -1,6 +1,6 @@
 import { SerialPort } from 'serialport'
 import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
-import type { TransportIoAdapter } from './reliableTransport.js'
+import type { TransportIoAdapter, ReliableTransportConfig } from './reliableTransport.js'
 import { createReliableTransport } from './reliableTransport.js'
 
 /** Configuración del transporte serial al dispositivo ELM327. */
@@ -19,6 +19,8 @@ export interface SerialConfig {
   readonly initCommands?: readonly string[]
   /** Timeout de cada comando de init (default: el de comando). */
   readonly initTimeoutMs?: number
+  /** Observador de cada intercambio, para seguir la conexion en vivo. */
+  readonly onTrace?: ReliableTransportConfig['onTrace']
 }
 
 /** Timeout por defecto para comandos seriales (3 segundos). */
@@ -70,5 +72,6 @@ export function createElm327SerialClient(config: SerialConfig): Elm327Transport 
     backoffMs,
     initCommands: config.initCommands,
     initTimeoutMs: config.initTimeoutMs,
+    onTrace: config.onTrace,
   })
 }

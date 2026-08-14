@@ -110,6 +110,22 @@ describe('createElm327SerialClient', () => {
     await expect(promise).resolves.toBe(ECHO_RPM)
   })
 
+  it('propaga onTrace hasta el nucleo — sin esto el observador se pierde en el camino', async () => {
+    const seen: string[] = []
+    const client = createClient({
+      path: '/dev/ttyUSB0',
+      baudRate: 38400,
+      onTrace: (entry) => seen.push(entry.cmd),
+    })
+    await client.connect()
+
+    const promise = client.sendCommand('01 0C')
+    respond(ECHO_RPM)
+    await promise
+
+    expect(seen).toEqual(['01 0C'])
+  })
+
   it('sin initCommands no envía ningún AT — el emulador no negocia nada', async () => {
     const client = createClient({ path: '/dev/ttyUSB0', baudRate: 38400 })
     await client.connect()

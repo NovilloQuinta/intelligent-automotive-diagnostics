@@ -64,6 +64,24 @@ export interface TransportIoAdapter<TConn> {
   commandTimeoutMessage(cmd: string, timeoutMs: number): string
 }
 
+/**
+ * Un intercambio con el adaptador, tal cual ocurrio en el cable.
+ *
+ * Es material de seguimiento en vivo, no un registro: nadie lo persiste, y el
+ * observador que lo recibe debe ser barato porque esto se dispara en cada
+ * comando, varias veces por segundo.
+ */
+export interface Elm327TraceEntry {
+  /** Comando enviado, sin el terminador. */
+  readonly cmd: string
+  /** Respuesta cruda del adaptador. Ausente si el comando fallo. */
+  readonly raw?: string
+  /** Motivo del fallo. Ausente si el comando respondio. */
+  readonly error?: string
+  /** Tiempo entre el envio y la respuesta (o el fallo), en ms. */
+  readonly durationMs: number
+}
+
 /** Configuración del núcleo de reconexión/reintentos, ya resuelta con sus valores por defecto. */
 export interface ReliableTransportConfig {
   readonly timeoutMs: number
@@ -83,6 +101,12 @@ export interface ReliableTransportConfig {
    * un vehículo real tarda varios segundos.
    */
   readonly initTimeoutMs?: number
+  /**
+   * Observador de cada intercambio, para seguir la conexion en vivo. Recibe
+   * tambien los comandos de init y cada reintento fisico, que es justo lo que
+   * hace falta ver cuando el enlace con el vehiculo va mal.
+   */
+  readonly onTrace?: (entry: Elm327TraceEntry) => void
 }
 
 /**
@@ -98,7 +122,14 @@ export interface ReliableTransportConfig {
  */
 export function createReliableTransport<TConn>(
   io: TransportIoAdapter<TConn>,
-  { timeoutMs, maxRetries, backoffMs, initCommands = [], initTimeoutMs }: ReliableTransportConfig,
+  {
+    timeoutMs,
+    maxRetries,
+    backoffMs,
+    initCommands = [],
+    initTimeoutMs,
+    onTrace,
+  }: ReliableTransportConfig,
 ): Elm327Transport {
   const initMs = initTimeoutMs ?? timeoutMs
   // Se rearma en cada apertura de conexión: el adaptador olvida su configuración.
@@ -210,7 +241,30 @@ export function createReliableTransport<TConn>(
     await reconnectPromise
   }
 
+  /**
+   * Envuelve el envio para cronometrarlo y notificar la traza.
+   *
+   * Llama a {@link sendCommandOnceRaw} de forma sincrona a proposito: encadenar
+   * un `await` antes de escribir cederia un microtask y retrasaria la escritura
+   * del comando un tick.
+   */
   function sendCommandOnce(cmd: string, commandTimeoutMs: number): Promise<string> {
+    if (onTrace === undefined) return sendCommandOnceRaw(cmd, commandTimeoutMs)
+    const startedAt = Date.now()
+    return sendCommandOnceRaw(cmd, commandTimeoutMs).then(
+      (raw) => {
+        onTrace({ cmd, raw, durationMs: Date.now() - startedAt })
+        return raw
+      },
+      (err: unknown) => {
+        const error = err instanceof Error ? err.message : String(err)
+        onTrace({ cmd, error, durationMs: Date.now() - startedAt })
+        throw err
+      },
+    )
+  }
+
+  function sendCommandOnceRaw(cmd: string, commandTimeoutMs: number): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       if (conn === null) {
         reject(new Elm327ConnectionError(io.notConnectedMessage()))

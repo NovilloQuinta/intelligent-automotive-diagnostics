@@ -17,6 +17,7 @@ import {
   ELM327_INIT_COMMANDS,
   ELM327_INIT_TIMEOUT_MS,
 } from '@/infrastructure/elm327/initSequence.js'
+import { createConsoleTracer } from '@/infrastructure/elm327/traceConsole.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import { createAnthropicClient } from '@/infrastructure/llm/anthropicClient.js'
@@ -343,10 +344,15 @@ function createObdRepoMap(
   scenarios: ScenarioDescriptor[],
   vehicleRepo: VehicleRepository,
   logger: LoggerPort,
+  trace = false,
 ): Map<string, ObdRepository> {
   const map = new Map<string, ObdRepository>()
   for (const s of scenarios) {
-    const transport = createElm327TcpClient({ host: s.host, port: s.port })
+    const transport = createElm327TcpClient({
+      host: s.host,
+      port: s.port,
+      onTrace: trace ? createConsoleTracer(s.id) : undefined,
+    })
     map.set(s.id, new Elm327TcpRepository(transport, vehicleRepo, logger))
   }
   return map
@@ -509,7 +515,7 @@ function createDiagnosisService(opts: CreateDiagnosisServiceOptions): DiagnosisS
   const { config, llmClient, knowledgeStack, webSearch, vehicleRepo, logger } = opts
   if (config.OBD_MODE === 'docker') {
     const scenarios = createDockerScenarios(config)
-    const obdRepos = createObdRepoMap(scenarios, vehicleRepo, logger)
+    const obdRepos = createObdRepoMap(scenarios, vehicleRepo, logger, config.OBD_TRACE)
     return new DiagnosisService({
       scenarios,
       obdRepos,
@@ -526,6 +532,7 @@ function createDiagnosisService(opts: CreateDiagnosisServiceOptions): DiagnosisS
       baudRate: config.SERIAL_BAUD_RATE,
       initCommands: ELM327_INIT_COMMANDS,
       initTimeoutMs: ELM327_INIT_TIMEOUT_MS,
+      onTrace: config.OBD_TRACE ? createConsoleTracer('serie') : undefined,
     })
     const obdRepo = new Elm327TcpRepository(transport, vehicleRepo, logger)
     return new DiagnosisService({
@@ -546,6 +553,7 @@ function createDiagnosisService(opts: CreateDiagnosisServiceOptions): DiagnosisS
     port: config.ELM327_PORT,
     initCommands: ELM327_INIT_COMMANDS,
     initTimeoutMs: ELM327_INIT_TIMEOUT_MS,
+    onTrace: config.OBD_TRACE ? createConsoleTracer('wifi') : undefined,
   })
   const obdRepo = new Elm327TcpRepository(transport, vehicleRepo, logger)
   return new DiagnosisService({
