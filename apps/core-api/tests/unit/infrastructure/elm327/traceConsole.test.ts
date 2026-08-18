@@ -71,4 +71,14 @@ describe('createConsoleTracer', () => {
     // El comando aparece una sola vez: en el lado del envio, no repetido en la respuesta.
     expect(line.match(/01 0C/g)).toHaveLength(1)
   })
+
+  it('escribe por consola cuando no se le inyecta destino', () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    createConsoleTracer('audi')({ cmd: '0100', durationMs: 12, raw: '41 00 BE' })
+
+    expect(log).toHaveBeenCalledOnce()
+    expect(log.mock.calls[0]?.[0]).toContain('[obd:audi]')
+    log.mockRestore()
+  })
 })

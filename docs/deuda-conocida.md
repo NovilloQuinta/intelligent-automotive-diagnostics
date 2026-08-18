@@ -50,16 +50,6 @@ escribir el bloque de ECUs simétrico a los de PID y DTC, y correr **el grupo A 
 batería, no solo B-E, porque un bloque nuevo de instrucciones puede volver al agente más verboso o
 más reticente en consultas legítimas.
 
-## Coverage: 3 ficheros bajo umbral
-
-| Fichero | Metrica | Actual | Umbral |
-|---|---|---|---|
-| `src/application/knowledge/diagnosisKnowledgeMapper.ts` | branches | 57.14% | 60% |
-| `src/application/shared/withTimeout.ts` | functions | 50% | 90% |
-| `src/infrastructure/llm/sdkErrorUtils.ts` | lines / statements | 73.33% | 80% |
-
-Preexistentes: no los introdujo ningun cambio reciente.
-
 ## Funciones que superan las 40 lineas (13)
 
 Las marca ESLint (`max-lines-per-function`, warn, solo `src/`). Ver "Excepciones
@@ -203,6 +193,11 @@ GitHub; su contenido ya esta integrado, asi que borrarlas no pierde nada:
   `mkdir -p` antes de abrir la conexion (`db.ts`), porque `better-sqlite3` no lo hace
   y `apps/core-api/data/` esta gitignored. Cubierto por `db.test.ts`.
 - **`swagger.ts` como god file**: el documento OpenAPI se genera desde el codigo.
+- **Coverage bajo umbral**: ningun fichero incumple ya. Al remedir aparecio un cuarto
+  que no estaba documentado (`traceConsole.ts`, functions 66,66 %). `withTimeout.ts` y
+  `sdkErrorUtils.ts` no tenian test ninguno; `diagnosisKnowledgeMapper.ts` cubria el
+  camino feliz pero no las guardas de `deserializeList` (campo ausente, no-string, JSON
+  corrupto, JSON que no es array).
 - **Los tests de la UI, fuera de lint y formato**: `lint` y `format` de `apps/ui` ya
   cubren `tests/` ademas de `src/`. La estimacion que habia aqui ("~1129 errores de
   `prettier/prettier`") era **de antes de formatear**: aplicado `prettier --write`
