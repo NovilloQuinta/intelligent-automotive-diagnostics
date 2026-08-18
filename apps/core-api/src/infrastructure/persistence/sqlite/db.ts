@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3'
 import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
+import fs from 'node:fs'
 import path from 'node:path'
 import * as schema from './schema.js'
 
@@ -23,11 +24,17 @@ let _sqlite: InstanceType<typeof Database> | null = null
  * y ejecuta las migraciones pendientes desde {@link MIGRATIONS_FOLDER}.
  * Llamadas posteriores devuelven la misma instancia sin re-inicializar.
  *
+ * Crea el directorio del fichero si no existe: `better-sqlite3` no lo hace y
+ * aborta con "Cannot open database because the directory does not exist". La
+ * ruta por defecto (`apps/core-api/data/`) esta gitignored, asi que un clon
+ * limpio no la tiene y el backend no arrancaria nunca a la primera.
+ *
  * @param dbPath - Ruta al archivo .db. Si se omite, usa `:memory:`.
  * @returns La instancia Drizzle con el schema completo aplicado.
  */
 export function getDb(dbPath?: string): DiagnosticsDb {
   if (!_db) {
+    if (dbPath) fs.mkdirSync(path.dirname(dbPath), { recursive: true })
     _sqlite = new Database(dbPath ?? ':memory:')
     _sqlite.pragma('journal_mode = WAL')
     _sqlite.pragma('foreign_keys = ON')
