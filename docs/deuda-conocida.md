@@ -4,7 +4,7 @@
 > de editar aqui**: este fichero se ha desincronizado dos veces por actualizarlo
 > de memoria.
 >
-> Estado general: 1973 tests en verde (1380 core-api + 593 ui), 0 errores de lint.
+> Estado general: 2003 tests en verde (1410 core-api + 593 ui), 0 errores de lint, 79 avisos (72 + 7).
 > Nada de lo que sigue es bloqueante.
 
 ## Bateria del agente: construida, sin ejecutar
@@ -104,7 +104,7 @@ la entrada pero no la salida.
 | Modulo | Estado |
 |---|---|
 | `infrastructure/mcp/mcpServer.ts` | ~~848 L~~ → 98 L — **RESUELTO** (Fases A y B) |
-| `infrastructure/services/diagnosisService.ts` | ~~969 L~~ → **786 L** — Fase A hecha; el test de 1631 L ya se partio en dos (865 + 780) |
+| `infrastructure/services/diagnosisService.ts` | ~~969 L~~ → ~~786 L~~ → **586 L** — **RESUELTO**: el flujo cognitivo salio a `services/cognitive/cognitiveDiagnosisRunner.ts` |
 | `infrastructure/persistence/sqlite/vehicleRepository.ts` | **632 L** (test 1011 L) — no estaba listado |
 | `infrastructure/composition/composition.ts` | **579 L** — no estaba listado |
 | `infrastructure/http/controllers/DiagnosisController.ts` | **578 L** — no estaba listado |

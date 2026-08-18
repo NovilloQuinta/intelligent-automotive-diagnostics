@@ -4,7 +4,6 @@ import {
   TimeoutError,
   DIAGNOSIS_TIMEOUT_MS,
 } from '@/application/shared/withTimeout.js'
-import { ExecuteCognitiveDiagnosisUseCase } from '@/application/use-cases/ExecuteCognitiveDiagnosisUseCase.js'
 import {
   createMcpServer,
   type ToolCallResult,
@@ -17,15 +16,12 @@ import {
 } from '@/infrastructure/mcp/errors.js'
 import {
   DiagnosisScenarioNotFoundError,
-  CognitiveDiagnosisUnavailableError,
-  CognitiveDiagnosisTimeoutError,
-  DiagnosisSessionNotFoundError,
   VehicleIdentificationUnavailableError,
 } from '@/infrastructure/services/errors.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
-import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
+import { CognitiveDiagnosisRunner } from '@/infrastructure/services/cognitive/cognitiveDiagnosisRunner.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { DiagnosisResult } from '@/domain/value-objects/diagnosisResult.js'
 import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
@@ -41,7 +37,6 @@ import {
 } from '@/application/use-cases/ConfirmVehicleIdentityUseCase.js'
 import type { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
-import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
 import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
@@ -52,7 +47,6 @@ import type {
 } from '@/application/ports/VehicleRepository.js'
 import { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
 import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
-import { normalizeManufacturer } from '@/domain/value-objects/manufacturer.js'
 import {
   MODE_CURRENT_DATA,
   PID_COOLANT_TEMP,
@@ -63,16 +57,11 @@ import {
 } from '@/domain/pids.js'
 
 import {
-  buildDiagnosisSnapshot,
-  buildFollowUpSnapshot,
-} from '@/infrastructure/services/diagnosisSnapshots.js'
-import {
   COGNITIVE_DIAGNOSIS_TIMEOUT_MS,
   PID_METADATA,
   TCP_DIRECT_SCENARIO,
   UNDECODED_VIN,
   type DiagnosisServiceOptions,
-  type ResolvedDiagnosisSession,
   type ScenarioDescriptor,
   type AvailablePid,
   type CognitiveDiagnosisResult,
@@ -116,6 +105,7 @@ export class DiagnosisService {
   private readonly cognitiveTimeoutMs: number
   private readonly toolCallTimeoutMs: number
   private readonly identityResolver: ResolveVehicleIdentityUseCase
+  private readonly cognitiveRunner: CognitiveDiagnosisRunner
 
   constructor(options: DiagnosisServiceOptions) {
     this.scenarios = options.scenarios
@@ -134,6 +124,22 @@ export class DiagnosisService {
       webSearch: this.webSearch,
       llmClient: this.llmClient,
       logger: this.logger,
+    })
+    // El host se arma con metodos ligados: son las cinco capacidades que el flujo
+    // cognitivo necesita de este servicio, y declararlas aqui las deja a la vista.
+    this.cognitiveRunner = new CognitiveDiagnosisRunner({
+      host: {
+        resolveRepository: (scenarioId) => this.resolveRepository(scenarioId),
+        identify: (vehicleInfo) => this.identify(vehicleInfo),
+        toVehicleProfile: (vehicleInfo) => this.toVehicleProfile(vehicleInfo),
+        getMcpServer: (scenarioId, session) => this.getMcpServer(scenarioId, session),
+        firstText: (result, toolName) => this.firstText(result, toolName),
+      },
+      logger: this.logger,
+      vehicleRepo: this.vehicleRepo,
+      llmClient: this.llmClient,
+      knowledgeStack: this.knowledgeStack,
+      cognitiveTimeoutMs: this.cognitiveTimeoutMs,
     })
   }
 
@@ -476,6 +482,16 @@ export class DiagnosisService {
    * @throws {CognitiveDiagnosisTimeoutError} Si se agota `cognitiveTimeoutMs`.
    * @throws {EmptyToolResultError} Si una tool invocada responde sin contenido.
    */
+  /**
+   * Diagnostico cognitivo con LLM.
+   *
+   * Delega en {@link CognitiveDiagnosisRunner}, que es donde vive el flujo entero
+   * (resolucion de sesion, ejecucion contra el modelo y persistencia del informe).
+   *
+   * @throws {CognitiveDiagnosisUnavailableError} Si no hay LLM configurado.
+   * @throws {CognitiveDiagnosisTimeoutError} Si el modelo no responde a tiempo.
+   * @throws {DiagnosisSessionNotFoundError} Si la sesion a continuar no es del usuario.
+   */
   async cognitiveDiagnosis(input: {
     scenarioId?: string
     userQuery?: string
@@ -483,223 +499,7 @@ export class DiagnosisService {
     userId?: number
     sessionId?: number
   }): Promise<CognitiveDiagnosisResult> {
-    const { scenarioId, userQuery, conversationHistory, userId, sessionId } = input
-    const repository = this.resolveRepository(scenarioId)
-    const vehicleInfo = await repository.getVehicleInfo()
-
-    const {
-      followUpSession,
-      sessionId: resolvedSessionId,
-      vehicleId,
-    } = await this.resolveDiagnosisSession(sessionId, userId, vehicleInfo)
-
-    const llmClient = this.requireLlmClient()
-
-    // D3: la sesión de diagnóstico se crea solo para diagnósticos nuevos (no follow-ups)
-    const persistedSessionId = followUpSession
-      ? resolvedSessionId
-      : await this.createDiagnosisSession(vehicleId, scenarioId, userId)
-
-    const session = this.buildSessionContext(persistedSessionId, vehicleId, vehicleInfo)
-
-    let diagnosisResult: ExecuteCognitiveDiagnosisOutput | undefined
-    try {
-      diagnosisResult = await this.runCognitiveDiagnosis(llmClient, scenarioId, session, {
-        vehicleInfo,
-        userQuery,
-        conversationHistory,
-      })
-      return { ...diagnosisResult, sessionId: persistedSessionId }
-    } catch (err) {
-      if (err instanceof TimeoutError) {
-        throw new CognitiveDiagnosisTimeoutError()
-      }
-      throw err
-    } finally {
-      this.persistDiagnosisSnapshot(persistedSessionId, followUpSession, {
-        vehicleInfo,
-        userQuery,
-        diagnosisResult,
-      })
-    }
-  }
-
-  /**
-   * Resuelve la sesión de follow-up (verificando propiedad) o persiste el vehículo
-   * para un diagnóstico nuevo. Fallar aquí evita gastar una llamada LLM.
-   */
-  private async resolveDiagnosisSession(
-    sessionId: number | undefined,
-    userId: number | undefined,
-    vehicleInfo: VehicleInfo,
-  ): Promise<ResolvedDiagnosisSession> {
-    if (sessionId === undefined) {
-      return {
-        followUpSession: undefined,
-        sessionId: undefined,
-        vehicleId: await this.upsertVehicleForDiagnosis(vehicleInfo),
-      }
-    }
-    if (!this.vehicleRepo || typeof userId !== 'number') {
-      throw new DiagnosisSessionNotFoundError()
-    }
-    const existing = await this.vehicleRepo.findSessionById(sessionId, userId)
-    if (!existing) {
-      throw new DiagnosisSessionNotFoundError()
-    }
-    return {
-      followUpSession: existing,
-      sessionId: existing.id,
-      vehicleId: existing.vehicleId ?? undefined,
-    }
-  }
-
-  /**
-   * Persiste el vehículo activo al inicio de un diagnóstico nuevo (D2).
-   * Devuelve su id, o `undefined` si no hay repositorio o la escritura falla.
-   *
-   * Resuelve la identidad **antes** de persistir: marca y modelo son la clave con
-   * la que el catálogo RAG archiva y recupera lo aprendido, así que un `unknown`
-   * aquí no es cosmético — condena todo lo que el agente aprenda de este coche a
-   * quedar bajo `unknown/unknown` y a no recuperarse nunca.
-   */
-  private async upsertVehicleForDiagnosis(vehicleInfo: VehicleInfo): Promise<number | undefined> {
-    if (!this.vehicleRepo) return undefined
-    try {
-      const identified = await this.identify(vehicleInfo)
-      const profile = this.toVehicleProfile(identified)
-      const result = await this.vehicleRepo.upsertVehicle(profile)
-      return result.id
-    } catch (e) {
-      this.logger.warn('Failed to upsert vehicle in diagnosis session', {
-        err: e instanceof Error ? e : String(e),
-      })
-      return undefined
-    }
-  }
-
-  /** Crea la sesión de diagnóstico (solo diagnósticos nuevos) y devuelve su id, o `undefined` si falla. */
-  private async createDiagnosisSession(
-    vehicleId: number | undefined,
-    scenarioId: string | undefined,
-    userId: number | undefined,
-  ): Promise<number | undefined> {
-    if (vehicleId === undefined || !this.vehicleRepo) return undefined
-    try {
-      const session = await this.vehicleRepo.createSession(
-        new DiagnosisSession({
-          id: 0,
-          vehicleId,
-          userId: userId ?? null,
-          scenarioId,
-          startedAt: new Date().toISOString(),
-        }),
-      )
-      return session.id
-    } catch (e) {
-      this.logger.warn('Failed to create diagnosis session', {
-        err: e instanceof Error ? e : String(e),
-      })
-      return undefined
-    }
-  }
-
-  /** Garantiza que el diagnóstico cognitivo esté disponible (LLM configurado) y devuelve el cliente. */
-  private requireLlmClient(): LlmClientPort {
-    if (!this.llmClient) {
-      this.logger.warn('Cognitive diagnosis requested but no LLM client is configured')
-      throw new CognitiveDiagnosisUnavailableError()
-    }
-    return this.llmClient
-  }
-
-  /** Construye el contexto de sesión MCP con fabricante normalizado y modelo. */
-  private buildSessionContext(
-    sessionId: number | undefined,
-    vehicleId: number | undefined,
-    vehicleInfo: VehicleInfo,
-  ): SessionContext {
-    return {
-      sessionId,
-      vehicleId,
-      manufacturer: normalizeManufacturer(vehicleInfo.make),
-      model: vehicleInfo.model,
-    }
-  }
-
-  /**
-   * Cablea el servidor MCP, crea el use case cognitivo y lo ejecuta con timeout.
-   *
-   * @throws {CognitiveDiagnosisTimeoutError} Si se agota `cognitiveTimeoutMs`.
-   * @throws {EmptyToolResultError} Si una tool invocada responde sin contenido.
-   */
-  private runCognitiveDiagnosis(
-    llmClient: LlmClientPort,
-    scenarioId: string | undefined,
-    session: SessionContext,
-    input: {
-      vehicleInfo: VehicleInfo
-      userQuery?: string
-      conversationHistory?: readonly LlmConversationItem[]
-    },
-  ): Promise<ExecuteCognitiveDiagnosisOutput> {
-    const mcp = this.getMcpServer(scenarioId, session)
-    const handler: ToolCallHandler = async (name, args) => {
-      const result = await mcp.callTool(name, args)
-      return this.firstText(result, name)
-    }
-    const useCase = new ExecuteCognitiveDiagnosisUseCase({
-      llmClient,
-      tools: mcp.listTools(),
-      handler,
-      logger: this.logger,
-      diagnosisIndex: this.knowledgeStack?.diagnosisIndex,
-    })
-    return withTimeout(
-      useCase.execute({
-        userQuery: input.userQuery,
-        vehicleContext: input.vehicleInfo,
-        conversationHistory: input.conversationHistory,
-      }),
-      this.cognitiveTimeoutMs,
-      'Cognitive diagnosis timed out',
-    )
-  }
-
-  /**
-   * Persiste el snapshot del resultado al cerrar (end) o actualizar (follow-up) la sesión.
-   *
-   * Fire-and-forget: los fallos de persistencia se registran sin enmascarar el
-   * resultado del diagnóstico.
-   */
-  private persistDiagnosisSnapshot(
-    sessionId: number | undefined,
-    followUpSession: DiagnosisSession | undefined,
-    input: {
-      vehicleInfo: VehicleInfo
-      userQuery?: string
-      diagnosisResult?: ExecuteCognitiveDiagnosisOutput
-    },
-  ): void {
-    if (sessionId === undefined || !this.vehicleRepo) return
-    if (followUpSession) {
-      if (!input.diagnosisResult) return
-      const snapshot = buildFollowUpSnapshot(
-        input.vehicleInfo,
-        followUpSession.resultJson,
-        input.userQuery,
-        input.diagnosisResult,
-        this.logger,
-      )
-      void this.vehicleRepo
-        .updateSessionResult(sessionId, snapshot)
-        .catch((e) => this.logger.warn('Failed to update diagnosis session with snapshot', e))
-      return
-    }
-    const snapshot = buildDiagnosisSnapshot(input.vehicleInfo, input.diagnosisResult)
-    void this.vehicleRepo
-      .endSession(sessionId, snapshot ?? undefined)
-      .catch((e) => this.logger.warn('Failed to end diagnosis session with snapshot', e))
+    return this.cognitiveRunner.run(input)
   }
 
   /**
