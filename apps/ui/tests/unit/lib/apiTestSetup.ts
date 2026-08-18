@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { vi } from 'vitest'
 
 /**
  * Setup compartido de los tests de `@/lib/api`.
@@ -9,23 +9,23 @@ import { vi } from "vitest";
  */
 
 export const MOCK_TOKENS = {
-  accessToken: "access-abc",
-  refreshToken: "refresh-xyz",
-};
+  accessToken: 'access-abc',
+  refreshToken: 'refresh-xyz',
+}
 
 export const MOCK_USER = {
   id: 1,
-  username: "juan",
-  email: "j@b.com",
-  userType: "individual",
-  createdAt: "2026-01-01",
+  username: 'juan',
+  email: 'j@b.com',
+  userType: 'individual',
+  createdAt: '2026-01-01',
   isWorkshop: false,
-};
+}
 
 /** Deja tokens validos en localStorage, como si el usuario estuviera logueado. */
 export function setStoredTokens() {
-  localStorage.setItem("iad.accessToken", MOCK_TOKENS.accessToken);
-  localStorage.setItem("iad.refreshToken", MOCK_TOKENS.refreshToken);
+  localStorage.setItem('iad.accessToken', MOCK_TOKENS.accessToken)
+  localStorage.setItem('iad.refreshToken', MOCK_TOKENS.refreshToken)
 }
 
 /**
@@ -35,7 +35,7 @@ export function setStoredTokens() {
  * test se filtra al siguiente y los tests dejan de estar aislados.
  */
 export async function freshApiModule() {
-  localStorage.clear();
-  vi.restoreAllMocks();
-  return await import("../../../src/lib/api");
+  localStorage.clear()
+  vi.restoreAllMocks()
+  return await import('../../../src/lib/api')
 }

@@ -1,35 +1,35 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { TelemetrySection } from "../../../src/components/dashboard/TelemetrySection";
-import type { PidReading } from "../../../src/components/dashboard/types";
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { TelemetrySection } from '../../../src/components/dashboard/TelemetrySection'
+import type { PidReading } from '../../../src/components/dashboard/types'
 
 beforeEach(() => {
-  vi.stubGlobal("requestAnimationFrame", vi.fn());
-  vi.stubGlobal("cancelAnimationFrame", vi.fn());
-});
+  vi.stubGlobal('requestAnimationFrame', vi.fn())
+  vi.stubGlobal('cancelAnimationFrame', vi.fn())
+})
 
 afterEach(() => {
-  vi.unstubAllGlobals();
-});
+  vi.unstubAllGlobals()
+})
 
-const numericValues = { rpm: 850, coolant: 90, speed: 50, intake: 35 };
-const nullValues = { rpm: null, coolant: null, speed: null, intake: null };
+const numericValues = { rpm: 850, coolant: 90, speed: 50, intake: 35 }
+const nullValues = { rpm: null, coolant: null, speed: null, intake: null }
 
 const STATUS_VARIANTS = [
-  "Diagnosticando…",
-  "Transmisión ECU · 1 Hz",
-  "Reconectando…",
-  "Sin vehículo",
-];
+  'Diagnosticando…',
+  'Transmisión ECU · 1 Hz',
+  'Reconectando…',
+  'Sin vehículo',
+]
 
-describe("TelemetrySection", () => {
-  const onDiagnose = vi.fn();
+describe('TelemetrySection', () => {
+  const onDiagnose = vi.fn()
 
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    vi.clearAllMocks()
+  })
 
-  it("should render live numeric values, the Live badge, raw summary and status", () => {
+  it('should render live numeric values, the Live badge, raw summary and status', () => {
     render(
       <TelemetrySection
         values={numericValues}
@@ -40,19 +40,19 @@ describe("TelemetrySection", () => {
         telemetryStatus="Transmisión ECU · 1 Hz"
         onDiagnose={onDiagnose}
       />,
-    );
+    )
 
-    expect(screen.getByText("850")).toBeDefined();
-    expect(screen.getByText("90")).toBeDefined();
-    expect(screen.getByText("050")).toBeDefined();
-    expect(screen.getByText("35")).toBeDefined();
-    expect(screen.getByText("En Vivo")).toBeDefined();
-    expect(screen.getByText("Transmisión ECU · 1 Hz")).toBeDefined();
-    expect(screen.getByText("41 0C 5A")).toBeDefined();
-    expect(screen.getByText("Iniciar diagnóstico")).toBeDefined();
-  });
+    expect(screen.getByText('850')).toBeDefined()
+    expect(screen.getByText('90')).toBeDefined()
+    expect(screen.getByText('050')).toBeDefined()
+    expect(screen.getByText('35')).toBeDefined()
+    expect(screen.getByText('En Vivo')).toBeDefined()
+    expect(screen.getByText('Transmisión ECU · 1 Hz')).toBeDefined()
+    expect(screen.getByText('41 0C 5A')).toBeDefined()
+    expect(screen.getByText('Iniciar diagnóstico')).toBeDefined()
+  })
 
-  it("should render zero placeholders and the raw frame fallback when values are null", () => {
+  it('should render zero placeholders and the raw frame fallback when values are null', () => {
     render(
       <TelemetrySection
         values={nullValues}
@@ -63,16 +63,16 @@ describe("TelemetrySection", () => {
         telemetryStatus="Sin vehículo"
         onDiagnose={onDiagnose}
       />,
-    );
+    )
 
-    expect(screen.getAllByText("0")).toHaveLength(3);
-    expect(screen.getByText("000")).toBeDefined();
-    expect(screen.queryByText("En Vivo")).toBeNull();
-    expect(screen.getByText("Sin vehículo")).toBeDefined();
-    expect(screen.getByText("Aguardando trama OBD-II…")).toBeDefined();
-  });
+    expect(screen.getAllByText('0')).toHaveLength(3)
+    expect(screen.getByText('000')).toBeDefined()
+    expect(screen.queryByText('En Vivo')).toBeNull()
+    expect(screen.getByText('Sin vehículo')).toBeDefined()
+    expect(screen.getByText('Aguardando trama OBD-II…')).toBeDefined()
+  })
 
-  it("should disable the diagnose button when canDiagnose is false", () => {
+  it('should disable the diagnose button when canDiagnose is false', () => {
     render(
       <TelemetrySection
         values={numericValues}
@@ -83,15 +83,15 @@ describe("TelemetrySection", () => {
         telemetryStatus="Reconectando…"
         onDiagnose={onDiagnose}
       />,
-    );
+    )
 
-    const btn = screen.getByRole("button", {
-      name: "Iniciar diagnóstico",
-    }) as HTMLButtonElement;
-    expect(btn.disabled).toBe(true);
-  });
+    const btn = screen.getByRole('button', {
+      name: 'Iniciar diagnóstico',
+    }) as HTMLButtonElement
+    expect(btn.disabled).toBe(true)
+  })
 
-  it("should call onDiagnose when the diagnose button is clicked", () => {
+  it('should call onDiagnose when the diagnose button is clicked', () => {
     render(
       <TelemetrySection
         values={numericValues}
@@ -102,16 +102,14 @@ describe("TelemetrySection", () => {
         telemetryStatus="Reconectando…"
         onDiagnose={onDiagnose}
       />,
-    );
+    )
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "Iniciar diagnóstico" }),
-    );
+    fireEvent.click(screen.getByRole('button', { name: 'Iniciar diagnóstico' }))
 
-    expect(onDiagnose).toHaveBeenCalledTimes(1);
-  });
+    expect(onDiagnose).toHaveBeenCalledTimes(1)
+  })
 
-  it("should show loading placeholders and hide the Live badge while loading", () => {
+  it('should show loading placeholders and hide the Live badge while loading', () => {
     render(
       <TelemetrySection
         values={nullValues}
@@ -122,16 +120,16 @@ describe("TelemetrySection", () => {
         telemetryStatus="Diagnosticando…"
         onDiagnose={onDiagnose}
       />,
-    );
+    )
 
-    expect(screen.getByText("----")).toBeDefined();
-    expect(screen.getByText("---")).toBeDefined();
-    expect(screen.getAllByText("--")).toHaveLength(2);
-    expect(screen.queryByText("En Vivo")).toBeNull();
-    expect(screen.getAllByText("Diagnosticando…")).toHaveLength(2);
-  });
+    expect(screen.getByText('----')).toBeDefined()
+    expect(screen.getByText('---')).toBeDefined()
+    expect(screen.getAllByText('--')).toHaveLength(2)
+    expect(screen.queryByText('En Vivo')).toBeNull()
+    expect(screen.getAllByText('Diagnosticando…')).toHaveLength(2)
+  })
 
-  it("should keep showing values when loading but they are already available", () => {
+  it('should keep showing values when loading but they are already available', () => {
     render(
       <TelemetrySection
         values={numericValues}
@@ -142,14 +140,14 @@ describe("TelemetrySection", () => {
         telemetryStatus="Diagnosticando…"
         onDiagnose={onDiagnose}
       />,
-    );
+    )
 
-    expect(screen.getByText("850")).toBeDefined();
-    expect(screen.getByText("90")).toBeDefined();
-    expect(screen.getAllByText("Diagnosticando…")).toHaveLength(2);
-  });
+    expect(screen.getByText('850')).toBeDefined()
+    expect(screen.getByText('90')).toBeDefined()
+    expect(screen.getAllByText('Diagnosticando…')).toHaveLength(2)
+  })
 
-  it("should render any telemetry status string", () => {
+  it('should render any telemetry status string', () => {
     const { rerender } = render(
       <TelemetrySection
         values={numericValues}
@@ -160,7 +158,7 @@ describe("TelemetrySection", () => {
         telemetryStatus={STATUS_VARIANTS[0]}
         onDiagnose={onDiagnose}
       />,
-    );
+    )
 
     for (const status of STATUS_VARIANTS) {
       rerender(
@@ -173,18 +171,18 @@ describe("TelemetrySection", () => {
           telemetryStatus={status}
           onDiagnose={onDiagnose}
         />,
-      );
-      expect(screen.getByText(status)).toBeDefined();
+      )
+      expect(screen.getByText(status)).toBeDefined()
     }
-  });
-});
+  })
+})
 
-describe("TelemetrySection — dynamic pids", () => {
-  const onDiagnose = vi.fn();
+describe('TelemetrySection — dynamic pids', () => {
+  const onDiagnose = vi.fn()
 
   beforeEach(() => {
-    vi.clearAllMocks();
-  });
+    vi.clearAllMocks()
+  })
 
   function renderSection(pids?: string[], readings: PidReading[] | null = null) {
     render(
@@ -199,50 +197,52 @@ describe("TelemetrySection — dynamic pids", () => {
         pids={pids}
         readings={readings}
       />,
-    );
+    )
   }
 
-  it("should render only the requested gauges when pids are provided", () => {
-    renderSection(["0C", "0D"]);
+  it('should render only the requested gauges when pids are provided', () => {
+    renderSection(['0C', '0D'])
 
-    expect(screen.getByText("RPM")).toBeDefined();
-    expect(screen.getByText("Velocidad")).toBeDefined();
-    expect(screen.queryByText("Refrigerante")).toBeNull();
-    expect(screen.queryByText("Admisión")).toBeNull();
-  });
+    expect(screen.getByText('RPM')).toBeDefined()
+    expect(screen.getByText('Velocidad')).toBeDefined()
+    expect(screen.queryByText('Refrigerante')).toBeNull()
+    expect(screen.queryByText('Admisión')).toBeNull()
+  })
 
-  it("should render the 4 default gauges when no pids are provided", () => {
-    renderSection();
+  it('should render the 4 default gauges when no pids are provided', () => {
+    renderSection()
 
-    expect(screen.getByText("RPM")).toBeDefined();
-    expect(screen.getByText("Refrigerante")).toBeDefined();
-    expect(screen.getByText("Velocidad")).toBeDefined();
-    expect(screen.getByText("Admisión")).toBeDefined();
-  });
+    expect(screen.getByText('RPM')).toBeDefined()
+    expect(screen.getByText('Refrigerante')).toBeDefined()
+    expect(screen.getByText('Velocidad')).toBeDefined()
+    expect(screen.getByText('Admisión')).toBeDefined()
+  })
 
-  it("should render an em dash for a generic PID whose value is null", () => {
-    renderSection(["11"], [
-      { code: "01 11", name: "Posición del acelerador", unit: "%", value: null },
-    ]);
+  it('should render an em dash for a generic PID whose value is null', () => {
+    renderSection(
+      ['11'],
+      [{ code: '01 11', name: 'Posición del acelerador', unit: '%', value: null }],
+    )
 
-    expect(screen.getByText("Posición del acelerador")).toBeDefined();
-    expect(screen.getByText("—")).toBeDefined();
-  });
+    expect(screen.getByText('Posición del acelerador')).toBeDefined()
+    expect(screen.getByText('—')).toBeDefined()
+  })
 
-  it("should render a generic gauge with name, value and unit from readings", () => {
-    renderSection(["11"], [
-      { code: "01 11", name: "Posición del acelerador", unit: "%", value: 14 },
-    ]);
+  it('should render a generic gauge with name, value and unit from readings', () => {
+    renderSection(
+      ['11'],
+      [{ code: '01 11', name: 'Posición del acelerador', unit: '%', value: 14 }],
+    )
 
-    expect(screen.getByText("Posición del acelerador")).toBeDefined();
-    expect(screen.getByText("14")).toBeDefined();
-    expect(screen.getByText("%")).toBeDefined();
-  });
+    expect(screen.getByText('Posición del acelerador')).toBeDefined()
+    expect(screen.getByText('14')).toBeDefined()
+    expect(screen.getByText('%')).toBeDefined()
+  })
 
-  it("should fall back to a generic gauge when readings have not arrived yet", () => {
-    renderSection(["11"], null);
+  it('should fall back to a generic gauge when readings have not arrived yet', () => {
+    renderSection(['11'], null)
 
-    expect(screen.getByText("PID 11")).toBeDefined();
-    expect(screen.getByText("—")).toBeDefined();
-  });
-});
+    expect(screen.getByText('PID 11')).toBeDefined()
+    expect(screen.getByText('—')).toBeDefined()
+  })
+})

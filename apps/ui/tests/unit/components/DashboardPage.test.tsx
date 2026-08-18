@@ -1,6 +1,6 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import type { Scenario } from "../../../src/components/dashboard/types";
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import type { Scenario } from '../../../src/components/dashboard/types'
 
 const {
   mockAuthStatus,
@@ -13,7 +13,7 @@ const {
   mockUseCognitiveDiagnosis,
   mockUseAvailablePids,
 } = vi.hoisted(() => ({
-  mockAuthStatus: { value: "anonymous" as "loading" | "authed" | "anonymous" },
+  mockAuthStatus: { value: 'anonymous' as 'loading' | 'authed' | 'anonymous' },
   mockLogout: vi.fn(),
   mockUseScenarios: vi.fn(),
   mockUseLiveTelemetry: vi.fn(),
@@ -22,9 +22,9 @@ const {
   mockUseCapabilities: vi.fn(),
   mockUseCognitiveDiagnosis: vi.fn(),
   mockUseAvailablePids: vi.fn(),
-}));
+}))
 
-vi.mock("@tanstack/react-router", () => {
+vi.mock('@tanstack/react-router', () => {
   return {
     useNavigate: () => vi.fn(),
     Navigate: ({ to, replace }: { to: string; replace?: boolean }) => (
@@ -35,10 +35,10 @@ vi.mock("@tanstack/react-router", () => {
         {children}
       </a>
     ),
-  };
-});
+  }
+})
 
-vi.mock("../../../src/lib/auth-context", () => ({
+vi.mock('../../../src/lib/auth-context', () => ({
   useAuth: () => ({
     status: mockAuthStatus.value,
     user: null,
@@ -46,39 +46,37 @@ vi.mock("../../../src/lib/auth-context", () => ({
     register: vi.fn(),
     logout: mockLogout,
   }),
-  AuthProvider: ({ children }: { children: React.ReactNode }) => (
-    <>{children}</>
-  ),
-}));
+  AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
 
-vi.mock("../../../src/components/dashboard/useScenarios", () => ({
+vi.mock('../../../src/components/dashboard/useScenarios', () => ({
   useScenarios: () => mockUseScenarios(),
-}));
-vi.mock("../../../src/components/dashboard/useLiveTelemetry", () => ({
+}))
+vi.mock('../../../src/components/dashboard/useLiveTelemetry', () => ({
   useLiveTelemetry: (_selectedId: string, _pids?: string[]) => mockUseLiveTelemetry(),
-}));
-vi.mock("../../../src/components/dashboard/useDiagnosis", () => ({
+}))
+vi.mock('../../../src/components/dashboard/useDiagnosis', () => ({
   useDiagnosis: () => mockUseDiagnosis(),
-}));
-vi.mock("../../../src/components/dashboard/useVehicleAutoDetect", () => ({
+}))
+vi.mock('../../../src/components/dashboard/useVehicleAutoDetect', () => ({
   useVehicleAutoDetect: () => mockUseVehicleAutoDetect(),
-}));
-vi.mock("../../../src/components/dashboard/useCapabilities", () => ({
+}))
+vi.mock('../../../src/components/dashboard/useCapabilities', () => ({
   useCapabilities: () => mockUseCapabilities(),
-}));
-vi.mock("../../../src/components/dashboard/useCognitiveDiagnosis", () => ({
+}))
+vi.mock('../../../src/components/dashboard/useCognitiveDiagnosis', () => ({
   useCognitiveDiagnosis: () => mockUseCognitiveDiagnosis(),
-}));
-vi.mock("../../../src/components/dashboard/useAvailablePids", () => ({
+}))
+vi.mock('../../../src/components/dashboard/useAvailablePids', () => ({
   useAvailablePids: () => mockUseAvailablePids(),
-}));
-vi.mock("../../../src/components/dashboard/useEcuInfo", () => ({
+}))
+vi.mock('../../../src/components/dashboard/useEcuInfo', () => ({
   useEcuInfo: () => ({ ecus: [], loading: false, error: null }),
-}));
-vi.mock("../../../src/components/dashboard/useVehicleStatus", () => ({
+}))
+vi.mock('../../../src/components/dashboard/useVehicleStatus', () => ({
   useVehicleStatus: () => ({ status: null, loading: false, error: null }),
-}));
-vi.mock("../../../src/components/dashboard/useSessionReport", () => ({
+}))
+vi.mock('../../../src/components/dashboard/useSessionReport', () => ({
   useSessionReport: () => ({
     capabilities: { cognitiveDiagnosis: true },
     deterministic: null,
@@ -92,9 +90,9 @@ vi.mock("../../../src/components/dashboard/useSessionReport", () => ({
     cognitiveLoading: false,
     cognitiveError: null,
   }),
-}));
+}))
 
-vi.mock("../../../src/lib/api", () => ({
+vi.mock('../../../src/lib/api', () => ({
   api: {
     getFreezeFrame: vi.fn(),
     getEcuInfo: vi.fn(),
@@ -103,60 +101,60 @@ vi.mock("../../../src/lib/api", () => ({
     getPermanentDtc: vi.fn(),
     clearDtc: vi.fn(),
   },
-}));
+}))
 
-vi.mock("../../../src/components/dashboard/usePendingDtc", () => ({
+vi.mock('../../../src/components/dashboard/usePendingDtc', () => ({
   usePendingDtc: () => ({ dtcCodes: [], loading: false, error: null }),
-}));
+}))
 
-vi.mock("../../../src/components/dashboard/usePermanentDtc", () => ({
+vi.mock('../../../src/components/dashboard/usePermanentDtc', () => ({
   usePermanentDtc: () => ({ dtcCodes: [], loading: false, error: null }),
-}));
+}))
 
-vi.mock("../../../src/components/dashboard/useClearDtc", () => ({
+vi.mock('../../../src/components/dashboard/useClearDtc', () => ({
   useClearDtc: () => ({ clearDtc: vi.fn(), loading: false, error: null }),
-}));
+}))
 
-const mockFreezeFrameHook = vi.fn();
+const mockFreezeFrameHook = vi.fn()
 
-vi.mock("../../../src/components/dashboard/useFreezeFrame", () => ({
+vi.mock('../../../src/components/dashboard/useFreezeFrame', () => ({
   useFreezeFrame: (...args: unknown[]) => mockFreezeFrameHook(...args),
-}));
+}))
 
-import { api } from "../../../src/lib/api";
-import { DashboardPage } from "../../../src/components/dashboard/DashboardPage";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { api } from '../../../src/lib/api'
+import { DashboardPage } from '../../../src/components/dashboard/DashboardPage'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const scenario: Scenario = {
-  id: "audi-a3",
-  name: "Audi A3 1.6 TDI",
-  vehicleType: "car",
-  connectionType: "wifi",
+  id: 'audi-a3',
+  name: 'Audi A3 1.6 TDI',
+  vehicleType: 'car',
+  connectionType: 'wifi',
   sensorValues: { rpm: 850, coolantTemp: 90, speed: 0, intakeTemp: 35 },
   dtcConfig: [],
   vehicleInfo: {
-    make: "Audi",
-    model: "A3",
+    make: 'Audi',
+    model: 'A3',
     year: 2015,
-    engineType: "1.6 TDI",
-    vin: "WAUZZZ8V5FA123456",
+    engineType: '1.6 TDI',
+    vin: 'WAUZZZ8V5FA123456',
   },
-};
+}
 
 const identifiedVehicle = {
-  vin: "WAUZZZ8V5FA123456",
-  make: "Audi",
-  model: "A3",
+  vin: 'WAUZZZ8V5FA123456',
+  make: 'Audi',
+  model: 'A3',
   year: 2015,
-  engineType: "1.6 TDI",
-  manufacturer: "Audi",
-  region: { country: "Germany", region: "Europe" },
+  engineType: '1.6 TDI',
+  manufacturer: 'Audi',
+  region: { country: 'Germany', region: 'Europe' },
   modelYearDecoded: 2015,
-};
+}
 
 function wizardState(overrides: Record<string, unknown> = {}) {
   return {
-    step: "done",
+    step: 'done',
     scenarioId: scenario.id,
     vehicle: identifiedVehicle,
     error: null,
@@ -165,37 +163,37 @@ function wizardState(overrides: Record<string, unknown> = {}) {
     confirm: vi.fn(),
     restart: vi.fn(),
     ...overrides,
-  };
+  }
 }
 
-describe("DashboardPage", () => {
+describe('DashboardPage', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(api.getPendingDtc).mockResolvedValue({ dtcCodes: [] });
-    vi.mocked(api.getPermanentDtc).mockResolvedValue({ dtcCodes: [] });
-    vi.mocked(api.clearDtc).mockResolvedValue({ cleared: true });
+    vi.clearAllMocks()
+    vi.mocked(api.getPendingDtc).mockResolvedValue({ dtcCodes: [] })
+    vi.mocked(api.getPermanentDtc).mockResolvedValue({ dtcCodes: [] })
+    vi.mocked(api.clearDtc).mockResolvedValue({ cleared: true })
     mockFreezeFrameHook.mockReturnValue({
       frame: null,
       loading: false,
       error: null,
-    });
-    mockUseVehicleAutoDetect.mockReturnValue(wizardState());
-    vi.stubGlobal("requestAnimationFrame", vi.fn());
-    vi.stubGlobal("cancelAnimationFrame", vi.fn());
-    mockAuthStatus.value = "anonymous";
+    })
+    mockUseVehicleAutoDetect.mockReturnValue(wizardState())
+    vi.stubGlobal('requestAnimationFrame', vi.fn())
+    vi.stubGlobal('cancelAnimationFrame', vi.fn())
+    mockAuthStatus.value = 'anonymous'
     mockUseScenarios.mockReturnValue({
       scenarios: [],
-      selectedId: "",
+      selectedId: '',
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
-    mockUseLiveTelemetry.mockReturnValue({ live: null, streamOk: false });
+    })
+    mockUseLiveTelemetry.mockReturnValue({ live: null, streamOk: false })
     mockUseDiagnosis.mockReturnValue({
       loading: false,
       result: null,
       runDiagnosis: vi.fn(),
-    });
-    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: false });
+    })
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: false })
     mockUseCognitiveDiagnosis.mockReturnValue({
       pidRows: null,
       loading: false,
@@ -206,91 +204,89 @@ describe("DashboardPage", () => {
       confidence: null,
       recommendations: null,
       conversationHistory: [],
-    });
-    mockUseAvailablePids.mockReturnValue([]);
-  });
+    })
+    mockUseAvailablePids.mockReturnValue([])
+  })
 
   afterEach(() => {
-    vi.unstubAllGlobals();
-  });
+    vi.unstubAllGlobals()
+  })
 
   it("should render <Navigate to='/login' replace /> when auth is anonymous", () => {
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    const nav = screen.getByTestId("navigate");
-    expect(nav.getAttribute("data-to")).toBe("/login");
-    expect(nav.getAttribute("data-replace")).toBe("true");
-    expect(screen.queryByText("Telemetría en vivo")).toBeNull();
-  });
+    const nav = screen.getByTestId('navigate')
+    expect(nav.getAttribute('data-to')).toBe('/login')
+    expect(nav.getAttribute('data-replace')).toBe('true')
+    expect(screen.queryByText('Telemetría en vivo')).toBeNull()
+  })
 
-  it("should render sidebar and live-data section when auth is authed", () => {
-    mockAuthStatus.value = "authed";
+  it('should render sidebar and live-data section when auth is authed', () => {
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
       selectedId: scenario.id,
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
+    })
     mockUseLiveTelemetry.mockReturnValue({
       live: {
         rpm: 850,
         speed: 0,
         coolantTemp: 90,
         intakeTemp: 35,
-        rawData: "41 0C 5A 41 0D 00",
+        rawData: '41 0C 5A 41 0D 00',
         ts: 1,
       },
       streamOk: true,
-    });
+    })
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    expect(
-      screen.getByText("Herramienta OBD-II · Diagnóstico Asistido por IA"),
-    ).toBeDefined();
-    expect(screen.getByText("Conectado")).toBeDefined();
-    expect(screen.getByText("Telemetría en vivo")).toBeDefined();
-    expect(screen.getByText("Datos Vivo")).toBeDefined();
-    expect(screen.getByText("Códigos DTC")).toBeDefined();
-    expect(screen.getByText("Unidades Control")).toBeDefined();
-    expect(screen.getByText("Diagnóstico")).toBeDefined();
-    expect(screen.getByText("Protocolo ISO 15765-4 CAN")).toBeDefined();
-    expect(screen.queryByTestId("navigate")).toBeNull();
-  });
+    expect(screen.getByText('Herramienta OBD-II · Diagnóstico Asistido por IA')).toBeDefined()
+    expect(screen.getByText('Conectado')).toBeDefined()
+    expect(screen.getByText('Telemetría en vivo')).toBeDefined()
+    expect(screen.getByText('Datos Vivo')).toBeDefined()
+    expect(screen.getByText('Códigos DTC')).toBeDefined()
+    expect(screen.getByText('Unidades Control')).toBeDefined()
+    expect(screen.getByText('Diagnóstico')).toBeDefined()
+    expect(screen.getByText('Protocolo ISO 15765-4 CAN')).toBeDefined()
+    expect(screen.queryByTestId('navigate')).toBeNull()
+  })
 
-  it("should call auth.logout when the TopBar logout button is clicked", () => {
-    mockAuthStatus.value = "authed";
+  it('should call auth.logout when the TopBar logout button is clicked', () => {
+    mockAuthStatus.value = 'authed'
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    fireEvent.click(screen.getByTitle("Cerrar sesión"));
+    fireEvent.click(screen.getByTitle('Cerrar sesión'))
 
-    expect(mockLogout).toHaveBeenCalledTimes(1);
-  });
+    expect(mockLogout).toHaveBeenCalledTimes(1)
+  })
 
-  it("should render the scenarios error banner when scenariosError is set", () => {
-    mockAuthStatus.value = "authed";
+  it('should render the scenarios error banner when scenariosError is set', () => {
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [],
-      selectedId: "",
+      selectedId: '',
       setSelectedId: vi.fn(),
-      scenariosError: "Error al cargar escenarios",
-    });
+      scenariosError: 'Error al cargar escenarios',
+    })
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    expect(screen.getByText("Error al cargar escenarios")).toBeDefined();
-  });
+    expect(screen.getByText('Error al cargar escenarios')).toBeDefined()
+  })
 
-  it("should show the generating state in the diagnosis section while the cognitive call runs", () => {
-    mockAuthStatus.value = "authed";
+  it('should show the generating state in the diagnosis section while the cognitive call runs', () => {
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
       selectedId: scenario.id,
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
-    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true });
+    })
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true })
     mockUseCognitiveDiagnosis.mockReturnValue({
       pidRows: null,
       loading: true,
@@ -301,276 +297,266 @@ describe("DashboardPage", () => {
       confidence: null,
       recommendations: null,
       conversationHistory: [],
-    });
+    })
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    fireEvent.click(screen.getByTitle("Diagnóstico"));
+    fireEvent.click(screen.getByTitle('Diagnóstico'))
 
-    expect(screen.getByText("Analizando datos OBD-II con IA…")).toBeDefined();
-  });
+    expect(screen.getByText('Analizando datos OBD-II con IA…')).toBeDefined()
+  })
 
-  it("should show the Streaming status and Live badge when the stream is live", () => {
-    mockAuthStatus.value = "authed";
+  it('should show the Streaming status and Live badge when the stream is live', () => {
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
       selectedId: scenario.id,
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
+    })
     mockUseLiveTelemetry.mockReturnValue({
       live: {
         rpm: 850,
         speed: 0,
         coolantTemp: 90,
         intakeTemp: 35,
-        rawData: "41 0C 5A",
+        rawData: '41 0C 5A',
         ts: 1,
       },
       streamOk: true,
-    });
+    })
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    expect(screen.getByText("Transmisión ECU · 1 Hz")).toBeDefined();
-    expect(screen.getByText("En Vivo")).toBeDefined();
-  });
+    expect(screen.getByText('Transmisión ECU · 1 Hz')).toBeDefined()
+    expect(screen.getByText('En Vivo')).toBeDefined()
+  })
 
-  it("should show the Reconectando status when stream is down", () => {
-    mockAuthStatus.value = "authed";
+  it('should show the Reconectando status when stream is down', () => {
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
       selectedId: scenario.id,
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
+    })
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    expect(screen.getByText("Reconectando…")).toBeDefined();
-    expect(screen.queryByText("En Vivo")).toBeNull();
-  });
+    expect(screen.getByText('Reconectando…')).toBeDefined()
+    expect(screen.queryByText('En Vivo')).toBeNull()
+  })
 
-  it("should render the identification wizard instead of the diagnosis menu without a confirmed vehicle", () => {
-    mockAuthStatus.value = "authed";
+  it('should render the identification wizard instead of the diagnosis menu without a confirmed vehicle', () => {
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
-      selectedId: "",
+      selectedId: '',
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
+    })
     mockUseVehicleAutoDetect.mockReturnValue(
-      wizardState({ step: "selecting", scenarioId: "", vehicle: null }),
-    );
+      wizardState({ step: 'selecting', scenarioId: '', vehicle: null }),
+    )
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    expect(screen.getByText("Identificación del vehículo")).toBeDefined();
-    expect(screen.queryByText("Telemetría en vivo")).toBeNull();
-    expect(
-      screen.getByText("Herramienta OBD-II · Diagnóstico Asistido por IA"),
-    ).toBeDefined();
-  });
+    expect(screen.getByText('Identificación del vehículo')).toBeDefined()
+    expect(screen.queryByText('Telemetría en vivo')).toBeNull()
+    expect(screen.getByText('Herramienta OBD-II · Diagnóstico Asistido por IA')).toBeDefined()
+  })
 
-  it("should enter the diagnosis menu when the wizard confirms the vehicle", () => {
-    mockAuthStatus.value = "authed";
-    const setSelectedId = vi.fn();
-    const confirm = vi.fn();
+  it('should enter the diagnosis menu when the wizard confirms the vehicle', () => {
+    mockAuthStatus.value = 'authed'
+    const setSelectedId = vi.fn()
+    const confirm = vi.fn()
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
-      selectedId: "",
+      selectedId: '',
       setSelectedId,
       scenariosError: null,
-    });
-    mockUseVehicleAutoDetect.mockReturnValue(
-      wizardState({ step: "confirming", confirm }),
-    );
+    })
+    mockUseVehicleAutoDetect.mockReturnValue(wizardState({ step: 'confirming', confirm }))
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    fireEvent.click(screen.getByText("Entrar a diagnóstico"));
+    fireEvent.click(screen.getByText('Entrar a diagnóstico'))
 
-    expect(setSelectedId).toHaveBeenCalledWith(scenario.id);
-    expect(confirm).toHaveBeenCalledTimes(1);
-  });
+    expect(setSelectedId).toHaveBeenCalledWith(scenario.id)
+    expect(confirm).toHaveBeenCalledTimes(1)
+  })
 
-  it("should reopen the wizard in detecting when another vehicle is picked in VehicleSelector", () => {
-    mockAuthStatus.value = "authed";
-    const detect = vi.fn();
+  it('should reopen the wizard in detecting when another vehicle is picked in VehicleSelector', () => {
+    mockAuthStatus.value = 'authed'
+    const detect = vi.fn()
     const other: Scenario = {
       ...scenario,
-      id: "kawa-z900",
-      name: "Kawasaki Z900",
-    };
+      id: 'kawa-z900',
+      name: 'Kawasaki Z900',
+    }
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario, other],
       selectedId: scenario.id,
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
-    mockUseVehicleAutoDetect.mockReturnValue(wizardState({ detect }));
+    })
+    mockUseVehicleAutoDetect.mockReturnValue(wizardState({ detect }))
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    fireEvent.click(screen.getByText("Audi A3 1.6 TDI"));
-    fireEvent.click(screen.getByText("Kawasaki Z900"));
+    fireEvent.click(screen.getByText('Audi A3 1.6 TDI'))
+    fireEvent.click(screen.getByText('Kawasaki Z900'))
 
-    expect(detect).toHaveBeenCalledWith("kawa-z900");
-  });
+    expect(detect).toHaveBeenCalledWith('kawa-z900')
+  })
 
-  it("should show the wizard scanning step while a new vehicle is being identified", () => {
-    mockAuthStatus.value = "authed";
+  it('should show the wizard scanning step while a new vehicle is being identified', () => {
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
       selectedId: scenario.id,
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
-    mockUseVehicleAutoDetect.mockReturnValue(
-      wizardState({ step: "detecting", vehicle: null }),
-    );
+    })
+    mockUseVehicleAutoDetect.mockReturnValue(wizardState({ step: 'detecting', vehicle: null }))
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    expect(screen.getByText("Detectando vehículo…")).toBeDefined();
-    expect(screen.queryByText("Telemetría en vivo")).toBeNull();
-  });
+    expect(screen.getByText('Detectando vehículo…')).toBeDefined()
+    expect(screen.queryByText('Telemetría en vivo')).toBeNull()
+  })
 
-  it("should render DTC codes and the diagnosis CTA, not the deterministic panel", () => {
-    mockAuthStatus.value = "authed";
+  it('should render DTC codes and the diagnosis CTA, not the deterministic panel', () => {
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
       selectedId: scenario.id,
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
+    })
     mockUseDiagnosis.mockReturnValue({
       loading: false,
       result: {
-        rawData: "41 0C 5A",
+        rawData: '41 0C 5A',
         parsedValues: { rpm: 850, coolantTemp: 90, speed: 50, intakeTemp: 35 },
-        dtcCodes: [
-          { code: "P0301", description: "Fallo de encendido cilindro 1" },
-        ],
-        diagnosisText: "Se recomienda revisar las bujías.",
-        severity: "high",
+        dtcCodes: [{ code: 'P0301', description: 'Fallo de encendido cilindro 1' }],
+        diagnosisText: 'Se recomienda revisar las bujías.',
+        severity: 'high',
       },
       runDiagnosis: vi.fn(),
-    });
-    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true });
+    })
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true })
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    fireEvent.click(screen.getByTitle("Códigos DTC"));
-    expect(screen.getByText("1 registrado")).toBeDefined();
-    expect(screen.getByText("P0301")).toBeDefined();
-    expect(screen.getByText("Fallo de encendido cilindro 1")).toBeDefined();
+    fireEvent.click(screen.getByTitle('Códigos DTC'))
+    expect(screen.getByText('1 registrado')).toBeDefined()
+    expect(screen.getByText('P0301')).toBeDefined()
+    expect(screen.getByText('Fallo de encendido cilindro 1')).toBeDefined()
 
-    fireEvent.click(screen.getByTitle("Diagnóstico"));
+    fireEvent.click(screen.getByTitle('Diagnóstico'))
     // El apartado diagnóstico muestra el chat (CTA vacío), no el texto determinista.
-    expect(screen.getByText("Lanzar diagnóstico IA")).toBeDefined();
-    expect(screen.queryByText("Se recomienda revisar las bujías.")).toBeNull();
-    expect(screen.queryByText("ALTA")).toBeNull();
+    expect(screen.getByText('Lanzar diagnóstico IA')).toBeDefined()
+    expect(screen.queryByText('Se recomienda revisar las bujías.')).toBeNull()
+    expect(screen.queryByText('ALTA')).toBeNull()
 
-    fireEvent.click(screen.getByTitle("Datos Vivo"));
-    expect(screen.getByText("850")).toBeDefined();
-    expect(screen.getByText("050")).toBeDefined();
-    expect(screen.getByText("4 registrados")).toBeDefined();
-    expect(screen.getByText("01 0C")).toBeDefined();
-    expect(screen.getByText("850 RPM")).toBeDefined();
-    expect(screen.getAllByText("OK")).toHaveLength(4);
-  });
+    fireEvent.click(screen.getByTitle('Datos Vivo'))
+    expect(screen.getByText('850')).toBeDefined()
+    expect(screen.getByText('050')).toBeDefined()
+    expect(screen.getByText('4 registrados')).toBeDefined()
+    expect(screen.getByText('01 0C')).toBeDefined()
+    expect(screen.getByText('850 RPM')).toBeDefined()
+    expect(screen.getAllByText('OK')).toHaveLength(4)
+  })
 
-  it("should navigate to freeze-frame when DTC row is selected", async () => {
-    mockAuthStatus.value = "authed";
+  it('should navigate to freeze-frame when DTC row is selected', async () => {
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
       selectedId: scenario.id,
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
+    })
     mockUseDiagnosis.mockReturnValue({
       loading: false,
       result: {
-        rawData: "41 0C 5A",
+        rawData: '41 0C 5A',
         parsedValues: { rpm: 850, coolantTemp: 90, speed: 50, intakeTemp: 35 },
-        dtcCodes: [
-          { code: "P0301", description: "Fallo de encendido cilindro 1" },
-        ],
-        diagnosisText: "Revisar bujías.",
-        severity: "high",
+        dtcCodes: [{ code: 'P0301', description: 'Fallo de encendido cilindro 1' }],
+        diagnosisText: 'Revisar bujías.',
+        severity: 'high',
       },
       runDiagnosis: vi.fn(),
-    });
+    })
     mockFreezeFrameHook.mockReturnValue({
-      frame: { dtcCode: "P0301", pidValues: { "0C": 850 } },
+      frame: { dtcCode: 'P0301', pidValues: { '0C': 850 } },
       loading: false,
       error: null,
-    });
+    })
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    fireEvent.click(screen.getByTitle("Códigos DTC"));
-    fireEvent.click(screen.getByText("P0301"));
+    fireEvent.click(screen.getByTitle('Códigos DTC'))
+    fireEvent.click(screen.getByText('P0301'))
 
     await waitFor(() => {
-      expect(screen.getByText("0C")).toBeDefined();
-    });
-  });
+      expect(screen.getByText('0C')).toBeDefined()
+    })
+  })
 
-  it("should show the report panel when sidebar Informe button is clicked", () => {
-    mockAuthStatus.value = "authed";
+  it('should show the report panel when sidebar Informe button is clicked', () => {
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
       selectedId: scenario.id,
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
+    })
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    fireEvent.click(screen.getByTitle("Informe"));
+    fireEvent.click(screen.getByTitle('Informe'))
 
-    expect(screen.getByText("Informe de Sesión de Diagnóstico")).toBeDefined();
-    expect(screen.getByText("Diagnóstico Determinista")).toBeDefined();
-    expect(screen.getByText("Diagnóstico Cognitivo")).toBeDefined();
-  });
+    expect(screen.getByText('Informe de Sesión de Diagnóstico')).toBeDefined()
+    expect(screen.getByText('Diagnóstico Determinista')).toBeDefined()
+    expect(screen.getByText('Diagnóstico Cognitivo')).toBeDefined()
+  })
 
-  it("should hide the report panel when another sidebar section is clicked", () => {
-    mockAuthStatus.value = "authed";
+  it('should hide the report panel when another sidebar section is clicked', () => {
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
       selectedId: scenario.id,
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
+    })
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    fireEvent.click(screen.getByTitle("Informe"));
-    expect(screen.getByText("Informe de Sesión de Diagnóstico")).toBeDefined();
+    fireEvent.click(screen.getByTitle('Informe'))
+    expect(screen.getByText('Informe de Sesión de Diagnóstico')).toBeDefined()
 
-    fireEvent.click(screen.getByTitle("Datos Vivo"));
-    expect(screen.queryByText("Informe de Sesión de Diagnóstico")).toBeNull();
-  });
+    fireEvent.click(screen.getByTitle('Datos Vivo'))
+    expect(screen.queryByText('Informe de Sesión de Diagnóstico')).toBeNull()
+  })
 
-  it("does not auto-run deterministic or cognitive diagnosis when a vehicle is selected", () => {
-    mockAuthStatus.value = "authed";
+  it('does not auto-run deterministic or cognitive diagnosis when a vehicle is selected', () => {
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
       selectedId: scenario.id,
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
-    const runDiagnosis = vi.fn();
-    const trigger = vi.fn();
-    const reset = vi.fn();
+    })
+    const runDiagnosis = vi.fn()
+    const trigger = vi.fn()
+    const reset = vi.fn()
     mockUseDiagnosis.mockReturnValue({
       loading: false,
       result: null,
       runDiagnosis,
-    });
-    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true });
+    })
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true })
     mockUseCognitiveDiagnosis.mockReturnValue({
       pidRows: null,
       loading: false,
@@ -581,32 +567,32 @@ describe("DashboardPage", () => {
       confidence: null,
       recommendations: null,
       conversationHistory: [],
-    });
+    })
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
     // Solo se limpia el estado cognitivo del vehículo anterior (reset).
-    expect(reset).toHaveBeenCalledTimes(1);
-    expect(runDiagnosis).not.toHaveBeenCalled();
-    expect(trigger).not.toHaveBeenCalled();
-  });
+    expect(reset).toHaveBeenCalledTimes(1)
+    expect(runDiagnosis).not.toHaveBeenCalled()
+    expect(trigger).not.toHaveBeenCalled()
+  })
 
   it("runs only the deterministic diagnosis when 'Iniciar diagnóstico' is clicked", () => {
-    mockAuthStatus.value = "authed";
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
       selectedId: scenario.id,
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
-    const runDiagnosis = vi.fn().mockResolvedValue(undefined);
-    const trigger = vi.fn();
+    })
+    const runDiagnosis = vi.fn().mockResolvedValue(undefined)
+    const trigger = vi.fn()
     mockUseDiagnosis.mockReturnValue({
       loading: false,
       result: null,
       runDiagnosis,
-    });
-    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true });
+    })
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true })
     mockUseCognitiveDiagnosis.mockReturnValue({
       pidRows: null,
       loading: false,
@@ -617,36 +603,36 @@ describe("DashboardPage", () => {
       confidence: null,
       recommendations: null,
       conversationHistory: [],
-    });
+    })
 
-    render(<DashboardPage />);
-    fireEvent.click(screen.getByText("Iniciar diagnóstico"));
+    render(<DashboardPage />)
+    fireEvent.click(screen.getByText('Iniciar diagnóstico'))
 
-    expect(runDiagnosis).toHaveBeenCalledTimes(1);
-    expect(trigger).not.toHaveBeenCalled();
-  });
+    expect(runDiagnosis).toHaveBeenCalledTimes(1)
+    expect(trigger).not.toHaveBeenCalled()
+  })
 
-  it("launches a new cognitive session (no query) from the diagnosis CTA", () => {
-    mockAuthStatus.value = "authed";
+  it('launches a new cognitive session (no query) from the diagnosis CTA', () => {
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
       selectedId: scenario.id,
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
-    const trigger = vi.fn();
+    })
+    const trigger = vi.fn()
     mockUseDiagnosis.mockReturnValue({
       loading: false,
       result: {
-        rawData: "41 0C 5A",
+        rawData: '41 0C 5A',
         parsedValues: { rpm: 850, coolantTemp: 90, speed: 0, intakeTemp: 35 },
         dtcCodes: [],
-        diagnosisText: "[LOW] Sin fallos",
-        severity: "low",
+        diagnosisText: '[LOW] Sin fallos',
+        severity: 'low',
       },
       runDiagnosis: vi.fn(),
-    });
-    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true });
+    })
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true })
     mockUseCognitiveDiagnosis.mockReturnValue({
       pidRows: null,
       loading: false,
@@ -657,37 +643,37 @@ describe("DashboardPage", () => {
       confidence: null,
       recommendations: null,
       conversationHistory: [],
-    });
+    })
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    fireEvent.click(screen.getByTitle("Diagnóstico"));
-    fireEvent.click(screen.getByText("Lanzar diagnóstico IA"));
+    fireEvent.click(screen.getByTitle('Diagnóstico'))
+    fireEvent.click(screen.getByText('Lanzar diagnóstico IA'))
 
-    expect(trigger).toHaveBeenCalledTimes(1);
-    expect(trigger).toHaveBeenCalledWith();
-  });
+    expect(trigger).toHaveBeenCalledTimes(1)
+    expect(trigger).toHaveBeenCalledWith()
+  })
 
-  it("should paint the deterministic result while the cognitive call is still loading", () => {
-    mockAuthStatus.value = "authed";
+  it('should paint the deterministic result while the cognitive call is still loading', () => {
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
       selectedId: scenario.id,
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
+    })
     mockUseDiagnosis.mockReturnValue({
       loading: false,
       result: {
-        rawData: "41 0C 5A",
+        rawData: '41 0C 5A',
         parsedValues: { rpm: 850, coolantTemp: 90, speed: 0, intakeTemp: 35 },
-        dtcCodes: [{ code: "P0301", description: "Cylinder 1 Misfire" }],
-        diagnosisText: "[HIGH] Fallo de encendido",
-        severity: "high",
+        dtcCodes: [{ code: 'P0301', description: 'Cylinder 1 Misfire' }],
+        diagnosisText: '[HIGH] Fallo de encendido',
+        severity: 'high',
       },
       runDiagnosis: vi.fn(),
-    });
-    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true });
+    })
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true })
     mockUseCognitiveDiagnosis.mockReturnValue({
       pidRows: null,
       loading: true,
@@ -698,45 +684,45 @@ describe("DashboardPage", () => {
       confidence: null,
       recommendations: null,
       conversationHistory: [],
-    });
+    })
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    expect(screen.getAllByTestId("pid-row")).toHaveLength(4);
-    expect(screen.getByText("Buscando PIDs adicionales…")).toBeDefined();
+    expect(screen.getAllByTestId('pid-row')).toHaveLength(4)
+    expect(screen.getByText('Buscando PIDs adicionales…')).toBeDefined()
 
-    fireEvent.click(screen.getByTitle("Códigos DTC"));
-    expect(screen.getByText("P0301")).toBeDefined();
-  });
+    fireEvent.click(screen.getByTitle('Códigos DTC'))
+    expect(screen.getByText('P0301')).toBeDefined()
+  })
 
-  it("should append the AI rows to the PIDs table once they resolve", () => {
-    mockAuthStatus.value = "authed";
+  it('should append the AI rows to the PIDs table once they resolve', () => {
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
       selectedId: scenario.id,
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
+    })
     mockUseDiagnosis.mockReturnValue({
       loading: false,
       result: {
-        rawData: "41 0C 5A",
+        rawData: '41 0C 5A',
         parsedValues: { rpm: 850, coolantTemp: 90, speed: 0, intakeTemp: 35 },
         dtcCodes: [],
-        diagnosisText: "[LOW] Sin fallos",
-        severity: "low",
+        diagnosisText: '[LOW] Sin fallos',
+        severity: 'low',
       },
       runDiagnosis: vi.fn(),
-    });
-    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true });
+    })
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true })
     mockUseCognitiveDiagnosis.mockReturnValue({
       pidRows: [
         {
-          code: "01 42",
-          description: "Voltaje del módulo de control",
-          value: "10.9 V",
-          status: "review",
-          source: "ai",
+          code: '01 42',
+          description: 'Voltaje del módulo de control',
+          value: '10.9 V',
+          status: 'review',
+          source: 'ai',
         },
       ],
       loading: false,
@@ -747,127 +733,125 @@ describe("DashboardPage", () => {
       confidence: null,
       recommendations: null,
       conversationHistory: [],
-    });
+    })
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    expect(screen.getAllByTestId("pid-row")).toHaveLength(5);
-    expect(screen.getByText("01 42")).toBeDefined();
-    expect(screen.getByText("IA")).toBeDefined();
-  });
+    expect(screen.getAllByTestId('pid-row')).toHaveLength(5)
+    expect(screen.getByText('01 42')).toBeDefined()
+    expect(screen.getByText('IA')).toBeDefined()
+  })
 
   it("should show a USB icon in TopBar when the selected scenario has connectionType 'usb'", () => {
-    mockAuthStatus.value = "authed";
+    mockAuthStatus.value = 'authed'
     const usbScenario: Scenario = {
       ...scenario,
-      id: "usb",
-      name: "ELM327 USB",
-      connectionType: "usb",
-    };
+      id: 'usb',
+      name: 'ELM327 USB',
+      connectionType: 'usb',
+    }
     mockUseScenarios.mockReturnValue({
       scenarios: [usbScenario],
-      selectedId: "usb",
+      selectedId: 'usb',
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
+    })
     mockUseLiveTelemetry.mockReturnValue({
       live: {
         rpm: 850,
         speed: 0,
         coolantTemp: 90,
         intakeTemp: 35,
-        rawData: "41 0C 5A 41 0D 00",
+        rawData: '41 0C 5A 41 0D 00',
         ts: 1,
       },
       streamOk: true,
-    });
+    })
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    expect(screen.getByTestId("connection-usb")).toBeDefined();
-    expect(screen.queryByTestId("connection-wifi")).toBeNull();
-  });
+    expect(screen.getByTestId('connection-usb')).toBeDefined()
+    expect(screen.queryByTestId('connection-wifi')).toBeNull()
+  })
 
-  it("should propagate the selected PIDs from PidsTable to TelemetrySection", () => {
-    mockAuthStatus.value = "authed";
+  it('should propagate the selected PIDs from PidsTable to TelemetrySection', () => {
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
       selectedId: scenario.id,
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
+    })
     mockUseDiagnosis.mockReturnValue({
       loading: false,
       result: {
-        rawData: "41 0C 5A",
+        rawData: '41 0C 5A',
         parsedValues: { rpm: 850, coolantTemp: 90, speed: 50, intakeTemp: 35 },
         dtcCodes: [],
-        diagnosisText: "Sin fallos",
-        severity: "low",
+        diagnosisText: 'Sin fallos',
+        severity: 'low',
       },
       runDiagnosis: vi.fn(),
-    });
+    })
     mockUseLiveTelemetry.mockReturnValue({
-      live: { rpm: 850, speed: 50, coolantTemp: 90, intakeTemp: 35, rawData: "", ts: 1 },
+      live: { rpm: 850, speed: 50, coolantTemp: 90, intakeTemp: 35, rawData: '', ts: 1 },
       streamOk: true,
       readings: null,
-    });
+    })
 
-    render(<DashboardPage />);
+    render(<DashboardPage />)
 
-    expect(screen.getAllByRole("checkbox")).toHaveLength(4);
-    expect(screen.getByText("Refrigerante")).toBeDefined();
+    expect(screen.getAllByRole('checkbox')).toHaveLength(4)
+    expect(screen.getByText('Refrigerante')).toBeDefined()
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "Seleccionar PID 05" }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Seleccionar PID 05' }))
 
-    expect(screen.queryByText("Refrigerante")).toBeNull();
-    expect(screen.getByText("RPM")).toBeDefined();
-    expect(screen.getByText("Velocidad")).toBeDefined();
-    expect(screen.getByText("Admisión")).toBeDefined();
-  });
+    expect(screen.queryByText('Refrigerante')).toBeNull()
+    expect(screen.getByText('RPM')).toBeDefined()
+    expect(screen.getByText('Velocidad')).toBeDefined()
+    expect(screen.getByText('Admisión')).toBeDefined()
+  })
 
-  it("should reset the PID selection to the 4 defaults when the vehicle changes", () => {
-    mockAuthStatus.value = "authed";
+  it('should reset the PID selection to the 4 defaults when the vehicle changes', () => {
+    mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
       selectedId: scenario.id,
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
+    })
     mockUseDiagnosis.mockReturnValue({
       loading: false,
       result: {
-        rawData: "41 0C 5A",
+        rawData: '41 0C 5A',
         parsedValues: { rpm: 850, coolantTemp: 90, speed: 50, intakeTemp: 35 },
         dtcCodes: [],
-        diagnosisText: "Sin fallos",
-        severity: "low",
+        diagnosisText: 'Sin fallos',
+        severity: 'low',
       },
       runDiagnosis: vi.fn(),
-    });
+    })
     mockUseLiveTelemetry.mockReturnValue({
-      live: { rpm: 850, speed: 50, coolantTemp: 90, intakeTemp: 35, rawData: "", ts: 1 },
+      live: { rpm: 850, speed: 50, coolantTemp: 90, intakeTemp: 35, rawData: '', ts: 1 },
       streamOk: true,
       readings: null,
-    });
+    })
 
-    const { rerender } = render(<DashboardPage />);
+    const { rerender } = render(<DashboardPage />)
 
-    fireEvent.click(screen.getByRole("checkbox", { name: "Seleccionar PID 05" }));
-    expect(screen.queryByText("Refrigerante")).toBeNull();
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Seleccionar PID 05' }))
+    expect(screen.queryByText('Refrigerante')).toBeNull()
 
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
-      selectedId: "kawa-z900",
+      selectedId: 'kawa-z900',
       setSelectedId: vi.fn(),
       scenariosError: null,
-    });
-    rerender(<DashboardPage />);
+    })
+    rerender(<DashboardPage />)
 
-    expect(screen.getByText("Refrigerante")).toBeDefined();
-    const checked = screen
-      .getAllByRole("checkbox")
-      .filter((c) => (c as HTMLInputElement).checked);
-    expect(checked).toHaveLength(4);
-  });
-});
+    expect(screen.getByText('Refrigerante')).toBeDefined()
+    const checked = screen.getAllByRole('checkbox').filter((c) => (c as HTMLInputElement).checked)
+    expect(checked).toHaveLength(4)
+  })
+})

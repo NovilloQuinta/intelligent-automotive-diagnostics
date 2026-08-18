@@ -1,12 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
-import { DashboardSection } from "../../../src/components/dashboard/DashboardSection";
-import type { SidebarSection } from "../../../src/components/layout/Sidebar";
+import { describe, expect, it, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import { DashboardSection } from '../../../src/components/dashboard/DashboardSection'
+import type { SidebarSection } from '../../../src/components/layout/Sidebar'
 
 function baseProps(overrides: Record<string, unknown> = {}) {
   return {
-    activeSection: "diagnosis" as SidebarSection,
-    selectedId: "audi-a3",
+    activeSection: 'diagnosis' as SidebarSection,
+    selectedId: 'audi-a3',
     selectedScenario: null,
     telemetry: {
       rpm: null,
@@ -38,30 +38,30 @@ function baseProps(overrides: Record<string, unknown> = {}) {
     onLaunchDiagnosis: vi.fn(),
     canLaunch: true,
     ...overrides,
-  };
+  }
 }
 
-describe("DashboardSection — diagnosis", () => {
-  it("renders DiagnosisChat (the CTA) instead of the deterministic panel", () => {
-    render(<DashboardSection {...baseProps()} />);
+describe('DashboardSection — diagnosis', () => {
+  it('renders DiagnosisChat (the CTA) instead of the deterministic panel', () => {
+    render(<DashboardSection {...baseProps()} />)
 
-    expect(screen.getByText("Lanzar diagnóstico IA")).toBeDefined();
+    expect(screen.getByText('Lanzar diagnóstico IA')).toBeDefined()
     // El panel determinista ya no existe: no hay header "Diagnóstico IA"
     // separado del chat (solo el título interno del chat).
     expect(
-      screen.queryByText("Sin datos. Ejecuta un diagnóstico para obtener el informe."),
-    ).toBeNull();
-  });
+      screen.queryByText('Sin datos. Ejecuta un diagnóstico para obtener el informe.'),
+    ).toBeNull()
+  })
 
-  it("renders the LLM output as a chat message when there is history", () => {
+  it('renders the LLM output as a chat message when there is history', () => {
     render(
       <DashboardSection
         {...baseProps({
           cognitive: {
-            severity: "high",
+            severity: 'high',
             confidence: 0.9,
             conversationHistory: [
-              { __type: "raw_response", data: { text: "Fallo de encendido." } },
+              { __type: 'raw_response', data: { text: 'Fallo de encendido.' } },
             ],
             loading: false,
             error: null,
@@ -70,13 +70,13 @@ describe("DashboardSection — diagnosis", () => {
           },
         })}
       />,
-    );
+    )
 
-    expect(screen.getByText("Fallo de encendido.")).toBeDefined();
-    expect(screen.queryByText("Lanzar diagnóstico IA")).toBeNull();
-  });
+    expect(screen.getByText('Fallo de encendido.')).toBeDefined()
+    expect(screen.queryByText('Lanzar diagnóstico IA')).toBeNull()
+  })
 
-  it("shows the unavailable message when the cognitive capability is off", () => {
+  it('shows the unavailable message when the cognitive capability is off', () => {
     render(
       <DashboardSection
         {...baseProps({
@@ -91,51 +91,51 @@ describe("DashboardSection — diagnosis", () => {
           },
         })}
       />,
-    );
+    )
 
     expect(
-      screen.getByText("El diagnóstico cognitivo no está disponible en este entorno."),
-    ).toBeDefined();
-  });
-});
+      screen.getByText('El diagnóstico cognitivo no está disponible en este entorno.'),
+    ).toBeDefined()
+  })
+})
 
-describe("DashboardSection — topology", () => {
+describe('DashboardSection — topology', () => {
   const ECUS = [
     {
       id: 1,
       vehicleId: 1,
-      name: "Motor",
-      requestAddr: "7E0",
-      responseAddr: "7E8",
-      type: "ECM",
-      protocol: "ISO 15765-4 CAN",
+      name: 'Motor',
+      requestAddr: '7E0',
+      responseAddr: '7E8',
+      type: 'ECM',
+      protocol: 'ISO 15765-4 CAN',
     },
-  ];
+  ]
 
-  it("renders the topology map with the ECUs already held in `ecu`", () => {
+  it('renders the topology map with the ECUs already held in `ecu`', () => {
     render(
       <DashboardSection
         {...baseProps({
-          activeSection: "topology" as SidebarSection,
+          activeSection: 'topology' as SidebarSection,
           ecu: { ecus: ECUS, loading: false, error: null },
         })}
       />,
-    );
+    )
 
-    expect(screen.getByText("Topología del Bus")).toBeDefined();
-    expect(screen.getByRole("button", { name: /motor/i })).toBeDefined();
-  });
+    expect(screen.getByText('Topología del Bus')).toBeDefined()
+    expect(screen.getByRole('button', { name: /motor/i })).toBeDefined()
+  })
 
-  it("propagates the ECU loading state to the topology panel", () => {
+  it('propagates the ECU loading state to the topology panel', () => {
     render(
       <DashboardSection
         {...baseProps({
-          activeSection: "topology" as SidebarSection,
+          activeSection: 'topology' as SidebarSection,
           ecu: { ecus: null, loading: true, error: null },
         })}
       />,
-    );
+    )
 
-    expect(screen.getByText(/cargando ecus/i)).toBeDefined();
-  });
-});
+    expect(screen.getByText(/cargando ecus/i)).toBeDefined()
+  })
+})

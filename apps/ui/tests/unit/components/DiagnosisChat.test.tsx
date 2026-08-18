@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import { DiagnosisChat } from "../../../src/components/dashboard/DiagnosisChat";
+import { describe, expect, it, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { DiagnosisChat } from '../../../src/components/dashboard/DiagnosisChat'
 
-describe("DiagnosisChat", () => {
+describe('DiagnosisChat', () => {
   const defaultProps = {
     severity: null,
     confidence: null,
@@ -12,103 +12,93 @@ describe("DiagnosisChat", () => {
     onSend: vi.fn(),
     onLaunchDiagnosis: vi.fn(),
     canLaunch: true,
-  };
+  }
 
   // -------------------------------------------------------------------------
   // Estado vacío
   // -------------------------------------------------------------------------
 
-  it("shows the CTA and a context line in the empty state, without the input", () => {
-    render(<DiagnosisChat {...defaultProps} />);
+  it('shows the CTA and a context line in the empty state, without the input', () => {
+    render(<DiagnosisChat {...defaultProps} />)
 
-    expect(screen.getByText("Lanzar diagnóstico IA")).toBeDefined();
+    expect(screen.getByText('Lanzar diagnóstico IA')).toBeDefined()
     expect(
       screen.getByText(
-        "El asistente revisará DTCs, datos en vivo, freeze frames y ECUs del vehículo seleccionado.",
+        'El asistente revisará DTCs, datos en vivo, freeze frames y ECUs del vehículo seleccionado.',
       ),
-    ).toBeDefined();
-    expect(screen.queryByPlaceholderText("Pregunta al mecánico...")).toBeNull();
-  });
+    ).toBeDefined()
+    expect(screen.queryByPlaceholderText('Pregunta al mecánico...')).toBeNull()
+  })
 
-  it("does not show the CTA while loading", () => {
-    render(<DiagnosisChat {...defaultProps} loading={true} />);
+  it('does not show the CTA while loading', () => {
+    render(<DiagnosisChat {...defaultProps} loading={true} />)
 
-    expect(screen.queryByText("Lanzar diagnóstico IA")).toBeNull();
-  });
+    expect(screen.queryByText('Lanzar diagnóstico IA')).toBeNull()
+  })
 
-  it("does not show the CTA once there is conversation history", () => {
+  it('does not show the CTA once there is conversation history', () => {
     render(
       <DiagnosisChat
         {...defaultProps}
-        conversationHistory={[
-          { __type: "raw_response", data: { text: "Fallo de encendido." } },
-        ]}
+        conversationHistory={[{ __type: 'raw_response', data: { text: 'Fallo de encendido.' } }]}
       />,
-    );
+    )
 
-    expect(screen.queryByText("Lanzar diagnóstico IA")).toBeNull();
-  });
+    expect(screen.queryByText('Lanzar diagnóstico IA')).toBeNull()
+  })
 
   // -------------------------------------------------------------------------
   // Estado generando
   // -------------------------------------------------------------------------
 
-  it("shows a spinner and descriptive text while loading, with the input disabled", () => {
-    render(<DiagnosisChat {...defaultProps} loading={true} />);
+  it('shows a spinner and descriptive text while loading, with the input disabled', () => {
+    render(<DiagnosisChat {...defaultProps} loading={true} />)
 
-    expect(screen.getByText("Analizando datos OBD-II con IA…")).toBeDefined();
-    expect(
-      screen.getByPlaceholderText("Pregunta al mecánico..."),
-    ).toBeDisabled();
-  });
+    expect(screen.getByText('Analizando datos OBD-II con IA…')).toBeDefined()
+    expect(screen.getByPlaceholderText('Pregunta al mecánico...')).toBeDisabled()
+  })
 
-  it("keeps the previous thread visible while a follow-up is loading, with an inline indicator", () => {
+  it('keeps the previous thread visible while a follow-up is loading, with an inline indicator', () => {
     render(
       <DiagnosisChat
         {...defaultProps}
         loading={true}
-        conversationHistory={[
-          { __type: "raw_response", data: { text: "Fallo de encendido." } },
-        ]}
+        conversationHistory={[{ __type: 'raw_response', data: { text: 'Fallo de encendido.' } }]}
       />,
-    );
+    )
 
     // El hilo previo NO desaparece durante el follow-up.
-    expect(screen.getByText("Fallo de encendido.")).toBeDefined();
+    expect(screen.getByText('Fallo de encendido.')).toBeDefined()
     // El indicador de carga se muestra inline (debajo del hilo).
-    expect(screen.getByText("Analizando datos OBD-II con IA…")).toBeDefined();
+    expect(screen.getByText('Analizando datos OBD-II con IA…')).toBeDefined()
     // Y nunca se muestra el CTA de primer diagnóstico.
-    expect(screen.queryByText("Lanzar diagnóstico IA")).toBeNull();
-  });
+    expect(screen.queryByText('Lanzar diagnóstico IA')).toBeNull()
+  })
 
-  it("shows the generating state without the CTA while loading without history", () => {
-    render(<DiagnosisChat {...defaultProps} loading={true} />);
+  it('shows the generating state without the CTA while loading without history', () => {
+    render(<DiagnosisChat {...defaultProps} loading={true} />)
 
-    expect(screen.getByText("Analizando datos OBD-II con IA…")).toBeDefined();
-    expect(screen.queryByText("Lanzar diagnóstico IA")).toBeNull();
-  });
+    expect(screen.getByText('Analizando datos OBD-II con IA…')).toBeDefined()
+    expect(screen.queryByText('Lanzar diagnóstico IA')).toBeNull()
+  })
 
   // -------------------------------------------------------------------------
   // Estado diagnóstico
   // -------------------------------------------------------------------------
 
-  it("shows the LLM output as the first message and enables the input", () => {
+  it('shows the LLM output as the first message and enables the input', () => {
     render(
       <DiagnosisChat
         {...defaultProps}
-        conversationHistory={[
-          { __type: "raw_response", data: { text: "Fallo de encendido." } },
-        ]}
+        conversationHistory={[{ __type: 'raw_response', data: { text: 'Fallo de encendido.' } }]}
       />,
-    );
+    )
 
-    expect(screen.getByText("Fallo de encendido.")).toBeDefined();
-    expect(
-      screen.getByPlaceholderText("Pregunta al mecánico..."),
-    ).toBeEnabled();
-  });
+    expect(screen.getByText('Fallo de encendido.')).toBeDefined()
+    expect(screen.getByPlaceholderText('Pregunta al mecánico...')).toBeEnabled()
+  })
 
-  it("renders a markdown table as a real table, not as raw pipes", () => {
+  it('renders a markdown table as a real table, not as raw pipes', () => {
     // El prompt le pide al modelo que no use tablas, pero eso es la capa
     // blanda: si se le escapa una, debe verse legible en vez de un churro
     // de barras verticales.
@@ -117,226 +107,206 @@ describe("DiagnosisChat", () => {
         {...defaultProps}
         conversationHistory={[
           {
-            __type: "raw_response",
+            __type: 'raw_response',
             data: {
-              text: "| Sí puedo | No puedo |\n| --- | --- |\n| Lectura de PID | Actuación física |",
+              text: '| Sí puedo | No puedo |\n| --- | --- |\n| Lectura de PID | Actuación física |',
             },
           },
         ]}
       />,
-    );
+    )
 
-    expect(container.querySelector("table")).not.toBeNull();
-    expect(screen.getByText("Actuación física")).toBeDefined();
-  });
+    expect(container.querySelector('table')).not.toBeNull()
+    expect(screen.getByText('Actuación física')).toBeDefined()
+  })
 
-  it("lets a wide table scroll inside its bubble instead of stretching the panel", () => {
+  it('lets a wide table scroll inside its bubble instead of stretching the panel', () => {
     const { container } = render(
       <DiagnosisChat
         {...defaultProps}
         conversationHistory={[
           {
-            __type: "raw_response",
-            data: { text: "| A | B |\n| --- | --- |\n| 1 | 2 |" },
+            __type: 'raw_response',
+            data: { text: '| A | B |\n| --- | --- |\n| 1 | 2 |' },
           },
         ]}
       />,
-    );
+    )
 
-    const bubble = container.querySelector("table")?.closest("div");
-    expect(bubble?.className).toContain("overflow-x-auto");
-  });
+    const bubble = container.querySelector('table')?.closest('div')
+    expect(bubble?.className).toContain('overflow-x-auto')
+  })
 
-  it("constrains the conversation thread with an internal scroll container", () => {
+  it('constrains the conversation thread with an internal scroll container', () => {
     render(
       <DiagnosisChat
         {...defaultProps}
-        conversationHistory={[
-          { __type: "raw_response", data: { text: "Fallo de encendido." } },
-        ]}
+        conversationHistory={[{ __type: 'raw_response', data: { text: 'Fallo de encendido.' } }]}
       />,
-    );
+    )
 
-    const thread = screen
-      .getByText("Fallo de encendido.")
-      .closest(".overflow-y-auto");
-    expect(thread).not.toBeNull();
-    expect(thread?.className).toContain("max-h-[26rem]");
-  });
+    const thread = screen.getByText('Fallo de encendido.').closest('.overflow-y-auto')
+    expect(thread).not.toBeNull()
+    expect(thread?.className).toContain('max-h-[26rem]')
+  })
 
   // -------------------------------------------------------------------------
   // Gate del CTA
   // -------------------------------------------------------------------------
 
-  it("disables the CTA when canLaunch is false", () => {
-    render(<DiagnosisChat {...defaultProps} canLaunch={false} />);
+  it('disables the CTA when canLaunch is false', () => {
+    render(<DiagnosisChat {...defaultProps} canLaunch={false} />)
 
-    expect(
-      screen.getByRole("button", { name: "Lanzar diagnóstico IA" }),
-    ).toBeDisabled();
-  });
+    expect(screen.getByRole('button', { name: 'Lanzar diagnóstico IA' })).toBeDisabled()
+  })
 
-  it("enables the CTA when canLaunch is true", () => {
-    render(<DiagnosisChat {...defaultProps} canLaunch={true} />);
+  it('enables the CTA when canLaunch is true', () => {
+    render(<DiagnosisChat {...defaultProps} canLaunch={true} />)
 
-    expect(
-      screen.getByRole("button", { name: "Lanzar diagnóstico IA" }),
-    ).toBeEnabled();
-  });
+    expect(screen.getByRole('button', { name: 'Lanzar diagnóstico IA' })).toBeEnabled()
+  })
 
-  it("calls onLaunchDiagnosis when the CTA is clicked", () => {
-    const onLaunchDiagnosis = vi.fn();
-    render(
-      <DiagnosisChat {...defaultProps} onLaunchDiagnosis={onLaunchDiagnosis} />,
-    );
+  it('calls onLaunchDiagnosis when the CTA is clicked', () => {
+    const onLaunchDiagnosis = vi.fn()
+    render(<DiagnosisChat {...defaultProps} onLaunchDiagnosis={onLaunchDiagnosis} />)
 
-    fireEvent.click(screen.getByText("Lanzar diagnóstico IA"));
+    fireEvent.click(screen.getByText('Lanzar diagnóstico IA'))
 
-    expect(onLaunchDiagnosis).toHaveBeenCalledTimes(1);
-  });
+    expect(onLaunchDiagnosis).toHaveBeenCalledTimes(1)
+  })
 
   // -------------------------------------------------------------------------
   // Comportamiento heredado (markdown, badge, error, follow-up)
   // -------------------------------------------------------------------------
 
-  it("renders the title", () => {
-    render(<DiagnosisChat {...defaultProps} />);
-    expect(screen.getByText("Diagnóstico IA")).toBeDefined();
-  });
+  it('renders the title', () => {
+    render(<DiagnosisChat {...defaultProps} />)
+    expect(screen.getByText('Diagnóstico IA')).toBeDefined()
+  })
 
-  it("calls onSend with the query text when send button is clicked", () => {
-    const onSend = vi.fn();
+  it('calls onSend with the query text when send button is clicked', () => {
+    const onSend = vi.fn()
     render(
       <DiagnosisChat
         {...defaultProps}
         onSend={onSend}
-        conversationHistory={[
-          { __type: "raw_response", data: { text: "Fallo." } },
-        ]}
+        conversationHistory={[{ __type: 'raw_response', data: { text: 'Fallo.' } }]}
       />,
-    );
+    )
 
-    const input = screen.getByPlaceholderText("Pregunta al mecánico...");
-    fireEvent.change(input, { target: { value: "¿Por qué tiembla?" } });
-    fireEvent.click(screen.getByText("Enviar"));
+    const input = screen.getByPlaceholderText('Pregunta al mecánico...')
+    fireEvent.change(input, { target: { value: '¿Por qué tiembla?' } })
+    fireEvent.click(screen.getByText('Enviar'))
 
-    expect(onSend).toHaveBeenCalledWith("¿Por qué tiembla?");
-  });
+    expect(onSend).toHaveBeenCalledWith('¿Por qué tiembla?')
+  })
 
-  it("calls onSend on Enter key", () => {
-    const onSend = vi.fn();
+  it('calls onSend on Enter key', () => {
+    const onSend = vi.fn()
     render(
       <DiagnosisChat
         {...defaultProps}
         onSend={onSend}
-        conversationHistory={[
-          { __type: "raw_response", data: { text: "Fallo." } },
-        ]}
+        conversationHistory={[{ __type: 'raw_response', data: { text: 'Fallo.' } }]}
       />,
-    );
+    )
 
-    const input = screen.getByPlaceholderText("Pregunta al mecánico...");
-    fireEvent.change(input, { target: { value: "problema" } });
-    fireEvent.keyDown(input, { key: "Enter" });
+    const input = screen.getByPlaceholderText('Pregunta al mecánico...')
+    fireEvent.change(input, { target: { value: 'problema' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
 
-    expect(onSend).toHaveBeenCalledWith("problema");
-  });
+    expect(onSend).toHaveBeenCalledWith('problema')
+  })
 
-  it("shows the severity badge attached to the last assistant bubble", () => {
+  it('shows the severity badge attached to the last assistant bubble', () => {
     render(
       <DiagnosisChat
         {...defaultProps}
         severity="high"
         confidence={0.92}
         conversationHistory={[
-          { __type: "user_message", content: "¿Qué le pasa?" },
+          { __type: 'user_message', content: '¿Qué le pasa?' },
           {
-            __type: "raw_response",
-            data: { text: "Fallo de encendido en cilindro 1" },
+            __type: 'raw_response',
+            data: { text: 'Fallo de encendido en cilindro 1' },
           },
         ]}
       />,
-    );
+    )
 
-    expect(
-      screen.getAllByText("Fallo de encendido en cilindro 1"),
-    ).toHaveLength(1);
-    expect(screen.getByText("Alta")).toBeDefined();
-    expect(screen.getByText("Confianza: 92%")).toBeDefined();
-  });
+    expect(screen.getAllByText('Fallo de encendido en cilindro 1')).toHaveLength(1)
+    expect(screen.getByText('Alta')).toBeDefined()
+    expect(screen.getByText('Confianza: 92%')).toBeDefined()
+  })
 
-  it("renders markdown formatting (bold, lists) in assistant bubbles", () => {
+  it('renders markdown formatting (bold, lists) in assistant bubbles', () => {
     render(
       <DiagnosisChat
         {...defaultProps}
         conversationHistory={[
           {
-            __type: "raw_response",
+            __type: 'raw_response',
             data: {
-              text: "**Diagnóstico:**\n- Bujía defectuosa\n- Revisar bobina",
+              text: '**Diagnóstico:**\n- Bujía defectuosa\n- Revisar bobina',
             },
           },
         ]}
       />,
-    );
+    )
 
-    expect(screen.getByText("Diagnóstico:").tagName).toBe("STRONG");
-    expect(screen.getByText("Bujía defectuosa").closest("li")).not.toBeNull();
-    expect(screen.getByText("Revisar bobina").closest("li")).not.toBeNull();
-  });
+    expect(screen.getByText('Diagnóstico:').tagName).toBe('STRONG')
+    expect(screen.getByText('Bujía defectuosa').closest('li')).not.toBeNull()
+    expect(screen.getByText('Revisar bobina').closest('li')).not.toBeNull()
+  })
 
-  it("renders user messages as plain text, not markdown", () => {
+  it('renders user messages as plain text, not markdown', () => {
     render(
       <DiagnosisChat
         {...defaultProps}
-        conversationHistory={[
-          { __type: "user_message", content: "**no debería negritear**" },
-        ]}
+        conversationHistory={[{ __type: 'user_message', content: '**no debería negritear**' }]}
       />,
-    );
+    )
 
-    expect(screen.getByText("**no debería negritear**")).toBeDefined();
-  });
+    expect(screen.getByText('**no debería negritear**')).toBeDefined()
+  })
 
-  it("renders the error message visibly when error is not null", () => {
+  it('renders the error message visibly when error is not null', () => {
     render(
       <DiagnosisChat
         {...defaultProps}
-        error={{ kind: "timeout", message: "La petición tardó demasiado" }}
+        error={{ kind: 'timeout', message: 'La petición tardó demasiado' }}
       />,
-    );
+    )
 
-    expect(screen.getByText("La petición tardó demasiado")).toBeDefined();
-  });
+    expect(screen.getByText('La petición tardó demasiado')).toBeDefined()
+  })
 
-  it("does not show the error message while a new attempt is loading", () => {
+  it('does not show the error message while a new attempt is loading', () => {
     render(
       <DiagnosisChat
         {...defaultProps}
         loading={true}
-        error={{ kind: "timeout", message: "La petición tardó demasiado" }}
+        error={{ kind: 'timeout', message: 'La petición tardó demasiado' }}
       />,
-    );
+    )
 
-    expect(screen.queryByText("La petición tardó demasiado")).toBeNull();
-  });
+    expect(screen.queryByText('La petición tardó demasiado')).toBeNull()
+  })
 
-  it("does not call onSend for an empty or whitespace-only query", () => {
-    const onSend = vi.fn();
+  it('does not call onSend for an empty or whitespace-only query', () => {
+    const onSend = vi.fn()
     render(
       <DiagnosisChat
         {...defaultProps}
         onSend={onSend}
-        conversationHistory={[
-          { __type: "raw_response", data: { text: "Fallo." } },
-        ]}
+        conversationHistory={[{ __type: 'raw_response', data: { text: 'Fallo.' } }]}
       />,
-    );
+    )
 
-    const input = screen.getByPlaceholderText("Pregunta al mecánico...");
-    fireEvent.change(input, { target: { value: "   " } });
-    fireEvent.click(screen.getByText("Enviar"));
+    const input = screen.getByPlaceholderText('Pregunta al mecánico...')
+    fireEvent.change(input, { target: { value: '   ' } })
+    fireEvent.click(screen.getByText('Enviar'))
 
-    expect(onSend).not.toHaveBeenCalled();
-  });
-});
+    expect(onSend).not.toHaveBeenCalled()
+  })
+})
