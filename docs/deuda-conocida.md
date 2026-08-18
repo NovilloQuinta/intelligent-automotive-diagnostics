@@ -149,19 +149,6 @@ Va **despues** de `build` a proposito: `src/routeTree.gen.ts` lo genera el plugi
 de router durante el build y esta gitignored, asi que en un clon limpio tsc no
 compila hasta que build lo ha creado.
 
-## Los tests de la UI no se lintan ni se formatean
-
-`apps/ui` tiene `lint: eslint src/` y `format: prettier --check "src/**"`: los 64
-ficheros de `tests/` quedan fuera de ambos. Por eso usan comillas dobles cuando
-la config de prettier pide simples — pasar `eslint tests/` hoy da ~1129 errores
-de `prettier/prettier`.
-
-No es urgente (son tests, y TypeScript + vitest ya los validan), pero conviene
-saberlo antes de "arreglarlo": ampliar los globs genera un diff enorme de
-reformateo. Hacerlo en un commit aislado y solo de formato.
-
-En `core-api` no pasa: alli lint y format ya cubren `src/` y `tests/`.
-
 ## Cabo suelto: `live-data` devolvio null en pruebas locales (13/08)
 
 Levantando el stack contra el emulador (ver `docs/infrastructure/elm327-emulator.md`),
@@ -216,3 +203,9 @@ GitHub; su contenido ya esta integrado, asi que borrarlas no pierde nada:
   `mkdir -p` antes de abrir la conexion (`db.ts`), porque `better-sqlite3` no lo hace
   y `apps/core-api/data/` esta gitignored. Cubierto por `db.test.ts`.
 - **`swagger.ts` como god file**: el documento OpenAPI se genera desde el codigo.
+- **Los tests de la UI, fuera de lint y formato**: `lint` y `format` de `apps/ui` ya
+  cubren `tests/` ademas de `src/`. La estimacion que habia aqui ("~1129 errores de
+  `prettier/prettier`") era **de antes de formatear**: aplicado `prettier --write`
+  quedaban 3 errores reales, todos arreglados sin suprimir ninguna regla — un escape
+  sobrante en un regex y dos helpers `wrapper` que llaman a `useState` y pasan a
+  `Wrapper`. Los 71 ficheros entran con 0 errores y sin anadir un solo aviso.

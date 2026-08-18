@@ -11,7 +11,7 @@ import { api } from '../../../src/lib/api'
 import { useLiveTelemetry } from '../../../src/components/dashboard/useLiveTelemetry'
 
 /** Un QueryClient por montaje, no uno nuevo en cada render. */
-function wrapper({ children }: { children: React.ReactNode }) {
+function Wrapper({ children }: { children: React.ReactNode }) {
   const [qc] = useState(() => new QueryClient({ defaultOptions: { queries: { retry: false } } }))
   return createElement(QueryClientProvider, { client: qc }, children)
 }
@@ -39,7 +39,7 @@ describe('useLiveTelemetry', () => {
     vi.mocked(api.getLiveData).mockResolvedValue(mockLiveData)
 
     const { result } = renderHook(() => useLiveTelemetry('audi-a3'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await waitFor(() => {
@@ -65,7 +65,7 @@ describe('useLiveTelemetry', () => {
     })
 
     const { result } = renderHook(() => useLiveTelemetry('audi-a3'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await waitFor(() => {
@@ -80,7 +80,7 @@ describe('useLiveTelemetry', () => {
     vi.mocked(api.getLiveData).mockRejectedValue(new Error('fail'))
 
     const { result } = renderHook(() => useLiveTelemetry('audi-a3'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await waitFor(() => {
@@ -92,7 +92,7 @@ describe('useLiveTelemetry', () => {
     vi.mocked(api.getLiveData).mockRejectedValue(new Error('Unauthorized'))
 
     const { result } = renderHook(() => useLiveTelemetry('audi-a3'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await waitFor(() => {
@@ -102,7 +102,7 @@ describe('useLiveTelemetry', () => {
   })
 
   it('sin vehiculo seleccionado no consulta nada', () => {
-    const { result } = renderHook(() => useLiveTelemetry(''), { wrapper })
+    const { result } = renderHook(() => useLiveTelemetry(''), { wrapper: Wrapper })
 
     expect(result.current.live).toBeNull()
     expect(result.current.streamOk).toBe(false)
@@ -114,7 +114,7 @@ describe('useLiveTelemetry', () => {
     vi.mocked(api.getLiveData).mockResolvedValue({ ...mockLiveData, readings })
 
     const { result } = renderHook(() => useLiveTelemetry('audi-a3', ['0C', '0D']), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await waitFor(() => {

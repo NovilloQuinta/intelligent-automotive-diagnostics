@@ -25,7 +25,7 @@ import { api } from '../../../src/lib/api'
  * cache escrita por la mutacion desaparecia: los asserts leian null de forma
  * intermitente segun el orden de los renders.
  */
-function wrapper({ children }: { children: React.ReactNode }) {
+function Wrapper({ children }: { children: React.ReactNode }) {
   const [qc] = useState(
     () =>
       new QueryClient({
@@ -67,7 +67,7 @@ describe('useCognitiveDiagnosis', () => {
     vi.mocked(api.getCognitiveDiagnosis).mockResolvedValue(cognitiveOutput())
 
     const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {
@@ -98,7 +98,7 @@ describe('useCognitiveDiagnosis', () => {
     vi.mocked(api.getCognitiveDiagnosis).mockImplementation(() => new Promise(() => {}))
 
     const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     act(() => {
@@ -115,7 +115,7 @@ describe('useCognitiveDiagnosis', () => {
     vi.mocked(api.getCognitiveDiagnosis).mockRejectedValue(new Error('boom'))
 
     const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {
@@ -130,7 +130,7 @@ describe('useCognitiveDiagnosis', () => {
     vi.mocked(api.getCognitiveDiagnosis).mockResolvedValue(cognitiveOutput())
 
     const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {
@@ -151,7 +151,7 @@ describe('useCognitiveDiagnosis', () => {
   })
 
   it('does not call the API when there is no selected scenario', async () => {
-    const { result } = renderHook(() => useCognitiveDiagnosis(''), { wrapper })
+    const { result } = renderHook(() => useCognitiveDiagnosis(''), { wrapper: Wrapper })
 
     await act(async () => {
       await result.current.trigger()
@@ -165,7 +165,7 @@ describe('useCognitiveDiagnosis', () => {
     vi.mocked(api.getCognitiveDiagnosis).mockResolvedValue(cognitiveOutput())
 
     const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {
@@ -184,7 +184,7 @@ describe('useCognitiveDiagnosis', () => {
     vi.mocked(api.getCognitiveDiagnosis).mockResolvedValueOnce(cognitiveOutput())
 
     const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {
@@ -213,7 +213,7 @@ describe('useCognitiveDiagnosis', () => {
       })
 
     const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {
@@ -250,7 +250,7 @@ describe('useCognitiveDiagnosis', () => {
 
     const { result, rerender } = renderHook(({ id }) => useCognitiveDiagnosis(id), {
       initialProps: { id: 'kawa-z900' },
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {
@@ -275,7 +275,7 @@ describe('useCognitiveDiagnosis', () => {
     )
 
     const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {
@@ -298,7 +298,7 @@ describe('useCognitiveDiagnosis', () => {
     )
 
     const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {
@@ -320,7 +320,7 @@ describe('useCognitiveDiagnosis', () => {
     )
 
     const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {
@@ -339,7 +339,7 @@ describe('useCognitiveDiagnosis', () => {
     vi.mocked(api.getCognitiveDiagnosis).mockRejectedValue(new ApiHttpError('No disponible', 404))
 
     const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {
@@ -355,7 +355,7 @@ describe('useCognitiveDiagnosis', () => {
     vi.mocked(api.getCognitiveDiagnosis).mockRejectedValue(new Error('network exploded'))
 
     const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {
@@ -374,7 +374,7 @@ describe('useCognitiveDiagnosis', () => {
     )
 
     const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {
@@ -409,7 +409,7 @@ describe('useCognitiveDiagnosis', () => {
       .mockResolvedValueOnce(cognitiveOutput())
 
     const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {
@@ -433,7 +433,7 @@ describe('useCognitiveDiagnosis', () => {
 
     const { result, rerender } = renderHook(({ id }) => useCognitiveDiagnosis(id), {
       initialProps: { id: 'kawa-z900' },
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {
@@ -461,7 +461,7 @@ describe('useCognitiveDiagnosis', () => {
     })
 
     const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {
@@ -483,7 +483,7 @@ describe('useCognitiveDiagnosis', () => {
       })
 
     const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {
@@ -514,7 +514,7 @@ describe('useCognitiveDiagnosis', () => {
       .mockResolvedValueOnce({ ...cognitiveOutput(), sessionId: 7 })
 
     const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
-      wrapper,
+      wrapper: Wrapper,
     })
 
     await act(async () => {

@@ -55,7 +55,7 @@ describe('RpmGauge', () => {
     expect(progressArc.getAttribute('d')).toContain('A 78 78 0 1 1')
     const valueSpan = container.querySelector('span.text-destructive')
     expect(valueSpan).not.toBeNull()
-    expect(valueSpan?.textContent).toMatch(/7[\.,]?000/)
+    expect(valueSpan?.textContent).toMatch(/7[.,]?000/)
   })
 
   it('should not apply danger styling below the danger threshold', () => {
