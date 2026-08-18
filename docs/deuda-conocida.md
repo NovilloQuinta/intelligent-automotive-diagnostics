@@ -114,8 +114,14 @@ la entrada pero no la salida.
 | Modulo | Estado |
 |---|---|
 | `infrastructure/mcp/mcpServer.ts` | ~~848 L~~ → 98 L — **RESUELTO** (Fases A y B) |
-| `infrastructure/services/diagnosisService.ts` | ~~969 L~~ → 714 L — Fase A hecha; queda Fase B (test de 1631 L) |
-| `apps/ui/src/lib/api.ts` | 658 L (test 1862 L) — pendiente |
+| `infrastructure/services/diagnosisService.ts` | ~~969 L~~ → **786 L** — Fase A hecha; el test de 1631 L ya se partio en dos (865 + 780) |
+| `infrastructure/persistence/sqlite/vehicleRepository.ts` | **632 L** (test 1011 L) — no estaba listado |
+| `infrastructure/composition/composition.ts` | **579 L** — no estaba listado |
+| `infrastructure/http/controllers/DiagnosisController.ts` | **578 L** — no estaba listado |
+| `apps/ui/src/lib/api.ts` | ~~658 L~~ → **438 L** (test 1582 L) — el fichero bajo; el test sigue siendo el mas grande del repo |
+
+> Cifras remedidas el 2026-08-18. `seedManufacturerCatalog.ts` (645 L) **no** cuenta:
+> son 73 entradas de datos sembrados, no logica.
 
 ## Tests sin factories compartidas
 
@@ -173,12 +179,6 @@ ECUs que deja `AT H1`/`AT SH 7DF` puestos, aunque `discoverEcus` restaura en
 Merece un vistazo si aparecen lecturas intermitentes con el coche real. No afecta
 al repo: fue un entorno de pruebas local, y ninguna suite lo reproduce.
 
-## Arranque en clon limpio: `apps/core-api/data/` no existe
-
-El backend aborta con `Cannot open database because the directory does not exist`.
-El directorio esta gitignored y nadie lo crea. Candidatos: crearlo en `predev`, o
-que `getDb` haga `mkdir -p` del directorio de `DB_PATH`.
-
 ## Vectorial
 
 Migrar a schema con columna JSON metadata para evitar migraciones futuras.
@@ -212,3 +212,7 @@ GitHub; su contenido ya esta integrado, asi que borrarlas no pierde nada:
   `develop` no se verificaba y los 61 ficheros de test de la UI no corrian nunca.
   Ahora matriz `core-api` + `ui` sobre push/PR a `main` y `develop`.
 - **`brace-expansion`**: resuelta.
+- **Arranque en clon limpio**: `getDb` crea el directorio de `DB_PATH` con
+  `mkdir -p` antes de abrir la conexion (`db.ts`), porque `better-sqlite3` no lo hace
+  y `apps/core-api/data/` esta gitignored. Cubierto por `db.test.ts`.
+- **`swagger.ts` como god file**: el documento OpenAPI se genera desde el codigo.
