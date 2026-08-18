@@ -1,107 +1,140 @@
 # ADR 002: Persistencia de Datos
 
-**Estado:** Propuesto
-**Fecha:** 2026-07-06
-**Contexto:** Necesidad de almacenar información de talleres, vehículos y diagnósticos
+**Estado:** Implementado (revisado Fase 4)
+**Fecha:** 2026-07-06 | **Revisado:** 2026-08-18
+**Contexto:** Necesidad de persistir vehículos, ECUs, catálogos de diagnóstico, sesiones y trazabilidad
 
 ---
 
 ## Contexto
 
-El proyecto inicial contemplaba solo un flujo en memoria (simulador → parseo → diagnóstico), pero para que la aplicación tenga utilidad real como plataforma es necesario persistir:
+El proyecto inicial contemplaba solo un flujo en memoria (simulador → parseo → diagnóstico). Para
+que la aplicación tenga utilidad real es necesario persistir:
 
-- **Talleres (workspaces):** registro de talleres que usan la plataforma
-- **Usuarios:** autenticación y roles dentro de cada taller
-- **Vehículos:** historial de VINs diagnosticados por taller
-- **Sesiones de diagnóstico:** cada vez que se ejecuta un diagnóstico
-- **Resultados:** DTCs, valores parseados y diagnóstico generado por IA
-- **Escenarios de simulación:** catálogo de perfiles de vehículo para demo
-- **Logs de actividad:** trazabilidad de acciones por taller (monitorización)
+- **Usuarios:** autenticación, tipo de cuenta (particular / taller) y rol
+- **Vehículos:** identificación por VIN y ECUs descubiertas en el bus
+- **Catálogos auto-expansivos:** definiciones de PID, DTC, ECU e identidades WMI que crecen con el uso
+- **Sesiones de diagnóstico:** cada ejecución, con su informe como snapshot inmutable
+- **Trazabilidad:** logs de aplicación y auditoría de peticiones HTTP (OWASP A09)
 
 ## Decisión
 
-Se incorpora una capa de persistencia en `src/infrastructure/persistence/sqlite/` con las siguientes elecciones tecnicas:
+Capa de persistencia en `src/infrastructure/persistence/sqlite/` con **Drizzle ORM sobre SQLite**
+(`better-sqlite3`), motor único en todos los entornos.
 
 ### ORM: Drizzle ORM
 
-- Type-safe nativo (los schemas son TypeScript, no archivos .prisma)
-- Soporta múltiples dialectos (PostgreSQL + SQLite con el mismo schema)
+- Type-safe nativo (los schemas son TypeScript, no archivos `.prisma`)
 - Ligero, sin clase "base" ni runtime pesado
-- `drizzle-kit` para generar migrations y explorar con Drizzle Studio
+- `drizzle-kit` para generar migraciones y explorar con Drizzle Studio
 
-### Motor de BD: Dual
+### Motor de BD: SQLite único
 
-| Entorno | Motor | Razón |
-|---|---|---|
-| **Desarrollo local** | SQLite (`better-sqlite3`) | Zero setup, sin servidor, archivo local. Rápido para iterar |
-| **Producción** | PostgreSQL 17 | Escalable, concurrencia real, tipado fuerte, funciones avanzadas |
+`getDb()` (`persistence/sqlite/db.ts`) abre una instancia singleton, aplica
+`journal_mode = WAL` y `foreign_keys = ON`, y **ejecuta las migraciones pendientes** desde
+`drizzle/` en la primera llamada. Sin ruta se abre `:memory:`, que es lo que usan los tests.
 
-La conexión se determina por variable de entorno: si `DATABASE_URL` apunta a PostgreSQL se usa ese driver; si no, SQLite por defecto.
-
-### Modelo de datos (7 tablas)
+### Modelo de datos (13 tablas)
 
 ```
-workspaces ──┬── users
-             ├── vehicles ──┬── diagnostic_sessions ──┬── diagnostic_results
-             │               └── simulation_scenarios ┘
-             └── activity_logs
+users ──┬── refresh_tokens
+        ├── password_reset_tokens
+        └── diagnosis_sessions ── pid_readings ── pid_definitions
+vehicles ──┬── ecus
+           └── diagnosis_sessions
+
+Catálogos auto-expansivos (sin FK, clave natural):
+  pid_definitions · dtc_definitions · ecu_definitions · vehicle_identities
+
+Trazabilidad: audit_logs · logs
 ```
 
 | Tabla | Propósito |
 |---|---|
-| **workspaces** | Talleres registrados (nombre, slug, activo/inactivo) |
-| **users** | Usuarios del sistema (name, email, password_hash, rol) |
-| **vehicles** | Vehículos diagnosticados (VIN, marca, modelo, año, motor) |
-| **diagnostic_sessions** | Sesión de diagnóstico (timestamps, estado, escenario usado) |
-| **diagnostic_results** | Resultados del parseo + IA (DTCs, parsed_values JSON, diagnosis_text, severidad) |
-| **simulation_scenarios** | Catálogo de escenarios predefinidos (config PID + DTC en JSON) |
-| **activity_logs** | Trazabilidad de actividad por taller (acción, metadata JSON, timestamp) |
+| **users** | Cuentas (`user_type`: individual/workshop, `role`: user/admin), datos fiscales opcionales, contador de intentos fallidos y `locked_until` para el bloqueo por fuerza bruta |
+| **refresh_tokens** | Tokens de refresco hasheados, con `expires_at` y `revoked_at` para la rotación |
+| **password_reset_tokens** | Tokens de reseteo de un solo uso, hasheados SHA-256, con TTL y `used_at` |
+| **vehicles** | Vehículos detectados por VIN (ISO 3779): marca, modelo, año, motor, `first_seen`/`last_seen` |
+| **ecus** | ECUs descubiertas en el bus CAN de un vehículo (direcciones request/response, tipo, protocolo) |
+| **pid_definitions** | Catálogo auto-expansivo de PIDs (SAE J1979 + propietarios) con fórmula, unidad, `confidence` y `source`. Índice único (modo, pid, fabricante, modelo) como backstop de idempotencia |
+| **pid_readings** | Lecturas históricas de PID con hex crudo y valor parseado, indexadas por sesión |
+| **diagnosis_sessions** | Sesión de diagnóstico con `result_json` como **snapshot inmutable** del informe, más `severity` y `dtc_count` desnormalizados para el listado |
+| **dtc_definitions** | Catálogo auto-expansivo de DTCs por fabricante y modelo |
+| **ecu_definitions** | Catálogo auto-expansivo de ECUs por fabricante, modelo y dirección de respuesta |
+| **vehicle_identities** | WMI (3 primeros caracteres del VIN) → fabricante. Sembrado con la asignación oficial ISO 3779 y ampliado por la cascada de identificación |
+| **audit_logs** | Auditoría de peticiones HTTP: método, ruta, código, IP, user-agent, duración y usuario |
+| **logs** | Logs de aplicación persistidos (nivel, mensaje, contexto) |
+
+El `result_json` de `diagnosis_sessions` es deliberadamente un snapshot: preserva el informe tal y
+como se generó, aunque después cambien los catálogos, las fórmulas o el prompt del LLM.
 
 ### Impacto en Clean Architecture
 
-- Se añaden **interfaces de repositorio** en `domain/repositories/` (ej. `IWorkspaceRepository`, `IVehicleRepository`, `IDiagnosticSessionRepository`, `IActivityLogRepository`)
-- Las **implementaciones concretas** (Drizzle + SQLite/PostgreSQL) viven en `infrastructure/persistence/sqlite/`
-- Los **casos de uso** existentes (`processVehicleDiagnosis`, `executeCognitiveDiagnosis`) reciben estos repositorios por inyección para guardar resultados
+- Los **puertos de repositorio** viven en el dominio; las **implementaciones** Drizzle en
+  `infrastructure/persistence/sqlite/`, con mappers dedicados en `persistence/mappers/`
+- `DiagnosticsDb` (alias de `BetterSQLite3Database`) queda declarado en `db.ts` como el único punto
+  de acoplamiento al motor: es el límite de capa que habría que tocar al cambiar de SQL
+
+## Revisión de Fase 4: por qué no hay PostgreSQL
+
+La versión original de este ADR proponía **motor dual**: SQLite en desarrollo y PostgreSQL 17 en
+producción, seleccionados por `DATABASE_URL`. No se implementó, y se descarta conscientemente:
+
+- El despliegue real es **single-container** para un TFM con un puñado de usuarios concurrentes.
+  SQLite en modo WAL admite lectores concurrentes con un escritor, que es exactamente el perfil de
+  carga de la aplicación. PostgreSQL habría añadido un servicio, una red y un backup que gestionar
+  sin resolver ningún problema observado.
+- Mantener dos dialectos vivos obliga a probar contra ambos. Las diferencias sutiles en JSON y
+  funciones de fecha que el propio ADR anticipaba como riesgo se convierten en coste real de tests
+  a cambio de una portabilidad que nadie iba a ejercer.
+- La portabilidad no se pierde, se aplaza: los repositorios están detrás de puertos y las queries
+  son Drizzle, así que migrar significa cambiar `DiagnosticsDb` y el driver, no reescribir la capa
+  de aplicación.
+
+En consecuencia **no existen** el driver `pg` ni la variable `DATABASE_URL` en el código. El modelo
+de datos tampoco es el propuesto originalmente: la orientación multi-taller (`workspaces`,
+`activity_logs`, `simulation_scenarios`, `diagnostic_results`) se sustituyó por un modelo centrado
+en el vehículo y en catálogos que aprenden, que es la tesis del proyecto. Los escenarios de
+simulación no son una tabla: viven en el emulador (ver ADR 004).
 
 ## Consecuencias
 
 **Positivas:**
 
-- Trazabilidad completa: cada diagnóstico queda registrado con su resultado
-- Histórico por vehículo: un taller puede ver diagnósticos anteriores del mismo VIN
-- Logs de actividad permiten monitorizar el uso de la plataforma
-- SQLite en desarrollo = zero configuración para empezar a codificar
-- Drizzle permite cambiar a PostgreSQL sin reescribir queries
+- Trazabilidad completa: cada diagnóstico queda registrado con su informe congelado
+- Histórico por vehículo y por usuario, con índice `(user_id, started_at)` para el listado paginado
+- Los catálogos auto-expansivos convierten cada diagnóstico en conocimiento reutilizable (ADR 007)
+- Zero configuración: sin servidor de BD, y las migraciones se aplican solas al arrancar
+- Los tests corren contra `:memory:` con el schema real, no contra mocks del ORM
 
 **Negativas:**
 
-- Complejidad añadida al proyecto (dependencias nuevas, migrations)
-- Los tests unitarios de usecases requieren mockear repositorios DB
-- SQLite y PostgreSQL tienen diferencias sutiles (JSON, funciones de fecha)
-- La capa de persistencia no se demuestra en la defensa (se queda en segundo plano)
+- Un solo escritor: no escala horizontalmente sin migrar de motor
+- Sin cifrado at-rest (riesgo residual asumido y documentado en `docs/security.md`)
+- El fichero `.db` es estado con nombre en el contenedor: requiere volumen persistente en el deploy
 
 ## Alternativas consideradas
 
 | Alternativa | Razón para descartar |
 |---|---|
-| **Prisma ORM** | Genera cliente pesado; schema en .prisma (no TypeScript); peor soporte multi-dialecto SQLite/PG |
-| **TypeORM** | Decorators, runtime reflect-metadata; más verbose; equipo prefiere schema-first |
+| **PostgreSQL en producción** | Ver "Revisión de Fase 4": coste operativo sin problema que resolver a esta escala |
+| **Prisma ORM** | Cliente pesado; schema en `.prisma` (no TypeScript); peor soporte multi-dialecto |
+| **TypeORM** | Decorators y `reflect-metadata` en runtime; más verboso |
 | **pg raw (sin ORM)** | Mucho código manual para queries, migraciones y validación; sin type-safety |
-| **MongoDB** | Datos relacionales (talleres → vehículos → sesiones); no encaja bien con document store |
-| **SQLite en todos los entornos** | No escala a producción; sin concurrencia real |
+| **MongoDB** | Los datos son relacionales (vehículo → ECUs → sesiones → lecturas); no encaja con document store |
 
-## Dependencias nuevas
+## Dependencias
 
 ```
-drizzle-orm        # ORM
-drizzle-kit        # Migraciones + Studio (dev)
-better-sqlite3     # Driver SQLite
+drizzle-orm            # ORM
+drizzle-kit            # Migraciones + Studio (dev)
+better-sqlite3         # Driver SQLite
 @types/better-sqlite3  # (dev)
-pg                 # Driver PostgreSQL
-@types/pg          # (dev)
 ```
 
 ## Referencias
 
 - Drizzle ORM: https://orm.drizzle.team
-- ADR 001: `001-arquitectura-del-sistema.md` (arquitectura base del proyecto)
+- ADR 001: `001-arquitectura-del-sistema.md` (arquitectura base)
+- ADR 007: `007-catalogo-auto-expansivo-lancedb.md` (catálogos y búsqueda vectorial)
+- `docs/security.md` (riesgos residuales de persistencia)

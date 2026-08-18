@@ -109,7 +109,7 @@ El endpoint está protegido con **rate limiting** (`cognitiveLimiter`) para prev
 // DiagnosisService.cognitiveDiagnosis()
 const repository = this.resolveRepository(scenarioId)
 const mcp = this.getMcpServer(scenarioId)   // ← crea MCP Server nuevo
-const tools = mcp.listTools()               // ← 7-14 tools según configuración
+const tools = mcp.listTools()               // ← 7-16 tools según configuración
 const handler: ToolCallHandler = async (name, args) => {
   const result = await mcp.callTool(name, args)
   return this.firstText(result, name)
@@ -205,7 +205,7 @@ Usuario ──▶ POST /api/mcp/cognitive-diagnosis
          DiagnosisService
                 │
          ┌──────┴──────┐
-         │  Crea MCP    │  listTools() → 14 tools OBD + RAG + web
+         │  Crea MCP    │  listTools() → 16 tools OBD + RAG + web
          │  Server      │
          └──────┬──────┘
                 │
@@ -735,7 +735,7 @@ Las discrepancias son **menores y no bloqueantes**. El sistema funciona correcta
 | `apps/core-api/src/infrastructure/llm/llmErrors.ts` | Infrastructure | `LlmTimeoutError`, `LlmApiError` |
 | `apps/core-api/src/infrastructure/llm/toolDefinitionSchema.ts` | Infrastructure | Schema Zod para validar definiciones de tools |
 | `apps/core-api/src/infrastructure/llm/sdkErrorUtils.ts` | Infrastructure | Unifica errores de SDKs (timeout, HTTP status) |
-| `apps/core-api/src/infrastructure/mcp/mcpServer.ts` | Infrastructure | Servidor MCP: registra 14 tools, error handling, validación |
+| `apps/core-api/src/infrastructure/mcp/mcpServer.ts` | Infrastructure | Servidor MCP: registra 16 tools, error handling, validación |
 | `apps/core-api/src/infrastructure/services/diagnosisService.ts` | Infrastructure | Orquestador: resuelve repositorios, crea use case, aplica timeout |
 | `apps/core-api/src/infrastructure/mcp/webSearchBudget.ts` | Infrastructure | Presupuesto de 3 búsquedas web por sesión |
 | `apps/core-api/src/infrastructure/mcp/webSearchContent.ts` | Infrastructure | Sanea y envuelve contenido web no confiable |

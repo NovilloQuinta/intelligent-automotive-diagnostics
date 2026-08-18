@@ -26,6 +26,30 @@ Lo que falta es leer las 30 respuestas y calibrar el prompt con ellas delante:
 Pendiente relacionado: no hay `LLM_TEMPERATURE`. Hoy se corre al 1.0 por defecto
 de Anthropic, que es lo peor para evaluar. `seed` no: no existe en su Messages API.
 
+## El bucle de aprendizaje de ECUs no se ejercita
+
+Medido el 2026-08-18 sobre `develop`. El system prompt (`application/prompts/cognitiveDiagnosisPrompt.ts`)
+tiene bloques explícitos que le dicen al agente qué hacer cuando descubre un PID desconocido y cuando
+descubre un DTC desconocido. **No hay bloque equivalente para ECUs.**
+
+Consecuencia: de las 16 tools registradas, cuatro no se nombran en el prompt —`get_freeze_frame`,
+`get_ecu_info`, `search_similar_ecus` e `index_ecu`—. Las tres últimas son la cadena completa de
+aprendizaje de ECUs, así que la tabla `ecu_definitions` y su índice vectorial existen, están
+testeados y en la práctica se quedan vacíos: el agente solo llegaría a ellos por la descripción de la
+tool, sin ninguna instrucción que se lo sugiera. `get_freeze_frame` es distinto: no es una cadena de
+aprendizaje y el flujo determinista sí lo usa.
+
+No se corrige aquí a propósito. Tocar el system prompt cambia el comportamiento del agente, y este
+proyecto calibra los cambios de prompt con `pnpm eval:agent` — que necesita la clave del LLM y no se
+ha corrido nunca (ver la sección anterior). Añadir un bloque a ciegas la víspera de una demo es
+justo el cambio que no se debe hacer sin medir.
+
+**Pendiente: abrir un change OpenSpec para esto.** No es un parche de una línea, es una decisión de
+producto con verificación asociada, y merece su propio ciclo propose → apply. El change debe cubrir:
+escribir el bloque de ECUs simétrico a los de PID y DTC, y correr **el grupo A entero** de la
+batería, no solo B-E, porque un bloque nuevo de instrucciones puede volver al agente más verboso o
+más reticente en consultas legítimas.
+
 ## Coverage: 3 ficheros bajo umbral
 
 | Fichero | Metrica | Actual | Umbral |

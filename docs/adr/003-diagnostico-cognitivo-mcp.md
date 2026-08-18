@@ -1,7 +1,7 @@
 # ADR 003: Diagnóstico Cognitivo con IA vía MCP
 
 **Estado:** Aprobado
-**Fecha:** 2026-07-10 | **Actualizado:** 2026-08-05
+**Fecha:** 2026-07-10 | **Actualizado:** 2026-08-18
 **Contexto:** Integración de un LLM como "cerebro" del diagnóstico
 
 ---
@@ -26,16 +26,45 @@ Se adopta el **Model Context Protocol (MCP) de Anthropic** como el adaptador de 
 LLM (Claude)  ←→  MCP Server (mcpServer.ts)  ←→  Use Cases + Simulador
 ```
 
-El MCP Server expone **tools** que el LLM puede invocar via los puertos `ObdRepository` y `VehicleRepository`:
+El MCP Server expone **16 tools** repartidas en tres familias. Se registran en
+`infrastructure/mcp/` — `diagnosticTools.ts` (7), `knowledgeTools.ts` (8) y `webSearchTool.ts` (1) —
+todas con la misma firma `register(nombre, descripción, schema Zod, handler)`.
+
+**Diagnóstico OBD (7)** — hablan con el vehículo a través de `ObdRepository`:
 
 | Tool | Descripción | Puerto |
 |---|---|---|
-| `read_pid` | Lee un PID OBD-II (Mode 01 estándar, 22 fabricante) | `ObdRepository.readPid` |
-| `get_dtc_codes` | Códigos de error activos (Service 03) | `ObdRepository.readDtcCodes` |
+| `read_pid` | Lee un PID OBD-II. Solo servicios de lectura (01, 02, 03, 05, 06, 07, 09, 0A, 22); los de control se rechazan | `ObdRepository.readPid` |
+| `get_dtc_codes` | Códigos de error almacenados (Service 03) | `ObdRepository.readDtcCodes` |
 | `get_freeze_frame` | Datos congelados del momento del fallo (Service 02) | `ObdRepository.getFreezeFrame` |
 | `read_vin` | VIN del vehículo (Service 09 PID 02) | `ObdRepository.readVin` |
 | `get_vehicle_info` | Marca, modelo, año, tipo de motor | `ObdRepository.getVehicleInfo` |
-| `get_available_pids` | PIDs conocidos para un vehículo | `VehicleRepository.findPidsByVehicle` |
+| `get_available_pids` | PIDs soportados por el vehículo conectado (bitmask de Mode 01 PID 00 + catálogo) | `ObdRepository.getSupportedPids` |
+| `get_ecu_info` | ECUs descubiertas: nombres, direcciones CAN y protocolo | `ObdRepository.getEcuInfo` |
+
+**Conocimiento / RAG (8)** — leen y escriben los catálogos auto-expansivos y el índice vectorial
+(ver ADR 007). Son simétricas: cuatro de búsqueda semántica y cuatro de indexación.
+
+| Tool | Descripción |
+|---|---|
+| `search_similar_pids` | Búsqueda semántica en el catálogo de PIDs. Devuelve distancia + campos |
+| `search_similar_dtcs` | Búsqueda semántica en el catálogo de DTCs |
+| `search_similar_diagnoses` | Búsqueda semántica en diagnósticos anteriores |
+| `search_similar_ecus` | Búsqueda semántica en el catálogo de ECUs |
+| `index_pid` | Indexa un PID descubierto; opcionalmente lo valida contra el vehículo conectado |
+| `index_dtc` | Indexa un DTC descubierto; opcionalmente lo valida contra el vehículo conectado |
+| `index_diagnosis` | Indexa un diagnóstico resuelto para recuperarlo en el futuro |
+| `index_ecu` | Indexa una ECU aprendida en el catálogo relacional y en el índice vectorial |
+
+**Búsqueda web (1)**:
+
+| Tool | Descripción |
+|---|---|
+| `web_search` | Busca en internet PIDs, DTCs o información que no está en la base vectorial. Sujeta a presupuesto (`webSearchBudget.ts`) |
+
+El bucle de indexación es lo que convierte el sistema en auto-expansivo: lo que el LLM descubre por
+`web_search` o le aporta el mecánico entra por una tool `index_*` y queda disponible para el
+siguiente diagnóstico sin volver a salir a la red.
 
 ### Buenas prácticas MCP aplicadas
 

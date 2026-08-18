@@ -312,7 +312,7 @@ La especificación OpenAPI 3.0.3 completa está definida en `swagger.ts` (1058 l
 - **Migraciones**: `drizzle-kit generate` → `drizzle-kit migrate` automático al arrancar
 - **Ruta por defecto**: `data/diagnostics.db` (configurable vía `DB_PATH`)
 
-### 5.5.2. Esquema de Base de Datos (10 tablas)
+### 5.5.2. Esquema de Base de Datos (13 tablas)
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -651,7 +651,7 @@ El ADR 002 está **significativamente desactualizado** respecto al código real:
 | **Tabla `diagnostic_results`** | "Resultados del parseo + IA (DTCs, parsed_values JSON, diagnosis_text, severidad)" | **No existe**. Los resultados de diagnóstico se devuelven en la respuesta HTTP pero no se persisten | **Alta** — tabla inexistente |
 | **Tabla `simulation_scenarios`** | "Catálogo de escenarios predefinidos (config PID + DTC en JSON)" | **No existe**. Los escenarios se definen en `composition.ts` como objetos `ScenarioDescriptor` y se conectan a emuladores TCP | **Alta** — tabla inexistente |
 | **Tabla `activity_logs`** | "Trazabilidad de actividad por taller (acción, metadata JSON, timestamp)" | **No existe**. La trazabilidad se cubre con `audit_logs` (HTTP) + `logs` (aplicación) | **Media** — reemplazada por dos tablas diferentes |
-| **Total de tablas** | 7 tablas | 10 tablas: `vehicles`, `ecus`, `pid_definitions`, `pid_readings`, `diagnosis_sessions`, `users`, `refresh_tokens`, `audit_logs`, `logs` | **Alta** — faltan 3, sobran 6 |
+| **Total de tablas** | 7 tablas | 13 tablas: `vehicles`, `ecus`, `pid_definitions`, `pid_readings`, `diagnosis_sessions`, `users`, `refresh_tokens`, `password_reset_tokens`, `audit_logs`, `logs`, `dtc_definitions`, `vehicle_identities`, `ecu_definitions` | **Resuelta** — ADR 002 reescrito el 2026-08-18 |
 | **Tablas extra en código real** | No documentadas | `ecus`, `pid_definitions`, `pid_readings`, `refresh_tokens`, `audit_logs`, `logs` — todas implementadas y funcionales | **Alta** — el catálogo de PIDs, ECUs y sistema de auditoría no están documentados |
 
 ### 5.10.3. OpenSpec Specs vs Código Real
@@ -713,7 +713,7 @@ apps/core-api/
 │       │   └── middleware/    (auth, admin, rate-limiter, audit-logger)
 │       ├── persistence/
 │       │   ├── sqlite/
-│       │   │   ├── schema.ts (10 tablas)
+│       │   │   ├── schema.ts (13 tablas)
 │       │   │   ├── db.ts
 │       │   │   ├── userRepository.ts
 │       │   │   ├── vehicleRepository.ts
@@ -737,4 +737,4 @@ apps/core-api/
 
 ---
 
-> **Nota para el tribunal**: Este documento refleja el estado real del código en la rama `develop` a fecha 2026-08-09. Las discrepancias con los ADR se deben a la evolución natural del proyecto (los ADR no se actualizaron tras decisiones posteriores como "solo SQLite" o la incorporación de tablas de PIDs y ECUs). El documento `ADR-002-persistencia-de-datos.md` requiere una actualización para reflejar el esquema real de 10 tablas.
+> **Nota para el tribunal**: este documento nació de una auditoría del código en `develop` (2026-08-09) cuyo objetivo era localizar dónde se había desviado la documentación del código. Las discrepancias que enumera **se corrigieron el 2026-08-18**: ADR 002 se reescribió para reflejar el motor real (SQLite único, sin PostgreSQL) y las 13 tablas actuales. Las tablas comparativas se conservan a propósito, como registro del método de auditoría y de la deriva que detectó, no como estado pendiente.

@@ -2,7 +2,7 @@
 
 **Estado:** Implementado
 **Fecha:** 2026-07-26
-**Actualizado:** 2026-08-09 — system prompt completado con DTC learning + catalog lookup proactivo. Pendiente de cablear: boostConfidence (+0.2 por reuso) requiere feedback del mecánico; SQLite relacional (vehicles, pid_readings, diagnosis_sessions) sin cablear.
+**Actualizado:** 2026-08-18 — system prompt completado con DTC learning + catalog lookup proactivo. **Fuera de alcance por decisión**: el escalado por reutilización exitosa (`boostConfidence`, +0.2) depende de una señal de acierto que el sistema no tiene.
 **Contexto:** El sistema debe aprender nuevos PIDs, DTCs y patrones de diagnóstico a medida que se conectan vehículos de distintos fabricantes.
 
 ---
@@ -50,7 +50,19 @@ Cada entrada se compone de `text` (texto para el embedding) + metadatos para fil
 | **Mecánico** (aporta manualmente) | 0.8 | 0.9 |
 | **Diagnóstico previo** (PID fue clave en un caso anterior) | 0.5 | +0.2 cada uso exitoso |
 
-> **Nota (2026-08-09):** `boostConfidence` y `SUCCESSFUL_REUSE_BONUS = 0.2` están implementados y testeados como funciones puras, pero **no se invocan desde ningún flujo**. El sistema carece de la señal "el diagnóstico acertó". Conectarlo requiere un mecanismo de feedback explícito del mecánico (botón "¿Te ayudó este diagnóstico?" en la UI).
+> **Nota (revisada 2026-08-18):** `boostConfidence` y `SUCCESSFUL_REUSE_BONUS = 0.2` están
+> implementados y testeados como funciones puras, pero **no se invocan desde ningún flujo, y es
+> deliberado**. El escalado por reutilización exitosa requiere saber que *el diagnóstico acertó*, y
+> esa señal no existe ni puede inferirse: que un mecánico consulte un diagnóstico no significa que
+> le sirviera. Fabricarla —dar por buena toda entrada reutilizada— degradaría el catálogo, porque
+> subiría la confianza de aciertos y errores por igual.
+>
+> Obtenerla exige feedback explícito del mecánico (un "¿te ayudó este diagnóstico?" en la UI) y, con
+> él, el bucle de producto que lo recoja y lo audite. Eso es un cambio de alcance, no una línea de
+> código pendiente. Las funciones se conservan porque la política de confianza tiene un único dueño
+> en `confidenceScale.ts` y ahí es donde el escalado deberá vivir el día que exista la señal; el
+> TSDoc del propio módulo lo advierte para que nadie las cablee sin resolver antes el origen del
+> dato.
 
 La validación OBD usa la fórmula y el rango `[minValue, maxValue]` ya definidos en `PidDefinition`:
 1. Leer el PID vía OBD (`readPid`).

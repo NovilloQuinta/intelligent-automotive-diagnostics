@@ -319,7 +319,7 @@ Comparando la documentación (ADR 003, OpenSpec specs, AGENTS.md) contra el cód
 ### 6.2 OpenSpec spec "6 tools" desactualizada
 
 - **OpenSpec** (`execute-cognitive-diagnosis/spec.md`, escenario "Lista de las 6 tools"): afirma que `listTools()` devuelve exactamente 6 definiciones y las enumera explícitamente: `read_pid`, `get_dtc_codes`, `get_freeze_frame`, `read_vin`, `get_vehicle_info`, `get_available_pids`.
-- **Código real**: `listTools()` devuelve **7 tools de diagnóstico** + **hasta 7 tools de conocimiento** (cuando `knowledgeStack` y `webSearch` están disponibles) = **hasta 14 tools**.
+- **Código real** (recontado 2026-08-18): `listTools()` devuelve **7 tools de diagnóstico** siempre, más **hasta 8 de conocimiento** y **1 de búsqueda web** cuando `knowledgeStack` y `webSearch` están disponibles = **hasta 16 tools**. Las de conocimiento son simétricas: `search_similar_{pids,dtcs,diagnoses,ecus}` e `index_{pid,dtc,diagnosis,ecu}`.
 - **Impacto**: cualquier test que verifique "exactamente 6 tools" fallaría contra el código actual.
 
 ### 6.3 `get_available_pids` más compleja de lo documentado

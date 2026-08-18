@@ -40,13 +40,21 @@ pnpm dev:all
 
 ### Dashboard UI (apps/ui)
 
-React 19 SPA con dashboard OBD-II profesional:
+React 19 SPA (Vite + TanStack Router) con dashboard OBD-II profesional:
 
 - **Gauges en tiempo real**: RPM, velocidad, temperatura de refrigerante y admision
-- **Selector de vehiculos**: escenarios reales del backend (Audi A3, Kawasaki Z900)
-- **Panel DTC**: codigos de fallo con severidad
+- **Selector de vehiculos**: escenarios reales del backend (Audi A3 TDI, Kawasaki Z900, Toyota Auris Hybrid)
+- **Wizard de identificacion por VIN**: cascada BBDD -> catalogo -> web -> mecanico; si el fabricante
+  no se resuelve, se confirma a mano y queda aprendido
+- **Panel DTC**: codigos de fallo con severidad, mas freeze frame, DTC pendientes y permanentes
 - **Diagnostico**: determinista via API + cognitivo via LLM (si esta configurado)
-- **Auth JWT**: login/registro con formularios validados (Zod + react-hook-form)
+- **MechanicChat**: conversacion con el agente sobre el diagnostico en curso
+- **Historial**: sesiones anteriores por usuario, con el informe congelado de cada una
+- **Panel admin**: usuarios, logs, auditoria y explorador del catalogo de conocimiento
+- **Auth JWT**: login/registro, recuperacion de contrasena por email y perfil, con formularios
+  validados (Zod + react-hook-form)
+
+> No hay exportacion a PDF ni busqueda por matricula: el vehiculo se identifica por **VIN**.
 
 ```bash
 cd apps/ui
@@ -57,17 +65,41 @@ pnpm preview      # previsualizar build
 
 **Endpoints:**
 
+Lista completa en Swagger UI (`/api-docs`). Resumen por familia:
+
 | Endpoint | Metodo | Auth | Descripcion |
 |---|---|---|---|
 | `/api-docs` | GET | No | Swagger UI |
 | `/health` | GET | No | Health check |
+| **Auth** | | | |
 | `/api/auth/register` | POST | No | Registro |
-| `/api/auth/login` | POST | No | Login (JWT) |
+| `/api/auth/login` | POST | No | Login (JWT). 5 fallos -> bloqueo 15 min (423) |
 | `/api/auth/refresh` | POST | No | Refresh token |
+| `/api/auth/logout` | POST | JWT | Revoca el refresh token |
+| `/api/auth/me` | GET | JWT | Usuario autenticado |
+| `/api/auth/forgot-password` | POST | No | Envia email de reseteo |
+| `/api/auth/reset-password` | POST | No | Consume el token de reseteo |
+| `/api/profile` | PATCH | JWT | Actualiza perfil y contrasena |
+| **Diagnostico** | | | |
 | `/api/scenarios` | GET | JWT | Escenarios de simulacion |
 | `/api/diagnosis` | POST | JWT | Diagnostico determinista |
-| `/api/mcp/tools/:toolName` | POST | JWT | Tool MCP |
+| `/api/live-data` | GET | JWT | Lectura de PIDs en vivo |
+| `/api/available-pids` | GET | JWT | PIDs soportados por el vehiculo |
+| `/api/vehicle-info` · `/api/vehicle-status` | GET | JWT | Identificacion y estado del vehiculo |
+| `/api/vehicle-identity` | POST | JWT | Confirmacion manual del fabricante (mecanico) |
+| `/api/freeze-frame` | GET | JWT | Datos congelados del fallo (Service 02) |
+| `/api/pending-dtc` · `/api/permanent-dtc` | GET | JWT | DTC pendientes (07) y permanentes (0A) |
+| `/api/ecu-info` | GET | JWT | ECUs descubiertas en el bus |
+| `/api/clear-dtc` | POST | JWT | Borrado de DTC (Service 04) |
+| `/api/diagnosis-history` | GET | JWT | Historial paginado del usuario |
+| `/api/diagnosis-history/:id` | GET | JWT | Detalle de una sesion (informe congelado) |
+| **IA / conocimiento** | | | |
+| `/api/mcp/tools/:toolName` | POST | JWT | Invoca una de las 16 tools MCP |
 | `/api/mcp/cognitive-diagnosis` | POST | JWT | Diagnostico cognitivo LLM |
+| `/api/mcp/capabilities` | GET | JWT | Capacidades disponibles segun configuracion |
+| `/api/knowledge` · `/api/knowledge/search` | GET · POST | JWT | Catalogo y busqueda semantica |
+| **Admin** (requiere rol `admin`) | | | |
+| `/api/admin/overview` · `/users` · `/logs` · `/audit-logs` | GET | JWT | Panel de administracion |
 
 ## Variables de entorno (`.env`)
 

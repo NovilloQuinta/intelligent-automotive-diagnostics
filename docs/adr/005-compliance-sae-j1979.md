@@ -1,7 +1,7 @@
 # ADR 005: Cumplimiento normativo SAE J1979 / ISO 15031 / ISO 3779
 
-**Estado:** Aprobado
-**Fecha:** 2026-07-18
+**Estado:** Aprobado (revisado Fase 4)
+**Fecha:** 2026-07-18 | **Revisado:** 2026-08-18
 **Contexto:** Verificación de estándares internacionales de diagnóstico OBD-II
 
 ---
@@ -30,21 +30,47 @@ El proyecto adopta los siguientes estándares con cobertura parcial pero demostr
 
 | Service | Hex | Descripción | Implementado | Método |
 |---|---|---|---|---|
-| **01** | `0x01` | Current data (PIDs en vivo) | Sí | `readPid(mode, pid)` + `getSupportedPids()` |
+| **01** | `0x01` | Current data (PIDs en vivo) | Sí | `readPid(mode, pid)` + `getSupportedPids()` + `getVehicleStatus()` |
 | **02** | `0x02` | Freeze frame data | Sí | `getFreezeFrame(dtc?)` |
 | **03** | `0x03` | Stored DTCs | Sí | `readDtcCodes()` |
-| **04** | `0x04` | Clear DTCs | Sí (no-op en simulación) | `clearDtcCodes()` |
+| **04** | `0x04` | Clear DTCs | Sí (única escritura del sistema) | `clearDtcCodes()` |
+| **07** | `0x07` | Pending DTCs | Sí | `readPendingDtcCodes()` |
 | **09** | `0x09` | Vehicle information (VIN) | Sí | `readVin()` + `vinDecoder` |
+| **0A** | `0x0A` | Permanent DTCs | Sí | `readPermanentDtcCodes()` |
 
-### Services SAE J1979 NO implementados (justificación)
+`03`, `07` y `0A` comparten implementación: `fetchDtcCodes(mode)` en `elm327Adapter.ts` está tipado
+como `'03' | '07' | '0A'`, de modo que los tres tipos de DTC se leen con el mismo parser y solo
+cambia el byte de modo.
 
-| Service | Hex | Razón para no implementar |
+### Services alcanzables sin método dedicado
+
+Estos modos están en la allowlist de solo lectura (`READ_ONLY_OBD_MODES`, `domain/obdServiceMode.ts`)
+y por tanto se pueden emitir con `readPid(mode, pid)`, pero no tienen método de conveniencia ni
+parseo específico en el puerto:
+
+| Service | Hex | Estado |
 |---|---|---|
-| **05** | `0x05` | Test results O2 sensor (non-CAN). Específico de emisiones pre-CAN. Fuera del scope del TFM. |
-| **06** | `0x06` | Test results other components. Complejo, específico de emisiones. |
-| **07** | `0x07` | Pending DTCs. Útil pero no crítico para la demo del TFM. Posible extensión futura. |
-| **08** | `0x08` | Control operations (actuadores). Fuera del scope de diagnóstico pasivo. |
-| **0A** | `0x0A` | Permanent DTCs. Poco frecuente en diagnóstico cotidiano. |
+| **05** | `0x05` | Test results de sonda lambda (non-CAN). Permitido, sin parseo dedicado |
+| **06** | `0x06` | Test results de monitores on-board. Permitido, sin parseo dedicado |
+| **22** | `0x22` | UDS ReadDataByIdentifier — PIDs propietarios de fabricante (SAE J2190) |
+
+### Services SAE J1979 excluidos (justificación)
+
+| Service | Hex | Razón para excluir |
+|---|---|---|
+| **08** | `0x08` | Control de componente on-board (actuadores). Fuera del scope de diagnóstico pasivo y **bloqueado en el dominio**: no está en `READ_ONLY_OBD_MODES` |
+
+Junto a `08` quedan fuera todos los servicios de control UDS (`2F` InputOutputControl, `31`
+RoutineControl, `11` ECUReset, `2E` WriteDataByIdentifier). El motivo es de seguridad, no de
+alcance: comparten espacio de nombres con los de lectura y solo se distinguen por el byte de modo,
+así que transponer `mode` y `pid` bastaría para convertir una lectura en una orden al vehículo
+(`2F` es "nivel de combustible" como PID y "controlar actuador" como modo). `fetchPidBytes` valida
+contra la allowlist **antes** de tocar el socket y lanza `UnsafeObdModeError`; una invariante por
+reflexión (`elm327AdapterInvariant.test.ts`) recorre el prototipo del adaptador y falla si un método
+nuevo emite un servicio de control.
+
+Mode `04` es la única escritura del sistema y solo es accesible por `clearDtcCodes()`; con
+`OBD_READ_ONLY=true` también se bloquea, que es como se conecta el coche real.
 
 ### Fórmulas SAE J1979 adoptadas
 
@@ -95,7 +121,8 @@ La validación se integra en `SqliteVehicleRepository.upsertVehicle()` y `findVe
 
 **Negativas:**
 
-- Los services no implementados (05-08, 0A) se documentan como gaps deliberados
+- Los modos `05` y `06` se aceptan pero no se parsean: devuelven bytes crudos sin interpretar
+- El único service excluido por completo es `08`, y lo es por seguridad, no por alcance
 - Mode 22 (PIDs propietarios) no está estandarizado — cada fabricante define los suyos
 - El check digit del VIN solo es obligatorio en Norteamérica y China; en Europa es opcional
 

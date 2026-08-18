@@ -1,10 +1,26 @@
 # ADR 008: Capa de Transporte ISO-TP (ISO 15765-2)
 
-**Estado:** Propuesto
-**Fecha:** 2026-08-01
+**Estado:** Propuesto — **no implementado, y descartado para el alcance del TFM**
+**Fecha:** 2026-08-01 | **Revisado:** 2026-08-18
 **Contexto:** El proyecto necesita leer el VIN (Service 09 PID 02) que produce 19 bytes de payload, excediendo los 7 bytes útiles de un Single Frame CAN.
 
 ---
+
+> **Aviso de estado (revisión 2026-08-18).** Nada de lo que describe este ADR existe en el código:
+> no hay `infrastructure/obd/isotp/`, ni `frameTypes.ts`, ni `reassembler.ts`, ni `segmenter.ts`, ni
+> tests asociados. Se conserva como registro de una decisión que **se evaluó y se descartó**, no
+> como trabajo pendiente ni como funcionalidad entregada.
+>
+> **La premisa del ADR resultó ser falsa.** El documento afirma que implementar ISO-TP es
+> "obligatorio" para hablar con el emulador ELM327 o con un vehículo real. No lo es: el chip ELM327
+> *ya* implementa ISO-TP: segmenta, reensambla y gestiona el flow control por su cuenta, y expone el
+> resultado como líneas de texto ASCII en hexadecimal. Por eso `readVin()` se reduce a enviar
+> `09 02` y parsear la respuesta con `parseVinResponse`, sin ver jamás un PCI byte ni una
+> Consecutive Frame. Lo que sí hizo falta fue `ATS1` en la negociación de la sesión, para que el
+> adaptador separe los bytes con espacios y el parser multilínea pueda leerlos.
+>
+> Implementar ISO-TP solo volvería a ser necesario bajando por debajo del ELM327 — un transporte
+> SocketCAN o J2534 hablando CAN crudo. Queda como trabajo futuro si el proyecto llega ahí.
 
 ## Contexto
 
