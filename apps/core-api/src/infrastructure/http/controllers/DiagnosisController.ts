@@ -62,13 +62,16 @@ function scenarioSchemas<T extends Record<string, z.ZodTypeAny>>(
   }
 }
 
-const { docker: DiagnosisBodySchema, tcp: DiagnosisBodyTcpSchema } = scenarioSchemas({})
+/** Cuerpo de `POST /api/diagnosis`: exige `scenarioId` en modo emulador y lo omite en conexion directa. */
+export const { docker: DiagnosisBodySchema, tcp: DiagnosisBodyTcpSchema } = scenarioSchemas({})
 
-const { docker: McpToolBodySchema, tcp: McpToolBodyTcpSchema } = scenarioSchemas({
+/** Cuerpo de `POST /api/mcp/tools/:toolName`: escenario mas los argumentos de la tool. */
+export const { docker: McpToolBodySchema, tcp: McpToolBodyTcpSchema } = scenarioSchemas({
   args: z.record(z.unknown()).default({}),
 })
 
-const McpToolParamsSchema = z.object({
+/** Parametro de ruta de `POST /api/mcp/tools/:toolName`. */
+export const McpToolParamsSchema = z.object({
   toolName: z.string().min(1),
 })
 
@@ -83,7 +86,8 @@ const LlmConversationItemSchema = z.discriminatedUnion('__type', [
   }),
 ])
 
-const { docker: CognitiveDiagnosisBodySchema, tcp: CognitiveDiagnosisBodyTcpSchema } =
+/** Cuerpo de `POST /api/mcp/cognitive-diagnosis`: escenario, consulta, historial y sesion a continuar. */
+export const { docker: CognitiveDiagnosisBodySchema, tcp: CognitiveDiagnosisBodyTcpSchema } =
   scenarioSchemas({
     query: z.string().optional(),
     history: z.array(LlmConversationItemSchema).optional(),
@@ -105,7 +109,7 @@ const { docker: VehicleInfoQuerySchema, tcp: VehicleInfoQueryTcpSchema } = scena
  * el dominio: aqui solo se acota la forma del payload para no aceptar un JSON
  * cualquiera. Duplicar las reglas en zod las dejaria divergir.
  */
-const VehicleIdentityBodySchema = z.object({
+export const VehicleIdentityBodySchema = z.object({
   vin: z.string().length(17),
   make: z.string().min(1).max(64),
   model: z.string().max(64).optional(),
@@ -151,7 +155,7 @@ const { docker: VehicleStatusQuerySchema, tcp: VehicleStatusQueryTcpSchema } = s
 
 /** Filtros de listado del historial — todos opcionales,
  *  `userId` nunca viaja en query (se toma del token). */
-const DiagnosisHistoryQuerySchema = z.object({
+export const DiagnosisHistoryQuerySchema = z.object({
   from: z.string().optional(),
   to: z.string().optional(),
   scenarioId: z.string().optional(),

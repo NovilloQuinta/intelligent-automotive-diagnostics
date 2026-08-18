@@ -97,9 +97,9 @@ Lista completa en Swagger UI (`/api-docs`). Resumen por familia:
 | `/api/mcp/tools/:toolName` | POST | JWT | Invoca una de las 16 tools MCP |
 | `/api/mcp/cognitive-diagnosis` | POST | JWT | Diagnostico cognitivo LLM |
 | `/api/mcp/capabilities` | GET | JWT | Capacidades disponibles segun configuracion |
-| `/api/knowledge` · `/api/knowledge/search` | GET · POST | JWT | Catalogo y busqueda semantica |
 | **Admin** (requiere rol `admin`) | | | |
 | `/api/admin/overview` · `/users` · `/logs` · `/audit-logs` | GET | JWT | Panel de administracion |
+| `/api/admin/knowledge` · `/knowledge/search` | GET · POST | JWT | Catalogo auto-expansivo y busqueda semantica |
 
 ## Variables de entorno (`.env`)
 

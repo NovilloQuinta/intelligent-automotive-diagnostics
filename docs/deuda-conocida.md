@@ -4,7 +4,7 @@
 > de editar aqui**: este fichero se ha desincronizado dos veces por actualizarlo
 > de memoria.
 >
-> Estado general: 1793 tests en verde (1214 core-api + 579 ui), 0 errores de lint.
+> Estado general: 1973 tests en verde (1380 core-api + 593 ui), 0 errores de lint.
 > Nada de lo que sigue es bloqueante.
 
 ## Bateria del agente: construida, sin ejecutar
@@ -85,13 +85,36 @@ al limite de 40 lineas" en `AGENTS.md` antes de marcar ninguna como legitima.
 (`validateVin`, `upsertEcuDefinition`, `upsertDtcDefinition`, `updateProfile`).
 En `DiagnosisService` quedan `getVehicleInfo` (12) y `getLiveData` (11).
 
+## Documentacion de la API: generada, no escrita
+
+`swagger.ts` (1335 L, el fichero mas grande del repositorio) **ya no existe**. El
+documento OpenAPI se construye en `infrastructure/http/openapi/`:
+
+- Los schemas de **peticion** son los mismos objetos Zod con los que la aplicacion
+  valida en runtime — no hay copia que pueda contradecirlos.
+- Los de **respuesta** viven en `openapi/contracts/` y describen lo que proyectan los
+  controladores.
+- Las operaciones se declaran en `openapi/routes/`, junto al router que las sirve.
+- `openapiSync.test.ts` recorre los routers reales de Express y falla si aparece una
+  ruta sin documentar o un path documentado que no existe. Comprobado que salta.
+
+Ese test es lo que hace irrepetible la deriva que teniamos: siete rutas servidas y sin
+documentar, entre ellas `POST /api/mcp/cognitive-diagnosis`.
+
+**Lo que sigue escribiendose a mano**, porque ninguna herramienta lo deduce: el tag, el
+resumen, la descripcion y los codigos de respuesta de cada operacion. Son ~1 entrada
+declarativa por ruta, no 936 lineas de JSON anidado.
+
+**Pendiente relacionado**: los contratos de respuesta solo se usan para documentar. Usarlos
+tambien para validar lo que devuelven los controladores cerraria el circulo — hoy se valida
+la entrada pero no la salida.
+
 ## God files (coste de contexto)
 
 | Modulo | Estado |
 |---|---|
 | `infrastructure/mcp/mcpServer.ts` | ~~848 L~~ → 98 L — **RESUELTO** (Fases A y B) |
 | `infrastructure/services/diagnosisService.ts` | ~~969 L~~ → 714 L — Fase A hecha; queda Fase B (test de 1631 L) |
-| `infrastructure/http/swagger.ts` | 1319 L — no es refactor: **deberia generarse**, no escribirse |
 | `apps/ui/src/lib/api.ts` | 658 L (test 1862 L) — pendiente |
 
 ## Tests sin factories compartidas
