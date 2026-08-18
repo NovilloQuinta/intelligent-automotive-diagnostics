@@ -342,3 +342,92 @@ describe('SqliteUserRepository — list/stats', () => {
     })
   })
 })
+
+describe('SqliteUserRepository — caducidad del bloqueo', () => {
+  let repo: SqliteUserRepository
+  let sqlite: Database.Database
+
+  beforeAll(() => {
+    sqlite = new Database(':memory:')
+    sqlite.pragma('foreign_keys = ON')
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        user_type TEXT NOT NULL,
+        role TEXT NOT NULL DEFAULT 'user',
+        business_name TEXT,
+        tax_id TEXT,
+        address TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        failed_login_attempts INTEGER NOT NULL DEFAULT 0,
+        locked_until TEXT
+      );
+    `)
+    repo = new SqliteUserRepository(drizzle(sqlite))
+  })
+
+  /** Deja al usuario bloqueado y adelanta el reloj poniendo el bloqueo en el pasado. */
+  async function lockAndExpire(userId: number): Promise<void> {
+    for (let i = 0; i < 5; i += 1) await repo.incrementFailedLogin(userId)
+    sqlite
+      .prepare('UPDATE users SET locked_until = ? WHERE id = ?')
+      .run(new Date(Date.now() - 60_000).toISOString(), userId)
+  }
+
+  it('deberia reiniciar el contador cuando el bloqueo anterior ya expiro', async () => {
+    const user = await repo.create({
+      username: 'expireduser',
+      email: new Email('expired@example.com'),
+      passwordHash: '$2b$12$hashedpasswordvaluehere',
+      userType: 'individual',
+    })
+    await lockAndExpire(user.id)
+
+    await repo.incrementFailedLogin(user.id)
+
+    // Con el contador pegado a 5, un unico fallo tras la expiracion volvia a
+    // bloquear 15 minutos: el usuario perdia los 4 intentos que le tocaban.
+    const after = await repo.findById(user.id)
+    expect(after?.failedLoginAttempts).toBe(1)
+    expect(after?.lockedUntil).toBeNull()
+  })
+
+  it('deberia volver a bloquear tras 5 fallos nuevos posteriores a la expiracion', async () => {
+    const user = await repo.create({
+      username: 'relockuser',
+      email: new Email('relock@example.com'),
+      passwordHash: '$2b$12$hashedpasswordvaluehere',
+      userType: 'individual',
+    })
+    await lockAndExpire(user.id)
+
+    for (let i = 0; i < 5; i += 1) await repo.incrementFailedLogin(user.id)
+
+    const after = await repo.findById(user.id)
+    expect(after?.failedLoginAttempts).toBe(5)
+    expect(after?.lockedUntil).not.toBeNull()
+    expect(new Date(after!.lockedUntil!).getTime()).toBeGreaterThan(Date.now())
+  })
+
+  it('no deberia prolongar un bloqueo todavia vigente', async () => {
+    const user = await repo.create({
+      username: 'activelock',
+      email: new Email('activelock@example.com'),
+      passwordHash: '$2b$12$hashedpasswordvaluehere',
+      userType: 'individual',
+    })
+    for (let i = 0; i < 5; i += 1) await repo.incrementFailedLogin(user.id)
+    // Bloqueo vigente pero a punto de expirar: si el intento lo reescribiera,
+    // se veria saltar de nuevo a los 15 minutos.
+    const expiresSoon = new Date(Date.now() + 2000).toISOString()
+    sqlite.prepare('UPDATE users SET locked_until = ? WHERE id = ?').run(expiresSoon, user.id)
+
+    const state = await repo.incrementFailedLogin(user.id)
+
+    expect(state.failedLoginAttempts).toBe(6)
+    expect(state.lockedUntil).toBe(expiresSoon)
+  })
+})

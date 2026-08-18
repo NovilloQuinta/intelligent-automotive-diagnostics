@@ -68,6 +68,26 @@ export type {
   PidObservation,
 } from '@/lib/apiTypes'
 
+// ---------------------------------------------------------------------------
+// Account lockout (HTTP 423)
+// ---------------------------------------------------------------------------
+
+/**
+ * Traduce el 423 del backend a un mensaje en español con los minutos que
+ * quedan de bloqueo. El cuerpo del error llega en ingles y sin formatear:
+ * mostrarlo tal cual deja al usuario sin saber cuanto tiene que esperar.
+ */
+async function accountLockedMessage(res: Response): Promise<string> {
+  const body = (await res.json().catch(() => ({}))) as { retryAfterSeconds?: unknown }
+  const seconds = typeof body.retryAfterSeconds === 'number' ? body.retryAfterSeconds : 0
+  const base = 'Cuenta bloqueada temporalmente por demasiados intentos fallidos.'
+
+  if (seconds <= 0) return `${base} Inténtalo de nuevo más tarde.`
+
+  const minutes = Math.max(1, Math.ceil(seconds / 60))
+  return `${base} Inténtalo de nuevo en ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}.`
+}
+
 export const api = {
   // ---- Auth ----
 
@@ -79,6 +99,7 @@ export const api = {
       body: JSON.stringify(input),
       signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
     })
+    if (res.status === 423) throw new ApiHttpError(await accountLockedMessage(res), res.status)
     await assertOk(res, GENERIC_ERROR_MESSAGE)
     const tokens = (await res.json()) as AuthTokens
     setTokens(tokens)

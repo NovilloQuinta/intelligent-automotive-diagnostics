@@ -88,7 +88,13 @@ export class AuthController {
       if (err instanceof AccountLockedError) {
         // 423 Locked: la cuenta existe y las credenciales pueden ser correctas,
         // pero esta bloqueada por intentos fallidos. Sin esta rama caia en 500.
-        res.status(423).json({ error: err.message })
+        const retryAfterSeconds = err.retryAfterSeconds
+        if (retryAfterSeconds !== null) res.setHeader('Retry-After', String(retryAfterSeconds))
+        res.status(423).json({
+          error: err.message,
+          lockedUntil: err.lockedUntil,
+          retryAfterSeconds,
+        })
         return
       }
       respondInternalError(res)

@@ -3,6 +3,7 @@ import type { CreateUserInput } from '@/application/dto/auth/CreateUserInput.js'
 import type { AdminUsersFilter } from '@/application/dto/admin/AdminUsersFilter.js'
 import type { AdminListResult } from '@/application/dto/admin/AdminListResult.js'
 import type { UserStats } from '@/application/dto/admin/UserStats.js'
+import type { FailedLoginState } from '@/application/dto/auth/FailedLoginState.js'
 
 /** Contrato para la persistencia de usuarios. */
 export interface UserRepository {
@@ -15,8 +16,12 @@ export interface UserRepository {
   /** Crea un usuario nuevo. */
   create(input: CreateUserInput): Promise<User>
 
-  /** Incrementa el contador de intentos fallidos de login y bloquea si llega a 5. */
-  incrementFailedLogin(userId: number): Promise<void>
+  /**
+   * Incrementa el contador de intentos fallidos de login y bloquea si llega a 5.
+   * Devuelve el estado ya persistido para que quien llama sepa si ese mismo
+   * intento ha dejado la cuenta bloqueada.
+   */
+  incrementFailedLogin(userId: number): Promise<FailedLoginState>
 
   /** Resetea el contador de intentos fallidos tras login exitoso. */
   resetFailedLogins(userId: number): Promise<void>

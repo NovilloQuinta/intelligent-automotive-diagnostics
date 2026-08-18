@@ -41,7 +41,7 @@ function createMocks(
     findByEmail: vi.fn().mockResolvedValue(USER),
     findById: vi.fn().mockResolvedValue(USER),
     create: vi.fn().mockResolvedValue(USER),
-    incrementFailedLogin: vi.fn().mockResolvedValue(undefined),
+    incrementFailedLogin: vi.fn().mockResolvedValue({ failedLoginAttempts: 1, lockedUntil: null }),
     resetFailedLogins: vi.fn().mockResolvedValue(undefined),
     updatePassword: vi.fn().mockResolvedValue(undefined),
     updateProfile: vi.fn().mockResolvedValue({ ...USER, username: 'renamed' }),

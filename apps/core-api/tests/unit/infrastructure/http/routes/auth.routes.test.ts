@@ -42,7 +42,7 @@ function createMocks(
       address: null,
       createdAt: '2024-01-01T00:00:00Z',
     }),
-    incrementFailedLogin: vi.fn().mockResolvedValue(undefined),
+    incrementFailedLogin: vi.fn().mockResolvedValue({ failedLoginAttempts: 1, lockedUntil: null }),
     resetFailedLogins: vi.fn().mockResolvedValue(undefined),
     updatePassword: vi.fn().mockResolvedValue(undefined),
     updateProfile: vi.fn().mockResolvedValue(undefined),
@@ -231,6 +231,27 @@ describe('authRoutes', () => {
       // Sin rama propia, AccountLockedError caia en el 500 generico: el bloqueo
       // por intentos fallidos se reportaba como error del servidor.
       expect(res.status).toBe(423)
+    })
+
+    it('should tell the client how long the lockout lasts', async () => {
+      const lockedUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+      const { app } = createTestApp({
+        userRepo: {
+          findByEmail: vi.fn().mockResolvedValue({
+            id: 1,
+            passwordHash: '$2b$12$hashed',
+            lockedUntil,
+          }),
+        },
+      })
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'juan@mail.com', password: 'whatever' })
+
+      expect(res.status).toBe(423)
+      expect(res.body.lockedUntil).toBe(lockedUntil)
+      expect(res.body.retryAfterSeconds).toBeGreaterThan(0)
+      expect(Number(res.headers['retry-after'])).toBeGreaterThan(0)
     })
 
     it('should return 401 when email is not found', async () => {
