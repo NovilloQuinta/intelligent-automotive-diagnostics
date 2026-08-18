@@ -68,6 +68,22 @@ export const openApiSpec = {
           },
           '401': { description: 'Invalid credentials' },
           '400': { description: 'Validation error' },
+          '423': {
+            description:
+              'Cuenta bloqueada temporalmente tras 5 intentos fallidos. Incluye cabecera `Retry-After` (segundos).',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    error: { type: 'string' },
+                    lockedUntil: { type: 'string', format: 'date-time', nullable: true },
+                    retryAfterSeconds: { type: 'integer', nullable: true },
+                  },
+                },
+              },
+            },
+          },
         },
       },
     },

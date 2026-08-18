@@ -22,7 +22,7 @@ function createUserRepo(user: unknown): UserRepository {
     findByEmail: vi.fn().mockResolvedValue(null),
     findById: vi.fn().mockResolvedValue(user),
     create: vi.fn().mockResolvedValue(USER),
-    incrementFailedLogin: vi.fn().mockResolvedValue(undefined),
+    incrementFailedLogin: vi.fn().mockResolvedValue({ failedLoginAttempts: 1, lockedUntil: null }),
     resetFailedLogins: vi.fn().mockResolvedValue(undefined),
     updatePassword: vi.fn().mockResolvedValue(undefined),
     updateProfile: vi.fn().mockResolvedValue(undefined),

@@ -6,6 +6,11 @@ import { persistRefreshToken } from '@/application/shared/hashToken.js'
 import { loginUserSchema, type LoginUserInput } from '@/application/dto/auth/LoginUserInput.js'
 import type { LoginUserOutput } from '@/application/dto/auth/LoginUserOutput.js'
 
+/** Indica si `lockedUntil` marca un bloqueo todavia vigente. */
+function isLocked(lockedUntil: string | null | undefined): lockedUntil is string {
+  return !!lockedUntil && new Date(lockedUntil) > new Date()
+}
+
 /** Caso de uso: inicio de sesion. */
 export class LoginUserUseCase {
   constructor(
@@ -26,18 +31,26 @@ export class LoginUserUseCase {
       throw new InvalidCredentialsError()
     }
 
-    if (user.lockedUntil && new Date(user.lockedUntil) > new Date()) {
+    if (isLocked(user.lockedUntil)) {
       this.logger?.warn('auth.locked_out', { userId: user.id, lockedUntil: user.lockedUntil })
-      throw new AccountLockedError()
+      throw new AccountLockedError(user.lockedUntil)
     }
 
     const valid = await this.authService.comparePassword(parsed.password, user.passwordHash)
     if (!valid) {
-      await this.userRepo.incrementFailedLogin(user.id)
+      const state = await this.userRepo.incrementFailedLogin(user.id)
       this.logger?.info('auth.login_failed', {
         userId: user.id,
         reason: 'wrong_password',
+        failedLoginAttempts: state.failedLoginAttempts,
       })
+      // El intento que alcanza el umbral ya deja la cuenta bloqueada: se
+      // responde 423 aqui mismo, en vez de un 401 que no explica nada y
+      // dejar el aviso para el intento siguiente.
+      if (isLocked(state.lockedUntil)) {
+        this.logger?.warn('auth.locked_out', { userId: user.id, lockedUntil: state.lockedUntil })
+        throw new AccountLockedError(state.lockedUntil)
+      }
       throw new InvalidCredentialsError()
     }
 
@@ -60,10 +73,26 @@ export class InvalidCredentialsError extends Error {
   }
 }
 
-/** Error lanzado cuando la cuenta esta bloqueada por multiples intentos fallidos. */
+/**
+ * Error lanzado cuando la cuenta esta bloqueada por multiples intentos fallidos.
+ *
+ * Lleva el instante de desbloqueo para que la capa HTTP pueda responder con
+ * `Retry-After` y el cliente sepa cuanto falta, en vez de un "bloqueada" seco.
+ */
 export class AccountLockedError extends Error {
-  constructor() {
+  /** Instante ISO-8601 en el que la cuenta se desbloquea, si se conoce. */
+  readonly lockedUntil: string | null
+
+  constructor(lockedUntil: string | null = null) {
     super('Account temporarily locked due to too many failed login attempts')
     this.name = 'AccountLockedError'
+    this.lockedUntil = lockedUntil
+  }
+
+  /** Segundos que faltan para el desbloqueo, redondeados al alza. `null` si se desconoce. */
+  get retryAfterSeconds(): number | null {
+    if (!this.lockedUntil) return null
+    const remainingMs = new Date(this.lockedUntil).getTime() - Date.now()
+    return remainingMs > 0 ? Math.ceil(remainingMs / 1000) : 0
   }
 }

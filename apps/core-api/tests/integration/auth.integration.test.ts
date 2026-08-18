@@ -57,11 +57,13 @@ describe('Auth integration', () => {
   let app: ReturnType<typeof createServer>
   let emailSender: CapturingEmailSender
   let userRepo: SqliteUserRepository
+  let rawDb: Database.Database
   let authServiceForSeed: ReturnType<typeof createAuthService>
 
   beforeAll(() => {
     const sqlite = new Database(':memory:')
     sqlite.pragma('foreign_keys = ON')
+    rawDb = sqlite
 
     sqlite.exec(`
       CREATE TABLE IF NOT EXISTS users (
@@ -231,6 +233,73 @@ describe('Auth integration', () => {
       await request(app)
         .post('/api/auth/login')
         .send({ email: 'noexiste@test.com', password: 'Pass1234!' })
+        .expect(401)
+    })
+  })
+
+  describe('Bloqueo por intentos fallidos (OWASP A07)', () => {
+    const LOCKED_EMAIL = 'bloqueo@test.com'
+    const GOOD_PASSWORD = 'Pass1234!'
+
+    beforeAll(async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({
+          username: 'bloqueado',
+          email: LOCKED_EMAIL,
+          password: GOOD_PASSWORD,
+          userType: 'individual',
+        })
+        .expect(201)
+    })
+
+    it('should keep answering 401 for the first four failed attempts', async () => {
+      for (let attempt = 1; attempt <= 4; attempt += 1) {
+        await request(app)
+          .post('/api/auth/login')
+          .send({ email: LOCKED_EMAIL, password: 'wrong-password' })
+          .expect(401)
+      }
+    })
+
+    it('should lock the account on the fifth failed attempt', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: LOCKED_EMAIL, password: 'wrong-password' })
+        .expect(423)
+
+      expect(res.body.retryAfterSeconds).toBeGreaterThan(0)
+      expect(Number(res.headers['retry-after'])).toBeGreaterThan(0)
+    })
+
+    it('should reject even the correct password while the account is locked', async () => {
+      // El bloqueo no sirve de nada si la contraseña correcta lo esquiva:
+      // el atacante solo tendria que acertar dentro de la ventana.
+      await request(app)
+        .post('/api/auth/login')
+        .send({ email: LOCKED_EMAIL, password: GOOD_PASSWORD })
+        .expect(423)
+    })
+
+    it('should let the user in again once the lockout window has passed', async () => {
+      const expired = new Date(Date.now() - 1000).toISOString()
+      rawDb.prepare('UPDATE users SET locked_until = ? WHERE email = ?').run(expired, LOCKED_EMAIL)
+
+      await request(app)
+        .post('/api/auth/login')
+        .send({ email: LOCKED_EMAIL, password: GOOD_PASSWORD })
+        .expect(200)
+    })
+
+    it('should restart the counter after an expired lockout instead of relocking on one typo', async () => {
+      const expired = new Date(Date.now() - 1000).toISOString()
+      rawDb
+        .prepare('UPDATE users SET failed_login_attempts = 5, locked_until = ? WHERE email = ?')
+        .run(expired, LOCKED_EMAIL)
+
+      await request(app)
+        .post('/api/auth/login')
+        .send({ email: LOCKED_EMAIL, password: 'wrong-password' })
         .expect(401)
     })
   })

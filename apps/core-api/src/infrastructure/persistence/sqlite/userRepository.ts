@@ -10,6 +10,7 @@ import type { AdminUsersFilter } from '@/application/dto/admin/AdminUsersFilter.
 import type { AdminListResult } from '@/application/dto/admin/AdminListResult.js'
 import type { UserStats } from '@/application/dto/admin/UserStats.js'
 import { toSafeUser } from '@/application/shared/safeUser.js'
+import type { FailedLoginState } from '@/application/dto/auth/FailedLoginState.js'
 
 /** Traduce un {@link AdminUsersFilter} a las condiciones `WHERE` de `users`. */
 function buildWhereClause(filter: AdminUsersFilter) {
@@ -63,21 +64,49 @@ export class SqliteUserRepository implements UserRepository {
    * en dos sentencias, asi que N intentos en paralelo leian el mismo valor y
    * escribian el mismo +1 — el bloqueo a los 5 intentos se esquivaba sin mas
    * que paralelizar.
+   *
+   * Si el bloqueo anterior ya caduco, el contador arranca de nuevo en 1 y el
+   * bloqueo se limpia. Sin esto el contador se quedaba pegado al umbral y el
+   * primer fallo tras la expiracion volvia a bloquear 15 minutos enteros.
+   *
+   * Un bloqueo vigente no se prolonga: si se reescribiera en cada intento,
+   * bastaria con seguir probando contraseñas para dejar a la victima fuera de
+   * su cuenta indefinidamente.
    */
-  async incrementFailedLogin(userId: number): Promise<void> {
+  async incrementFailedLogin(userId: number): Promise<FailedLoginState> {
+    const nowIso = new Date().toISOString()
     const lockedUntilIso = new Date(Date.now() + LOCKOUT_DURATION_MS).toISOString()
 
-    await this.db
+    // Comparacion lexicografica valida: `locked_until` siempre se escribe con
+    // `toISOString()` (UTC, ancho fijo).
+    const lockActive = sql`${schema.users.lockedUntil} IS NOT NULL AND ${schema.users.lockedUntil} > ${nowIso}`
+    const lockExpired = sql`${schema.users.lockedUntil} IS NOT NULL AND ${schema.users.lockedUntil} <= ${nowIso}`
+    const nextAttempts = sql`CASE
+      WHEN ${lockExpired} THEN 1
+      ELSE ${schema.users.failedLoginAttempts} + 1
+    END`
+
+    const rows = await this.db
       .update(schema.users)
       .set({
-        failedLoginAttempts: sql`${schema.users.failedLoginAttempts} + 1`,
+        failedLoginAttempts: nextAttempts,
         lockedUntil: sql`CASE
-          WHEN ${schema.users.failedLoginAttempts} + 1 >= ${MAX_FAILED_ATTEMPTS}
-          THEN ${lockedUntilIso}
+          WHEN ${lockActive} THEN ${schema.users.lockedUntil}
+          WHEN ${nextAttempts} >= ${MAX_FAILED_ATTEMPTS} THEN ${lockedUntilIso}
+          WHEN ${lockExpired} THEN NULL
           ELSE ${schema.users.lockedUntil}
         END`,
       })
       .where(eq(schema.users.id, userId))
+      .returning({
+        failedLoginAttempts: schema.users.failedLoginAttempts,
+        lockedUntil: schema.users.lockedUntil,
+      })
+
+    const updated = rows[0]
+    if (!updated) throw new Error(`User ${userId} not found while counting failed logins`)
+
+    return updated
   }
 
   async resetFailedLogins(userId: number): Promise<void> {

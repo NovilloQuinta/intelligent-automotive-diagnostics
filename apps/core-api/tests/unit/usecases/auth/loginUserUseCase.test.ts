@@ -35,7 +35,7 @@ function createMocks(
     findByEmail: vi.fn().mockResolvedValue(USER),
     findById: vi.fn().mockResolvedValue(USER),
     create: vi.fn().mockResolvedValue(USER),
-    incrementFailedLogin: vi.fn().mockResolvedValue(undefined),
+    incrementFailedLogin: vi.fn().mockResolvedValue({ failedLoginAttempts: 1, lockedUntil: null }),
     resetFailedLogins: vi.fn().mockResolvedValue(undefined),
     updatePassword: vi.fn().mockResolvedValue(undefined),
     updateProfile: vi.fn().mockResolvedValue(USER),
@@ -118,6 +118,35 @@ describe('LoginUserUseCase', () => {
     await expect(
       useCase.execute({ email: 'juan@mail.com', password: 'any' }),
     ).rejects.toBeInstanceOf(AccountLockedError)
+  })
+
+  it('deberia responder AccountLockedError en el mismo intento que alcanza el umbral', async () => {
+    const lockedUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString()
+    mocks.authService.comparePassword = vi.fn().mockResolvedValue(false)
+    mocks.userRepo.incrementFailedLogin = vi
+      .fn()
+      .mockResolvedValue({ failedLoginAttempts: 5, lockedUntil })
+
+    // Con un 401 en el 5o fallo el usuario no se entera de que acaba de
+    // quedar bloqueado hasta el intento siguiente.
+    await expect(
+      useCase.execute({ email: 'juan@mail.com', password: 'wrong' }),
+    ).rejects.toBeInstanceOf(AccountLockedError)
+  })
+
+  it('deberia exponer en el error hasta cuando dura el bloqueo', async () => {
+    const lockedUntil = new Date(Date.now() + 10 * 60 * 1000).toISOString()
+    mocks.userRepo.findByEmail = vi.fn().mockResolvedValue({ ...USER, lockedUntil })
+
+    const error = await useCase
+      .execute({ email: 'juan@mail.com', password: 'any' })
+      .catch((e: unknown) => e)
+
+    // Sin este dato la UI solo puede decir "bloqueada", nunca cuanto falta.
+    expect(error).toBeInstanceOf(AccountLockedError)
+    expect((error as AccountLockedError).lockedUntil).toBe(lockedUntil)
+    expect((error as AccountLockedError).retryAfterSeconds).toBeGreaterThan(0)
+    expect((error as AccountLockedError).retryAfterSeconds).toBeLessThanOrEqual(600)
   })
 
   it('deberia permitir login si el bloqueo ya expiro', async () => {

@@ -31,6 +31,42 @@ describe("api — endpoints", () => {
       expect(localStorage.getItem("iad.refreshToken")).toBe("refresh-xyz");
     });
 
+    it("explains the lockout in Spanish with the remaining minutes on 423", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 423,
+          json: async () => ({
+            error: "Account temporarily locked due to too many failed login attempts",
+            lockedUntil: new Date(Date.now() + 9 * 60 * 1000).toISOString(),
+            retryAfterSeconds: 540,
+          }),
+        }),
+      );
+
+      // El mensaje del backend llega en ingles: la pantalla de login es en
+      // español y el usuario necesita saber cuanto falta, no solo que esta bloqueado.
+      await expect(
+        api.login({ email: "a@b.com", password: "wrong" }),
+      ).rejects.toThrow(/bloqueada temporalmente.*9 minutos/i);
+    });
+
+    it("falls back to a generic wait message when the lockout has no remaining time", async () => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 423,
+          json: async () => ({ error: "Account temporarily locked" }),
+        }),
+      );
+
+      await expect(
+        api.login({ email: "a@b.com", password: "wrong" }),
+      ).rejects.toThrow(/bloqueada temporalmente.*más tarde/i);
+    });
+
     it("throws on 401", async () => {
       vi.stubGlobal(
         "fetch",
