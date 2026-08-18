@@ -185,8 +185,12 @@ Migrar a schema con columna JSON metadata para evitar migraciones futuras.
 
 ## Ramas
 
-`origin/refactor/split-mcp-server` quedo sin borrar: el proxy de git del entorno
-remoto rechaza el borrado de ramas. Hay que quitarla desde la UI de GitHub.
+El proxy de git del entorno remoto rechaza el borrado de ramas (403 al
+`push --delete`). Estas quedaron sin borrar y hay que quitarlas desde la UI de
+GitHub; su contenido ya esta integrado, asi que borrarlas no pierde nada:
+
+- `origin/refactor/split-mcp-server`
+- `origin/refactor/openapi-from-zod` — mergeada en `develop` el 2026-08-18
 
 ---
 
