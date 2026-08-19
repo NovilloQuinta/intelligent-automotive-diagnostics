@@ -12,25 +12,29 @@ const PAGE_PARAMS = [
   {
     name: 'page',
     in: 'query' as const,
-    description: 'Pagina',
+    description: 'Pagina, empezando en 1',
+    example: 1,
     schema: { type: 'integer' as const },
   },
   {
     name: 'pageSize',
     in: 'query' as const,
     description: 'Tamano de pagina',
+    example: 25,
     schema: { type: 'integer' as const },
   },
   {
     name: 'from',
     in: 'query' as const,
     description: 'Desde (ISO 8601)',
+    example: '2026-08-01T00:00:00Z',
     schema: { type: 'string' as const },
   },
   {
     name: 'to',
     in: 'query' as const,
     description: 'Hasta (ISO 8601)',
+    example: '2026-08-31T23:59:59Z',
     schema: { type: 'string' as const },
   },
 ]
@@ -54,8 +58,20 @@ export const adminOperations: readonly OperationSpec[] = [
     auth: true,
     parameters: [
       ...PAGE_PARAMS,
-      { name: 'level', in: 'query', description: 'Nivel de log', schema: { type: 'string' } },
-      { name: 'q', in: 'query', description: 'Busqueda en el mensaje', schema: { type: 'string' } },
+      {
+        name: 'level',
+        in: 'query',
+        description: 'Nivel de log: `debug`, `info`, `warn` o `error`',
+        example: 'error',
+        schema: { type: 'string' },
+      },
+      {
+        name: 'q',
+        in: 'query',
+        description: 'Busqueda en el mensaje',
+        example: 'timeout',
+        schema: { type: 'string' },
+      },
     ],
     responses: {
       '200': { description: 'Pagina de logs', schema: 'AdminLogsPage' },

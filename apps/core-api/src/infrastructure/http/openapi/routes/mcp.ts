@@ -43,6 +43,7 @@ export const mcpOperations: readonly OperationSpec[] = [
         in: 'path',
         required: true,
         description: 'Nombre de la tool a invocar',
+        example: 'read_dtc_codes',
         schema: { type: 'string' },
       },
     ],

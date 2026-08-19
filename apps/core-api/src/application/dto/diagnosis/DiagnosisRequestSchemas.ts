@@ -17,10 +17,17 @@ import { MODE_CURRENT_DATA } from '@/domain/pids.js'
  */
 
 /** scenarioId obligatorio: modo simulacion, donde hay que elegir escenario. */
-const requiredScenarioId = z.string().min(1, 'scenarioId is required')
+const requiredScenarioId = z
+  .string()
+  .min(1, 'scenarioId is required')
+  .describe('Vehiculo emulado al que hablar. Se obtiene de `GET /api/scenarios`')
 
 /** scenarioId opcional: modo TCP directo, donde solo hay un vehiculo conectado. */
-const optionalScenarioId = z.string().min(1).optional()
+const optionalScenarioId = z
+  .string()
+  .min(1)
+  .optional()
+  .describe('Ignorado en conexion directa: solo hay un vehiculo conectado')
 
 /**
  * Crea el par docker/tcp de esquemas Zod para un endpoint, aplicando
@@ -28,23 +35,33 @@ const optionalScenarioId = z.string().min(1).optional()
  */
 function scenarioSchemas<T extends Record<string, z.ZodTypeAny>>(
   extra: T,
+  description = 'Peticion de diagnostico sobre un vehiculo',
 ): {
   docker: z.ZodObject<{ scenarioId: z.ZodString } & T>
   tcp: z.ZodObject<{ scenarioId: z.ZodOptional<z.ZodString> } & T>
 } {
   return {
-    docker: z.object({ scenarioId: requiredScenarioId, ...extra }),
-    tcp: z.object({ scenarioId: optionalScenarioId, ...extra }),
+    docker: z.object({ scenarioId: requiredScenarioId, ...extra }).describe(description),
+    tcp: z.object({ scenarioId: optionalScenarioId, ...extra }).describe(description),
   }
 }
 
 /** Cuerpo de `POST /api/diagnosis`: exige `scenarioId` en modo emulador y lo omite en conexion directa. */
-export const { docker: DiagnosisBodySchema, tcp: DiagnosisBodyTcpSchema } = scenarioSchemas({})
+export const { docker: DiagnosisBodySchema, tcp: DiagnosisBodyTcpSchema } = scenarioSchemas(
+  {},
+  'Cuerpo de `POST /api/diagnosis`: lanza el diagnostico determinista sobre un vehiculo',
+)
 
 /** Cuerpo de `POST /api/mcp/tools/:toolName`: escenario mas los argumentos de la tool. */
-export const { docker: McpToolBodySchema, tcp: McpToolBodyTcpSchema } = scenarioSchemas({
-  args: z.record(z.unknown()).default({}),
-})
+export const { docker: McpToolBodySchema, tcp: McpToolBodyTcpSchema } = scenarioSchemas(
+  {
+    args: z
+      .record(z.unknown())
+      .default({})
+      .describe('Argumentos de la tool. La forma depende de la tool invocada'),
+  },
+  'Cuerpo de `POST /api/mcp/tools/{toolName}`: invocacion directa de una tool MCP',
+)
 
 /** Parametro de ruta de `POST /api/mcp/tools/:toolName`. */
 export const McpToolParamsSchema = z.object({
@@ -53,11 +70,25 @@ export const McpToolParamsSchema = z.object({
 
 /** Cuerpo de `POST /api/mcp/cognitive-diagnosis`: escenario, consulta, historial y sesion a continuar. */
 export const { docker: CognitiveDiagnosisBodySchema, tcp: CognitiveDiagnosisBodyTcpSchema } =
-  scenarioSchemas({
-    query: z.string().optional(),
-    history: z.array(LlmConversationItemSchema).optional(),
-    sessionId: z.number().int().positive().optional(),
-  })
+  scenarioSchemas(
+    {
+      query: z
+        .string()
+        .optional()
+        .describe('Pregunta del usuario. Si se omite, el agente hace el barrido completo'),
+      history: z
+        .array(LlmConversationItemSchema)
+        .optional()
+        .describe('Turnos previos de la conversacion, para continuar un diagnostico'),
+      sessionId: z
+        .number()
+        .int()
+        .positive()
+        .optional()
+        .describe('Sesion a continuar. Si se omite, se abre una nueva'),
+    },
+    'Cuerpo de `POST /api/mcp/cognitive-diagnosis`: diagnostico cognitivo con LLM',
+  )
 
 /** Query de `GET /api/freeze-frame`: el DTC concreto es opcional. */
 export const { docker: FreezeFrameQuerySchema, tcp: FreezeFrameQueryTcpSchema } = scenarioSchemas({
@@ -79,13 +110,21 @@ export const { docker: VehicleInfoQuerySchema, tcp: VehicleInfoQueryTcpSchema } 
  * el dominio: aqui solo se acota la forma del payload para no aceptar un JSON
  * cualquiera. Duplicar las reglas en zod las dejaria divergir.
  */
-export const VehicleIdentityBodySchema = z.object({
-  vin: z.string().length(17),
-  make: z.string().min(1).max(64),
-  model: z.string().max(64).optional(),
-  year: z.number().int().min(1980).max(2100).optional(),
-  engineType: z.string().max(64).optional(),
-})
+export const VehicleIdentityBodySchema = z
+  .object({
+    vin: z.string().length(17).describe('Numero de bastidor, exactamente 17 caracteres'),
+    make: z.string().min(1).max(64).describe('Marca que declara el mecanico'),
+    model: z.string().max(64).optional().describe('Modelo, si se conoce'),
+    year: z
+      .number()
+      .int()
+      .min(1980)
+      .max(2100)
+      .optional()
+      .describe('Ano de fabricacion, si se conoce'),
+    engineType: z.string().max(64).optional().describe('Motorizacion, si se conoce'),
+  })
+  .describe('Identidad del vehiculo aportada a mano desde la pantalla de confirmacion')
 
 /** Códigos de PID Mode 01 válidos (SAE J1979) según el catálogo de seed data. */
 const MODE_01_PID_CODES = new Set(

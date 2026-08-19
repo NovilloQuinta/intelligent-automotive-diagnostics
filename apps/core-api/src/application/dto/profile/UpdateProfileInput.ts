@@ -7,12 +7,13 @@ import { z } from 'zod'
  */
 export const updateProfileSchema = z
   .object({
-    username: z.string().min(3).max(50).optional(),
-    address: z.string().max(500).optional(),
-    businessName: z.string().max(200).optional(),
-    taxId: z.string().max(50).optional(),
+    username: z.string().min(3).max(50).optional().describe('Nombre de usuario nuevo'),
+    address: z.string().max(500).optional().describe('Direccion fiscal. Solo talleres'),
+    businessName: z.string().max(200).optional().describe('Razon social. Solo talleres'),
+    taxId: z.string().max(50).optional().describe('NIF o CIF. Solo talleres'),
   })
   .strict()
+  .describe('Edicion parcial del perfil. `email` queda fuera de alcance y se rechaza con 400')
 
 /** Input del caso de uso UpdateProfile. */
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>

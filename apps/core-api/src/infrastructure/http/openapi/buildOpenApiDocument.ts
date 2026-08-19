@@ -1,7 +1,8 @@
 import { zodToJsonSchema } from 'zod-to-json-schema'
 
-import type { OperationSpec, SchemaMap } from './registry.js'
+import type { ExampleMap, OperationSpec, SchemaMap } from './registry.js'
 import { openApiSchemas } from './schemas.js'
+import { openApiExamples } from './examples.js'
 import { authOperations } from './routes/auth.js'
 import { diagnosisOperations } from './routes/diagnosis.js'
 import { mcpOperations } from './routes/mcp.js'
@@ -112,12 +113,13 @@ function toPathItem(operation: OperationSpec): Record<string, unknown> {
  * schema del catalogo se publica completo bajo su nombre, que es lo que hace legible
  * el documento en Swagger UI.
  */
-function buildComponentSchemas(schemas: SchemaMap): Record<string, unknown> {
+function buildComponentSchemas(schemas: SchemaMap, examples: ExampleMap): Record<string, unknown> {
   return Object.fromEntries(
-    Object.entries(schemas).map(([name, schema]) => [
-      name,
-      zodToJsonSchema(schema, { target: 'openApi3', $refStrategy: 'none' }),
-    ]),
+    Object.entries(schemas).map(([name, schema]) => {
+      const generated = zodToJsonSchema(schema, { target: 'openApi3', $refStrategy: 'none' })
+      const example = examples[name]
+      return [name, example === undefined ? generated : { ...generated, example }]
+    }),
   )
 }
 
@@ -137,11 +139,13 @@ function buildPaths(operations: readonly OperationSpec[]): Record<string, unknow
  *
  * @param operations - Operaciones a documentar. Por defecto, todas las de la API.
  * @param schemas - Catalogo de schemas. Por defecto, el de `schemas.ts`.
+ * @param examples - Cuerpos de ejemplo. Por defecto, los de `examples.ts`.
  * @returns El documento OpenAPI 3.0.3 listo para servir.
  */
 export function buildOpenApiDocument(
   operations: readonly OperationSpec[] = ALL_OPERATIONS,
   schemas: SchemaMap = openApiSchemas,
+  examples: ExampleMap = openApiExamples,
 ): Record<string, unknown> {
   return {
     openapi: '3.0.3',
@@ -153,7 +157,7 @@ export function buildOpenApiDocument(
       securitySchemes: {
         bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
       },
-      schemas: buildComponentSchemas(schemas),
+      schemas: buildComponentSchemas(schemas, examples),
     },
   }
 }

@@ -97,3 +97,67 @@ describe('sincronia entre las rutas de Express y el documento OpenAPI', () => {
     expect(phantom).toEqual([])
   })
 })
+
+/** Schemas publicados en `components.schemas`, con su nombre. */
+function componentSchemas(): [string, Record<string, unknown>][] {
+  const components = openApiSpec.components as {
+    schemas: Record<string, Record<string, unknown>>
+  }
+  return Object.entries(components.schemas)
+}
+
+/** Parametros de todas las operaciones, etiquetados con la operacion que los declara. */
+function allParameters(): { label: string; parameter: Record<string, unknown> }[] {
+  const paths = openApiSpec.paths as Record<string, Record<string, Record<string, unknown>>>
+  return Object.entries(paths).flatMap(([path, operations]) =>
+    Object.entries(operations).flatMap(([method, operation]) =>
+      ((operation.parameters ?? []) as Record<string, unknown>[]).map((parameter) => ({
+        label: `${method.toUpperCase()} ${path} ?${String(parameter.name)}`,
+        parameter,
+      })),
+    ),
+  )
+}
+
+/**
+ * El documento se genera desde el codigo, asi que nada obliga a que sea *legible*: un
+ * schema sin descripciones ni ejemplos sigue siendo valido y Swagger UI lo pinta vacio.
+ * Estas pruebas son ese contrato — el que se perdio al sustituir el `swagger.ts` escrito
+ * a mano, que si traia ejemplos.
+ */
+describe('legibilidad del documento OpenAPI', () => {
+  it('describe todos los schemas publicados', () => {
+    const sinDescripcion = componentSchemas()
+      .filter(([, schema]) => typeof schema.description !== 'string')
+      .map(([name]) => name)
+
+    expect(sinDescripcion).toEqual([])
+  })
+
+  it('describe todas las propiedades de cada schema', () => {
+    const sinDescripcion = componentSchemas().flatMap(([name, schema]) =>
+      Object.entries((schema.properties ?? {}) as Record<string, Record<string, unknown>>)
+        .filter(([, property]) => typeof property.description !== 'string')
+        .map(([property]) => `${name}.${property}`),
+    )
+
+    expect(sinDescripcion).toEqual([])
+  })
+
+  it('da un ejemplo de cuerpo en cada schema de peticion', () => {
+    const sinEjemplo = componentSchemas()
+      .filter(([name]) => name.endsWith('Request'))
+      .filter(([, schema]) => schema.example === undefined)
+      .map(([name]) => name)
+
+    expect(sinEjemplo).toEqual([])
+  })
+
+  it('da un ejemplo en cada parametro de ruta y de query', () => {
+    const sinEjemplo = allParameters()
+      .filter(({ parameter }) => parameter.example === undefined)
+      .map(({ label }) => label)
+
+    expect(sinEjemplo).toEqual([])
+  })
+})

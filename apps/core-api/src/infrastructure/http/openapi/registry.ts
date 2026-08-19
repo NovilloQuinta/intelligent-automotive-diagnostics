@@ -11,12 +11,18 @@ import type { ZodTypeAny } from 'zod'
 /** Metodos HTTP que la API expone. */
 export type HttpMethod = 'get' | 'post' | 'patch' | 'put' | 'delete'
 
-/** Parametro de ruta o de query, con su tipo primitivo. */
+/**
+ * Parametro de ruta o de query, con su tipo primitivo.
+ *
+ * `example` es obligatorio: sin el, Swagger UI ofrece un campo vacio y el "Try it out"
+ * no se puede lanzar sin buscar antes un valor valido a mano.
+ */
 export interface ParameterSpec {
   readonly name: string
   readonly in: 'path' | 'query'
   readonly required?: boolean
   readonly description: string
+  readonly example: string | number | boolean
   readonly schema: { readonly type: 'string' | 'integer' | 'number' | 'boolean' }
 }
 
@@ -48,3 +54,11 @@ export interface OperationSpec {
  * se referencian desde las operaciones.
  */
 export type SchemaMap = Readonly<Record<string, ZodTypeAny>>
+
+/**
+ * Cuerpos de ejemplo, indexados por el mismo nombre que el schema que ilustran.
+ *
+ * Zod no lleva ejemplos, asi que se declaran aparte y el constructor los inyecta como
+ * `example` del schema generado. Es lo que rellena el "Example Value" de Swagger UI.
+ */
+export type ExampleMap = Readonly<Record<string, unknown>>
