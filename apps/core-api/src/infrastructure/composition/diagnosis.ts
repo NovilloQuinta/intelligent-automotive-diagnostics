@@ -5,7 +5,10 @@ import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
-import { Elm327TcpRepository } from '@/infrastructure/elm327/elm327Adapter.js'
+import {
+  Elm327TcpRepository,
+  type Elm327RepositoryOptions,
+} from '@/infrastructure/elm327/elm327Adapter.js'
 import { createElm327TcpClient } from '@/infrastructure/elm327/tcpTransport.js'
 import { createElm327SerialClient } from '@/infrastructure/elm327/serialTransport.js'
 import {
@@ -28,13 +31,41 @@ import { createDockerScenarios } from '@/infrastructure/composition/scenarios.js
  * `composition/scenarios.ts`.
  */
 
+/**
+ * Decide si el adaptador se monta en solo lectura.
+ *
+ * `OBD_READ_ONLY` puede activarlo en cualquier modo, pero **no puede desactivarlo
+ * cuando hay un vehiculo real al otro lado del cable**: el borrado de DTC (Mode 04)
+ * es la unica escritura del sistema y en un coche es irreversible —elimina codigos
+ * y freeze frames y reinicia los monitores de emisiones—. Depender de que alguien
+ * se acuerde de poner la variable antes de enchufar era la proteccion mas fragil
+ * posible: el olvido no avisa.
+ *
+ * Contra el emulador la variable manda, porque ahi el escenario se regenera al
+ * reiniciar el contenedor y la demo web usa el boton con normalidad.
+ */
+function resolveReadOnly(config: AppConfig): Required<Elm327RepositoryOptions> {
+  if (config.OBD_MODE !== 'docker') {
+    return {
+      readOnly: true,
+      readOnlyReason:
+        `a real vehicle is connected (OBD_MODE=${config.OBD_MODE}), where clearing DTCs ` +
+        'is irreversible — it wipes freeze frames and resets the emissions monitors',
+    }
+  }
+  return {
+    readOnly: config.OBD_READ_ONLY,
+    readOnlyReason: 'OBD_READ_ONLY is enabled',
+  }
+}
+
 /** Mapa scenarioId → ObdRepository creado a partir de los descriptores de escenarios. */
 function createObdRepoMap(
   scenarios: ScenarioDescriptor[],
   vehicleRepo: VehicleRepository,
   logger: LoggerPort,
   trace = false,
-  readOnly = false,
+  policy: Elm327RepositoryOptions = {},
 ): Map<string, ObdRepository> {
   const map = new Map<string, ObdRepository>()
   for (const s of scenarios) {
@@ -43,7 +74,7 @@ function createObdRepoMap(
       port: s.port,
       onTrace: trace ? createConsoleTracer(s.id) : undefined,
     })
-    map.set(s.id, new Elm327TcpRepository(transport, vehicleRepo, logger, { readOnly }))
+    map.set(s.id, new Elm327TcpRepository(transport, vehicleRepo, logger, policy))
   }
   return map
 }
@@ -75,7 +106,7 @@ function wireDockerMode(opts: CreateDiagnosisServiceOptions): ObdWiring {
       vehicleRepo,
       logger,
       config.OBD_TRACE,
-      config.OBD_READ_ONLY,
+      resolveReadOnly(config),
     ),
   }
 }
@@ -92,9 +123,7 @@ function wireSerialMode(opts: CreateDiagnosisServiceOptions): ObdWiring {
   })
   return {
     scenarios: [],
-    obdRepo: new Elm327TcpRepository(transport, vehicleRepo, logger, {
-      readOnly: config.OBD_READ_ONLY,
-    }),
+    obdRepo: new Elm327TcpRepository(transport, vehicleRepo, logger, resolveReadOnly(config)),
     directScenario: SERIAL_DIRECT_SCENARIO,
   }
 }
@@ -117,9 +146,7 @@ function wireTcpMode(opts: CreateDiagnosisServiceOptions): ObdWiring {
   })
   return {
     scenarios: [],
-    obdRepo: new Elm327TcpRepository(transport, vehicleRepo, logger, {
-      readOnly: config.OBD_READ_ONLY,
-    }),
+    obdRepo: new Elm327TcpRepository(transport, vehicleRepo, logger, resolveReadOnly(config)),
   }
 }
 

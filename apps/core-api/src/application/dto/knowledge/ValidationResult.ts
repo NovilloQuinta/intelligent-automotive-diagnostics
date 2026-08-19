@@ -5,7 +5,11 @@
  * rango que comprobar) ni `unsupported` (`readDtcCodes` funciona tambien en simulacion).
  */
 export type ValidationOutcome =
-  'validated' | 'out_of_range' | 'no_vehicle' | 'unsupported' | 'invalid_formula'
+  | 'validated'
+  | 'out_of_range'
+  | 'no_vehicle'
+  | 'unsupported'
+  | 'invalid_formula'
 
 /** Entrada tras el intento de validacion, junto al desenlace que lo explica. */
 export interface ValidationResult<TEntry, TOutcome extends string = ValidationOutcome> {

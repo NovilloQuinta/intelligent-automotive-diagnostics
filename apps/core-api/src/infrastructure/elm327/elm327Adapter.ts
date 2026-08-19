@@ -47,6 +47,9 @@ const MODE_UDS = '22'
 /** Modo 04 (ClearDiagnosticInformation): unica escritura que el adaptador puede emitir. */
 const MODE_CLEAR_DTC = '04'
 
+/** Motivo por defecto del rechazo, cuando la composicion no aporta uno mas concreto. */
+const DEFAULT_READ_ONLY_REASON = 'this adapter is configured as read-only'
+
 /** Politica de seguridad del adaptador frente al vehiculo. */
 export interface Elm327RepositoryOptions {
   /**
@@ -57,6 +60,15 @@ export interface Elm327RepositoryOptions {
    * de averias desde la UI.
    */
   readonly readOnly?: boolean
+
+  /**
+   * Por que esta en solo lectura, en el mensaje del rechazo.
+   *
+   * Sin esto, quien pulsa "Borrar averias" y recibe un error no puede distinguir
+   * una proteccion deliberada de un fallo del adaptador, que es justo la duda que
+   * lleva a desactivar la proteccion "por probar".
+   */
+  readonly readOnlyReason?: string
 }
 
 /**
@@ -74,6 +86,7 @@ export class Elm327TcpRepository implements ObdRepository {
   private readonly pidFormulas: PidFormulaCatalog
   private readonly vehicleRepo?: VehicleRepository
   private readonly readOnly: boolean
+  private readonly readOnlyReason: string
 
   constructor(
     transport: Elm327Transport,
@@ -84,6 +97,7 @@ export class Elm327TcpRepository implements ObdRepository {
     this.client = transport
     this.vehicleRepo = vehicleRepo
     this.readOnly = options?.readOnly ?? false
+    this.readOnlyReason = options?.readOnlyReason ?? DEFAULT_READ_ONLY_REASON
     this.pidFormulas = createPidFormulaCatalog(toFormulaEntries(ALL_SEED_PIDS))
     this.client.connect().catch((err: unknown) => {
       const message = '[Elm327TcpRepository] eager connect failed'
@@ -248,7 +262,7 @@ export class Elm327TcpRepository implements ObdRepository {
   async clearDtcCodes(): Promise<void> {
     if (this.readOnly) {
       throw new UnsafeObdModeError(
-        `OBD mode "${MODE_CLEAR_DTC}" (clear DTC) is blocked: this adapter is configured as read-only.`,
+        `OBD mode "${MODE_CLEAR_DTC}" (clear DTC) is blocked: ${this.readOnlyReason}.`,
       )
     }
     await this.client.sendCommand(MODE_CLEAR_DTC)
