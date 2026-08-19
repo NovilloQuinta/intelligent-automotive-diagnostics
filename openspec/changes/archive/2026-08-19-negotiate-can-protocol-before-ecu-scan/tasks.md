@@ -145,7 +145,7 @@
       el ADR 009, la proposal, la spec delta y `deuda-conocida.md`, que afirmaban lo
       contrario.
 - [x] 11.4 Recuento de avisos de ESLint contra la línea base de 0.1. Igual o menor.
-- [ ] 11.5 `pnpm verify` completo (lint + format + test + build + typecheck de ambas apps).
+- [x] 11.5 `pnpm verify` completo (lint + format + test + build + typecheck de ambas apps).
 
 ## 12. Cierre
 
@@ -173,4 +173,5 @@
 - [x] 12.7 `docs/deuda-conocida.md`: en el cabo suelto de `live-data`, anotar la causa
       probable corregida. **No cerrarlo**: no se ha reproducido.
 - [x] 12.8 `docs/estado-actual.md` (regla 8: máximo 15 líneas, solo estado presente).
-- [ ] 12.9 Archivar el change y sincronizar la spec.
+- [x] 12.9 Archivar el change y sincronizar la spec. Sincronizados los dos requisitos
+      MODIFIED y los dos ADDED contra `openspec/specs/`.
