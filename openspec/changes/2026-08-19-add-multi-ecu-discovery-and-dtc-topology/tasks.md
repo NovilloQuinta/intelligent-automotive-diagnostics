@@ -3,11 +3,16 @@
 - [ ] 1.1 Importar en `docker/elm327/scenarios/audi_a3_tdi.py` las cuatro constantes
       nuevas de `elm.obd_message`: `ECU_R_ADDR_T`, `ECU_R_ADDR_U`, `ECU_R_ADDR_B`,
       `ECU_R_ADDR_M`.
-- [ ] 1.2 Convertir la respuesta de `01 00` (`ELM_PIDS_A`) en multi-header: el bloque
-      del motor que ya existe **más** un bloque por cada una de las cuatro ECUs nuevas,
-      cada uno con su bitmask de PIDs soportados. No tocar ninguna otra respuesta.
+- [ ] 1.2 **Añadir** una entrada nueva para `01 00` con `Header: "7DF"` (el broadcast
+      funcional), cuya `Response` encadena un bloque `HD/SZ/DT` por ECU: el motor más las
+      cuatro nuevas, cada una con su bitmask de PIDs soportados.
+      **`ELM_PIDS_A` no se toca**: es la que responde al header por defecto `7E0` y la
+      que consume `getSupportedPids()`. Ninguna otra respuesta cambia.
 - [ ] 1.3 Verificar a mano contra el emulador: levantar el contenedor y comprobar que
-      `01 00` devuelve cinco líneas con headers distintos.
+      con `AT SH 7DF` el `01 00` devuelve cinco líneas con headers distintos.
+- [ ] 1.3b Descartar la regresión concreta: con el header por defecto (`7E0`),
+      `getSupportedPids()` del Audi devuelve **exactamente** la misma lista que antes del
+      cambio. Es el único camino que la entrada nueva podría pisar.
 - [ ] 1.4 Actualizar `docs/infrastructure/elm327-emulator.md` con las cinco ECUs del
       escenario Audi.
 

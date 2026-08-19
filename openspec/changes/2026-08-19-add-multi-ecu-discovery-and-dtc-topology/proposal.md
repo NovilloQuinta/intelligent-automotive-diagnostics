@@ -6,10 +6,15 @@ hace exactamente lo que hace una máquina de taller al enchufarse: pone headers 
 `01 00` y parsea el header CAN de cada ECU que conteste. `parseCanHeaders` recoge
 múltiples respondedores deduplicados, y `TopologyMapPanel` pinta el bus.
 
-**El problema es que no hay a quién preguntar.** Las 474 líneas del escenario Audi del
-emulador responden todas desde `ECU_R_ADDR_E` (7E8, el motor): 38 usos de esa dirección
-y cero de cualquier otra. El broadcast devuelve un respondedor y el mapa dibuja un nodo.
-La función está terminada y no tiene nada que mostrar.
+**El problema es que el broadcast no llega a nadie.** El emulador filtra sus entradas
+por header (`elm.py:2081`): si una entrada declara `Header` y el header activo es otro,
+la salta. La entrada `01 00` del escenario Audi declara `Header: ECU_ADDR_E` (`7E0`) y el
+barrido pregunta con `AT SH 7DF`, así que **no casa ninguna entrada y la petición se queda
+sin respuesta**. `discoverEcus` cae entonces a su fallback `discoverPrimaryEcu`
+(addressing físico + Mode 09 0A) y devuelve un único ECM: el mapa dibuja un nodo.
+
+La función está terminada y no tiene nada que mostrar. Y como los dos caminos están
+separados por header, la solución es puramente aditiva (ver D1).
 
 Hay dos huecos más, del mismo hilo:
 
@@ -26,12 +31,13 @@ Hay dos huecos más, del mismo hilo:
 
 ## What Changes
 
-- **El escenario Audi responde desde cinco ECUs.** El emulador soporta respuestas
-  multi-header: un `Response` es una concatenación de bloques `HD(dirección) + SZ + DT`
-  y se pueden encadenar bloques de direcciones distintas (su propio escenario `car` lo
-  hace). Se usan las cinco que caen en el rango legislado ISO 15765-4 que `protocol.ts`
-  acepta: motor (7E8), transmisión (7E9), control híbrido (7EA), batería de tracción
-  (7EB) y powertrain (7ED).
+- **El escenario Audi responde al broadcast desde cinco ECUs.** Se **añade** una entrada
+  nueva para `01 00` con `Header: "7DF"`; la existente (`Header: ECU_ADDR_E`, la que sirve
+  a `getSupportedPids()`) no se toca. Su `Response` encadena bloques
+  `HD(dirección) + SZ + DT` de direcciones distintas, como hace el escenario `car` del
+  propio emulador. Son las cinco que caen en el rango legislado ISO 15765-4 que
+  `protocol.ts` acepta: motor (7E8), transmisión (7E9), control híbrido (7EA), batería de
+  tracción (7EB) y powertrain (7ED).
 - **Las ECUs nuevas se quedan sin nombre a propósito.** `ecuAddressCatalog` solo tiene
   estandarizada `7E8` = Engine Control Module; el resto sale como "ECU 7E9", tipo
   desconocido. Sembrar los nombres cortocircuitaría justo lo que el proyecto quiere
@@ -62,8 +68,10 @@ Ninguna. Se basa en `develop` tal cual (`a9ada00`).
 
 ## Impact
 
-- **Aditivo, sin TypeScript**: `docker/elm327/scenarios/audi_a3_tdi.py` — las respuestas
-  multi-header. Es la parte de riesgo cero: no cambia ninguna respuesta existente.
+- **Aditivo, sin TypeScript**: `docker/elm327/scenarios/audi_a3_tdi.py` — una entrada
+  nueva para el header `7DF`. Riesgo acotado: no modifica ninguna entrada existente, y el
+  filtro de header del emulador garantiza que la nueva solo casa con el barrido. La
+  regresión a descartar es una sola, `getSupportedPids()` (tarea 1.3b).
 - **Comportamiento del LLM**: `apps/core-api/src/application/prompts/cognitiveDiagnosisPrompt.ts`.
   **Requiere `pnpm eval:agent` con la clave del usuario para validarse** — y el grupo A
   entero, no solo B-E, porque un bloque nuevo puede volver al agente más verboso.

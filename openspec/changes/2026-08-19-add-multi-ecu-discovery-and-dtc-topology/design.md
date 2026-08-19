@@ -12,20 +12,31 @@ Lo verificado sobre `develop` (`a9ada00`), no supuesto:
 | `fetchDtcCodes` (`elm327Adapter.ts:212`) | Emite el modo con headers OFF; `parseDtcResponse` devuelve pares de bytes sin origen |
 | Escenario Audi | 38 usos de `ECU_R_ADDR_E`, 0 de cualquier otra dirección |
 
-## D1 — Multi-ECU en el emulador: respuestas multi-header
+## D1 — Multi-ECU en el emulador: una entrada nueva para el broadcast
 
 ELM327-emulator resuelve **una** entrada por petición (`elm.py:2103` hace `return` en la
-primera coincidencia), así que no se puede declarar una entrada por ECU para el mismo
-comando. Pero un `Response` es una cadena de bloques y admite varios headers seguidos:
+primera coincidencia), pero antes filtra por header (`elm.py:2081`): descarta toda entrada
+cuyo `Header` no sea el header activo. Eso separa los dos caminos que hoy usan `01 00`:
+
+| Camino | Header activo | Entrada que casa |
+|---|---|---|
+| `getSupportedPids()` (`elm327Adapter.ts:165`) | `7E0`, el de por defecto | `ELM_PIDS_A`, la actual — **no se toca** |
+| `discoverEcus` (barrido) | `7DF`, el broadcast funcional | **una entrada nueva** |
+
+Por eso el cambio es **aditivo**: se añade una entrada con `Header: "7DF"` cuya `Response`
+encadena un bloque `HD/SZ/DT` por ECU, que es lo que admite un `Response` del emulador:
 
 ```python
 'Response': HD(ECU_R_ADDR_E) + SZ('06') + DT('41 00 BE 3F A8 13') +
             HD(ECU_R_ADDR_T) + SZ('06') + DT('41 00 80 00 00 01') + ...
 ```
 
-Es el patrón que usa su propio escenario `car` (`obd_message.py:654`, `:783`). Se aplica
-**solo a `01 00`**, que es lo que el scan usa para descubrir: el resto de PIDs siguen
-contestando desde el motor y ninguna respuesta existente cambia.
+Es el patrón que usa su propio escenario `car` (`obd_message.py:654`, `:783`).
+
+**Convertir la entrada existente en multi-header sería un error**: `getSupportedPids()`
+pasa la respuesta por `parseModeResponse`, que espera **una sola**. El orden de `Priority`
+es irrelevante aquí (`elm.py:505`), porque el filtro de header ya garantiza que solo una
+de las dos entradas puede casar. Ninguna respuesta existente cambia.
 
 **Direcciones elegidas**, las cinco del rango legislado que `protocol.ts` acepta:
 
