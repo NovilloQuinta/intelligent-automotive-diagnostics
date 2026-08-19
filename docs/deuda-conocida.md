@@ -105,9 +105,9 @@ la entrada pero no la salida.
 |---|---|
 | `infrastructure/mcp/mcpServer.ts` | ~~848 L~~ → 98 L — **RESUELTO** (Fases A y B) |
 | `infrastructure/services/diagnosisService.ts` | ~~969 L~~ → ~~786 L~~ → **586 L** — **RESUELTO**: el flujo cognitivo salio a `services/cognitive/cognitiveDiagnosisRunner.ts` |
-| `infrastructure/persistence/sqlite/vehicleRepository.ts` | **632 L** (test 1011 L) — no estaba listado |
-| `infrastructure/composition/composition.ts` | **579 L** — no estaba listado |
-| `infrastructure/http/controllers/DiagnosisController.ts` | **578 L** — no estaba listado |
+| `infrastructure/persistence/sqlite/vehicleRepository.ts` | ~~632 L~~ → **181 L** — **RESUELTO**: un store por agregado en `sqlite/vehicle/` |
+| `infrastructure/composition/composition.ts` | ~~579 L~~ → **100 L** — **RESUELTO**: repartido por areas en `composition/` |
+| `infrastructure/http/controllers/DiagnosisController.ts` | ~~578 L~~ → **479 L** — los schemas Zod viven ya en `application/dto/diagnosis/` |
 | `apps/ui/src/lib/api.ts` | ~~658 L~~ → **438 L** (test 1582 L) — el fichero bajo; el test sigue siendo el mas grande del repo |
 
 > Cifras remedidas el 2026-08-18. `seedManufacturerCatalog.ts` (645 L) **no** cuenta:

@@ -10,7 +10,7 @@ import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import { createPidFormulaCatalog } from './pidFormulaCatalog.js'
 import type { PidFormulaCatalog } from '@/application/ports/PidFormulaCatalog.js'
 import { toFormulaEntries } from '@/application/shared/formulaEntries.js'
-import { ALL_SEED_PIDS } from '../persistence/sqlite/seed-pids.js'
+import { ALL_SEED_PIDS } from '@/domain/pidCatalog.js'
 import { dtcDescribe } from '@/domain/dtcCatalog.js'
 import { assertReadOnlyObdMode, UnsafeObdModeError } from '@/domain/obdServiceMode.js'
 

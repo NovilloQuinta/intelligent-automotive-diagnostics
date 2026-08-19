@@ -18,8 +18,34 @@ import {
 import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
-import { ALL_SEED_PIDS } from '@/infrastructure/persistence/sqlite/seed-pids.js'
-import { MODE_CURRENT_DATA } from '@/domain/pids.js'
+import {
+  DiagnosisBodySchema,
+  DiagnosisBodyTcpSchema,
+  McpToolBodySchema,
+  McpToolBodyTcpSchema,
+  McpToolParamsSchema,
+  CognitiveDiagnosisBodySchema,
+  CognitiveDiagnosisBodyTcpSchema,
+  FreezeFrameQuerySchema,
+  FreezeFrameQueryTcpSchema,
+  EcuInfoQuerySchema,
+  EcuInfoQueryTcpSchema,
+  VehicleInfoQuerySchema,
+  VehicleInfoQueryTcpSchema,
+  VehicleIdentityBodySchema,
+  LiveDataQuerySchema,
+  LiveDataQueryTcpSchema,
+  ClearDtcBodySchema,
+  ClearDtcBodyTcpSchema,
+  PendingDtcQuerySchema,
+  PendingDtcQueryTcpSchema,
+  PermanentDtcQuerySchema,
+  PermanentDtcQueryTcpSchema,
+  VehicleStatusQuerySchema,
+  VehicleStatusQueryTcpSchema,
+  DiagnosisHistoryQuerySchema,
+  DiagnosisSessionIdSchema,
+} from '@/application/dto/diagnosis/DiagnosisRequestSchemas.js'
 
 const ERROR_MESSAGES = {
   scenarioNotFound: 'Scenario not found',
@@ -39,135 +65,6 @@ const ERROR_MESSAGES = {
   sessionNotFound: 'Diagnosis session not found',
   accessTokenRequired: 'Access token required',
 } as const
-
-/** scenarioId obligatorio: modo simulacion, donde hay que elegir escenario. */
-const requiredScenarioId = z.string().min(1, 'scenarioId is required')
-
-/** scenarioId opcional: modo TCP directo, donde solo hay un vehiculo conectado. */
-const optionalScenarioId = z.string().min(1).optional()
-
-/**
- * Crea el par docker/tcp de esquemas Zod para un endpoint, aplicando
- * `scenarioId` requerido u opcional segun el modo de conexion.
- */
-function scenarioSchemas<T extends Record<string, z.ZodTypeAny>>(
-  extra: T,
-): {
-  docker: z.ZodObject<{ scenarioId: z.ZodString } & T>
-  tcp: z.ZodObject<{ scenarioId: z.ZodOptional<z.ZodString> } & T>
-} {
-  return {
-    docker: z.object({ scenarioId: requiredScenarioId, ...extra }),
-    tcp: z.object({ scenarioId: optionalScenarioId, ...extra }),
-  }
-}
-
-/** Cuerpo de `POST /api/diagnosis`: exige `scenarioId` en modo emulador y lo omite en conexion directa. */
-export const { docker: DiagnosisBodySchema, tcp: DiagnosisBodyTcpSchema } = scenarioSchemas({})
-
-/** Cuerpo de `POST /api/mcp/tools/:toolName`: escenario mas los argumentos de la tool. */
-export const { docker: McpToolBodySchema, tcp: McpToolBodyTcpSchema } = scenarioSchemas({
-  args: z.record(z.unknown()).default({}),
-})
-
-/** Parametro de ruta de `POST /api/mcp/tools/:toolName`. */
-export const McpToolParamsSchema = z.object({
-  toolName: z.string().min(1),
-})
-
-const LlmConversationItemSchema = z.discriminatedUnion('__type', [
-  z.object({ __type: z.literal('user_message'), content: z.string() }),
-  z.object({ __type: z.literal('raw_response'), data: z.unknown() }),
-  z.object({
-    __type: z.literal('tool_result'),
-    toolCallId: z.string(),
-    content: z.string(),
-    isError: z.boolean(),
-  }),
-])
-
-/** Cuerpo de `POST /api/mcp/cognitive-diagnosis`: escenario, consulta, historial y sesion a continuar. */
-export const { docker: CognitiveDiagnosisBodySchema, tcp: CognitiveDiagnosisBodyTcpSchema } =
-  scenarioSchemas({
-    query: z.string().optional(),
-    history: z.array(LlmConversationItemSchema).optional(),
-    sessionId: z.number().int().positive().optional(),
-  })
-
-const { docker: FreezeFrameQuerySchema, tcp: FreezeFrameQueryTcpSchema } = scenarioSchemas({
-  dtc: z.string().optional(),
-})
-
-const { docker: EcuInfoQuerySchema, tcp: EcuInfoQueryTcpSchema } = scenarioSchemas({})
-
-const { docker: VehicleInfoQuerySchema, tcp: VehicleInfoQueryTcpSchema } = scenarioSchemas({})
-
-/**
- * Identificacion que aporta el mecanico desde la pantalla de confirmacion.
- *
- * La validacion fuerte (normalizacion del nombre, forma de marca, WMI) vive en
- * el dominio: aqui solo se acota la forma del payload para no aceptar un JSON
- * cualquiera. Duplicar las reglas en zod las dejaria divergir.
- */
-export const VehicleIdentityBodySchema = z.object({
-  vin: z.string().length(17),
-  make: z.string().min(1).max(64),
-  model: z.string().max(64).optional(),
-  year: z.number().int().min(1980).max(2100).optional(),
-  engineType: z.string().max(64).optional(),
-})
-
-/** Códigos de PID Mode 01 válidos (SAE J1979) según el catálogo de seed data. */
-const MODE_01_PID_CODES = new Set(
-  ALL_SEED_PIDS.filter((p) => p.pidCode.mode === MODE_CURRENT_DATA).map((p) => p.pidCode.pid),
-)
-
-/** Número máximo de PIDs simultáneos en un comando multi-PID (design D6). */
-const MAX_LIVE_PIDS = 8
-
-/** Query param `pids` opcional: lista separada por comas de códigos de PID Mode 01. */
-const PidsQuerySchema = z
-  .string()
-  .optional()
-  .transform((raw) =>
-    raw === undefined || raw.trim() === ''
-      ? undefined
-      : raw.split(',').map((p) => p.trim().toUpperCase()),
-  )
-  .refine((pids) => pids === undefined || pids.length <= MAX_LIVE_PIDS, {
-    message: `Maximum ${MAX_LIVE_PIDS} PIDs allowed`,
-  })
-  .refine((pids) => pids === undefined || pids.every((pid) => MODE_01_PID_CODES.has(pid)), {
-    message: 'Invalid PID code',
-  })
-
-const { docker: LiveDataQuerySchema, tcp: LiveDataQueryTcpSchema } = scenarioSchemas({
-  pids: PidsQuerySchema,
-})
-
-const { docker: ClearDtcBodySchema, tcp: ClearDtcBodyTcpSchema } = scenarioSchemas({})
-
-const { docker: PendingDtcQuerySchema, tcp: PendingDtcQueryTcpSchema } = scenarioSchemas({})
-
-const { docker: PermanentDtcQuerySchema, tcp: PermanentDtcQueryTcpSchema } = scenarioSchemas({})
-
-const { docker: VehicleStatusQuerySchema, tcp: VehicleStatusQueryTcpSchema } = scenarioSchemas({})
-
-/** Filtros de listado del historial — todos opcionales,
- *  `userId` nunca viaja en query (se toma del token). */
-export const DiagnosisHistoryQuerySchema = z.object({
-  from: z.string().optional(),
-  to: z.string().optional(),
-  scenarioId: z.string().optional(),
-  severity: z.enum(['low', 'medium', 'high', 'critical']).optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(25),
-  offset: z.coerce.number().int().min(0).default(0),
-})
-
-/** Parametro de ruta para GET /api/diagnosis-history/:id */
-const DiagnosisSessionIdSchema = z.object({
-  id: z.coerce.number().int().min(1),
-})
 
 /** Controlador HTTP para los endpoints de diagnostico OBD. */
 export class DiagnosisController {

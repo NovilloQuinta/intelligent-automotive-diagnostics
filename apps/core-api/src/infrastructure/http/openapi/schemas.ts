@@ -13,7 +13,7 @@ import {
   McpToolBodySchema,
   CognitiveDiagnosisBodySchema,
   VehicleIdentityBodySchema,
-} from '@/infrastructure/http/controllers/DiagnosisController.js'
+} from '@/application/dto/diagnosis/DiagnosisRequestSchemas.js'
 
 import * as auth from './contracts/auth.js'
 import * as diagnosis from './contracts/diagnosis.js'

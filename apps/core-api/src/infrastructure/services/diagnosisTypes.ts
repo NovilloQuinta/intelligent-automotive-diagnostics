@@ -11,7 +11,7 @@ import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
 import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
-import { ALL_SEED_PIDS } from '@/infrastructure/persistence/sqlite/seed-pids.js'
+import { ALL_SEED_PIDS } from '@/domain/pidCatalog.js'
 import { MODE_CURRENT_DATA } from '@/domain/pids.js'
 
 /** Timeout por defecto del diagnostico cognitivo (60 s). */
