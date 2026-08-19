@@ -45,6 +45,15 @@ no un peaje por mensaje.
 5b. **Verificar ruta del worktree antes de escribir** — si trabajas en un worktree (`.claude/worktrees/xxx/`), TODO agente y toda operacion `Write`/`Edit` DEBE usar la ruta del worktree, NUNCA la del repo principal. Antes de escribir un archivo, confirma que el path contiene `.claude/worktrees/`. Si un agente escribe en el repo principal estando en un worktree, es un fallo critico.
 6. **Checks pre-push**: `pnpm verify` (lint + format + test + build de core-api y ui). No encadenes los scripts a mano: `pnpm test` solo cubre core-api.
 7. **Preguntar antes de commitear/pushear** — mostrar resumen de cambios, esperar OK humano
+7b. **Los commits son del autor humano, no del agente** — el autor y el committer son
+    siempre `Jesús Ángel Novillo Lucas-Vaquero <jesusangelquintanar@gmail.com>`. **Prohibido**
+    anadir al mensaje `Co-Authored-By: Claude`, `Claude-Session:`, `Generated with [Claude Code]`
+    o cualquier enlace a `claude.ai/code`. Si el entorno trae `user.name` puesto a `Claude`,
+    corrigelo con `git config user.name/user.email` antes del primer commit.
+7c. **Mensajes de commit cortos** — asunto de una linea en formato convencional
+    (`tipo(ambito): que cambia`), max ~72 caracteres. Cuerpo solo si el *por que* no cabe en
+    el asunto, y como mucho dos o tres lineas. El detalle largo va al change de OpenSpec o a
+    `docs/`, no al historial de git.
 8. **Al cerrar un cambio**: actualizar `docs/estado-actual.md`. Maximo 15 lineas, solo estado presente. El historial va a git, a `openspec/changes/archive/` y a Engram — nunca ahi.
 9. **Auto-auditoria post-tarea** — al terminar una tarea no trivial: skills usadas, agentes delegados, codigo nuevo estrictamente necesario.
 
