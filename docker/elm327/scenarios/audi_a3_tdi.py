@@ -37,12 +37,21 @@ scenario where everything is out of range diagnoses nothing.
 from elm.obd_message import (
     ECU_ADDR_E,
     ECU_R_ADDR_E,
+    ECU_R_ADDR_T,
+    ECU_R_ADDR_U,
+    ECU_R_ADDR_B,
+    ECU_R_ADDR_M,
     ELM_FOOTER,
     HD,
     SZ,
     DT,
     PA,
 )
+
+# Functional addressing broadcast address (ISO 15765-4). A diagnostic tool
+# sends 'AT SH 7DF' and every ECU on the bus answers from its own address.
+BROADCAST_HEADER = "7DF"
+
 
 ObdMessage = {
     # ==================================================================
@@ -56,6 +65,30 @@ ObdMessage = {
         "Descr": "Supported PIDs [01-20] (diesel bitmask)",
         "Header": ECU_ADDR_E,
         "Response": HD(ECU_R_ADDR_E) + SZ("06") + DT("41 00 B8 3B A8 13"),
+    },
+
+    # ------------  PIDs 01-20, functional broadcast  ------------
+    # Answers the ECU discovery scan, which addresses 7DF instead of a single
+    # ECU. The emulator filters entries by the active header (elm.py:2081), so
+    # this one and ELM_PIDS_A above can never match the same request:
+    #
+    #   AT SH 7E0 (default) -> ELM_PIDS_A, one line, feeds getSupportedPids()
+    #   AT SH 7DF (scan)    -> this entry, one line per ECU
+    #
+    # Each HD/SZ/DT block is emitted on its own line, which is what the client
+    # needs to collect the CAN headers. No PA() here on purpose: its answer
+    # header would be 7DF + 8 = 7E7, outside the ISO 15765-4 response range.
+    "ELM_PIDS_A_BROADCAST": {
+        "Request": "^0100" + ELM_FOOTER,
+        "Descr": "Supported PIDs [01-20] — all ECUs answering the 7DF broadcast",
+        "Header": BROADCAST_HEADER,
+        "Response": (
+            HD(ECU_R_ADDR_E) + SZ("06") + DT("41 00 B8 3B A8 13")
+            + HD(ECU_R_ADDR_T) + SZ("06") + DT("41 00 98 18 00 01")
+            + HD(ECU_R_ADDR_U) + SZ("06") + DT("41 00 80 00 00 01")
+            + HD(ECU_R_ADDR_B) + SZ("06") + DT("41 00 80 00 00 01")
+            + HD(ECU_R_ADDR_M) + SZ("06") + DT("41 00 98 18 00 01")
+        ),
     },
     "MIL_STATUS": {
         "Request": "^0101" + ELM_FOOTER,

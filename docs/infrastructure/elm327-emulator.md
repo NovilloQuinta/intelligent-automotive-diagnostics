@@ -181,31 +181,51 @@ ELM327_PORT=35000       # Puerto TCP
 
 Definidas en `.env` (raíz del proyecto).
 
-## Limitacion: no implementa functional addressing (7DF)
+## Descubrimiento de ECUs (functional addressing, 7DF)
 
-**El descubrimiento de ECUs no se puede probar contra el emulador.** Verificado
-el 13/08: `GET /api/ecu-info` devuelve `{"ecus":[]}` y la pantalla de topologia
-sale vacia, mientras `live-data` y `vehicle-info` (que exige ISO-TP multi-frame)
-funcionan perfectamente contra el mismo emulador.
+**Funciona.** Verificado el 19/08 contra el emulador: `GET /api/ecu-info` del Audi
+devuelve cinco ECUs y la pantalla de topologia las pinta.
 
-No es un bug de la app. El escenario `audi_a3_tdi.py` no tiene **ninguna**
-entrada con `7DF` ni con `09 0A`, asi que `discoverEcus` hace lo documentado:
-broadcast → nada, fallback Mode 09 → nada, devuelve `[]`. Ademas el escenario
-define una sola ECU (`ECU_R_ADDR_E`).
+| Respuesta | Peticion |
+|---|---|
+| `7E8` | `7E0` — Engine Control Module (la unica que estandariza ISO 15765-4) |
+| `7E9` | `7E1` |
+| `7EA` | `7E2` |
+| `7EB` | `7E3` |
+| `7ED` | `7E5` |
 
-**Por que no basta con anadir una entrada de broadcast**: `elm.py` NUNCA lee el
-campo `Header` de las entradas de `ObdMessage` — no hay una sola referencia en
-el codigo del emulador. Dos entradas con el mismo `Request` (`^0100`) no se
-pueden diferenciar por header: la nueva acaba respondiendo tambien a las
-lecturas dirigidas y las rompe (probado y revertido).
+Cuatro de las cinco salen en la UI como `ECU 7E9`, tipo `UNKNOWN`: `ecuAddressCatalog`
+solo estandariza `7E8` y el proyecto no inventa nombres.
 
-**Camino viable** (sin hacer): el emulador si trackea el header actual en
-`self.counters['cmd_header']`, y el campo `Response` admite invocables (ver el
-patron `ResponseHeader`). Una respuesta que ramifique segun el header podria
-emitir las tres tramas solo cuando la peticion viene por 7DF.
+### Como responde el emulador a los dos caminos
 
-**Consecuencia practica**: topologia y descubrimiento de ECUs solo se pueden
-demostrar con un vehiculo real, que si responde a functional addressing.
+El emulador **si** filtra por el campo `Header` de cada entrada de `ObdMessage`
+(`elm.py:2081`), y `cmd_set_header` arranca valiendo `7E0` (`elm.py:427`), asi que el
+filtro esta siempre activo. Eso separa limpiamente los dos usos de `01 00`:
+
+| Camino | Header activo | Entrada que casa |
+|---|---|---|
+| `getSupportedPids()` | `7E0`, el de por defecto | `ELM_PIDS_A` — una sola linea |
+| `discoverEcus` | `7DF`, el broadcast | `ELM_PIDS_A_BROADCAST` — una linea por ECU |
+
+Por eso el soporte multi-ECU se anadio como **entrada nueva** y `ELM_PIDS_A` no se toco:
+las dos no pueden casar a la vez, y el orden de `Priority` es irrelevante.
+
+La `Response` de la entrada de broadcast encadena un bloque `HD(addr) + SZ + DT` por ECU
+— el patron del escenario `car` del propio emulador (`obd_message.py:783`) — y cada bloque
+se emite en su propia linea, que es lo que necesita `parseCanHeaders`. No lleva `PA(...)`:
+su cabecera de respuesta seria `7DF + 8 = 7E7`, fuera del rango ISO 15765-4.
+
+> **Correccion a lo que decia esta pagina.** Hasta el 19/08 aqui se afirmaba que
+> «`elm.py` NUNCA lee el campo `Header`» y que el descubrimiento de ECUs solo se podia
+> demostrar con un coche real. Las dos cosas eran falsas.
+
+### Lo que este barrido no hace
+
+Encuentra solo las ECU de emisiones del rango legislado `7E8`-`7EF`, que es lo que acepta
+`isObdResponseAddr` (`protocol.ts:250`). Una maquina de taller tipo Autel lista muchos mas
+sistemas (ABS, airbag, confort) porque pregunta a la gateway y habla UDS con direcciones
+de fabricante, fuera de ese rango. Eso exigiria tocar emulador **y** codigo.
 
 ## Troubleshooting
 
