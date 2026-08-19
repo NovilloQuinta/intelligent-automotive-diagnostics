@@ -68,8 +68,37 @@ describe('ecuAddressCatalog', () => {
       expect(() => resolveEcuAddress('XYZ')).toThrow(EcuAddressError)
     })
 
-    it('should throw EcuAddressError for input longer than 3 digits', () => {
+    it('should throw EcuAddressError for a width that is neither 11-bit nor 29-bit', () => {
       expect(() => resolveEcuAddress('7E8A')).toThrow(EcuAddressError)
+      expect(() => resolveEcuAddress('18DAF1')).toThrow(EcuAddressError)
+      expect(() => resolveEcuAddress('18DAF11000')).toThrow(EcuAddressError)
+    })
+
+    it('should resolve the 29-bit ECM address', () => {
+      expect(resolveEcuAddress('18DAF110')).toEqual({
+        type: 'ECM',
+        name: 'Engine Control Module',
+        requestAddr: '18DA10F1',
+      })
+    })
+
+    it('should derive the 29-bit request address by swapping the last two bytes', () => {
+      // No es "respuesta menos 8" como en 11 bits: en 29 bits el destinatario y el
+      // origen intercambian sitio. `18DAF111` responde, `18DA11F1` pregunta.
+      expect(resolveEcuAddress('18DAF111')).toEqual({
+        type: 'UNKNOWN',
+        name: 'ECU 18DAF111',
+        requestAddr: '18DA11F1',
+      })
+    })
+
+    it('should not name 29-bit ECUs it does not know', () => {
+      expect(resolveEcuAddress('18DAF11B').type).toBe('UNKNOWN')
+      expect(resolveEcuAddress('18DAF11B').requestAddr).toBe('18DA1BF1')
+    })
+
+    it('should normalize lowercase 29-bit input', () => {
+      expect(resolveEcuAddress('18daf110')).toEqual(resolveEcuAddress('18DAF110'))
     })
   })
 })
