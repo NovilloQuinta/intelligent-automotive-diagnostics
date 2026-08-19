@@ -6,8 +6,7 @@ import { PidCode } from '@/domain/value-objects/pidCode.js'
 import { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import { PidReading } from '@/domain/entities/pidReading.js'
 import { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import { EcuDefinition } from '@/domain/entities/ecuDefinition.js'
-import { ECU_TYPE_UNKNOWN } from '@/domain/ecuAddressCatalog.js'
+import { loadEcuDefinitionLookup } from '@/application/ecu-catalog/loadEcuDefinitionLookup.js'
 import { resolveEcuDefinitions } from '@/application/ecu-catalog/resolveEcuDefinitions.js'
 import {
   text,
@@ -294,31 +293,6 @@ async function resolveDiscoveredEcus(
 
   const lookup = await loadEcuDefinitionLookup(vehicleRepo, manufacturer, model, ecus)
   return resolveEcuDefinitions(ecus, lookup)
-}
-
-/** Carga las definiciones de las ECUs `UNKNOWN` y devuelve un lookup por direccion de respuesta. */
-async function loadEcuDefinitionLookup(
-  vehicleRepo: VehicleRepository,
-  manufacturer: string,
-  model: string,
-  ecus: readonly EcuInfo[],
-): Promise<(responseAddr: string) => EcuDefinition | undefined> {
-  const unknownAddresses = [
-    ...new Set(ecus.filter((ecu) => ecu.type === ECU_TYPE_UNKNOWN).map((ecu) => ecu.responseAddr)),
-  ]
-
-  const definitions = await Promise.all(
-    unknownAddresses.map((address) =>
-      vehicleRepo.findEcuDefinitionByAddress(manufacturer, model, address),
-    ),
-  )
-
-  const byAddress = new Map<string, EcuDefinition>()
-  definitions.forEach((definition, index) => {
-    if (definition) byAddress.set(unknownAddresses[index], definition)
-  })
-
-  return (responseAddr) => byAddress.get(responseAddr)
 }
 
 function formatPidLine(p: PidDefinition): string {

@@ -41,6 +41,8 @@ import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
+import { loadEcuDefinitionLookup } from '@/application/ecu-catalog/loadEcuDefinitionLookup.js'
+import { resolveEcuDefinitions } from '@/application/ecu-catalog/resolveEcuDefinitions.js'
 import { persistDiscoveredEcus } from '@/application/shared/persistDiscoveredEcus.js'
 import type {
   DiagnosisSessionFilter,
@@ -267,7 +269,36 @@ export class DiagnosisService {
     const repository = this.resolveRepository(scenarioId)
     const ecus = await repository.getEcuInfo()
     void this.persistDiscovered(repository, ecus)
-    return ecus
+    return this.resolveLearnedNames(repository, ecus)
+  }
+
+  /**
+   * Sustituye el nombre de las ECUs sin catalogar por el que aprendio el agente.
+   *
+   * Es la misma resolucion que ya hacia la tool MCP, aplicada tambien al camino
+   * REST: el mapa de topologia mostraba `ECU 7E9 / UNKNOWN` aunque el catalogo ya
+   * supiera que era la caja de cambios. Lo resuelto se marca con `source: 'ai'`
+   * para que la pantalla lo distinga de lo que dicta la norma.
+   *
+   * Best-effort: si el vehiculo no esta identificado o el catalogo falla, se
+   * devuelven las ECUs tal cual. Descubrir no depende de poder resolver.
+   */
+  private async resolveLearnedNames(
+    repository: ObdRepository,
+    ecus: EcuInfo[],
+  ): Promise<EcuInfo[]> {
+    if (!this.vehicleRepo || ecus.length === 0) return ecus
+    try {
+      const { make, model } = await this.identify(await repository.getVehicleInfo())
+      if (make === UNKNOWN_VEHICLE_FIELD || model === UNKNOWN_VEHICLE_FIELD) return ecus
+      const lookup = await loadEcuDefinitionLookup(this.vehicleRepo, make, model, ecus)
+      return resolveEcuDefinitions(ecus, lookup)
+    } catch (e) {
+      this.logger.warn('Failed to resolve learned ECU names', {
+        err: e instanceof Error ? e : String(e),
+      })
+      return ecus
+    }
   }
 
   /**

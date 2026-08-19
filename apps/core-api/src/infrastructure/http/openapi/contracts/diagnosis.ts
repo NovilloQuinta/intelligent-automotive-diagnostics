@@ -107,6 +107,12 @@ export const ecuInfoSchema = z
     type: z.string().describe('Tipo de centralita, o `unknown` si el catalogo no la tiene'),
     protocol: z.string().describe('Protocolo del bus, por ejemplo `ISO 15765-4 CAN`'),
     discoveredAt: z.string().describe('Momento del descubrimiento en ISO 8601'),
+    source: z
+      .enum(['catalog', 'ai'])
+      .describe(
+        'De donde sale el nombre: `catalog` lo dicta ISO 15765-4 (solo estandariza el ECM), ' +
+          '`ai` lo averiguo el diagnostico cognitivo y quedo aprendido en el catalogo',
+      ),
   })
   .describe('Centralita descubierta en el bus CAN por functional addressing')
 

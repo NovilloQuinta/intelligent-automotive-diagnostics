@@ -8,6 +8,9 @@ export class EcuInfoError extends Error {
 
 const CAN_ADDR_REGEX = /^[0-9A-Fa-f]+$/
 
+/** Origen del nombre de una ECU: la norma, o lo aprendido por el agente. */
+export type EcuInfoSource = 'catalog' | 'ai'
+
 /** Entidad que representa una unidad de control electronico descubierta en el bus CAN/OBD. */
 export class EcuInfo {
   readonly id: number
@@ -19,6 +22,17 @@ export class EcuInfo {
   readonly protocol: string
   readonly discoveredAt?: string
 
+  /**
+   * De donde sale el nombre de esta ECU.
+   *
+   * `'catalog'` = la norma ISO 15765-4, que solo estandariza el ECM. `'ai'` = lo
+   * averiguo el diagnostico cognitivo y quedo aprendido en `ecu_definitions`.
+   *
+   * Se marca por la misma razon que en los PIDs: lo que aprende la IA se muestra
+   * como tal, para que el mecanico sepa que no viene de una norma.
+   */
+  readonly source: EcuInfoSource
+
   constructor(params: {
     id: number
     vehicleId: number
@@ -28,6 +42,7 @@ export class EcuInfo {
     type: string
     protocol: string
     discoveredAt?: string
+    source?: EcuInfoSource
   }) {
     if (!params.name.trim()) throw new EcuInfoError('ECU name must not be empty')
     if (!CAN_ADDR_REGEX.test(params.requestAddr)) {
@@ -45,5 +60,6 @@ export class EcuInfo {
     this.type = params.type
     this.protocol = params.protocol
     this.discoveredAt = params.discoveredAt
+    this.source = params.source ?? 'catalog'
   }
 }

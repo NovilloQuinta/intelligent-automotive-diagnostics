@@ -38,6 +38,9 @@ export function resolveEcuDefinitions(
       type: definition.type,
       protocol: ecu.protocol,
       discoveredAt: ecu.discoveredAt,
+      // El nombre ya no viene de la norma sino de lo que aprendio el agente, y
+      // eso se muestra: mismo criterio que los PIDs descubiertos por la IA.
+      source: 'ai',
     })
   })
 }

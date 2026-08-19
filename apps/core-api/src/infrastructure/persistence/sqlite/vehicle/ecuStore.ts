@@ -56,6 +56,9 @@ export class EcuStore {
       requestAddr: r.requestAddr,
       responseAddr: r.responseAddr,
       type: r.type as EcuInfo['type'],
+      // La tabla `ecus` no guarda el origen del nombre: lo aprendido vive en
+      // `ecu_definitions` y se resuelve al leer, no al persistir.
+      source: 'catalog' as const,
       protocol: r.protocol,
       discoveredAt: r.discoveredAt ?? undefined,
     }))
@@ -84,6 +87,9 @@ export class EcuStore {
       requestAddr: r.requestAddr,
       responseAddr: r.responseAddr,
       type: r.type as EcuInfo['type'],
+      // La tabla `ecus` no guarda el origen del nombre: lo aprendido vive en
+      // `ecu_definitions` y se resuelve al leer, no al persistir.
+      source: 'catalog' as const,
       protocol: r.protocol,
       discoveredAt: r.discoveredAt ?? undefined,
     }

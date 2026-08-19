@@ -87,6 +87,12 @@ export type EcuInfo = {
   type: string
   protocol: string
   discoveredAt?: string
+  /**
+   * De donde sale el nombre: `catalog` lo dicta la norma (que solo estandariza el
+   * motor), `ai` lo averiguo el diagnostico cognitivo. Se muestra con la insignia
+   * IA, igual que los PIDs descubiertos por el agente.
+   */
+  source?: 'catalog' | 'ai'
 }
 
 /**

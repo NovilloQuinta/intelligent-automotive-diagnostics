@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Network } from 'lucide-react'
 import { COLORS, type DtcCode, type EcuInfo } from './types'
+import { AiOriginBadge } from './AiOriginBadge'
 import { PanelState } from './PanelState'
 import { ECU_PANEL_MESSAGES } from './ecuMessages'
 import { getEcuTopologyColor } from './ecuTopologyColors'
@@ -96,9 +97,10 @@ function countFaultsByEcu(dtcs: readonly DtcCode[]): Map<string, number> {
  * pantalla, y porque un mapa que solo distingue por tono deja fuera a quien no
  * distingue esos tonos.
  */
-function nodeLabel(name: string, faultCount: number): string {
-  if (faultCount === 0) return name
-  return `${name} — ${faultCount} ${faultCount === 1 ? 'averia' : 'averias'}`
+function nodeLabel(ecu: EcuInfo, faultCount: number): string {
+  const origen = ecu.source === 'ai' ? ' (IA)' : ''
+  if (faultCount === 0) return `${ecu.name}${origen}`
+  return `${ecu.name}${origen} — ${faultCount} ${faultCount === 1 ? 'averia' : 'averias'}`
 }
 
 /** Un nodo esta por encima del bus cuando su y es menor que la linea. */
@@ -121,7 +123,7 @@ function EcuNode({ ecu, position, selected, onSelect, index, faultCount }: EcuNo
     <g
       role="button"
       tabIndex={0}
-      aria-label={nodeLabel(ecu.name, faultCount)}
+      aria-label={nodeLabel(ecu, faultCount)}
       aria-pressed={selected}
       transform={`translate(${position.x}, ${position.y})`}
       className="cursor-pointer focus:outline-none"
@@ -169,6 +171,12 @@ function EcuNode({ ecu, position, selected, onSelect, index, faultCount }: EcuNo
         className="pointer-events-none fill-current text-[10px] text-foreground/80"
       >
         {ecu.name}
+        {ecu.source === 'ai' ? (
+          <tspan dx={5} className="fill-primary text-[9px] font-bold">
+            <title>Centralita identificada por el diagnóstico cognitivo</title>
+            IA
+          </tspan>
+        ) : null}
       </text>
     </g>
   )
@@ -179,7 +187,12 @@ function EcuDetailCard({ ecu }: { readonly ecu: EcuInfo }) {
   return (
     <div className="mt-3 rounded-md border border-white/10 bg-white/[0.02] p-3">
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-xs font-bold text-foreground/90">{ecu.name}</span>
+        <span className="text-xs font-bold text-foreground/90">
+          {ecu.name}
+          {ecu.source === 'ai' ? (
+            <AiOriginBadge title="Centralita identificada por el diagnóstico cognitivo" />
+          ) : null}
+        </span>
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
           {ecu.type}
         </span>

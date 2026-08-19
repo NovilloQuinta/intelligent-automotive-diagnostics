@@ -5,7 +5,13 @@ import { TopologyMapPanel } from '../../../src/components/dashboard/TopologyMapP
 import { getEcuTopologyColor } from '../../../src/components/dashboard/ecuTopologyColors'
 import type { EcuInfo } from '../../../src/components/dashboard/types'
 
-function ecu(name: string, type: string, req: string, res: string): EcuInfo {
+function ecu(
+  name: string,
+  type: string,
+  req: string,
+  res: string,
+  source: EcuInfo['source'] = 'catalog',
+): EcuInfo {
   return {
     id: 0,
     vehicleId: 1,
@@ -14,6 +20,7 @@ function ecu(name: string, type: string, req: string, res: string): EcuInfo {
     responseAddr: res,
     type,
     protocol: 'ISO 15765-4 CAN',
+    source,
   }
 }
 
@@ -172,6 +179,41 @@ describe('TopologyMapPanel', () => {
       )
 
       expect(screen.getByRole('button', { name: /Motor.*2 aver/i })).toBeInTheDocument()
+    })
+  })
+
+  describe('origen del nombre', () => {
+    it('marca en el mapa lo que aprendio el agente', () => {
+      const aprendida = [ecu('Caja de cambios', 'TCM', '7E1', '7E9', 'ai')]
+
+      render(<TopologyMapPanel {...BASE} ecus={aprendida} />)
+
+      expect(screen.getByText('IA')).toBeInTheDocument()
+    })
+
+    it('no marca lo que dicta la norma', () => {
+      render(<TopologyMapPanel {...BASE} ecus={[ecu('Motor', 'ECM', '7E0', '7E8')]} />)
+
+      expect(screen.queryByText('IA')).not.toBeInTheDocument()
+    })
+
+    it('la ficha de detalle lleva la insignia con su explicacion', async () => {
+      const user = userEvent.setup()
+      render(
+        <TopologyMapPanel {...BASE} ecus={[ecu('Caja de cambios', 'TCM', '7E1', '7E9', 'ai')]} />,
+      )
+
+      await user.click(screen.getByRole('button', { name: /Caja de cambios/i }))
+
+      expect(screen.getByTitle(/diagn.stico cognitivo/i)).toBeInTheDocument()
+    })
+
+    it('el nombre accesible del nodo dice que viene de la IA', () => {
+      render(
+        <TopologyMapPanel {...BASE} ecus={[ecu('Caja de cambios', 'TCM', '7E1', '7E9', 'ai')]} />,
+      )
+
+      expect(screen.getByRole('button', { name: /Caja de cambios.*IA/i })).toBeInTheDocument()
     })
   })
 })

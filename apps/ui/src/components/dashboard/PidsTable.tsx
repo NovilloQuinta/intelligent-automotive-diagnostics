@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { AlertTriangle, Gauge, Loader2, Sparkles } from 'lucide-react'
+import { AlertTriangle, Gauge, Loader2 } from 'lucide-react'
+import { AiOriginBadge } from './AiOriginBadge'
 import {
   Table,
   TableHeader,
@@ -54,17 +55,6 @@ interface PidSelection {
 }
 
 /** Discreet badge marking a row as discovered by the AI rather than read by the fixed diagnosis. */
-function AiOriginBadge() {
-  return (
-    <span
-      className="mono ml-2 inline-flex items-center gap-1 rounded border border-primary/40 bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary"
-      title="PID descubierto por el diagnóstico cognitivo"
-    >
-      <Sparkles className="h-2.5 w-2.5" />
-      IA
-    </span>
-  )
-}
 
 /** Secondary, non-blocking loading row shown while the cognitive diagnosis resolves. */
 function AiLoadingRow({ colSpan }: { colSpan: number }) {
@@ -170,7 +160,9 @@ function PidRowView({ row, index, selection }: PidRowViewProps) {
       ) : null}
       <TableCell className="mono text-xs font-bold text-foreground/90">
         {row.code}
-        {row.source === 'ai' ? <AiOriginBadge /> : null}
+        {row.source === 'ai' ? (
+          <AiOriginBadge title="PID descubierto por el diagnóstico cognitivo" />
+        ) : null}
       </TableCell>
       <TableCell className="text-sm text-foreground/90">{row.description}</TableCell>
       <TableCell className="mono text-sm text-foreground/90">{row.value}</TableCell>
