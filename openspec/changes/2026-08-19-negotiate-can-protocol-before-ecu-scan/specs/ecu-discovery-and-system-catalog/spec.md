@@ -97,12 +97,13 @@ devolver `[]`.
 
 ## ADDED Requirements
 
-### Requirement: El barrido devuelve el adaptador al estado en que lo encontró
-El sistema SHALL restaurar, al terminar el barrido, la configuración del adaptador previa a
-él: headers apagados y la dirección de broadcast funcional del protocolo negociado, que es
-el estado por defecto sobre el que operan las lecturas normales. La restauración SHALL
-ejecutarse también cuando el barrido falla. El sistema NO SHALL dejar el adaptador fijado a
-un protocolo ni a un destinatario físico concreto.
+### Requirement: El barrido deja el adaptador listo para las lecturas normales
+El sistema SHALL restaurar, al terminar el barrido, la configuración que las lecturas
+necesitan: cabeceras apagadas y las peticiones dirigidas al ECU de motor del protocolo
+negociado. La dirección de broadcast SHALL quedar deshecha — sirve para preguntar quién hay
+en el bus, no para leer parámetros, y dejarla puesta deja las lecturas sin respuesta. La
+restauración SHALL ejecutarse también cuando el barrido falla, y el sistema NO SHALL dejar
+el adaptador fijado a ningún protocolo.
 
 #### Scenario: Las lecturas se comportan igual antes y después de un barrido
 - **GIVEN** un vehículo del que se leen los PID de telemetría correctamente
@@ -112,7 +113,7 @@ un protocolo ni a un destinatario físico concreto.
 #### Scenario: El estado se restaura aunque el barrido falle
 - **GIVEN** un bus que corta la comunicación en mitad del broadcast
 - **WHEN** el barrido lanza el error correspondiente
-- **THEN** el adaptador queda igualmente con los headers apagados y la dirección funcional del protocolo negociado
+- **THEN** el adaptador queda igualmente con las cabeceras apagadas y las peticiones dirigidas al ECU de motor
 
 #### Scenario: Un fallo del barrido no deja el vehículo inaccesible
 - **GIVEN** un barrido que ha fallado sobre un vehículo real

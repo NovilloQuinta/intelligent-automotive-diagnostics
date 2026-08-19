@@ -42,11 +42,17 @@ ISO 9141-2, KWP2000) y en el A (J1939), el barrido devuelve `[]` **sin emitir un
 comando de configuración**. El broadcast por functional addressing no tiene equivalente
 fuera de CAN, y tocar el adaptador para nada es exactamente lo que rompía la sesión.
 
-**4. Restaurar al estado previo real.** El restore deja la dirección funcional del bus
-negociado (`7DF` o `18DB33F1`), no `7E0`. El init nunca emite `AT SH`, así que antes del
-primer barrido el adaptador está en su valor por defecto, que es el broadcast: dejarlo
-apuntando físicamente al ECM hacía que las lecturas se comportaran distinto antes y después
-de un barrido.
+**4. Restaurar la dirección que las lecturas necesitan.** El restore deja las cabeceras
+apagadas y las peticiones dirigidas al ECU de motor del protocolo negociado (`7E0` en
+11 bits, `18DA10F1` en 29). **No** a la dirección funcional, aunque sea el valor de fábrica
+del adaptador: medido contra el emulador sobre una sola conexión, con `AT SH 7DF` puesto un
+`01 0C` responde `NO DATA` y con `AT SH 7E0` responde `41 0C 0C 08`. El broadcast sirve para
+preguntar quién hay en el bus, no para leer parámetros.
+
+**4b. Leer la respuesta de `AT DPN` línea a línea.** Es el primer comando del barrido, o sea
+que se emite antes de que `AT E0` apague el eco: la respuesta real es `"AT DPN\rA6\r\r>"`.
+Aplanarla da `"AT DPNA6"`, que no identifica nada, y el barrido se abstendría en un coche
+perfectamente capaz.
 
 **5. Declarar el bus real.** `EcuInfo.protocol` sale del protocolo negociado en vez de la
 constante `'CAN_11_500'`, que era falsa en cualquier otro bus.
@@ -59,6 +65,8 @@ constante `'CAN_11_500'`, que era falsa en cualquier otro bus.
 - El barrido funciona en 29 bits, que es el segundo bus más común.
 - Lo que se persiste sobre cada ECU deja de ser una suposición.
 - El bitrate deja de estar decidido en nuestro código: no era nuestra decisión.
+- Verificado end-to-end contra el ELM327-emulator: el Audi devuelve sus cinco ECUs y la
+  telemetría da los mismos valores antes y después del barrido.
 
 **En contra, o pendiente**
 

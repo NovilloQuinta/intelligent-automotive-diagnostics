@@ -121,10 +121,29 @@
 
 - [x] 11.1 `elm327AdapterInvariant.test.ts` verde **sin tocarlo**: nada de esto abre una
       vía de escritura nueva.
-- [ ] 11.2 Contra el emulador con `OBD_TRACE=true`: sale `AT DPN`, **no** sale `AT SP 6`, y
+- [x] 11.2 Contra el emulador con `OBD_TRACE=true`: sale `AT DPN`, **no** sale `AT SP 6`, y
       el barrido del Audi sigue devolviendo las cinco ECUs del escenario.
-- [ ] 11.3 Descartar la regresión concreta: `GET /api/live-data` devuelve valores **antes y
+      **Hecho el 19/08 sin Docker** (no hay demonio en el entorno): `pip install
+      ELM327-emulator` en un venv + `python docker/elm327/run_audi.py`, que es lo mismo que
+      hace la imagen. Resultado: 5 ECUs (`7E8`, `7E9`, `7EA`, `7EB`, `7ED`), etiqueta
+      `CAN_11_500`, y la traza confirma la secuencia sin `AT SP`.
+      **Destapó dos fallos que los tests no veían** — ver 11.2b y 11.2c.
+- [x] 11.3 Descartar la regresión concreta: `GET /api/live-data` devuelve valores **antes y
       después** de un barrido. Es el cabo suelto de `docs/deuda-conocida.md`.
+      **Verificado**: 770 rpm / 90 °C / 0 km/h / 35 °C antes y después, HTTP 200 los dos.
+      Ojo con el rate limit de 1 req/s del endpoint: sin pausa entre lecturas responde 429 y
+      parece un `null` de la aplicación. Ese falso positivo costó una vuelta.
+      **Conclusión para la deuda**: el estado que deja el barrido NO explica aquel `null`.
+      La causa sigue sin identificar.
+- [x] 11.2b El emulador tiene el eco activado y `AT DPN` es el primer comando, antes de
+      `AT E0`: la respuesta real es `"AT DPN\rA6\r\r>"`. Aplanarla daba `"AT DPNA6"` y el
+      barrido se abstenía en un coche capaz. `resolveCanBus` pasa a leer línea a línea.
+      La traza no lo mostraba: `flatten` (`traceConsole.ts`) descarta el eco.
+- [x] 11.2c **El restore a la dirección funcional era un error mío**: con `AT SH 7DF` puesto,
+      `01 0C` responde `NO DATA`; con `AT SH 7E0`, `41 0C 0C 08`. Revertido a la dirección
+      física del ECM, que es lo que hacía el código original. Corregidos `design.md` (D4),
+      el ADR 009, la proposal, la spec delta y `deuda-conocida.md`, que afirmaban lo
+      contrario.
 - [x] 11.4 Recuento de avisos de ESLint contra la línea base de 0.1. Igual o menor.
 - [ ] 11.5 `pnpm verify` completo (lint + format + test + build + typecheck de ambas apps).
 

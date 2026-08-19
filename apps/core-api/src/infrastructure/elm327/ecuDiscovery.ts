@@ -85,20 +85,25 @@ async function scanCanBus(
 
 /**
  * Restaura el estado del ELM327 tras el scan: headers apagados y la dirección
- * funcional del bus negociado.
+ * **física** del ECM, que es a la que van dirigidas las lecturas normales.
  *
- * Se restaura a la dirección **funcional**, no a la física del ECM, porque es el
- * estado sobre el que operan las lecturas normales: el init nunca emite `AT SH`,
- * así que antes del primer barrido el adaptador está en su valor por defecto, que
- * es el broadcast. Dejarlo apuntando al ECM hacía que las lecturas se comportaran
- * distinto antes y después de un barrido.
+ * No se restaura a la dirección funcional aunque sea el valor de fábrica del
+ * adaptador. Comprobado contra el ELM327-emulator, sobre una sola conexión:
+ *
+ * ```
+ * AT SH 7DF  →  01 0C  →  NO DATA
+ * AT SH 7E0  →  01 0C  →  41 0C 0C 08
+ * ```
+ *
+ * El broadcast funcional sirve para preguntar quién hay en el bus, no para leer
+ * PIDs: dejarlo puesto tumba la telemetría hasta la siguiente reconexión.
  */
 async function restoreElm327State(
   session: Elm327ExclusiveSession,
   bus: CanBusDescriptor,
 ): Promise<void> {
   await session.sendCommand('AT H0')
-  await session.sendCommand(setHeader(bus.functionalAddress))
+  await session.sendCommand(setHeader(bus.ecmRequestAddress))
 }
 
 /** Fallback Mode 09 PID 0A: devuelve el ECM si el bus responde, `[]` en caso contrario. */

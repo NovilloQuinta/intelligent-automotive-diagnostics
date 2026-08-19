@@ -13,11 +13,11 @@ el protocolo**. Tres consecuencias, todas verificadas sobre el código:
 - **No se recupera solo.** El init se reejecuta al reconectar (`reliableTransport.ts:304`),
   pero aquí el socket con el dongle sigue vivo: lo que está muerto es el enlace con el
   coche. Hay que reiniciar el proceso.
-- **El restore deja un estado que no es el previo.** El init nunca toca `AT SH`, así que
-  antes del primer barrido las lecturas salen con el default del ELM327, `7DF` (funcional).
-  El restore las deja en `7E0` (físico al motor). El comentario del código afirma que `7E0`
-  es "el header por defecto" y es incorrecto. Encaja con el cabo suelto `live-data devolvió
-  null` de `docs/deuda-conocida.md`, que ya sospechaba del barrido.
+- **El comentario del restore es incorrecto**, aunque el comando sí lo era: el código deja
+  `AT SH 7E0` diciendo que es "el header por defecto", y no lo es —el valor de fábrica del
+  ELM327 es `7DF`—. Es, eso sí, el destinatario que las lecturas necesitan: verificado
+  contra el emulador, con `7DF` puesto un `01 0C` responde `NO DATA`. Se corrige el
+  comentario, no el comando.
 
 Además, `DISCOVERED_ECU_PROTOCOL` (`:35`) está fijo a `'CAN_11_500'`: toda ECU descubierta
 se persiste con esa etiqueta aunque el bus sea otro.
@@ -43,8 +43,8 @@ a `true` en el `.env`, cosa que `docs/guion-demo.md:159` avisa pero el código n
 - **En pre-CAN (protocolos 1–5) o respuesta irreconocible, el barrido se abstiene**:
   devuelve `[]` sin emitir un solo comando AT. Es lo que evita tumbar las lecturas que sí
   funcionan en esos coches.
-- **El restore devuelve el adaptador al estado previo al barrido** —la dirección funcional
-  del protocolo detectado— en vez del `7E0` de hoy.
+- **El restore deja la dirección física del ECM del protocolo detectado** (`7E0` en 11 bits,
+  `18DA10F1` en 29), que es la que las lecturas necesitan.
 - **`EcuInfo.protocol` refleja el bus real** (`CAN_11_500`, `CAN_29_500`, `CAN_11_250`,
   `CAN_29_250`) en vez de una constante.
 - **Solo lectura forzada con un coche real conectado**: `OBD_MODE=serial` o `tcp` implica
@@ -87,7 +87,7 @@ Ninguna. Se basa en `develop` tal cual (`5f82166`).
   del modo de conexión. Los tres puntos que hoy leen `config.OBD_READ_ONLY` (`:78`, `:96`,
   `:121`) pasan a leer el derivado.
 - **Documentación**: `.env.example`, tabla de entorno del `README.md`, el aviso de
-  `docs/guion-demo.md:177-178` (que queda falso) y el cabo suelto de `docs/deuda-conocida.md`.
+  `docs/guion-demo.md:177-178` (que queda falso), el capítulo 3.4 del TFM y el ADR 009.
 - **Riesgo residual**: no hay coche de 29 bits ni pre-CAN contra el que probar en este
   entorno. Esa parte queda respaldada por tests y por el direccionamiento ISO 15765-4, no
   por una prueba empírica. Ver "Validación pendiente" en `design.md`.

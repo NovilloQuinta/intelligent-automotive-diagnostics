@@ -81,21 +81,52 @@ Del catálogo solo se estandariza el ECM, igual que en 11 bits: `18DAF110` → `
 Engine Control Module. Todo lo demás sale `UNKNOWN` con su dirección. **Se mantiene la
 regla de no inventar nombres** que ya fija el change de multi-ECU.
 
-## D4 — Restaurar al estado previo, no a `7E0`
+## D4 — El restore se queda en la dirección física del ECM
 
-El restore actual deja `AT SH 7E0` y el comentario lo justifica diciendo que es "el header
-por defecto" que asumen `readPid`/`readPids`. **Eso es falso**: el init nunca emite
-`AT SH`, así que antes del primer barrido las lecturas usan el default del ELM327, que es
-la dirección funcional `7DF`. Dicho de otro modo, hoy las lecturas se comportan distinto
-antes y después de un barrido, y nadie lo pidió.
+**Aquí me equivoqué en la primera versión de este diseño, y la verificación contra el
+emulador lo destapó.** Sostuve que restaurar `AT SH 7E0` era un bug y que lo correcto era
+dejar la dirección funcional, razonando que el init nunca emite `AT SH` y que por tanto el
+estado previo era el valor de fábrica del adaptador (`7DF`).
 
-El restore pasa a dejar la dirección funcional del protocolo detectado (`7DF` o
-`18DB33F1`), que sí es el estado previo. Sigue en el `finally`, como hoy.
+El razonamiento sobre cuál es el valor de fábrica es correcto. La conclusión no. Medido
+sobre una sola conexión al ELM327-emulator:
 
-Esto es lo que puede cerrar el cabo suelto de `docs/deuda-conocida.md` (`live-data`
-devolviendo `null` de forma consistente tras varios reinicios, con el barrido como
-sospecha). **No se declara resuelto**: no se ha reproducido, así que se anota como causa
-probable corregida y se deja la entrada abierta.
+```
+AT SH 7DF  →  01 0C  →  NO DATA
+AT SH 7E0  →  01 0C  →  41 0C 0C 08
+```
+
+La dirección funcional sirve para **preguntar quién hay en el bus**, no para leer PIDs.
+Dejarla puesta tumba la telemetría hasta la siguiente reconexión — exactamente el fallo que
+este change venía a evitar, reintroducido por otra puerta.
+
+Así que el restore mantiene `AT H0` + la dirección física del ECM (`7E0` u `18DA10F1`), que
+es lo que hacía el código original. Lo único que estaba mal era el comentario, que llamaba
+a `7E0` "el header por defecto": no lo es: es el destinatario que las lecturas necesitan.
+
+**Consecuencia para la deuda**: esto invalida la hipótesis de que el restore explicaba el
+`live-data devolvió null` de `docs/deuda-conocida.md`. Con el código anterior las lecturas
+posteriores al barrido funcionan; se ha comprobado. La causa de aquel fallo sigue sin
+identificar.
+
+## D4b — El eco: por qué `AT DPN` no se puede leer aplanando la respuesta
+
+Segundo hallazgo de la verificación, y solo aparece al levantar la aplicación. `AT DPN` es
+ahora el **primer** comando del barrido, o sea que se emite antes de que `AT E0` apague el
+eco. La respuesta real del adaptador es:
+
+```
+"AT DPN\rA6\r\r>"
+```
+
+Aplanarla da `"AT DPNA6"`, que no identifica ningún protocolo, así que el barrido se
+abstiene **en un coche perfectamente capaz**. Por eso `resolveCanBus` recorre la respuesta
+línea a línea en vez de limpiarla entera, que es lo que ya hace `stripEcho` para los modos
+de datos.
+
+Detalle que costó encontrar: la traza de `OBD_TRACE=true` **oculta el eco** —`flatten` en
+`traceConsole.ts` descarta la línea igual al comando—, así que la traza mostraba `< A6` y el
+parser recibía otra cosa. Los tests unitarios tampoco lo veían: guionizan la respuesta.
 
 ## D5 — Solo lectura forzada por el modo de conexión
 

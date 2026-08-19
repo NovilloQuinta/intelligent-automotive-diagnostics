@@ -178,15 +178,19 @@ Sospecha sin confirmar: estado de la conexion TCP del emulador tras un scan de
 ECUs que deja `AT H1`/`AT SH 7DF` puestos, aunque `discoverEcus` restaura en
 `finally`.
 
-**Actualizado el 2026-08-19**: la sospecha era correcta en su mitad. El barrido dejaba
-`AT SH 7E0` puesto —addressing fisico al motor— cuando el estado previo era el default del
-ELM327, la direccion funcional `7DF`, porque el init nunca emite `AT SH`. Y ademas dejaba
-`AT SP 6` sin deshacer. Las dos cosas estan corregidas: el restore devuelve la direccion
-funcional del bus negociado y `AT SP` ha desaparecido del codigo.
+**Actualizado el 2026-08-19, y la sospecha queda DESCARTADA.** Se levanto el emulador y se
+midio la secuencia completa sobre una sola conexion: tras el barrido, con el restore
+`AT H0` + `AT SH 7E0` que ya hacia el codigo, un `01 0C` responde `41 0C 0C 08` con
+normalidad. Comprobado ademas end-to-end por la API: `GET /api/live-data` devuelve los
+mismos valores antes y despues de un barrido de ECUs.
 
-**No se cierra esta entrada**: el fallo original no se ha reproducido, asi que no se puede
-afirmar que fuera esta la causa. Si vuelve a aparecer con el coche real, esta pista ya no
-sirve y hay que buscar en otro sitio.
+Es decir, **el estado que deja el barrido no explica aquel fallo**. Lo que si estaba mal era
+el comentario del codigo, que llamaba a `7E0` "el header por defecto" —el valor de fabrica
+del ELM327 es `7DF`—; corregido, pero el comando era el correcto: con `7DF` puesto las
+lecturas devuelven `NO DATA`.
+
+La causa del `live-data` en null **sigue sin identificar**. Si reaparece, esta pista ya esta
+gastada y hay que mirar en otro sitio.
 
 ## Vectorial
 

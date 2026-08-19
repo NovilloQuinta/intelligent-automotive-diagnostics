@@ -605,7 +605,7 @@ describe('Elm327TcpRepository', () => {
       'AT SH 7DF\r\n',
       '01 00\r\n',
       'AT H0\r\n',
-      'AT SH 7DF\r\n',
+      'AT SH 7E0\r\n',
     ])
   })
 

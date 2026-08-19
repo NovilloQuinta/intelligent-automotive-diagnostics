@@ -69,6 +69,19 @@ describe('resolveCanBus', () => {
     expect(resolveCanBus('a6')).toEqual(resolveCanBus('6'))
   })
 
+  it('should tolerate the command echo, which is on until AT E0 runs', () => {
+    // `AT DPN` es el primer comando del barrido, antes de que `AT E0` apague el
+    // eco, asi que la respuesta llega con el comando repetido delante. Verificado
+    // contra el ELM327-emulator: devuelve "AT DPN\rA6\r\r>".
+    expect(resolveCanBus('AT DPN\rA6\r\r>')).toEqual(resolveCanBus('6'))
+    expect(resolveCanBus('ATDPN\rA6\r>')).toEqual(resolveCanBus('6'))
+  })
+
+  it('should not mistake the echoed command for an answer', () => {
+    // Sin respuesta detras del eco no hay protocolo que devolver.
+    expect(resolveCanBus('AT DPN\r\r>')).toBeNull()
+  })
+
   it.each(['', ' ', '?', 'BUS INIT: ERROR', 'NO DATA', 'STOPPED', '66', 'X'])(
     'should return null when the adapter answers %o instead of a protocol',
     (raw) => {

@@ -8,11 +8,17 @@ const PROTOCOL_QUERY = 'AT DPN'
 /** Secuencia AT del barrido en CAN de 11 bits, tras conocer el protocolo. */
 const SCAN_11_BIT = ['AT E0', 'AT L0', 'AT H1', 'AT SH 7DF']
 
-/** Restauración al estado previo: headers off y la dirección funcional del bus. */
-const RESTORE_11_BIT = ['AT H0', 'AT SH 7DF']
+/**
+ * Restauración tras el barrido: headers off y la dirección **física** del ECM.
+ *
+ * No la funcional. Verificado contra el ELM327-emulator: con `AT SH 7DF` puesto,
+ * un `01 0C` responde `NO DATA` — la dirección de broadcast sirve para preguntar
+ * quién hay en el bus, no para leer PIDs. Dejarla puesta tumba la telemetría.
+ */
+const RESTORE_11_BIT = ['AT H0', 'AT SH 7E0']
 
 const SCAN_29_BIT = ['AT E0', 'AT L0', 'AT H1', 'AT SH 18DB33F1']
-const RESTORE_29_BIT = ['AT H0', 'AT SH 18DB33F1']
+const RESTORE_29_BIT = ['AT H0', 'AT SH 18DA10F1']
 
 /** Respuesta por defecto de `AT DPN`: CAN 11 bits / 500 kbps negociado en automático. */
 const CAN_11_500 = 'A6\r\r>'

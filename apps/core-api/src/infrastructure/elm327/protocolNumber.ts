@@ -82,11 +82,16 @@ const PROTOCOL_NUMBER_RE = /^A?([0-9A-C])$/
  *   protocolo por defecto**: es justo lo que hacía el `AT SP 6` que esto sustituye.
  */
 export function resolveCanBus(raw: string): CanBusDescriptor | null {
-  const cleaned = raw
-    .replace(/[\r\n>]/g, '')
-    .trim()
-    .toUpperCase()
-  const match = PROTOCOL_NUMBER_RE.exec(cleaned)
-  if (!match) return null
-  return CAN_BUSES[match[1]] ?? null
+  // Se lee linea a linea y no como una cadena aplanada porque `AT DPN` es el
+  // primer comando del barrido, **antes** de que `AT E0` apague el eco: la
+  // respuesta llega con el comando repetido delante. Aplanarla daria "AT DPNA6",
+  // que no identifica nada, y el barrido se abstendria en un coche perfectamente
+  // capaz. Verificado contra el ELM327-emulator, que arranca con el eco puesto.
+  for (const line of raw.split(/\r\n?|\n/)) {
+    const cleaned = line.replace(/>/g, '').trim().toUpperCase()
+    if (cleaned === '') continue
+    const match = PROTOCOL_NUMBER_RE.exec(cleaned)
+    if (match) return CAN_BUSES[match[1]] ?? null
+  }
+  return null
 }
