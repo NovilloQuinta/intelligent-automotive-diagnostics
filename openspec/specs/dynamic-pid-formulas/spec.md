@@ -7,7 +7,7 @@ Catálogo de fórmulas PID sin hardcodeo — `createPidFormulaCatalog(entries)` 
 ## Requirements
 
 ### Requirement: Catálogo de fórmulas sin hardcodeo
-El sistema SHALL proporcionar `createPidFormulaCatalog(entries)` que acepte un `Iterable<readonly [string, PidFormulaEntry]>` y devuelva un `PidFormulaCatalog` con `get(mode, pid)` y `apply(mode, pid, bytes)`.
+El sistema SHALL proporcionar `createPidFormulaCatalog(entries)` que acepte un `Iterable<readonly [string, PidFormulaEntry]>` y devuelva un `PidFormulaCatalogPort` con `get(mode, pid)` y `apply(mode, pid, bytes)`.
 
 #### Scenario: Construcción desde entries externas
 - **GIVEN** entries `[["01 0C", { formula: "(A*256+B)/4", dataBytes: 2 }], ["22 1130", { formula: "(A*256+B)/4", dataBytes: 2 }]]`

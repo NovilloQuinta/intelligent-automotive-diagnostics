@@ -7,6 +7,8 @@ description: Reglas de capa domain/application/infrastructure del proyecto — d
 
 Load this skill before creating or moving files between layers. Enforces strict Clean Architecture discipline across `domain/`, `application/`, and `infrastructure/`.
 
+The authority for these rules is `docs/adr/001-arquitectura-del-sistema.md`. This file is its operational form; if the two ever disagree, the ADR wins and this file is the one to fix.
+
 ---
 
 ## Layer rules
@@ -14,9 +16,10 @@ Load this skill before creating or moving files between layers. Enforces strict 
 ### `domain/` — Entities & Business Rules (innermost layer)
 
 **Allowed contents:**
-- Pure entity interfaces with `readonly` properties (`LiveData`, `VehicleProfile`, `EcuInfo`, `PidDefinition`, `DtcCode`)
-- Rich value objects with pure behavior: `private constructor`, `static create()` with validation and typed errors, derived getters (pattern `Vin`, `PidCode`, `FreezeFrame`, `DiagnosisResult`)
-- Type unions, enums, constants that represent business concepts
+- **Entities** (`domain/entities/`): classes with a mandatory `id: number` in the constructor, `readonly` properties, and typed errors (`User`, `EcuInfo`, `PidDefinition`, `VehicleProfile`)
+- **Value objects** (`domain/value-objects/`): immutable classes without identity, public constructor with inline validation and derived getters (`Vin`, `PidCode`, `FreezeFrame`, `DiagnosisResult`)
+- **Domain services** (`domain/services/`): pure functions over domain concepts (`pidFormula.ts`)
+- **Catalogs and constants** at the root of `domain/`: seeded reference data and OBD-II constants (`pidCatalog.ts`, `dtcCatalog.ts`, `ecuAddressCatalog.ts`, `pids.ts`)
 
 **Forbidden:**
 - NO imports from `application/` or `infrastructure/`
@@ -24,34 +27,51 @@ Load this skill before creating or moving files between layers. Enforces strict 
 - NO I/O: no file system, no HTTP, no DB drivers
 - NO side effects
 
+**Naming** — entities and value objects in `PascalCase`, one concept per file. Catalogs, constants and domain services stay in `camelCase`: they are modules of data or functions, not a single named concept.
+
 **Examples (this project):**
 ```
-domain/entities/liveData.ts       ← OK: pure interface
-domain/entities/pidDefinition.ts  ← OK: pure interface
-domain/entities/ecuInfo.ts        ← OK: pure interface
-domain/entities/vehicleProfile.ts ← OK: pure interface
-domain/vin.ts                     ← OK: rich value object (create + VinDecodeError + derived getters)
-domain/pidCode.ts                 ← OK: rich value object (create + PidCodeError + key getter)
-domain/diagnosisResult.ts         ← OK: rich value object (create derives severity, no presentation)
+domain/entities/User.ts                ← OK: entity, mandatory id, UserError
+domain/entities/EcuInfo.ts             ← OK: entity
+domain/entities/PidDefinition.ts       ← OK: entity
+domain/value-objects/Vin.ts            ← OK: value object (validation + VinDecodeError + derived getters)
+domain/value-objects/PidCode.ts        ← OK: value object (key getter)
+domain/value-objects/DiagnosisResult.ts ← OK: value object (derives severity, no presentation)
+domain/services/pidFormula.ts          ← OK: pure functions over PIDs
+domain/pidCatalog.ts                   ← OK: SAE J1979 reference data
 ```
 
 ### `application/` — Ports & Use Cases (middle layer)
 
 **Allowed contents:**
-- **Ports** (`application/ports/`): interfaces that define contracts the infrastructure must implement
-- **Use cases** (`application/diagnosis/`, `application/discovery/`, `application/agents/`, `application/simulation/`): orchestration logic
+- **Ports** (`application/ports/`): interfaces defining the contracts infrastructure must implement
+- **Use cases** (`application/use-cases/`): classes with an `execute()` method and dependencies injected through the constructor. Admin use cases live in `application/use-cases/admin/`
+- **DTOs** (`application/dto/`): pure data interfaces, one per file, grouped by area (`auth/`, `admin/`, `diagnosis/`, `llm/`, `knowledge/`, `vector/`, `audit/`, `profile/`, `web-search/`)
+- **Supporting modules**: `llm/` (anti-corruption parser), `knowledge/` (confidence scale and mappers), `prompts/`, `templates/`, `obd/`, `ecu-catalog/`, `services/`, `shared/`
 
 **Allowed imports:**
-- `domain/entities/*` — YES (reads entity types)
-- `application/ports/*` — YES (ports reference other ports)
+- `domain/**` — YES
+- `application/**` — YES
 - `infrastructure/*` — **NO** (ports must NOT know implementations)
+
+**Port naming (ADR-001, rule 9)** — repository ports carry no suffix; ports for external services end in `Port`. The suffix is what tells them apart at a glance:
+
+```
+application/ports/UserRepository.ts         ← repository: no suffix
+application/ports/ObdRepository.ts          ← repository: no suffix
+application/ports/VehicleRepository.ts      ← repository: no suffix
+application/ports/LlmClientPort.ts          ← external service: Port
+application/ports/Elm327TransportPort.ts    ← external service: Port
+application/ports/VectorStorePort.ts        ← external service: Port
+application/ports/LoggerPort.ts             ← external service: Port
+```
 
 **Examples (this project):**
 ```
-application/ports/obdRepository.interface.ts       ← OK: pure interface, imports domain types
-application/ports/vehicleRepository.interface.ts   ← OK: pure interface, imports domain types
-application/diagnosis/processVehicleDiagnosis.ts   ← OK: imports port, orchestrates
-application/discovery/discoverVehicle.ts            ← OK: imports port, orchestrates
+application/use-cases/RegisterUserUseCase.ts          ← OK: class with execute(), deps by constructor
+application/use-cases/ProcessVehicleDiagnosisUseCase.ts ← OK: imports port, orchestrates
+application/use-cases/admin/ListUsersUseCase.ts       ← OK: admin use case
+application/dto/auth/RegisterUserInput.ts             ← OK: one DTO per file
 ```
 
 **Anti-patterns:**
@@ -59,31 +79,38 @@ application/discovery/discoverVehicle.ts            ← OK: imports port, orches
 // ❌ use case importing infrastructure directly
 import { SqliteVehicleRepository } from '@/infrastructure/persistence/sqlite/vehicleRepository.js'
 
-// ❌ port importing another port from infrastructure
-import { Elm327Client } from '@/infrastructure/obd/elm327Client.js'
+// ❌ orchestration living outside use-cases/ as a loose function
+// ❌ a use case without execute(), or with dependencies resolved inside instead of injected
 ```
 
 ### `infrastructure/` — Adapters (outermost layer)
 
 **Allowed contents:**
 - Implementations of ports (`implements ObdRepository`, `implements VehicleRepository`)
-- Framework code (Express server, controllers, MCP server)
-- DB drivers, SQL schemas, repositories
-- Hardware simulators, TCP clients, parsers
+- Framework code: Express server, controllers, middleware, MCP server
+- DB drivers, Drizzle schemas, repositories, vector stores
+- Hardware adapters, TCP/serial clients, simulators, parsers
 
-**Allowed imports:**
-- `domain/entities/*` — YES
-- `application/ports/*` — YES (to implement them)
-- `application/diagnosis/*` — YES (controllers call use cases)
-- Other `infrastructure/*` modules — YES (adapters can depend on each other)
+**Allowed imports:** `domain/**`, `application/**`, and other `infrastructure/**` modules.
 
-**Examples (this project):**
+**Real directories:**
 ```
-infrastructure/persistence/sqlite/vehicleRepository.ts  ← OK: implements VehicleRepository port
-infrastructure/hardware-simulator/obdSimulatorRepository.ts ← OK: implements ObdRepository port
-infrastructure/http/controllers/diagnosisController.ts   ← OK: calls use cases
-infrastructure/mcp/mcpServer.ts                          ← OK: calls ports + use cases
+infrastructure/
+├── composition/     # Composition root — the single wiring point, split by area
+├── configuration/   # Zod-validated env vars
+├── elm327/          # ELM327 adapter, transport, protocol parsing
+├── email/           # Email sender
+├── http/            # controllers/, routes/, middleware/, openapi/, server.ts
+├── llm/             # Anthropic / OpenAI adapters
+├── mcp/             # In-process MCP server and toolkits
+├── observability/   # pino logger + SQLite sink
+├── persistence/     # sqlite/ (Drizzle), vector/ (LanceDB), mappers/
+├── services/        # Application services (auth, diagnosis)
+├── simulation/      # OBD-II simulator and scenarios
+└── web-search/      # Web search adapter
 ```
+
+**Controllers call use cases.** `AuthController`, `AdminController` and `ProfileController` are the reference: the controller validates input, calls a use case, maps the result to HTTP. It does not orchestrate.
 
 ---
 
@@ -91,38 +118,32 @@ infrastructure/mcp/mcpServer.ts                          ← OK: calls ports + u
 
 ```
 apps/core-api/src/
-├── domain/                          # Capa interna: entidades puras
-│   └── entities/
-│       ├── vehicleProfile.ts        # VehicleProfile, DiagnosisSession
-│       ├── ecuInfo.ts               # EcuInfo
-│       ├── pidDefinition.ts         # PidDefinition, PidReading
-│       ├── vehicleInfo.ts           # VehicleInfo (legacy)
-│       ├── liveData.ts              # LiveData
-│       ├── dtcCode.ts               # DtcCode
-│       └── diagnosisResult.ts       # DiagnosisResult
+├── main.ts                          # Entry point — loads config, calls buildApp, listens
 │
-├── application/                     # Capa intermedia: puertos + casos de uso
-│   ├── ports/
-│   │   ├── obdRepository.interface.ts
-│   │   └── vehicleRepository.interface.ts
-│   ├── diagnosis/
-│   │   └── processVehicleDiagnosis.ts
-│   ├── discovery/                   # discoverVehicle, scanEcus (Fase 2a)
-│   ├── agents/                      # executeCognitiveDiagnosis (Fase 2b)
-│   └── simulation/                  # switchSimulationScenario (Fase 3)
+├── domain/                          # Inner layer: pure business concepts
+│   ├── entities/                    #   9 entities, PascalCase, mandatory id
+│   ├── value-objects/               #   12 value objects, PascalCase, immutable
+│   ├── services/                    #   Pure domain functions
+│   └── *.ts                         #   Catalogs and OBD-II constants (camelCase)
 │
-└── infrastructure/                  # Capa externa: adaptadores concretos
-    ├── hardware-simulator/
-    ├── math-parsers/
-    ├── mcp/
-    ├── obd/
-    ├── persistence/
-    │   ├── sqlite/
-    │   └── vector/
-    └── http/
-        ├── controllers/
-        └── server.ts
+├── application/                     # Middle layer: ports + use cases
+│   ├── ports/                       #   23 contracts (Repository / …Port)
+│   ├── use-cases/                   #   Classes with execute(), + admin/
+│   ├── dto/                         #   One DTO per file, grouped by area
+│   ├── llm/                         #   Anti-corruption parser for LLM output
+│   ├── knowledge/                   #   Confidence scale + knowledge mappers
+│   ├── ecu-catalog/                 #   ECU definition resolution
+│   ├── prompts/                     #   System prompt blocks
+│   ├── templates/                   #   Text templates
+│   ├── obd/                         #   OBD error types
+│   ├── services/                    #   Application-level helpers
+│   └── shared/                      #   Cross-cutting pure utilities
+│
+└── infrastructure/                  # Outer layer: concrete adapters
+    └── (see the 12 directories above)
 ```
+
+The **composition root** is `infrastructure/composition/`, not `main.ts`. It is split by area (`auth.ts`, `diagnosis.ts`, `knowledge.ts`, `persistence.ts`, `llm.ts`, `admin.ts`, `email.ts`, `scenarios.ts`) and assembled in `composition.ts`. It is the only place where concrete classes are instantiated and injected into use cases.
 
 ---
 
@@ -137,7 +158,7 @@ domain ← application ← infrastructure
 - `domain/` imports NOTHING from outside itself
 - `application/` imports `domain/` but NOT `infrastructure/`
 - `infrastructure/` imports both `domain/` and `application/`
-- **Composition root** (`main.ts`) instantiates infrastructure adapters and injects them into use cases
+- **Composition root** instantiates infrastructure adapters and injects them into use cases
 
 ---
 
@@ -160,3 +181,6 @@ Run before committing to verify layer discipline:
 | Use case imports `express` | Extract HTTP concern to controller in `infrastructure/http/` |
 | Domain entity imports `drizzle-orm` | Remove the dependency; entities are pure data |
 | Port is in `domain/repositories/` | Move to `application/ports/` |
+| Controller orchestrates instead of calling a use case | Move the orchestration to `application/use-cases/` |
+| New entity or value object in `camelCase` | Rename to `PascalCase` (ADR-001) |
+| Port for an external service without `Port` suffix | Rename (ADR-001, rule 9) |

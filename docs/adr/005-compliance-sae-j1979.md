@@ -97,7 +97,7 @@ El `PidParser` (algoritmo Shunting-yard) evalúa fórmulas siguiendo exactamente
 
 ### Validación VIN (ISO 3779)
 
-La funcion `validateVin()` en `domain/vin.ts` implementa:
+La funcion `validateVin()` en `domain/value-objects/Vin.ts` implementa:
 
 - Longitud exacta de 17 caracteres
 - Caracteres prohibidos: I, O, Q

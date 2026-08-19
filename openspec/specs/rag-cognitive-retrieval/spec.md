@@ -7,7 +7,7 @@ Cablear la infraestructura vectorial del ADR-007 (bloque #1) en el flujo real de
 ## Requirements
 
 ### Requirement: Wiring del stack de conocimiento en composition root
-El sistema SHALL instanciar en `composition.ts` un `VectorStore` y un índice de conocimiento (vía `createKnowledgeIndex`) para cada una de las tres tablas del ADR-007 (`pids_index`, `dtcs_index`, `diagnoses_index`), compartiendo una única conexión LanceDB y un único `EmbeddingGenerator`.
+El sistema SHALL instanciar en `composition.ts` un `VectorStorePort` y un índice de conocimiento (vía `createKnowledgeIndex`) para cada una de las tres tablas del ADR-007 (`pids_index`, `dtcs_index`, `diagnoses_index`), compartiendo una única conexión LanceDB y un único `EmbeddingGeneratorPort`.
 
 #### Scenario: Inicialización correcta
 - **WHEN** `buildApp` arranca con `LANCEDB_PATH` accesible

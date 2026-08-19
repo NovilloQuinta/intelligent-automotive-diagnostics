@@ -157,7 +157,7 @@ apps/core-api/src/
 │   │   ├── LlmClientPort.ts, AuthServicePort.ts
 │   │   ├── LoggerPort.ts, AuditLogRepository.ts
 │   │   ├── RefreshTokenRepository.ts, VehicleRepository.ts
-│   │   └── ToolCallHandler.ts
+│   │   └── ToolCallHandlerPort.ts
 │   ├── use-cases/              ← Clases con execute()
 │   │   ├── RegisterUserUseCase.ts
 │   │   ├── LoginUserUseCase.ts

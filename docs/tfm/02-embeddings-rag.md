@@ -54,20 +54,20 @@ La capa vectorial sigue los principios de **Clean Architecture** del proyecto:
 
 | Capa | Responsabilidad | Archivos clave |
 |------|----------------|----------------|
-| **domain** | Value objects (`KnowledgeSource`) | `domain/value-objects/knowledgeSource.ts` |
-| **application** | Puertos, DTOs, casos de uso, lógica de confianza | `ports/VectorStore.ts`, `ports/VectorRepository.ts`, `knowledge/*` |
+| **domain** | Value objects (`KnowledgeSource`) | `domain/value-objects/KnowledgeSource.ts` |
+| **application** | Puertos, DTOs, casos de uso, lógica de confianza | `ports/VectorStorePort.ts`, `ports/VectorRepository.ts`, `knowledge/*` |
 | **infrastructure** | Implementación con LanceDB + transformers.js | `persistence/vector/*`, `mcp/mcpServer.ts` |
 
-El puerto `VectorStore` es la única pieza que cambia al cambiar de motor vectorial. Todo lo demás —los casos de uso, los mappers, el sistema de confianza— es independiente del backend.
+El puerto `VectorStorePort` es la única pieza que cambia al cambiar de motor vectorial. Todo lo demás —los casos de uso, los mappers, el sistema de confianza— es independiente del backend.
 
 ### 2.2.1 Puertos (interfaces)
 
 ```
 application/ports/
-├── VectorStore.ts          # Almacén vectorial crudo (upsert, query, count, sample)
+├── VectorStorePort.ts          # Almacén vectorial crudo (upsert, query, count, sample)
 ├── VectorRepository.ts     # Repositorio tipado con búsqueda semántica (index, search)
-├── EmbeddingGenerator.ts   # Función pura: (text: string) => Promise<number[]>
-├── KnowledgeStack.ts       # Agrupa los tres índices (pids, dtcs, diagnosis)
+├── EmbeddingGeneratorPort.ts   # Función pura: (text: string) => Promise<number[]>
+├── KnowledgeStackPort.ts       # Agrupa los tres índices (pids, dtcs, diagnosis)
 ├── PidVectorRepository.ts  # = VectorRepository<PidKnowledgeEntry>
 ├── DtcVectorRepository.ts  # = VectorRepository<DtcKnowledgeEntry>
 └── DiagnosisVectorRepository.ts  # = VectorRepository<DiagnosisKnowledgeEntry>
@@ -241,7 +241,7 @@ El flujo está embebido en el **system prompt del LLM**. Cuando el modelo encuen
 La implementación en `mcpServer.ts` (`handleIndexPid`, `handleIndexDtc`):
 
 ```typescript
-function handleIndexPid(stack: KnowledgeStack, obdRepo: ObdRepository): ToolHandler {
+function handleIndexPid(stack: KnowledgeStackPort, obdRepo: ObdRepository): ToolHandler {
   return async (args) => {
     const source = resolveKnowledgeSource(args)
     const entry: PidKnowledgeEntry = { ...baseKnowledgeEntry(args, source), validated: false }
@@ -411,7 +411,7 @@ export async function createKnowledgeStack(
   logger: LoggerPort,
 ): Promise<KnowledgeStackWithStores | undefined> {
   const { db } = await initLanceDb(config.LANCEDB_PATH)
-  const embed: EmbeddingGenerator = createEmbedding
+  const embed: EmbeddingGeneratorPort = createEmbedding
 
   const [pidsStore, dtcsStore, diagnosesStore] = await Promise.all([
     createLanceVectorStore(db, PIDS_TABLE_CONFIG),
@@ -514,7 +514,7 @@ Comparación entre el **ADR 007** (`docs/adr/007-catalogo-auto-expansivo-lancedb
 - `apps/core-api/src/application/dto/knowledge/ValidationResult.ts`
 - `apps/core-api/src/application/use-cases/ExecuteCognitiveDiagnosisUseCase.ts`
 - `apps/core-api/src/infrastructure/mcp/mcpServer.ts` (funciones `handleSearchSimilar`, `handleIndexPid`, `handleIndexDtc`, `handleIndexDiagnosis`, `registerKnowledgeTools`)
-- `apps/core-api/src/application/ports/` (VectorStore, VectorRepository, EmbeddingGenerator, KnowledgeStack, PidVectorRepository, DtcVectorRepository, DiagnosisVectorRepository)
+- `apps/core-api/src/application/ports/` (VectorStorePort, VectorRepository, EmbeddingGeneratorPort, KnowledgeStackPort, PidVectorRepository, DtcVectorRepository, DiagnosisVectorRepository)
 - `apps/core-api/src/infrastructure/composition/composition.ts` (función `createKnowledgeStack`)
-- `apps/core-api/src/domain/value-objects/knowledgeSource.ts`
+- `apps/core-api/src/domain/value-objects/KnowledgeSource.ts`
 - `docs/adr/007-catalogo-auto-expansivo-lancedb.md`

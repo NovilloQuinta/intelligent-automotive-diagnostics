@@ -19,7 +19,7 @@ catálogo (que solo estandariza el ECM; el resto SHALL resolverse como `UNKNOWN`
 `protocol` reflejando el bus realmente negociado.
 
 #### Scenario: El barrido lee el protocolo antes de configurar nada
-- **GIVEN** un `Elm327Transport` conectado a un vehículo que negoció CAN 11 bits / 500 kbps
+- **GIVEN** un `Elm327TransportPort` conectado a un vehículo que negoció CAN 11 bits / 500 kbps
 - **WHEN** se invoca `getEcuInfo()`
 - **THEN** el primer comando emitido es la consulta del protocolo negociado
 - **AND** no se emite ningún comando que fije el protocolo del bus

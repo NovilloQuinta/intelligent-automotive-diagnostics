@@ -103,13 +103,13 @@ El sistema SHALL mantener el catálogo de fórmulas del emulador ELM327 (`STANDA
 ---
 
 ### Requirement: Inyección de catálogo de fórmulas desde nuevas ubicaciones
-El sistema SHALL modificar `Elm327TcpRepository` en `infrastructure/elm327/elm327Adapter.ts` para importar `createPidFormulaCatalog` desde `./pidFormulaCatalog.js`, `PidFormulaCatalog` type desde `@/application/ports/PidFormulaCatalog.js`, y `pidDefinitionsToFormulaEntries` desde `@/application/shared/pidDefinitionsToFormulaEntries.js`. El catálogo se construye en el constructor con `createPidFormulaCatalog(pidDefinitionsToFormulaEntries(ALL_SEED_PIDS))` sin cambios de comportamiento.
+El sistema SHALL modificar `Elm327TcpRepository` en `infrastructure/elm327/elm327Adapter.ts` para importar `createPidFormulaCatalog` desde `./pidFormulaCatalog.js`, `PidFormulaCatalogPort` type desde `@/application/ports/PidFormulaCatalogPort.js`, y `pidDefinitionsToFormulaEntries` desde `@/application/shared/pidDefinitionsToFormulaEntries.js`. El catálogo se construye en el constructor con `createPidFormulaCatalog(pidDefinitionsToFormulaEntries(ALL_SEED_PIDS))` sin cambios de comportamiento.
 
 #### Scenario: Import de createPidFormulaCatalog desde pidFormulaCatalog.ts
 - **GIVEN** `elm327Adapter.ts` tras el refactor
 - **WHEN** se inspeccionan sus imports
 - **THEN** `createPidFormulaCatalog` se importa desde `./pidFormulaCatalog.js` (no desde `./pidFormulas.js`)
-- **AND** `PidFormulaCatalog` type se importa desde `@/application/ports/PidFormulaCatalog.js`
+- **AND** `PidFormulaCatalogPort` type se importa desde `@/application/ports/PidFormulaCatalogPort.js`
 - **AND** `pidDefinitionsToFormulaEntries` se importa desde `@/application/shared/pidDefinitionsToFormulaEntries.js`
 
 #### Scenario: Constructor sin cambios de comportamiento

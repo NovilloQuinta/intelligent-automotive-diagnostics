@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Puertos, indices de conocimiento y adaptador para indexar y buscar por similitud semantica el conocimiento auto-expansivo del ADR-007: definiciones de PIDs propietarios, codigos DTC especificos de fabricante y casos de diagnostico resueltos. El motor vectorial queda confinado tras el puerto `VectorStore`, de modo que cambiarlo no toque ni la capa de aplicacion ni la logica de orquestacion.
+Puertos, indices de conocimiento y adaptador para indexar y buscar por similitud semantica el conocimiento auto-expansivo del ADR-007: definiciones de PIDs propietarios, codigos DTC especificos de fabricante y casos de diagnostico resueltos. El motor vectorial queda confinado tras el puerto `VectorStorePort`, de modo que cambiarlo no toque ni la capa de aplicacion ni la logica de orquestacion.
 
 ## Requirements
 
@@ -22,7 +22,7 @@ El sistema SHALL definir en `application/ports/` los puertos `PidVectorRepositor
 ---
 
 ### Requirement: Puerto de almacen vectorial
-El sistema SHALL definir un puerto `VectorStore` con `upsert(records)` y `query({ vector, limit, filter })`. El filtro SHALL viajar estructurado —fabricante y modelo opcionales— y NO SHALL expresarse como cadena de consulta de ningun motor.
+El sistema SHALL definir un puerto `VectorStorePort` con `upsert(records)` y `query({ vector, limit, filter })`. El filtro SHALL viajar estructurado —fabricante y modelo opcionales— y NO SHALL expresarse como cadena de consulta de ningun motor.
 
 #### Scenario: Filtro estructurado
 - **WHEN** la capa de aplicacion acota una busqueda por fabricante
@@ -48,11 +48,11 @@ Los metadatos de un `VectorRecord` SHALL restringirse a `string`, `number` o `bo
 ---
 
 ### Requirement: Indice de conocimiento agnostico del motor
-El sistema SHALL proporcionar `createKnowledgeIndex` en `application/knowledge/`, que orqueste embeber, guardar y buscar apoyandose unicamente en los puertos `VectorStore` y `EmbeddingGenerator`. Los tres mapeadores (`pidKnowledgeMapper`, `dtcKnowledgeMapper`, `diagnosisKnowledgeMapper`) viven junto a el, sin una sola referencia a LanceDB.
+El sistema SHALL proporcionar `createKnowledgeIndex` en `application/knowledge/`, que orqueste embeber, guardar y buscar apoyandose unicamente en los puertos `VectorStorePort` y `EmbeddingGeneratorPort`. Los tres mapeadores (`pidKnowledgeMapper`, `dtcKnowledgeMapper`, `diagnosisKnowledgeMapper`) viven junto a el, sin una sola referencia a LanceDB.
 
 #### Scenario: Indexado de una entrada
 - **WHEN** se invoca `index(entry)`
-- **THEN** se genera el embedding de `entry.embeddedText` mediante el `EmbeddingGenerator`
+- **THEN** se genera el embedding de `entry.embeddedText` mediante el `EmbeddingGeneratorPort`
 - **AND** se invoca `upsert` con el vector y los metadatos producidos por `toMetadata`
 
 #### Scenario: Busqueda por similitud
@@ -68,7 +68,7 @@ El sistema SHALL proporcionar `createKnowledgeIndex` en `application/knowledge/`
 ---
 
 ### Requirement: Adaptador LanceDB
-El sistema SHALL implementar `createLanceVectorStore(db, config)` en `infrastructure/persistence/vector/`, que cumpla `VectorStore` sobre LanceDB, aprovisione su tabla y concentre todo lo especifico del motor.
+El sistema SHALL implementar `createLanceVectorStore(db, config)` en `infrastructure/persistence/vector/`, que cumpla `VectorStorePort` sobre LanceDB, aprovisione su tabla y concentre todo lo especifico del motor.
 
 #### Scenario: Escapado de literales
 - **WHEN** se consulta con un valor de filtro que contiene una comilla simple

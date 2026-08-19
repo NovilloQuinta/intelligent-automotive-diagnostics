@@ -110,7 +110,7 @@ El endpoint está protegido con **rate limiting** (`cognitiveLimiter`) para prev
 const repository = this.resolveRepository(scenarioId)
 const mcp = this.getMcpServer(scenarioId)   // ← crea MCP Server nuevo
 const tools = mcp.listTools()               // ← 7-16 tools según configuración
-const handler: ToolCallHandler = async (name, args) => {
+const handler: ToolCallHandlerPort = async (name, args) => {
   const result = await mcp.callTool(name, args)
   return this.firstText(result, name)
 }
@@ -225,7 +225,7 @@ Usuario ──▶ POST /api/mcp/cognitive-diagnosis
          │        │        │                    │
          │        │        │              MCP Server.callTool()
          │        │        │                    │
-         │        │        │              ObdRepository / KnowledgeStack
+         │        │        │              ObdRepository / KnowledgeStackPort
          │        │        │                    │
          │        │        └──── resultado ◀────┘
          │        │
@@ -259,7 +259,7 @@ El servidor MCP (`mcpServer.ts`) registra tools condicionalmente según las depe
 
 **Auto-aprendizaje en `read_pid`**: cuando se lee un PID no estándar (Mode ≠ `01`) y existe `VehicleRepository`, el handler registra automáticamente el PID en la base de datos con fórmula genérica `(A*256+B)`, 2 bytes de datos, y confianza `0.3`. Esto es **transparente para el LLM** — él solo ve el valor leído.
 
-### Tools de conocimiento RAG (si `KnowledgeStack` está configurado)
+### Tools de conocimiento RAG (si `KnowledgeStackPort` está configurado)
 
 | Tool | Parámetros | Descripción |
 |---|---|---|
@@ -546,7 +546,7 @@ Siguiendo el patrón **Port/Adapter** (Clean Architecture / Hexagonal), el siste
 
 ```typescript
 export interface LlmClientPort {
-  sendMessage(input: LlmMessageInput, handler: ToolCallHandler): Promise<LlmResponse>
+  sendMessage(input: LlmMessageInput, handler: ToolCallHandlerPort): Promise<LlmResponse>
   sendSingleMessage(input: LlmMessageInput): Promise<LlmSingleResponse>
 }
 ```

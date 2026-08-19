@@ -62,7 +62,7 @@ La capa OBD del proyecto se estructura en tres niveles según Clean Architecture
 | Capa | Directorio | Responsabilidad |
 |------|-----------|----------------|
 | **Dominio** | `domain/` | `VehicleStatus`, `Vin`, `DtcCode`, `FreezeFrame`, `PidFormulaEntry`, `Formula`, `LiveData`, catálogo DTC (`dtcCatalog`), motor de fórmulas (`services/pidFormula`) |
-| **Aplicación** | `application/ports/` | Puerto `ObdRepository` (contrato), `PidFormulaCatalog` (contrato) |
+| **Aplicación** | `application/ports/` | Puerto `ObdRepository` (contrato), `PidFormulaCatalogPort` (contrato) |
 | **Infraestructura** | `infrastructure/elm327/`, `infrastructure/simulation/`, `infrastructure/composition/` | Implementaciones concretas: TCP, simulación, wiring |
 
 El contrato central es la interfaz `ObdRepository` (`apps/core-api/src/application/ports/ObdRepository.ts`), que define **13 métodos** que toda implementación debe satisfacer:
@@ -289,7 +289,7 @@ códigos de avería y el VIN sigan funcionando en un coche antiguo.
 
 ### 4.2 Detalle de modos implementados
 
-**Mode 01 — Current Data**. Lee PIDs en tiempo real. El PID 00 devuelve un bitmask de 4 bytes indicando qué PIDs del rango 01-20 están soportados. El PID 01 devuelve 4 bytes con estado MIL, conteo de DTCs y monitores de emisiones. Los PIDs de sensores (05, 0C, 0D, 0F, etc.) se decodifican aplicando la fórmula SAE J1979 correspondiente desde el `PidFormulaCatalog`.
+**Mode 01 — Current Data**. Lee PIDs en tiempo real. El PID 00 devuelve un bitmask de 4 bytes indicando qué PIDs del rango 01-20 están soportados. El PID 01 devuelve 4 bytes con estado MIL, conteo de DTCs y monitores de emisiones. Los PIDs de sensores (05, 0C, 0D, 0F, etc.) se decodifican aplicando la fórmula SAE J1979 correspondiente desde el `PidFormulaCatalogPort`.
 
 ```typescript
 // Ejemplo de lectura de RPM desde Elm327TcpRepository
@@ -598,7 +598,7 @@ El freeze frame se lee con Mode 02, iterando 5 PIDs (04, 05, 0C, 0D, 11). Si un 
 
 ### 9.2 ISO 3779 — Validación VIN
 
-Implementado en `domain/value-objects/vin.ts`:
+Implementado en `domain/value-objects/Vin.ts`:
 
 - ✅ 17 caracteres exactos
 - ✅ Caracteres prohibidos I, O, Q
@@ -701,18 +701,18 @@ Esta sección compara los documentos de arquitectura (ADR 004, 005, 008) y la do
 | `apps/core-api/src/domain/pids.ts` | Constantes: modos y PIDs |
 | `apps/core-api/src/domain/pidFormulaEntry.ts` | Entidad PidFormulaEntry |
 | `apps/core-api/src/domain/services/pidFormula.ts` | Motor Shunting-yard |
-| `apps/core-api/src/domain/value-objects/formula.ts` | Value Object Formula |
-| `apps/core-api/src/domain/value-objects/vin.ts` | Value Object VIN (ISO 3779) |
-| `apps/core-api/src/domain/value-objects/vehicleStatus.ts` | Value Object VehicleStatus (SAE J1979) |
-| `apps/core-api/src/domain/value-objects/vehicleInfo.ts` | Value Object VehicleInfo |
-| `apps/core-api/src/domain/value-objects/dtcCode.ts` | Value Object DtcCode (SAE J2012) |
-| `apps/core-api/src/domain/value-objects/freezeFrame.ts` | Value Object FreezeFrame |
-| `apps/core-api/src/domain/value-objects/liveData.ts` | Value Object LiveData |
-| `apps/core-api/src/domain/value-objects/pidCode.ts` | Value Object PidCode |
+| `apps/core-api/src/domain/value-objects/Formula.ts` | Value Object Formula |
+| `apps/core-api/src/domain/value-objects/Vin.ts` | Value Object VIN (ISO 3779) |
+| `apps/core-api/src/domain/value-objects/VehicleStatus.ts` | Value Object VehicleStatus (SAE J1979) |
+| `apps/core-api/src/domain/value-objects/VehicleInfo.ts` | Value Object VehicleInfo |
+| `apps/core-api/src/domain/value-objects/DtcCode.ts` | Value Object DtcCode (SAE J2012) |
+| `apps/core-api/src/domain/value-objects/FreezeFrame.ts` | Value Object FreezeFrame |
+| `apps/core-api/src/domain/value-objects/LiveData.ts` | Value Object LiveData |
+| `apps/core-api/src/domain/value-objects/PidCode.ts` | Value Object PidCode |
 | `apps/core-api/src/domain/dtcCatalog.ts` | Catálogo de descripciones DTC estándar (P0xxx, SAE J2012) |
-| `apps/core-api/src/domain/entities/ecuInfo.ts` | Entidad EcuInfo |
+| `apps/core-api/src/domain/entities/EcuInfo.ts` | Entidad EcuInfo |
 | `apps/core-api/src/application/ports/ObdRepository.ts` | Puerto ObdRepository |
-| `apps/core-api/src/application/ports/PidFormulaCatalog.ts` | Puerto PidFormulaCatalog |
+| `apps/core-api/src/application/ports/PidFormulaCatalogPort.ts` | Puerto PidFormulaCatalogPort |
 | `scripts/send-obd.ts` | Script de prueba: enviar comando OBD |
 | `scripts/scan-pids.ts` | Script de prueba: escanear PIDs soportados |
 | `docker/elm327/Dockerfile` | Imagen Docker del emulador |

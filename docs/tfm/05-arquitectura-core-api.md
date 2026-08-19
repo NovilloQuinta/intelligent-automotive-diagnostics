@@ -103,29 +103,29 @@ Entidades con identidad (`id: number` obligatorio) y validación en constructor:
 
 | Entidad | Fichero | Propósito |
 |---|---|---|
-| `User` | `entities/user.ts` | Usuario (particular o taller) con email, password_hash, rol (user/admin), bloqueo por intentos |
-| `VehicleProfile` | `entities/vehicleProfile.ts` | Perfil completo de vehículo (VIN, marca, modelo, año, motor) |
-| `DiagnosisSession` | `entities/diagnosisSession.ts` | Sesión de diagnóstico vinculada a vehículo y escenario |
-| `EcuInfo` | `entities/ecuInfo.ts` | ECU descubierta en el bus CAN (nombre, direcciones, protocolo) |
-| `PidDefinition` | `entities/pidDefinition.ts` | Definición de un PID OBD-II (modo, código, fórmula, confianza) |
-| `PidReading` | `entities/pidReading.ts` | Lectura histórica de un PID (raw hex + valor parseado) |
+| `User` | `entities/User.ts` | Usuario (particular o taller) con email, password_hash, rol (user/admin), bloqueo por intentos |
+| `VehicleProfile` | `entities/VehicleProfile.ts` | Perfil completo de vehículo (VIN, marca, modelo, año, motor) |
+| `DiagnosisSession` | `entities/DiagnosisSession.ts` | Sesión de diagnóstico vinculada a vehículo y escenario |
+| `EcuInfo` | `entities/EcuInfo.ts` | ECU descubierta en el bus CAN (nombre, direcciones, protocolo) |
+| `PidDefinition` | `entities/PidDefinition.ts` | Definición de un PID OBD-II (modo, código, fórmula, confianza) |
+| `PidReading` | `entities/PidReading.ts` | Lectura histórica de un PID (raw hex + valor parseado) |
 
 #### Value Objects (11 ficheros)
 Objetos inmutables sin identidad, con validación en constructor:
 
 | Value Object | Fichero | Propósito |
 |---|---|---|
-| `Email` | `value-objects/email.ts` | Email validado (regex + lowercase + trim) |
-| `Vin` | `value-objects/vin.ts` | VIN ISO 3779 (17 caracteres, validación de checksum) |
-| `PidCode` | `value-objects/pidCode.ts` | Par modo+PID (ej. `01 0C`) con formato canónico |
-| `Formula` | `value-objects/formula.ts` | Fórmula de conversión PID (ej. `A*256+B`) |
-| `DtcCode` | `value-objects/dtcCode.ts` | Código DTC SAE J2012 (ej. `P0301`) |
-| `LiveData` | `value-objects/liveData.ts` | Telemetría en vivo (RPM, temperatura, velocidad, etc.) |
-| `DiagnosisResult` | `value-objects/diagnosisResult.ts` | Resultado de diagnóstico (severidad derivada del estado) |
-| `VehicleInfo` | `value-objects/vehicleInfo.ts` | Datos de identificación del vehículo (marca, modelo, VIN) |
-| `VehicleStatus` | `value-objects/vehicleStatus.ts` | Estado MIL + monitores de emisiones (Mode 01 PID 01) |
-| `FreezeFrame` | `value-objects/freezeFrame.ts` | Fotograma congelado OBD-II asociado a un DTC |
-| `KnowledgeSource` | `value-objects/knowledgeSource.ts` | Procedencia de un dato del catálogo (manual/auto-aprendizaje/LLM) |
+| `Email` | `value-objects/Email.ts` | Email validado (regex + lowercase + trim) |
+| `Vin` | `value-objects/Vin.ts` | VIN ISO 3779 (17 caracteres, validación de checksum) |
+| `PidCode` | `value-objects/PidCode.ts` | Par modo+PID (ej. `01 0C`) con formato canónico |
+| `Formula` | `value-objects/Formula.ts` | Fórmula de conversión PID (ej. `A*256+B`) |
+| `DtcCode` | `value-objects/DtcCode.ts` | Código DTC SAE J2012 (ej. `P0301`) |
+| `LiveData` | `value-objects/LiveData.ts` | Telemetría en vivo (RPM, temperatura, velocidad, etc.) |
+| `DiagnosisResult` | `value-objects/DiagnosisResult.ts` | Resultado de diagnóstico (severidad derivada del estado) |
+| `VehicleInfo` | `value-objects/VehicleInfo.ts` | Datos de identificación del vehículo (marca, modelo, VIN) |
+| `VehicleStatus` | `value-objects/VehicleStatus.ts` | Estado MIL + monitores de emisiones (Mode 01 PID 01) |
+| `FreezeFrame` | `value-objects/FreezeFrame.ts` | Fotograma congelado OBD-II asociado a un DTC |
+| `KnowledgeSource` | `value-objects/KnowledgeSource.ts` | Procedencia de un dato del catálogo (manual/auto-aprendizaje/LLM) |
 
 #### Catálogos y Constantes
 - **`pids.ts`**: Constantes de modos OBD-II (`MODE_CURRENT_DATA = '01'`, `MODE_PROPRIETARY = '22'`) y PIDs estándar (`PID_RPM = '0C'`, `PID_COOLANT_TEMP = '05'`, etc.)
@@ -148,19 +148,19 @@ Definen los contratos que `infrastructure/` debe implementar:
 | `RefreshTokenRepository` | Almacenamiento y revocación de refresh tokens |
 | `AuthServicePort` | Hashing bcrypt + generación/verificación de JWT |
 | `LlmClientPort` | Cliente LLM (Anthropic u OpenAI) para diagnóstico cognitivo |
-| `KnowledgeStack` | Acceso a los índices vectoriales (PIDs, DTCs, diagnósticos) |
-| `EmbeddingGenerator` | Generación de embeddings para búsqueda semántica |
-| `VectorStore` | Almacén vectorial genérico (usado por LanceDB) |
+| `KnowledgeStackPort` | Acceso a los índices vectoriales (PIDs, DTCs, diagnósticos) |
+| `EmbeddingGeneratorPort` | Generación de embeddings para búsqueda semántica |
+| `VectorStorePort` | Almacén vectorial genérico (usado por LanceDB) |
 | `WebSearchPort` | Búsqueda web externa |
 | `LoggerPort` | Interfaz de logging (debug, info, warn, error) |
-| `ToolCallHandler` | Handler de tools MCP durante diagnóstico cognitivo |
-| `PidFormulaCatalog` | Catálogo de fórmulas PID |
+| `ToolCallHandlerPort` | Handler de tools MCP durante diagnóstico cognitivo |
+| `PidFormulaCatalogPort` | Catálogo de fórmulas PID |
 | `PidVectorRepository` | Repositorio vectorial de PIDs |
 | `DtcVectorRepository` | Repositorio vectorial de DTCs |
 | `DiagnosisVectorRepository` | Repositorio vectorial de diagnósticos |
 | `VectorRepository` | Repositorio vectorial genérico |
 
-#### Casos de Uso (15 ficheros)
+#### Casos de Uso (21 ficheros)
 Clases con método `execute()`, dependencias inyectadas por constructor:
 
 | Caso de uso | Fichero | Propósito |
@@ -175,6 +175,12 @@ Clases con método `execute()`, dependencias inyectadas por constructor:
 | `ExecuteLlmToolCalling` | `ExecuteLlmToolCalling.ts` | Bucle de tool calling LLM (máx. iteraciones) |
 | `ValidateDiscoveredPidUseCase` | `ValidateDiscoveredPidUseCase.ts` | Validación de PIDs auto-descubiertos |
 | `ValidateDiscoveredDtcUseCase` | `ValidateDiscoveredDtcUseCase.ts` | Validación de DTCs auto-descubiertos |
+| `ResolveVehicleIdentityUseCase` | `ResolveVehicleIdentityUseCase.ts` | Cascada de identificación (BBDD → catálogo → web → mecánico) |
+| `ConfirmVehicleIdentityUseCase` | `ConfirmVehicleIdentityUseCase.ts` | Confirmación manual del fabricante, que queda aprendida |
+| `ChangePasswordUseCase` | `ChangePasswordUseCase.ts` | Cambio de contraseña con verificación de la actual |
+| `ForgotPasswordUseCase` | `ForgotPasswordUseCase.ts` | Emisión del token de recuperación |
+| `ResetPasswordUseCase` | `ResetPasswordUseCase.ts` | Restablecimiento con token de un solo uso |
+| `UpdateProfileUseCase` | `UpdateProfileUseCase.ts` | Actualización de los datos del perfil |
 | `GetAdminOverviewUseCase` | `admin/GetAdminOverviewUseCase.ts` | Resumen del panel admin |
 | `ListSystemLogsUseCase` | `admin/ListSystemLogsUseCase.ts` | Logs paginados/filtrados |
 | `ListAuditLogsUseCase` | `admin/ListAuditLogsUseCase.ts` | Auditoría HTTP paginada/filtrada |
@@ -189,21 +195,21 @@ Un fichero por DTO en `application/dto/`, organizados por dominio: `auth/`, `adm
 Implementa los puertos de `application/ports/` y contiene todo el código de frameworks, drivers y adaptadores externos.
 
 #### Composition Root
-**`composition/composition.ts`** (412 líneas) es el punto único de cableado:
+**`composition/`** (9 ficheros, `composition.ts` de 100 líneas) es el punto único de cableado:
 1. Carga configuración validada con Zod (`configuration/index.ts`)
 2. Abre conexión SQLite singleton (`persistence/sqlite/db.ts`)
 3. Instancia repositorios concretos: `SqliteUserRepository`, `SqliteVehicleRepository`, `SqliteAuditLogRepository`, `SqliteLogRepository`, `SqliteRefreshTokenStore`
 4. Crea el servicio de autenticación (`AuthServicePort` con bcrypt + JWT)
 5. Siembra el usuario admin desde `ADMIN_EMAIL`/`ADMIN_PASSWORD` (idempotente)
 6. Instancia casos de uso (auth + diagnosis + admin)
-7. Crea controladores Express (`AuthController`, `DiagnosisController`, `AdminController`)
+7. Crea controladores Express (`AuthController`, `DiagnosisController`, `AdminController`, `ProfileController`)
 8. Inicializa LanceDB y los índices vectoriales (graceful degradation si no disponible)
 9. Crea el cliente LLM según `LLM_PROVIDER` (anthropic/openai)
 10. Crea `DiagnosisService` con mapa de escenarios o conexión directa TCP
 11. Devuelve la app Express con todas las rutas montadas
 
 #### Servidor HTTP (`http/server.ts`)
-- **Express 5** como framework base (228 líneas)
+- **Express 5** como framework base (279 líneas)
 - **Helmet** con CSP estricta (`default-src: 'none'`), HSTS, frameguard `deny`
 - **CORS** con allowlist de orígenes (configurable vía `ALLOWED_ORIGINS`)
 - **Rate limiting** global (100 req/15min) con límites específicos por ruta
@@ -500,7 +506,7 @@ El backend expone 6 endpoints bajo `/api/admin/*` que alimentan el panel de admi
    - Responde 503 si LanceDB no está disponible
 
 6. **Búsqueda semántica** (`/api/admin/knowledge/search`)
-   - Permite probar la búsqueda vectorial (embedding + `VectorStore.query()`)
+   - Permite probar la búsqueda vectorial (embedding + `VectorStorePort.query()`)
    - El mismo pipeline que usa el RAG real durante el diagnóstico cognitivo
    - Parámetros: `text` (consulta), `index` (pids/dtcs/diagnoses), `limit` (1-20)
 

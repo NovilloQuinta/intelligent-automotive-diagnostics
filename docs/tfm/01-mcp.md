@@ -26,7 +26,7 @@ La decisión arquitectónica está documentada en el **ADR 003** — en lugar de
 LLM (Claude / DeepSeek)  ←→  MCP Server (mcpServer.ts)  ←→  Vehículo OBD real/emulado
 ```
 
-El LLM **nunca** accede directamente al vehículo. Todas las lecturas pasan por el MCP Server, que traduce cada tool a puertos de dominio (`ObdRepository`, `VehicleRepository`, `KnowledgeStack`, `WebSearchPort`).
+El LLM **nunca** accede directamente al vehículo. Todas las lecturas pasan por el MCP Server, que traduce cada tool a puertos de dominio (`ObdRepository`, `VehicleRepository`, `KnowledgeStackPort`, `WebSearchPort`).
 
 ---
 
@@ -225,7 +225,7 @@ DiagnosisService.cognitiveDiagnosis()
   │       └── Esto crea un WebSearchBudget fresco (3 búsquedas disponibles)
   │
   ├── 4. Obtiene tools vía mcp.listTools()
-  ├── 5. Construye un handler bridge: ToolCallHandler → mcp.callTool()
+  ├── 5. Construye un handler bridge: ToolCallHandlerPort → mcp.callTool()
   │
   ▼
 ExecuteCognitiveDiagnosisUseCase
@@ -377,7 +377,7 @@ Comparando la documentación (ADR 003, OpenSpec specs, AGENTS.md) contra el cód
 | `apps/core-api/src/application/llm/llmErrors.ts` | `MaxToolCallIterationsError` |
 | `apps/core-api/src/application/llm/extractLlmDiagnosis.ts` | Parser anti-corrupción del bloque `---JSON---` |
 | `apps/core-api/src/application/shared/mcpToolNames.ts` | Constante `READ_PID_TOOL` |
-| `apps/core-api/src/application/ports/ToolCallHandler.ts` | Puerto: `ToolCallHandler = (name, args) => Promise<string>` |
+| `apps/core-api/src/application/ports/ToolCallHandlerPort.ts` | Puerto: `ToolCallHandlerPort = (name, args) => Promise<string>` |
 | `apps/core-api/src/infrastructure/services/diagnosisService.ts` | Servicio: `cognitiveDiagnosis()`, `callMcpTool()`, `getMcpServer()` |
 | `apps/core-api/src/infrastructure/http/controllers/DiagnosisController.ts` | Controlador HTTP: endpoints `/api/mcp/*` |
 | `apps/core-api/src/infrastructure/http/routes/diagnosis.routes.ts` | Rutas Express: `POST /api/mcp/cognitive-diagnosis`, `POST /api/mcp/tools/:toolName` |

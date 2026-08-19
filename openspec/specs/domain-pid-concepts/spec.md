@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Conceptos de dominio SAE J1979 para fórmulas de PID OBD-II: el type `PidFormulaEntry` (entrada de fórmula con expresión aritmética y bytes esperados) y la función pura `bigEndian` (interpretación big-endian de secuencia de bytes, usada como fallback para PIDs sin fórmula conocida). El puerto `PidFormulaCatalog` define el contrato del catálogo de fórmulas en `application/ports/`.
+Conceptos de dominio SAE J1979 para fórmulas de PID OBD-II: el type `PidFormulaEntry` (entrada de fórmula con expresión aritmética y bytes esperados) y la función pura `bigEndian` (interpretación big-endian de secuencia de bytes, usada como fallback para PIDs sin fórmula conocida). El puerto `PidFormulaCatalogPort` define el contrato del catálogo de fórmulas en `application/ports/`.
 
 ## Requirements
 
@@ -16,7 +16,7 @@ El sistema SHALL definir `PidFormulaEntry` en `domain/pidFormulaEntry.ts` como u
 - **AND** solo exporta `PidFormulaEntry` como named export
 
 #### Scenario: Type usado por application/ports
-- **GIVEN** `application/ports/PidFormulaCatalog.ts`
+- **GIVEN** `application/ports/PidFormulaCatalogPort.ts`
 - **WHEN** se inspeccionan sus imports
 - **THEN** importa `PidFormulaEntry` desde `@/domain/pidFormulaEntry.js`
 
@@ -43,21 +43,21 @@ El sistema SHALL definir `bigEndian` en `domain/bigEndian.ts` como una función 
 
 ---
 
-### Requirement: PidFormulaCatalog interface en application/ports
-El sistema SHALL definir `PidFormulaCatalog` en `application/ports/PidFormulaCatalog.ts` (PascalCase) como una interface con métodos `get(mode, pid): PidFormulaEntry | undefined` y `apply(mode, pid, bytes): number`.
+### Requirement: PidFormulaCatalogPort interface en application/ports
+El sistema SHALL definir `PidFormulaCatalogPort` en `application/ports/PidFormulaCatalogPort.ts` (PascalCase) como una interface con métodos `get(mode, pid): PidFormulaEntry | undefined` y `apply(mode, pid, bytes): number`.
 
 #### Scenario: Puerto importa solo de dominio
-- **GIVEN** `application/ports/PidFormulaCatalog.ts`
+- **GIVEN** `application/ports/PidFormulaCatalogPort.ts`
 - **WHEN** se inspeccionan sus imports
 - **THEN** solo importa `PidFormulaEntry` desde `@/domain/pidFormulaEntry.js`
 - **AND** no importa de `infrastructure/` ni de otros módulos de `application/`
 
 #### Scenario: get devuelve PidFormulaEntry o undefined
-- **GIVEN** una implementación de `PidFormulaCatalog`
+- **GIVEN** una implementación de `PidFormulaCatalogPort`
 - **WHEN** se invoca `catalog.get("01", "0C")`
 - **THEN** devuelve `PidFormulaEntry` si la fórmula existe, `undefined` si no
 
 #### Scenario: apply aplica fórmula o fallback
-- **GIVEN** una implementación de `PidFormulaCatalog`
+- **GIVEN** una implementación de `PidFormulaCatalogPort`
 - **WHEN** se invoca `catalog.apply("01", "0C", bytes)`
 - **THEN** devuelve el valor físico calculado (fórmula conocida) o el fallback big-endian (fórmula desconocida)
