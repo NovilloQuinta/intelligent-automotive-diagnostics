@@ -1,5 +1,5 @@
 import type { Application } from 'express'
-import { createDiagnosisService } from '@/infrastructure/composition/obd.js'
+import { createDiagnosisService } from '@/infrastructure/composition/diagnosis.js'
 import { getDb } from '@/infrastructure/persistence/sqlite/db.js'
 import { createServer } from '@/infrastructure/http/server.js'
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'

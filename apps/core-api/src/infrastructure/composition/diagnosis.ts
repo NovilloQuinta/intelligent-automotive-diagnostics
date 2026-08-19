@@ -5,8 +5,6 @@ import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
-import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
-import { Vin } from '@/domain/value-objects/vin.js'
 import { Elm327TcpRepository } from '@/infrastructure/elm327/elm327Adapter.js'
 import { createElm327TcpClient } from '@/infrastructure/elm327/tcpTransport.js'
 import { createElm327SerialClient } from '@/infrastructure/elm327/serialTransport.js'
@@ -20,81 +18,15 @@ import {
   SERIAL_DIRECT_SCENARIO,
 } from '@/infrastructure/services/diagnosisService.js'
 import type { ScenarioDescriptor } from '@/infrastructure/services/diagnosisTypes.js'
+import { createDockerScenarios } from '@/infrastructure/composition/scenarios.js'
 
 /**
- * Cableado de la capa OBD: los tres vehiculos emulados y el servicio de diagnostico
- * segun el modo de conexion configurado.
- */
-
-/**
- * Escenario Toyota (escenario `car` integrado del emulador).
+ * Composicion del servicio de diagnostico: elige como se llega al vehiculo segun
+ * `OBD_MODE` y monta el servicio con ese acceso.
  *
- * La telemetria (PIDs 05, 0C, 0D, 0F) y los codigos de averia se leen en
- * tiempo real del emulador via `GET /api/live-data` y `GET /api/dtc-codes`.
- * No se hardcodean valores que el emulador ya provee.
+ * Los vehiculos emulados que consume el modo docker son datos y viven en
+ * `composition/scenarios.ts`.
  */
-function toyotaScenario(config: AppConfig): ScenarioDescriptor {
-  return {
-    id: 'toyota',
-    name: 'Toyota (Built-in)',
-    vehicleType: 'car',
-    connectionType: 'wifi',
-    dtcConfig: [],
-    vehicleInfo: new VehicleInfo({
-      make: 'Toyota',
-      model: 'Auris Hybrid',
-      year: 2016,
-      engineType: '1.8L Hybrid',
-      vin: new Vin('JTDKN3DU60A123456'),
-    }),
-    host: config.ELM327_TOYOTA_HOST,
-    port: config.ELM327_TOYOTA_PORT,
-  }
-}
-
-/** Escenario Audi A3 2.0 TDI, con las tres averias del diesel. */
-function audiScenario(config: AppConfig): ScenarioDescriptor {
-  return {
-    id: 'audi-a3-tdi',
-    name: 'Audi A3 2.0 TDI',
-    vehicleType: 'car',
-    connectionType: 'wifi',
-    vehicleInfo: new VehicleInfo({
-      make: 'Audi',
-      model: 'A3',
-      year: 2018,
-      engineType: '2.0 TDI',
-      vin: new Vin('WAUZZZ8V5JA123456'),
-    }),
-    host: config.ELM327_AUDI_HOST,
-    port: config.ELM327_AUDI_PORT,
-  }
-}
-
-/** Escenario Kawasaki Z900: el unico vehiculo de dos ruedas del catalogo. */
-function kawasakiScenario(config: AppConfig): ScenarioDescriptor {
-  return {
-    id: 'kawasaki-z900',
-    name: 'Kawasaki Z900',
-    vehicleType: 'motorcycle',
-    connectionType: 'wifi',
-    dtcConfig: [],
-    vehicleInfo: new VehicleInfo({
-      make: 'Kawasaki',
-      model: 'Z900',
-      year: 2020,
-      engineType: '948cc Inline-4',
-      vin: new Vin('JKAZR2A1XLA000111'),
-    }),
-    host: config.ELM327_KAWASAKI_HOST,
-    port: config.ELM327_KAWASAKI_PORT,
-  }
-}
-
-/** Los tres vehiculos emulados que sirve el modo docker. */
-function createDockerScenarios(config: AppConfig): ScenarioDescriptor[] {
-  return [toyotaScenario(config), audiScenario(config), kawasakiScenario(config)]
-}
 
 /** Mapa scenarioId → ObdRepository creado a partir de los descriptores de escenarios. */
 function createObdRepoMap(
@@ -171,7 +103,7 @@ function wireSerialMode(opts: CreateDiagnosisServiceOptions): ObdWiring {
  * Modo tcp: dongle WiFi real. Negocia igual que el serie.
  *
  * No se unifica con {@link wireSerialMode} pese al parecido: la regla DRY del proyecto
- * pide tres repeticiones y aqui hay dos. Los escenarios docker se construyen en
+ * pide tres repeticiones y aqui hay dos. Los escenarios docker se cablean en
  * {@link createObdRepoMap} y siguen sin negociar nada.
  */
 function wireTcpMode(opts: CreateDiagnosisServiceOptions): ObdWiring {
