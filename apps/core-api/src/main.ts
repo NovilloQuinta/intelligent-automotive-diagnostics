@@ -1,8 +1,7 @@
 import dotenv from 'dotenv'
-import { resolve, dirname } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { resolveEnvFilePath } from '@/infrastructure/configuration/envFile.js'
 
-dotenv.config({ path: resolve(dirname(fileURLToPath(import.meta.url)), '../../.env') })
+dotenv.config({ path: resolveEnvFilePath(import.meta.url) })
 
 import { loadConfig, assertProductionSecrets } from '@/infrastructure/configuration/index.js'
 import { buildApp } from '@/infrastructure/composition/composition.js'
