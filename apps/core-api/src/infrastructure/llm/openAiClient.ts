@@ -66,7 +66,8 @@ function buildOpenAiMessages(
           role: 'assistant',
           content: msg?.content ?? null,
           tool_calls: msg?.tool_calls as
-            OpenAI.Chat.Completions.ChatCompletionMessageToolCall[] | undefined,
+            | OpenAI.Chat.Completions.ChatCompletionMessageToolCall[]
+            | undefined,
         }
       },
       buildToolResult: (callId, content) => ({

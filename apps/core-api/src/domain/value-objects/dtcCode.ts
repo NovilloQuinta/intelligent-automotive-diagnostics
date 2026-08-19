@@ -14,7 +14,16 @@ export class DtcCode {
   readonly code: string
   readonly description: string
 
-  constructor(params: { code: string; description?: string }) {
+  /**
+   * Direccion de la ECU que reporta el codigo, cuando el bus la ha dicho.
+   *
+   * **Opcional a proposito**: la lectura de DTC solo lleva origen si se emitio con
+   * los headers activos. Un codigo sin origen sigue siendo un DTC valido — hacerlo
+   * obligatorio romperia el flujo determinista y las lecturas con headers apagados.
+   */
+  readonly ecuAddress?: string
+
+  constructor(params: { code: string; description?: string; ecuAddress?: string }) {
     const code = params.code.trim().toUpperCase()
     if (!DTC_REGEX.test(code)) {
       throw new DtcCodeError(
@@ -23,6 +32,7 @@ export class DtcCode {
     }
     this.code = code
     this.description = params.description ?? ''
+    this.ecuAddress = params.ecuAddress?.trim().toUpperCase()
   }
 
   /** SAE J2012: decodifica un par de bytes del bus CAN a un codigo DTC (ej. 0x0301 → "P0301"). */

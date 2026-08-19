@@ -26,8 +26,10 @@ import {
   parseModeResponse,
   parseMode22Response,
   parseVinResponse,
-  parseDtcResponse,
+  parseDtcResponseByEcu,
   parseSupportedPidBitmask,
+  type DtcMode,
+  type EcuDtcGroup,
 } from './protocol.js'
 import { discoverEcus } from './ecuDiscovery.js'
 
@@ -43,6 +45,12 @@ const FREEZE_FRAME_PIDS = ['04', '05', '0C', '0D', '11']
 
 /** Modo 22 (UDS ReadDataByIdentifier): su respuesta se parsea distinto a la de los modos SAE. */
 const MODE_UDS = '22'
+
+/** Activa las cabeceras CAN, para saber que ECU responde. */
+const HEADERS_ON = 'AT H1'
+
+/** Vuelve a apagarlas: es el estado sobre el que operan las lecturas normales. */
+const HEADERS_OFF = 'AT H0'
 
 /** Modo 04 (ClearDiagnosticInformation): unica escritura que el adaptador puede emitir. */
 const MODE_CLEAR_DTC = '04'
@@ -223,21 +231,42 @@ export class Elm327TcpRepository implements ObdRepository {
    * compilacion: la allowlist lo vuelve a comprobar en ejecucion para que el
    * comando no dependa de que nadie haya hecho un cast por el camino.
    */
-  private async fetchDtcCodes(mode: '03' | '07' | '0A'): Promise<DtcCode[]> {
+  private async fetchDtcCodes(mode: DtcMode): Promise<DtcCode[]> {
     assertReadOnlyObdMode(mode)
-    const raw = await this.client.sendCommand(mode)
+    // Los headers se activan para saber que ECU reporta cada codigo, y se apagan en
+    // el `finally` porque son estado global del adaptador: una lectura concurrente
+    // que caiga entre medias volveria con el header delante y sin parsear. Mismo
+    // patron que {@link discoverEcus}, incluida la reserva de la conexion.
+    const raw = await this.client.runExclusive(async (session) => {
+      try {
+        await session.sendCommand(HEADERS_ON)
+        return await session.sendCommand(mode)
+      } finally {
+        await session.sendCommand(HEADERS_OFF)
+      }
+    })
     try {
-      const codes = parseDtcResponse(raw, mode).map(([b1, b2]) => DtcCode.decodeFromBytes(b1, b2))
-      return await Promise.all(
-        codes.map(
-          async (code) =>
-            new DtcCode({ code, description: await this.resolveDtcDescription(code) }),
-        ),
-      )
+      return await this.toDtcCodes(parseDtcResponseByEcu(raw, mode))
     } catch (err) {
       if (err instanceof Elm327ParseError) return []
       throw err
     }
+  }
+
+  /** Decodifica los grupos del bus a `DtcCode`, conservando la ECU de origen. */
+  private async toDtcCodes(groups: EcuDtcGroup[]): Promise<DtcCode[]> {
+    const decoded = groups.flatMap((group) =>
+      group.pairs.map(([b1, b2]) => ({
+        code: DtcCode.decodeFromBytes(b1, b2),
+        ecuAddress: group.ecuAddress,
+      })),
+    )
+    return Promise.all(
+      decoded.map(
+        async ({ code, ecuAddress }) =>
+          new DtcCode({ code, description: await this.resolveDtcDescription(code), ecuAddress }),
+      ),
+    )
   }
 
   async readDtcCodes(): Promise<DtcCode[]> {

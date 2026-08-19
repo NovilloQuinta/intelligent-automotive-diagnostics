@@ -110,6 +110,22 @@ function expectSent(cmd: string): void {
   expect(lastSocket().write).toHaveBeenCalledWith(`${cmd}\r\n`)
 }
 
+/**
+ * Guiona una lectura de DTC sobre el socket: `AT H1`, el modo y `AT H0`.
+ *
+ * Los codigos se leen con las cabeceras activas para saber que ECU los reporta, y
+ * se apagan al terminar, asi que el modo ya no es el primer comando del socket.
+ */
+async function driveDtcRead(promise: Promise<unknown>, mode: string, answer: string) {
+  await vi.waitFor(() => expectSent('AT H1'))
+  respond('OK\r>')
+  await vi.waitFor(() => expectSent(mode))
+  respond(answer)
+  await vi.waitFor(() => expectSent('AT H0'))
+  respond('OK\r>')
+  return promise
+}
+
 /** Respuestas ELM327 reales del emulador (echo + datos + prompt). */
 const RESPONSES: Record<string, string> = {
   '01 0C': '01 0C\r41 0C 0C 80 \r\r>',
@@ -256,10 +272,9 @@ describe('Elm327TcpRepository', () => {
 
   it('readDtcCodes: mock responde "43 03 01 04 01" → [P0301, P0401] con descripcion', async () => {
     const repo = makeRepo()
-    const promise = repo.readDtcCodes()
-    expectSent('03')
-    respond(RESPONSES['03'])
-    const dtcs = await promise
+    const dtcs = (await driveDtcRead(repo.readDtcCodes(), '03', RESPONSES['03'])) as Awaited<
+      ReturnType<typeof repo.readDtcCodes>
+    >
     expect(dtcs).toEqual([
       { code: 'P0301', description: 'Cylinder 1 Misfire Detected' },
       { code: 'P0401', description: 'Exhaust Gas Recirculation Flow Insufficient Detected' },
@@ -268,9 +283,9 @@ describe('Elm327TcpRepository', () => {
 
   it('readDtcCodes: mock responde "NO DATA" → []', async () => {
     const repo = makeRepo()
-    const promise = repo.readDtcCodes()
-    expectSent('03')
-    respond('NO DATA\r\r>')
+    const promise = driveDtcRead(repo.readDtcCodes(), '03', 'NO DATA\r\r>') as ReturnType<
+      typeof repo.readDtcCodes
+    >
     await expect(promise).resolves.toEqual([])
   })
 
@@ -286,9 +301,9 @@ describe('Elm327TcpRepository', () => {
       }),
     })
     const repo = makeRepo(undefined, vRepo)
-    const promise = repo.readDtcCodes()
-    expectSent('03')
-    respond('03\r43 20 02\r\r>')
+    const promise = driveDtcRead(repo.readDtcCodes(), '03', '03\r43 20 02\r\r>') as ReturnType<
+      typeof repo.readDtcCodes
+    >
     const dtcs = await promise
     expect(dtcs).toEqual([
       {
@@ -300,18 +315,18 @@ describe('Elm327TcpRepository', () => {
 
   it('readDtcCodes: DTC manufacturer-specific sin vehicleRepo → description vacia', async () => {
     const repo = makeRepo()
-    const promise = repo.readDtcCodes()
-    expectSent('03')
-    respond('03\r43 20 02\r\r>')
+    const promise = driveDtcRead(repo.readDtcCodes(), '03', '03\r43 20 02\r\r>') as ReturnType<
+      typeof repo.readDtcCodes
+    >
     const dtcs = await promise
     expect(dtcs).toEqual([{ code: 'P2002', description: '' }])
   })
 
   it('readPendingDtcCodes: mock responde "47 03 01 04 01" → [P0301, P0401] con descripcion', async () => {
     const repo = makeRepo()
-    const promise = repo.readPendingDtcCodes()
-    expectSent('07')
-    respond(RESPONSES['07'])
+    const promise = driveDtcRead(repo.readPendingDtcCodes(), '07', RESPONSES['07']) as ReturnType<
+      typeof repo.readPendingDtcCodes
+    >
     const dtcs = await promise
     expect(dtcs).toEqual([
       { code: 'P0301', description: 'Cylinder 1 Misfire Detected' },
@@ -321,17 +336,17 @@ describe('Elm327TcpRepository', () => {
 
   it('readPendingDtcCodes: mock responde "NO DATA" → []', async () => {
     const repo = makeRepo()
-    const promise = repo.readPendingDtcCodes()
-    expectSent('07')
-    respond('NO DATA\r\r>')
+    const promise = driveDtcRead(repo.readPendingDtcCodes(), '07', 'NO DATA\r\r>') as ReturnType<
+      typeof repo.readPendingDtcCodes
+    >
     await expect(promise).resolves.toEqual([])
   })
 
   it('readPermanentDtcCodes: mock responde "4A 03 01 04 01" → [P0301, P0401] con descripcion', async () => {
     const repo = makeRepo()
-    const promise = repo.readPermanentDtcCodes()
-    expectSent('0A')
-    respond(RESPONSES['0A'])
+    const promise = driveDtcRead(repo.readPermanentDtcCodes(), '0A', RESPONSES['0A']) as ReturnType<
+      typeof repo.readPermanentDtcCodes
+    >
     const dtcs = await promise
     expect(dtcs).toEqual([
       { code: 'P0301', description: 'Cylinder 1 Misfire Detected' },
@@ -341,9 +356,9 @@ describe('Elm327TcpRepository', () => {
 
   it('readPermanentDtcCodes: mock responde "NO DATA" → []', async () => {
     const repo = makeRepo()
-    const promise = repo.readPermanentDtcCodes()
-    expectSent('0A')
-    respond('NO DATA\r\r>')
+    const promise = driveDtcRead(repo.readPermanentDtcCodes(), '0A', 'NO DATA\r\r>') as ReturnType<
+      typeof repo.readPermanentDtcCodes
+    >
     await expect(promise).resolves.toEqual([])
   })
 
@@ -737,5 +752,94 @@ describe('Elm327TcpRepository', () => {
       await expect(repo.clearDtcCodes()).rejects.toBeInstanceOf(UnsafeObdModeError)
       expect(lastSocket().write).not.toHaveBeenCalled()
     })
+  })
+})
+
+describe('lectura de DTC con origen', () => {
+  /** Transporte guionizado que registra los comandos, como el de `ecuDiscovery.test.ts`. */
+  function createScriptedTransport(script: Record<string, string>): {
+    transport: Elm327Transport
+    sent: string[]
+  } {
+    const sent: string[] = []
+    const transport: Elm327Transport = {
+      connect: vi.fn().mockResolvedValue(undefined),
+      sendCommand: vi.fn(async (cmd: string) => {
+        sent.push(cmd)
+        return script[cmd] ?? 'OK\r>'
+      }),
+      runExclusive: (fn) => fn({ sendCommand: (cmd) => transport.sendCommand(cmd) }),
+      close: vi.fn().mockResolvedValue(undefined),
+    }
+    return { transport, sent }
+  }
+
+  it('should read stored DTCs with headers on and restore them afterwards', async () => {
+    const { transport, sent } = createScriptedTransport({
+      '03': '7E8 07 43 03 01 04 01 20 02\r>',
+    })
+    const repo = new Elm327TcpRepository(transport)
+
+    const dtcs = await repo.readDtcCodes()
+
+    expect(sent).toEqual(['AT H1', '03', 'AT H0'])
+    expect(dtcs.map((d) => d.code)).toEqual(['P0301', 'P0401', 'P2002'])
+    expect(dtcs.every((d) => d.ecuAddress === '7E8')).toBe(true)
+  })
+
+  it('should attribute each code to the ECU that reports it', async () => {
+    const { transport } = createScriptedTransport({
+      '03': '7E8 07 43 03 01\r7E9 04 43 04 01\r>',
+    })
+    const repo = new Elm327TcpRepository(transport)
+
+    const dtcs = await repo.readDtcCodes()
+
+    expect(dtcs.map((d) => [d.code, d.ecuAddress])).toEqual([
+      ['P0301', '7E8'],
+      ['P0401', '7E9'],
+    ])
+  })
+
+  it('should restore the headers even if the read throws', async () => {
+    const sent: string[] = []
+    const transport: Elm327Transport = {
+      connect: vi.fn().mockResolvedValue(undefined),
+      sendCommand: vi.fn(async (cmd: string) => {
+        sent.push(cmd)
+        if (cmd === '03') throw new Error('bus unavailable')
+        return 'OK\r>'
+      }),
+      runExclusive: (fn) => fn({ sendCommand: (cmd) => transport.sendCommand(cmd) }),
+      close: vi.fn().mockResolvedValue(undefined),
+    }
+    const repo = new Elm327TcpRepository(transport)
+
+    await expect(repo.readDtcCodes()).rejects.toThrow('bus unavailable')
+    expect(sent).toEqual(['AT H1', '03', 'AT H0'])
+  })
+
+  it('should keep codes without origin when the bus returns no headers', async () => {
+    const { transport } = createScriptedTransport({ '03': '43 03 01\r>' })
+    const repo = new Elm327TcpRepository(transport)
+
+    const dtcs = await repo.readDtcCodes()
+
+    expect(dtcs[0].code).toBe('P0301')
+    expect(dtcs[0].ecuAddress).toBeUndefined()
+  })
+
+  it('should use the pending and permanent modes with the same protocol', async () => {
+    const pending = createScriptedTransport({ '07': '7E8 04 47 04 01\r>' })
+    const permanent = createScriptedTransport({ '0A': '7E8 04 4A 20 02\r>' })
+
+    expect((await new Elm327TcpRepository(pending.transport).readPendingDtcCodes())[0].code).toBe(
+      'P0401',
+    )
+    expect(pending.sent).toEqual(['AT H1', '07', 'AT H0'])
+    expect(
+      (await new Elm327TcpRepository(permanent.transport).readPermanentDtcCodes())[0].code,
+    ).toBe('P2002')
+    expect(permanent.sent).toEqual(['AT H1', '0A', 'AT H0'])
   })
 })
