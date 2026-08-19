@@ -79,6 +79,21 @@ const OBD_RESPONSE_ADDR_MIN = 0x7e8
 const OBD_RESPONSE_ADDR_MAX = 0x7ef
 
 /**
+ * Indica si un token tiene **forma** de direccion CAN: 3 digitos hex (11 bits) u 8 (29).
+ *
+ * Distinto de {@link isEcuResponseAddress}, que ademas exige que sea una respuesta
+ * de diagnostico. La diferencia importa al parsear una traza: `18DB33F1` tiene forma
+ * de direccion pero es una peticion, y la linea entera se descarta; `43` no tiene
+ * forma de direccion, asi que la linea viene sin header y sus datos si valen.
+ *
+ * @param token - Primer token de una linea de respuesta.
+ * @returns `true` si podria ser una direccion CAN, valida o no.
+ */
+export function looksLikeCanAddress(token: string): boolean {
+  return CAN_ADDRESS_REGEX.test(token.trim())
+}
+
+/**
  * Indica si una direccion CAN es una respuesta de diagnostico OBD-II.
  *
  * Vive aqui, junto al catalogo, porque es la misma norma —ISO 15765-4— que decide

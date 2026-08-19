@@ -1,4 +1,4 @@
-import { isEcuResponseAddress } from '@/domain/ecuAddressCatalog.js'
+import { isEcuResponseAddress, looksLikeCanAddress } from '@/domain/ecuAddressCatalog.js'
 import { Elm327BusError, Elm327NoDataError, Elm327ParseError } from './errors.js'
 
 /**
@@ -200,22 +200,113 @@ export function parseVinResponse(raw: string): number[] {
  * @throws {Elm327ParseError} Si la respuesta no contiene el header esperado.
  * @throws {Elm327BusError} Si el bus falla — distinto de "no hay averias".
  */
-export function parseDtcResponse(
-  raw: string,
-  mode: '03' | '07' | '0A' = '03',
-): Array<[number, number]> {
+export function parseDtcResponse(raw: string, mode: DtcMode = '03'): Array<[number, number]> {
   assertNoBusError(raw)
-  const headerByte = (0x40 + Number.parseInt(mode, 16)).toString(16).toUpperCase()
   const cleaned = stripEcho(raw)
   if (/NO DATA/i.test(cleaned)) return []
-  const match = cleaned.match(new RegExp(`${headerByte}\\s+((?:[0-9A-F]{2}\\s+)*[0-9A-F]{2})`, 'i'))
+  const match = cleaned.match(
+    new RegExp(`${dtcResponseByte(mode)}\\s+((?:[0-9A-F]{2}\\s+)*[0-9A-F]{2})`, 'i'),
+  )
   if (!match) throw new Elm327ParseError(raw)
-  const bytes = parseHexBytes(match[1])
+  return toDtcPairs(parseHexBytes(match[1]))
+}
+
+/** Modos de lectura de DTC: almacenados, pendientes y permanentes. */
+export type DtcMode = '03' | '07' | '0A'
+
+/** Byte con el que la ECU encabeza su respuesta a un modo de lectura (`03` → `43`). */
+function dtcResponseByte(mode: DtcMode): string {
+  return (0x40 + Number.parseInt(mode, 16)).toString(16).toUpperCase()
+}
+
+/** Codigos de averia de una ECU concreta, tal como llegan del bus. */
+export interface EcuDtcGroup {
+  /** Direccion de respuesta de la ECU que los reporta. Ausente si los headers estaban apagados. */
+  readonly ecuAddress?: string
+  /** Pares de bytes sin decodificar, en orden de aparicion. */
+  readonly pairs: Array<[number, number]>
+}
+
+/** Empareja los bytes de datos de un DTC: cada dos bytes, un codigo. */
+function toDtcPairs(bytes: number[]): Array<[number, number]> {
   const pairs: Array<[number, number]> = []
   for (let i = 0; i + 1 < bytes.length; i += 2) {
     pairs.push([bytes[i], bytes[i + 1]])
   }
   return pairs
+}
+
+/**
+ * Parsea una lectura de DTC agrupando por la ECU que responde.
+ *
+ * Es la variante de {@link parseDtcResponse} para cuando el modo se emite con
+ * `AT H1`: en vez de aplanar todos los codigos en una lista, conserva de quien
+ * viene cada uno, que es lo que permite marcar la ECU averiada en el mapa de
+ * topologia. Sin headers no se pierde nada — los codigos salen igual, con el
+ * origen ausente.
+ *
+ * Las direcciones se validan con {@link isEcuResponseAddress}, la misma regla que
+ * usa el barrido de ECUs, asi que una peticion colada en la traza (`18DB33F1`) no
+ * se confunde con una respuesta.
+ *
+ * @param raw - Respuesta cruda del adaptador ELM327.
+ * @param mode - Modo emitido: `03` almacenados, `07` pendientes, `0A` permanentes.
+ * @returns Un grupo por ECU que responde, en orden de aparicion.
+ * @throws {Elm327ParseError} Si ninguna linea lleva el byte de respuesta del modo.
+ */
+/**
+ * Separa el header de una linea de respuesta.
+ *
+ * @returns `null` si la linea no aporta datos: vacia, el prompt, o encabezada por
+ *   una direccion que no es una respuesta de diagnostico.
+ */
+function splitDtcLine(line: string): { address?: string; payload: string } | null {
+  const trimmed = line.trim()
+  if (trimmed === '' || trimmed === '>') return null
+  const [first, ...rest] = trimmed.split(/\s+/)
+  if (isEcuResponseAddress(first)) {
+    return { address: first.toUpperCase(), payload: rest.join(' ') }
+  }
+  // Una direccion con forma valida que no sea respuesta —una peticion colada en la
+  // traza— invalida la linea entera: sus datos no vienen de ninguna ECU.
+  if (looksLikeCanAddress(first)) return null
+  return { payload: trimmed }
+}
+
+/** Extrae el grupo de codigos de una linea, o `null` si no lleva ninguno. */
+function parseDtcLine(line: string, dataRe: RegExp): EcuDtcGroup | null {
+  const split = splitDtcLine(line)
+  if (split === null) return null
+  const match = dataRe.exec(split.payload)
+  if (match === null) return null
+  const pairs = toDtcPairs(parseHexBytes(match[1]))
+  return pairs.length > 0 ? { ecuAddress: split.address, pairs } : null
+}
+
+/**
+ * Parsea una lectura de DTC agrupando por la ECU que responde.
+ *
+ * Es la variante de {@link parseDtcResponse} para cuando el modo se emite con
+ * `AT H1`: en vez de aplanar todos los codigos en una lista, conserva de quien
+ * viene cada uno, que es lo que permite marcar la ECU averiada en el mapa de
+ * topologia. Sin headers no se pierde nada — los codigos salen igual, con el
+ * origen ausente.
+ *
+ * @param raw - Respuesta cruda del adaptador ELM327.
+ * @param mode - Modo emitido: `03` almacenados, `07` pendientes, `0A` permanentes.
+ * @returns Un grupo por ECU que responde, en orden de aparicion.
+ * @throws {Elm327ParseError} Si ninguna linea lleva el byte de respuesta del modo.
+ */
+export function parseDtcResponseByEcu(raw: string, mode: DtcMode = '03'): EcuDtcGroup[] {
+  assertNoBusError(raw)
+  if (/NO DATA/i.test(raw)) return []
+  const dataRe = new RegExp(`${dtcResponseByte(mode)}\\s+((?:[0-9A-F]{2}\\s+)*[0-9A-F]{2})`, 'i')
+  const groups = raw
+    .split(/\r\n?|\n/)
+    .map((line) => parseDtcLine(line, dataRe))
+    .filter((group): group is EcuDtcGroup => group !== null)
+  if (groups.length === 0) throw new Elm327ParseError(raw)
+  return groups
 }
 
 /**

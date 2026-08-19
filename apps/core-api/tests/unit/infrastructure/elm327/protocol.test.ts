@@ -10,6 +10,7 @@ import {
   parseSupportedPidBitmask,
   parseHexBytes,
   parseCanHeaders,
+  parseDtcResponseByEcu,
 } from '@/infrastructure/elm327/protocol.js'
 import {
   Elm327BusError,
@@ -161,6 +162,87 @@ describe('protocol', () => {
 
     it('should throw Elm327NoDataError on "NO DATA"', () => {
       expect(() => parseVinResponse('NO DATA')).toThrow(Elm327NoDataError)
+    })
+  })
+
+  describe('parseDtcResponseByEcu', () => {
+    it('should group codes by the ECU that reports them', () => {
+      const raw = '7E8 07 43 03 01 04 01 20 02\r7E9 04 43 01 33\r>'
+
+      expect(parseDtcResponseByEcu(raw)).toEqual([
+        {
+          ecuAddress: '7E8',
+          pairs: [
+            [0x03, 0x01],
+            [0x04, 0x01],
+            [0x20, 0x02],
+          ],
+        },
+        { ecuAddress: '7E9', pairs: [[0x01, 0x33]] },
+      ])
+    })
+
+    it('should return a single group when only one ECU answers', () => {
+      const raw = '7E8 07 43 03 01 04 01 20 02\r\r>'
+
+      expect(parseDtcResponseByEcu(raw)).toEqual([
+        {
+          ecuAddress: '7E8',
+          pairs: [
+            [0x03, 0x01],
+            [0x04, 0x01],
+            [0x20, 0x02],
+          ],
+        },
+      ])
+    })
+
+    it('should keep the codes without an ECU when headers are off', () => {
+      // Sin `AT H1` la respuesta no dice quien contesta. Los codigos siguen siendo
+      // validos: el origen es opcional, no un requisito.
+      const raw = '43 03 01 04 01\r\r>'
+
+      expect(parseDtcResponseByEcu(raw)).toEqual([
+        {
+          ecuAddress: undefined,
+          pairs: [
+            [0x03, 0x01],
+            [0x04, 0x01],
+          ],
+        },
+      ])
+    })
+
+    it('should ignore addresses that are not diagnostic responses', () => {
+      const raw = '7E8 07 43 03 01\r18DB33F1 04 43 01 33\r>'
+
+      expect(parseDtcResponseByEcu(raw)).toEqual([{ ecuAddress: '7E8', pairs: [[0x03, 0x01]] }])
+    })
+
+    it('should group 29-bit responders by their own address', () => {
+      const raw = '18DAF110 07 43 03 01\r18DAF111 04 43 01 33\r>'
+
+      expect(parseDtcResponseByEcu(raw)).toEqual([
+        { ecuAddress: '18DAF110', pairs: [[0x03, 0x01]] },
+        { ecuAddress: '18DAF111', pairs: [[0x01, 0x33]] },
+      ])
+    })
+
+    it('should return [] for NO DATA', () => {
+      expect(parseDtcResponseByEcu('NO DATA\r\r>')).toEqual([])
+    })
+
+    it('should honour the mode byte of pending (07) and permanent (0A) reads', () => {
+      expect(parseDtcResponseByEcu('7E8 04 47 01 33\r>', '07')).toEqual([
+        { ecuAddress: '7E8', pairs: [[0x01, 0x33]] },
+      ])
+      expect(parseDtcResponseByEcu('7E8 04 4A 01 33\r>', '0A')).toEqual([
+        { ecuAddress: '7E8', pairs: [[0x01, 0x33]] },
+      ])
+    })
+
+    it('should throw when no line carries the mode byte', () => {
+      expect(() => parseDtcResponseByEcu('7E8 04 41 00 BE\r>')).toThrow(Elm327ParseError)
     })
   })
 
