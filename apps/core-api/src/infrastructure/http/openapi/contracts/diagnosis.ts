@@ -34,8 +34,15 @@ export const dtcCodeSchema = z
   .object({
     code: z.string().describe('Codigo DTC normalizado, por ejemplo `P0301`'),
     description: z.string().describe('Descripcion resuelta contra el catalogo de averias'),
+    ecuAddress: z
+      .string()
+      .optional()
+      .describe(
+        'Direccion de respuesta de la ECU que reporta la averia, por ejemplo `7E8`. ' +
+          'Ausente si la lectura llego sin cabeceras: el codigo es igual de valido sin origen',
+      ),
   })
-  .describe('Codigo de averia con su descripcion resuelta')
+  .describe('Codigo de averia con su descripcion resuelta y, si el bus lo dijo, su origen')
 
 /** Identificacion del vehiculo conectado. */
 export const vehicleInfoSchema = z

@@ -124,4 +124,54 @@ describe('TopologyMapPanel', () => {
       expect(screen.queryByText('7E1 → 7E9')).not.toBeInTheDocument()
     })
   })
+
+  describe('ECU averiada', () => {
+    const dtc = (code: string, ecuAddress?: string) => ({ code, description: '', ecuAddress })
+
+    it('marca el nodo de la ECU que reporta la averia', () => {
+      render(<TopologyMapPanel {...BASE} ecus={AUDI_ECUS} dtcs={[dtc('P0301', '7E9')]} />)
+
+      expect(screen.getByRole('button', { name: /Cambio.*aver/i })).toBeInTheDocument()
+    })
+
+    it('no marca a las ECU que no reportan nada', () => {
+      render(<TopologyMapPanel {...BASE} ecus={AUDI_ECUS} dtcs={[dtc('P0301', '7E9')]} />)
+
+      expect(screen.getByRole('button', { name: 'Motor' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Motor.*aver/i })).not.toBeInTheDocument()
+    })
+
+    it('un codigo sin origen no marca ningun nodo', () => {
+      // Lectura con las cabeceras apagadas: el codigo es valido pero no dice de
+      // donde viene. Repartirlo por el mapa seria inventar el dato.
+      render(<TopologyMapPanel {...BASE} ecus={AUDI_ECUS} dtcs={[dtc('P0301')]} />)
+
+      expect(screen.queryByRole('button', { name: /aver/i })).not.toBeInTheDocument()
+    })
+
+    it('empareja la direccion sin distinguir mayusculas', () => {
+      render(<TopologyMapPanel {...BASE} ecus={AUDI_ECUS} dtcs={[dtc('P0301', '7e9')]} />)
+
+      expect(screen.getByRole('button', { name: /Cambio.*aver/i })).toBeInTheDocument()
+    })
+
+    it('sin la prop de averias el mapa se comporta como antes', () => {
+      render(<TopologyMapPanel {...BASE} ecus={MOTO_ECUS} />)
+
+      expect(screen.getByRole('button', { name: 'Motor' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /aver/i })).not.toBeInTheDocument()
+    })
+
+    it('cuenta las averias cuando una ECU reporta varias', () => {
+      render(
+        <TopologyMapPanel
+          {...BASE}
+          ecus={AUDI_ECUS}
+          dtcs={[dtc('P0301', '7E8'), dtc('P0401', '7E8')]}
+        />,
+      )
+
+      expect(screen.getByRole('button', { name: /Motor.*2 aver/i })).toBeInTheDocument()
+    })
+  })
 })

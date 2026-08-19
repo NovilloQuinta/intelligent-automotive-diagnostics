@@ -160,6 +160,7 @@ export function DashboardSection({
           loading={ecusLoading}
           error={ecusError}
           selectedId={selectedId}
+          dtcs={dtcCodes ?? []}
         />
       )
     case 'diagnosis':

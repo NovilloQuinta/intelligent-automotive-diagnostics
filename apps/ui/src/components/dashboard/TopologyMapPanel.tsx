@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Network } from 'lucide-react'
-import { COLORS, type EcuInfo } from './types'
+import { COLORS, type DtcCode, type EcuInfo } from './types'
 import { PanelState } from './PanelState'
 import { ECU_PANEL_MESSAGES } from './ecuMessages'
 import { getEcuTopologyColor } from './ecuTopologyColors'
@@ -27,6 +27,9 @@ const TOPOLOGY = {
   LABEL_DY_ABOVE: -36,
   /** Alto util cuando no hay ningun nodo por debajo del bus (caso de una sola ECU). */
   VIEWBOX_HEIGHT_TOP_ONLY: 160,
+  /** Separacion del anillo de averia respecto al borde del nodo. */
+  FAULT_RING_GAP: 6,
+  FAULT_RING_WIDTH: 2.5,
 } as const
 
 const BUS_STROKE = 'rgba(255,255,255,0.18)'
@@ -36,6 +39,12 @@ interface Props {
   readonly loading: boolean
   readonly error: string | null
   readonly selectedId: string | null
+  /**
+   * Averias leidas del bus. Solo marcan nodo las que traen `ecuAddress`: una
+   * lectura sin cabeceras no dice de donde viene el codigo, y repartirlo por el
+   * mapa seria inventar el dato.
+   */
+  readonly dtcs?: readonly DtcCode[]
 }
 
 interface NodePosition {
@@ -65,6 +74,31 @@ interface EcuNodeProps {
   readonly selected: boolean
   readonly onSelect: (index: number) => void
   readonly index: number
+  /** Cuantas averias reporta esta ECU. `0` = sana. */
+  readonly faultCount: number
+}
+
+/** Cuenta las averias atribuidas a cada ECU por su direccion de respuesta. */
+function countFaultsByEcu(dtcs: readonly DtcCode[]): Map<string, number> {
+  const counts = new Map<string, number>()
+  for (const dtc of dtcs) {
+    const address = dtc.ecuAddress?.trim().toUpperCase()
+    if (!address) continue
+    counts.set(address, (counts.get(address) ?? 0) + 1)
+  }
+  return counts
+}
+
+/**
+ * Nombre accesible del nodo, con la averia dentro.
+ *
+ * Va en el nombre y no solo en el color porque el color no lo lee un lector de
+ * pantalla, y porque un mapa que solo distingue por tono deja fuera a quien no
+ * distingue esos tonos.
+ */
+function nodeLabel(name: string, faultCount: number): string {
+  if (faultCount === 0) return name
+  return `${name} — ${faultCount} ${faultCount === 1 ? 'averia' : 'averias'}`
 }
 
 /** Un nodo esta por encima del bus cuando su y es menor que la linea. */
@@ -78,15 +112,16 @@ function isAboveBus(position: NodePosition): boolean {
  * Es un `<g>` con `role="button"` para que sea alcanzable por teclado y por
  * nombre accesible — un `<circle>` suelto no lo seria.
  */
-function EcuNode({ ecu, position, selected, onSelect, index }: EcuNodeProps) {
+function EcuNode({ ecu, position, selected, onSelect, index, faultCount }: EcuNodeProps) {
   const color = getEcuTopologyColor(ecu.type)
   const radius = selected ? TOPOLOGY.NODE_RADIUS_SELECTED : TOPOLOGY.NODE_RADIUS
+  const faulty = faultCount > 0
 
   return (
     <g
       role="button"
       tabIndex={0}
-      aria-label={ecu.name}
+      aria-label={nodeLabel(ecu.name, faultCount)}
       aria-pressed={selected}
       transform={`translate(${position.x}, ${position.y})`}
       className="cursor-pointer focus:outline-none"
@@ -105,11 +140,20 @@ function EcuNode({ ecu, position, selected, onSelect, index }: EcuNodeProps) {
         className={selected ? undefined : 'stub-pulse'}
         opacity={selected ? 0.9 : 0.5}
       />
+      {faulty && (
+        <circle
+          r={radius + TOPOLOGY.FAULT_RING_GAP}
+          fill="none"
+          stroke={COLORS.destructive}
+          strokeWidth={TOPOLOGY.FAULT_RING_WIDTH}
+          opacity={0.9}
+        />
+      )}
       <circle
         r={radius}
         fill={color}
         fillOpacity={selected ? 0.95 : 0.75}
-        stroke={color}
+        stroke={faulty ? COLORS.destructive : color}
         strokeWidth={selected ? 3 : 1}
       />
       <text
@@ -155,8 +199,9 @@ function EcuDetailCard({ ecu }: { readonly ecu: EcuInfo }) {
  * No consume ningun dato ni endpoint nuevo — es una vista alternativa de lo que
  * el sistema ya expone.
  */
-export function TopologyMapPanel({ ecus, loading, error, selectedId }: Props) {
+export function TopologyMapPanel({ ecus, loading, error, selectedId, dtcs = [] }: Props) {
   const [selectedNode, setSelectedNode] = useState<number | null>(null)
+  const faultsByEcu = countFaultsByEcu(dtcs)
 
   const showMap = Boolean(selectedId) && !loading && !error && ecus.length > 0
   // Los nodos impares son los que caen por debajo del bus: con una sola ECU no
@@ -229,6 +274,7 @@ export function TopologyMapPanel({ ecus, loading, error, selectedId }: Props) {
                   position={nodePosition(index, ecus.length)}
                   selected={selectedNode === index}
                   onSelect={setSelectedNode}
+                  faultCount={faultsByEcu.get(ecu.responseAddr.toUpperCase()) ?? 0}
                 />
               ))}
             </svg>

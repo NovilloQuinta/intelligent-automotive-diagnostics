@@ -191,6 +191,13 @@ export type UpdateProfileInput = Partial<{
 export type DtcCode = {
   code: string
   description: string
+  /**
+   * Direccion de la ECU que reporta la averia (`7E8`), cuando el bus la dijo.
+   *
+   * Opcional: una lectura con las cabeceras apagadas devuelve el codigo sin
+   * origen, y sigue siendo una averia legitima.
+   */
+  ecuAddress?: string
 }
 
 /** Emission monitor readiness status. */

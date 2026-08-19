@@ -18,18 +18,21 @@
 
 ## 2. El mapa marca la ECU averiada (dominio → UI)
 
-- [ ] 2.1 RED: test de `parseDtcResponse` agrupando por header — una respuesta con dos
+- [x] 2.1 RED: test de `parseDtcResponse` agrupando por header — una respuesta con dos
       headers devuelve los códigos de cada uno asociados a su dirección.
-- [ ] 2.2 GREEN: variante de parseo que agrupa por header, reutilizando
+- [x] 2.2 GREEN: variante de parseo que agrupa por header, reutilizando
       `parseCanHeaders` para validar direcciones.
-- [ ] 2.3 Añadir `ecuAddress?: string` a `DtcCode`. **Opcional**: un DTC sin origen
+- [x] 2.3 Añadir `ecuAddress?: string` a `DtcCode`. **Opcional**: un DTC sin origen
       sigue siendo válido.
-- [ ] 2.4 `fetchDtcCodes` emite con `AT H1` y restaura `AT H0` en `finally`, con el
+- [x] 2.4 `fetchDtcCodes` emite con `AT H1` y restaura `AT H0` en `finally`, con el
       mismo patrón que `discoverEcus`. Test de que el estado se restaura aunque falle.
-- [ ] 2.5 Propagar el origen por el DTO de respuesta hasta la UI.
-- [ ] 2.6 RED/GREEN en `TopologyMapPanel`: recibe los DTC y marca el nodo cuyo
+- [x] 2.5 Propagar el origen por el DTO de respuesta hasta la UI. **No hizo falta mapper**:
+      los `DtcCode` se serializan tal cual, asi que solo se declara `ecuAddress` en
+      `dtcCodeSchema` y se blinda con `dtcContract.test.ts`, que avisaria si alguien
+      intercalara una proyeccion que se lo dejara por el camino.
+- [x] 2.6 RED/GREEN en `TopologyMapPanel`: recibe los DTC y marca el nodo cuyo
       `responseAddr` coincide; los DTC sin origen no marcan ninguno.
-- [ ] 2.7 `pnpm verify` completo. Los 1241 L de `diagnosis.routes.test.ts` deben pasar
+- [x] 2.7 `pnpm verify` completo. Los 1241 L de `diagnosis.routes.test.ts` deben pasar
       sin tocarse.
 
 ## 3. El agente aprende ECUs (cambia comportamiento del LLM)
