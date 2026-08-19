@@ -130,14 +130,28 @@
 
 ## 12. Cierre
 
-- [ ] 12.1 `pnpm obd:probe` imprime también `AT DP` (el nombre en texto) junto al `AT DPN`
+> Las tareas 12.1–12.3 **documentan lo que la herramienta hace**; las 12.5–12.8 **corrigen
+> lo que queda falso**. Las primeras son las que se evaporan si el bloque se aplaza: la
+> 12.2 puede escribirse ya, porque su razonamiento está entero en `design.md`.
+
+- [ ] 12.1 Sección nueva en `docs/tfm/03-obd-elm327-emulador.md`, junto a la 4.1 "Tabla
+      completa de modos": los diez protocolos, cuáles barre el descubrimiento de ECUs
+      (los cuatro CAN), qué pasa en los pre-CAN (se abstiene, y las lecturas siguen
+      funcionando) y de dónde sale el bitrate — del `ATSP0` del adaptador, nunca de
+      nuestro código.
+- [ ] 12.2 ADR 009: negociar el protocolo en vez de imponerlo, y limitar el barrido a CAN.
+      Recoge D1, D3 y las alternativas descartadas de `design.md`, que se archiva con el
+      change; el ADR es lo que queda discoverable después.
+- [ ] 12.3 `README.md:6` y `:23`: añadir `ISO 15765-4` a la línea de normativa, que hoy
+      cita SAE J1979 / ISO 15031-5 / ISO 3779 y se deja fuera justo la norma del bus CAN.
+- [ ] 12.4 `pnpm obd:probe` imprime también `AT DP` (el nombre en texto) junto al `AT DPN`
       que ya imprime (`probe-serial.ts:182`): el número es para la lógica, el texto es para
       que el mecánico confirme de un vistazo que coinciden.
-- [ ] 12.2 `.env.example` y la tabla de entorno del `README.md`: en `serial`/`tcp` el solo
+- [ ] 12.5 `.env.example` y la tabla de entorno del `README.md`: en `serial`/`tcp` el solo
       lectura es forzado.
-- [ ] 12.3 `docs/guion-demo.md:177-178`: el aviso «`ecuDiscovery.ts` fuerza `AT SP 6` [...]
+- [ ] 12.6 `docs/guion-demo.md:177-178`: el aviso «`ecuDiscovery.ts` fuerza `AT SP 6` [...]
       está clavado a fuego» queda falso. Sustituir por lo que hace ahora.
-- [ ] 12.4 `docs/deuda-conocida.md`: en el cabo suelto de `live-data`, anotar la causa
+- [ ] 12.7 `docs/deuda-conocida.md`: en el cabo suelto de `live-data`, anotar la causa
       probable corregida. **No cerrarlo**: no se ha reproducido.
-- [ ] 12.5 `docs/estado-actual.md` (regla 8: máximo 15 líneas, solo estado presente).
-- [ ] 12.6 Archivar el change y sincronizar la spec.
+- [ ] 12.8 `docs/estado-actual.md` (regla 8: máximo 15 líneas, solo estado presente).
+- [ ] 12.9 Archivar el change y sincronizar la spec.
