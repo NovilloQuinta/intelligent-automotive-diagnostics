@@ -1,4 +1,4 @@
-import type { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
+import type { KnowledgeSource } from '@/domain/value-objects/KnowledgeSource.js'
 
 /** Codigo DTC especifico de fabricante aprendido por el sistema. */
 export interface DtcKnowledgeEntry {

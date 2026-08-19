@@ -1,5 +1,5 @@
 import type { UserRepository } from '@/application/ports/UserRepository.js'
-import type { User } from '@/domain/entities/user.js'
+import type { User } from '@/domain/entities/User.js'
 import { toSafeUser } from '@/application/shared/safeUser.js'
 
 /** Error lanzado cuando el usuario autenticado no existe en el sistema. */

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { Formula } from '@/domain/value-objects/formula.js'
+import { Formula } from '@/domain/value-objects/Formula.js'
 
 describe('Formula', () => {
   describe('create', () => {

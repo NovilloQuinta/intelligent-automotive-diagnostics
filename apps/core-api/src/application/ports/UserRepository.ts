@@ -1,4 +1,4 @@
-import type { User } from '@/domain/entities/user.js'
+import type { User } from '@/domain/entities/User.js'
 import type { CreateUserInput } from '@/application/dto/auth/CreateUserInput.js'
 import type { AdminUsersFilter } from '@/application/dto/admin/AdminUsersFilter.js'
 import type { AdminListResult } from '@/application/dto/admin/AdminListResult.js'

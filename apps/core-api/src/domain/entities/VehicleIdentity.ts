@@ -1,4 +1,4 @@
-import { normalizeManufacturer } from '@/domain/value-objects/manufacturer.js'
+import { normalizeManufacturer } from '@/domain/value-objects/Manufacturer.js'
 
 /** Error lanzado cuando falla la validacion de una identidad de vehiculo. */
 export class VehicleIdentityError extends Error {

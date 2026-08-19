@@ -10,7 +10,7 @@
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { KnowledgeSource } from '../src/domain/value-objects/knowledgeSource.js'
+import { KnowledgeSource } from '../src/domain/value-objects/KnowledgeSource.js'
 import { createKnowledgeIndex } from '../src/application/knowledge/createKnowledgeIndex.js'
 import { toDtcMetadata, toDtcEntry } from '../src/application/knowledge/dtcKnowledgeMapper.js'
 import { createEmbedding } from '../src/infrastructure/persistence/vector/embedding.js'

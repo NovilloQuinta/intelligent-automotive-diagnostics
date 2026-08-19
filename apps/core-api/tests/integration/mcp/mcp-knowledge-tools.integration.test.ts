@@ -23,8 +23,8 @@ import {
 } from '@/infrastructure/persistence/vector/vectorTableConfigs.js'
 import type { EmbeddingGeneratorPort } from '@/application/ports/EmbeddingGeneratorPort.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
-import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
-import { Vin } from '@/domain/value-objects/vin.js'
+import type { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
+import { Vin } from '@/domain/value-objects/Vin.js'
 
 const embed: EmbeddingGeneratorPort = (text) => {
   let hash = 0

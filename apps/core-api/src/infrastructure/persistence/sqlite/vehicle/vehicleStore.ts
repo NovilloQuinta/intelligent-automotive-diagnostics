@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm'
 import * as schema from '../schema.js'
-import { Vin } from '@/domain/value-objects/vin.js'
-import type { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
+import { Vin } from '@/domain/value-objects/Vin.js'
+import type { VehicleProfile } from '@/domain/entities/VehicleProfile.js'
 import type { DiagnosticsDb } from '../db.js'
 
 /** Acceso a vehiculos por VIN. */

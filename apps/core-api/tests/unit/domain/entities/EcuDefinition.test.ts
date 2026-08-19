@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { EcuDefinition, EcuDefinitionError } from '@/domain/entities/ecuDefinition.js'
+import { EcuDefinition, EcuDefinitionError } from '@/domain/entities/EcuDefinition.js'
 
 type EcuDefinitionParams = ConstructorParameters<typeof EcuDefinition>[0]
 

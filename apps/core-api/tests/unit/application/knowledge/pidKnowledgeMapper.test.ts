@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { toPidMetadata, toPidEntry } from '@/application/knowledge/pidKnowledgeMapper.js'
 import type { PidKnowledgeEntry } from '@/application/dto/knowledge/PidKnowledgeEntry.js'
-import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
+import { KnowledgeSource } from '@/domain/value-objects/KnowledgeSource.js'
 
 const entry: PidKnowledgeEntry = {
   id: 'pid-22F40C',

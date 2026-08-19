@@ -8,10 +8,10 @@ import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.
 import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
 import { ExecuteCognitiveDiagnosisUseCase } from '@/application/use-cases/ExecuteCognitiveDiagnosisUseCase.js'
 import { withTimeout, TimeoutError } from '@/application/shared/withTimeout.js'
-import { normalizeManufacturer } from '@/domain/value-objects/manufacturer.js'
-import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
-import { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
-import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
+import { normalizeManufacturer } from '@/domain/value-objects/Manufacturer.js'
+import { DiagnosisSession } from '@/domain/entities/DiagnosisSession.js'
+import { VehicleProfile } from '@/domain/entities/VehicleProfile.js'
+import type { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
 import type { DiagnosticsMcpServer, SessionContext } from '@/infrastructure/mcp/mcpServer.js'
 import {
   CognitiveDiagnosisUnavailableError,

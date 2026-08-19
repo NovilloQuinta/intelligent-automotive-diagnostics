@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { toSafeUser, stripPasswordHash } from '@/application/shared/safeUser.js'
-import { User } from '@/domain/entities/user.js'
-import { Email } from '@/domain/value-objects/email.js'
+import { User } from '@/domain/entities/User.js'
+import { Email } from '@/domain/value-objects/Email.js'
 
 function buildUser(role: 'user' | 'admin'): User {
   return new User({

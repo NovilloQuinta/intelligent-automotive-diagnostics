@@ -4,7 +4,7 @@ import {
   PID_OBSERVATION_CATALOG,
   resolvePidObservationStatus,
 } from '@/domain/pidObservationCatalog.js'
-import { PidCode } from '@/domain/value-objects/pidCode.js'
+import { PidCode } from '@/domain/value-objects/PidCode.js'
 import { READ_PID_TOOL } from '@/application/shared/mcpToolNames.js'
 
 /** Resuelve la clave de catalogo de una traza, o `null` si los args no son un PID valido. */

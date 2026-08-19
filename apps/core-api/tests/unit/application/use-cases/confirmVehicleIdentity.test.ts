@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { ConfirmVehicleIdentityUseCase } from '@/application/use-cases/ConfirmVehicleIdentityUseCase.js'
-import { Vin } from '@/domain/value-objects/vin.js'
-import { VehicleIdentity } from '@/domain/entities/vehicleIdentity.js'
-import { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
+import { Vin } from '@/domain/value-objects/Vin.js'
+import { VehicleIdentity } from '@/domain/entities/VehicleIdentity.js'
+import { VehicleProfile } from '@/domain/entities/VehicleProfile.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { toEcuMetadata, toEcuEntry } from '@/application/knowledge/ecuKnowledgeMapper.js'
 import type { EcuKnowledgeEntry } from '@/application/dto/knowledge/EcuKnowledgeEntry.js'
-import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
+import { KnowledgeSource } from '@/domain/value-objects/KnowledgeSource.js'
 
 const entry: EcuKnowledgeEntry = {
   id: 'ecu-7E9',

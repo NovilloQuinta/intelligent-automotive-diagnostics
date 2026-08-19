@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express'
 import { z } from 'zod'
-import { VehicleIdentityError } from '@/domain/entities/vehicleIdentity.js'
-import { VinDecodeError } from '@/domain/value-objects/vin.js'
+import { VehicleIdentityError } from '@/domain/entities/VehicleIdentity.js'
+import { VinDecodeError } from '@/domain/value-objects/Vin.js'
 import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 import {
   ToolCallTimeoutError,

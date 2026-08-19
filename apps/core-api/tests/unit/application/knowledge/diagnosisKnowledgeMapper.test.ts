@@ -4,7 +4,7 @@ import {
   toDiagnosisEntry,
 } from '@/application/knowledge/diagnosisKnowledgeMapper.js'
 import type { DiagnosisKnowledgeEntry } from '@/application/dto/knowledge/DiagnosisKnowledgeEntry.js'
-import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
+import { KnowledgeSource } from '@/domain/value-objects/KnowledgeSource.js'
 
 const entry: DiagnosisKnowledgeEntry = {
   id: 'diag-001',

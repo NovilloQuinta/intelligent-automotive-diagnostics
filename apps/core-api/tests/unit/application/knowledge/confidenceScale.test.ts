@@ -5,7 +5,7 @@ import {
   boostConfidence,
   SUCCESSFUL_REUSE_BONUS,
 } from '@/application/knowledge/confidenceScale.js'
-import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
+import { KnowledgeSource } from '@/domain/value-objects/KnowledgeSource.js'
 
 describe('confidenceScale', () => {
   describe('initialConfidenceFor', () => {

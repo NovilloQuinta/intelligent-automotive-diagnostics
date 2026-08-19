@@ -1,6 +1,6 @@
 import type { SessionResultSnapshot } from '@/application/ports/VehicleRepository.js'
-import type { SessionSeverity } from '@/domain/entities/diagnosisSession.js'
-import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
+import type { SessionSeverity } from '@/domain/entities/DiagnosisSession.js'
+import type { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
 import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import {

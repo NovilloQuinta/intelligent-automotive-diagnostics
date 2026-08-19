@@ -1,4 +1,4 @@
-import type { User } from '@/domain/entities/user.js'
+import type { User } from '@/domain/entities/User.js'
 
 /**
  * Datos necesarios para crear un usuario (sin id, createdAt, getters ni campos

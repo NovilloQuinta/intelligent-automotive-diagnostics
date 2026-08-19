@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { toUser, toCreateValues } from '@/infrastructure/persistence/mappers/userMapper.js'
-import { Email } from '@/domain/value-objects/email.js'
+import { Email } from '@/domain/value-objects/Email.js'
 import type { CreateUserInput } from '@/application/dto/auth/CreateUserInput.js'
 
 const BASE_ROW = {

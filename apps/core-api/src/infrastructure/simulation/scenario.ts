@@ -1,8 +1,8 @@
-import type { LiveData } from '@/domain/value-objects/liveData.js'
-import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
-import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
-import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
+import type { LiveData } from '@/domain/value-objects/LiveData.js'
+import type { DtcCode } from '@/domain/value-objects/DtcCode.js'
+import type { EcuInfo } from '@/domain/entities/EcuInfo.js'
+import type { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
+import type { FreezeFrame } from '@/domain/value-objects/FreezeFrame.js'
 
 /** Tipo de vehiculo soportado por la simulacion. */
 export enum VehicleType {

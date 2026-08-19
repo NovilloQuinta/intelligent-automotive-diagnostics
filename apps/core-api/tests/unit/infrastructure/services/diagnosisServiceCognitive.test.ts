@@ -5,10 +5,10 @@ import {
   CognitiveDiagnosisUnavailableError,
   DiagnosisSessionNotFoundError,
 } from '@/infrastructure/services/errors.js'
-import { Vin } from '@/domain/value-objects/vin.js'
-import { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
-import { VehicleIdentity } from '@/domain/entities/vehicleIdentity.js'
-import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
+import { Vin } from '@/domain/value-objects/Vin.js'
+import { VehicleProfile } from '@/domain/entities/VehicleProfile.js'
+import { VehicleIdentity } from '@/domain/entities/VehicleIdentity.js'
+import { DiagnosisSession } from '@/domain/entities/DiagnosisSession.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { KnowledgeStackPort } from '@/application/ports/KnowledgeStackPort.js'
 import type { PidVectorRepository } from '@/application/ports/PidVectorRepository.js'

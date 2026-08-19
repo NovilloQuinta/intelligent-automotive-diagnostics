@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { ObdSimulator } from '@/infrastructure/simulation/simulator.js'
-import { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import { Vin } from '@/domain/value-objects/vin.js'
-import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
+import { EcuInfo } from '@/domain/entities/EcuInfo.js'
+import { Vin } from '@/domain/value-objects/Vin.js'
+import { FreezeFrame } from '@/domain/value-objects/FreezeFrame.js'
 import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import { seedScenarios } from '@/infrastructure/simulation/seedScenarios.js'
-import type { LiveData } from '@/domain/value-objects/liveData.js'
+import type { LiveData } from '@/domain/value-objects/LiveData.js'
 
 const audiIdleSensorValues: LiveData = {
   rpm: 750,

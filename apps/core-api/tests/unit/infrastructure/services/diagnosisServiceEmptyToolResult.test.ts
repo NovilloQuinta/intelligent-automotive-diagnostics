@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { Vin } from '@/domain/value-objects/vin.js'
+import { Vin } from '@/domain/value-objects/Vin.js'
 import { VehicleType, type SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { dtcCodeSchema } from '@/infrastructure/http/openapi/contracts/diagnosis.js'
-import { DtcCode } from '@/domain/value-objects/dtcCode.js'
+import { DtcCode } from '@/domain/value-objects/DtcCode.js'
 
 /**
  * El origen del DTC viaja hasta la UI sin mapper por el medio: los `DtcCode` se

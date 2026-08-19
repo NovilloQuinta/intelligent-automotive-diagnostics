@@ -11,7 +11,7 @@ import { UpdateProfileUseCase } from '@/application/use-cases/UpdateProfileUseCa
 import { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 import { ProfileController } from '@/infrastructure/http/controllers/ProfileController.js'
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
-import { Email } from '@/domain/value-objects/email.js'
+import { Email } from '@/domain/value-objects/Email.js'
 import type { EmailSenderPort } from '@/application/ports/EmailSenderPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { UserRepository } from '@/application/ports/UserRepository.js'

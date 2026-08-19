@@ -19,14 +19,14 @@ import {
   VehicleIdentificationUnavailableError,
 } from '@/infrastructure/services/errors.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
-import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
+import type { EcuInfo } from '@/domain/entities/EcuInfo.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import { CognitiveDiagnosisRunner } from '@/infrastructure/services/cognitive/cognitiveDiagnosisRunner.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
-import type { DiagnosisResult } from '@/domain/value-objects/diagnosisResult.js'
-import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
-import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
-import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
+import type { DiagnosisResult } from '@/domain/value-objects/DiagnosisResult.js'
+import type { FreezeFrame } from '@/domain/value-objects/FreezeFrame.js'
+import type { DtcCode } from '@/domain/value-objects/DtcCode.js'
+import { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
 import {
   ResolveVehicleIdentityUseCase,
   UNKNOWN_VEHICLE_FIELD,
@@ -35,8 +35,8 @@ import {
   ConfirmVehicleIdentityUseCase,
   type ConfirmVehicleIdentityOutput,
 } from '@/application/use-cases/ConfirmVehicleIdentityUseCase.js'
-import type { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
-import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
+import type { VehicleStatus } from '@/domain/value-objects/VehicleStatus.js'
+import { Vin, FALLBACK_VIN } from '@/domain/value-objects/Vin.js'
 import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
 import type { KnowledgeStackPort } from '@/application/ports/KnowledgeStackPort.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
@@ -48,8 +48,8 @@ import type {
   DiagnosisSessionFilter,
   DiagnosisSessionPage,
 } from '@/application/ports/VehicleRepository.js'
-import { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
-import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
+import { VehicleProfile } from '@/domain/entities/VehicleProfile.js'
+import { DiagnosisSession } from '@/domain/entities/DiagnosisSession.js'
 import {
   MODE_CURRENT_DATA,
   PID_COOLANT_TEMP,

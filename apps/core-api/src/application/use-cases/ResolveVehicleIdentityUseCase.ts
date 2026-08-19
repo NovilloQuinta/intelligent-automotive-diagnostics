@@ -1,11 +1,11 @@
-import type { Vin } from '@/domain/value-objects/vin.js'
+import type { Vin } from '@/domain/value-objects/Vin.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
-import { normalizeManufacturer } from '@/domain/value-objects/manufacturer.js'
+import { normalizeManufacturer } from '@/domain/value-objects/Manufacturer.js'
 import { initialConfidenceFor } from '@/application/knowledge/confidenceScale.js'
-import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
+import { KnowledgeSource } from '@/domain/value-objects/KnowledgeSource.js'
 
 /** Valor con el que se rellenan los campos que la cascada no consigue resolver. */
 export const UNKNOWN_VEHICLE_FIELD = 'unknown'

@@ -1,5 +1,5 @@
-import { Formula } from '../value-objects/formula.js'
-import type { PidCode } from '../value-objects/pidCode.js'
+import { Formula } from '../value-objects/Formula.js'
+import type { PidCode } from '../value-objects/PidCode.js'
 
 /** Error lanzado cuando falla la validacion de un PidDefinition. */
 export class PidDefinitionError extends Error {

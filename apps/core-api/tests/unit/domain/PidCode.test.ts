@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { PidCode, PidCodeError } from '@/domain/value-objects/pidCode.js'
+import { PidCode, PidCodeError } from '@/domain/value-objects/PidCode.js'
 
 describe('PidCode', () => {
   describe('PidCode', () => {

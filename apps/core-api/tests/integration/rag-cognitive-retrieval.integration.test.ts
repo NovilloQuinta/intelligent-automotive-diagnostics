@@ -22,8 +22,8 @@ import {
   EMBEDDING_DIMENSIONS,
   DIAGNOSES_TABLE_CONFIG,
 } from '@/infrastructure/persistence/vector/vectorTableConfigs.js'
-import { Vin } from '@/domain/value-objects/vin.js'
-import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
+import { Vin } from '@/domain/value-objects/Vin.js'
+import type { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
 
 /**
  * Embedding determinista basado en hash: reparte cada texto en un eje distinto,

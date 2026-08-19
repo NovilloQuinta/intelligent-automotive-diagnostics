@@ -1,10 +1,10 @@
-import type { Vin } from '@/domain/value-objects/vin.js'
+import type { Vin } from '@/domain/value-objects/Vin.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
-import { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
-import { VehicleIdentity } from '@/domain/entities/vehicleIdentity.js'
+import { VehicleProfile } from '@/domain/entities/VehicleProfile.js'
+import { VehicleIdentity } from '@/domain/entities/VehicleIdentity.js'
 import { initialConfidenceFor } from '@/application/knowledge/confidenceScale.js'
-import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
+import { KnowledgeSource } from '@/domain/value-objects/KnowledgeSource.js'
 import { UNKNOWN_VEHICLE_FIELD } from '@/application/use-cases/ResolveVehicleIdentityUseCase.js'
 
 /** Datos que aporta el mecánico desde la pantalla de confirmación. */

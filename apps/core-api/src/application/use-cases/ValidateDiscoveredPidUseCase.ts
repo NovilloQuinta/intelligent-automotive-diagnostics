@@ -3,7 +3,7 @@ import type { PidKnowledgeEntry } from '@/application/dto/knowledge/PidKnowledge
 import type { PidFormulaSource } from '@/application/dto/diagnosis/PidFormulaSource.js'
 import { PidRawReadNotSupportedError } from '@/application/obd/obdErrors.js'
 import { markValidated } from '@/application/knowledge/confidenceScale.js'
-import { Formula } from '@/domain/value-objects/formula.js'
+import { Formula } from '@/domain/value-objects/Formula.js'
 import { PidParseError } from '@/domain/services/pidFormula.js'
 import type { ValidationResult } from '@/application/dto/knowledge/ValidationResult.js'
 

@@ -4,8 +4,8 @@ import type { UserRepository } from '@/application/ports/UserRepository.js'
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { AppConfig } from '@/infrastructure/configuration/index.js'
-import { User } from '@/domain/entities/user.js'
-import { Email } from '@/domain/value-objects/email.js'
+import { User } from '@/domain/entities/User.js'
+import { Email } from '@/domain/value-objects/Email.js'
 
 function createLogger(): LoggerPort {
   return { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() }

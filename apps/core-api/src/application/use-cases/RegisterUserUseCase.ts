@@ -2,7 +2,7 @@ import type { UserRepository } from '@/application/ports/UserRepository.js'
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
-import { Email } from '@/domain/value-objects/email.js'
+import { Email } from '@/domain/value-objects/Email.js'
 import { persistRefreshToken } from '@/application/shared/hashToken.js'
 import { toSafeUser } from '@/application/shared/safeUser.js'
 import {

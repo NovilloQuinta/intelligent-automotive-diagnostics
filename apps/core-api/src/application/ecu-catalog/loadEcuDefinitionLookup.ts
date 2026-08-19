@@ -1,6 +1,6 @@
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
-import type { EcuDefinition } from '@/domain/entities/ecuDefinition.js'
-import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
+import type { EcuDefinition } from '@/domain/entities/EcuDefinition.js'
+import type { EcuInfo } from '@/domain/entities/EcuInfo.js'
 import { ECU_TYPE_UNKNOWN } from '@/domain/ecuAddressCatalog.js'
 import type { EcuDefinitionLookup } from './resolveEcuDefinitions.js'
 

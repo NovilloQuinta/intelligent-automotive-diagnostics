@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { VehicleStatus, type MonitorStatus } from '@/domain/value-objects/vehicleStatus.js'
+import { VehicleStatus, type MonitorStatus } from '@/domain/value-objects/VehicleStatus.js'
 
 /** Byte arrays para PID 01 (4 data bytes: A, B, C, D). */
 const b = (a: number, b: number, c: number, d: number): number[] => [a, b, c, d]

@@ -1,7 +1,7 @@
-import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
+import type { PidDefinition } from '@/domain/entities/PidDefinition.js'
 import { SYSTEM_ENGINE, SYSTEM_VEHICLE } from '@/domain/systemVocabulary.js'
-import { Formula } from '@/domain/value-objects/formula.js'
-import { PidCode } from '@/domain/value-objects/pidCode.js'
+import { Formula } from '@/domain/value-objects/Formula.js'
+import { PidCode } from '@/domain/value-objects/PidCode.js'
 
 /** PIDs estándar Mode 01 (SAE J1979) — globales, para cualquier vehículo. */
 export const STANDARD_MODE_01_PIDS: PidDefinition[] = [

@@ -5,8 +5,8 @@ import {
 } from '@/application/use-cases/UpdateProfileUseCase.js'
 import { UserNotFoundError } from '@/application/use-cases/GetCurrentUserUseCase.js'
 import type { UserRepository } from '@/application/ports/UserRepository.js'
-import type { User } from '@/domain/entities/user.js'
-import { Email } from '@/domain/value-objects/email.js'
+import type { User } from '@/domain/entities/User.js'
+import { Email } from '@/domain/value-objects/Email.js'
 
 const USER: User = {
   id: 1,

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { ValidateDiscoveredDtcUseCase } from '@/application/use-cases/ValidateDiscoveredDtcUseCase.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { DtcKnowledgeEntry } from '@/application/dto/knowledge/DtcKnowledgeEntry.js'
-import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
+import { KnowledgeSource } from '@/domain/value-objects/KnowledgeSource.js'
 
 const entry: DtcKnowledgeEntry = {
   id: 'dtc-P1234',

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { DtcDefinition } from '@/domain/entities/dtcDefinition.js'
+import type { DtcDefinition } from '@/domain/entities/DtcDefinition.js'
 
 describe('DtcDefinition', () => {
   const sample: DtcDefinition = {

@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { DiagnosisResult, Severity } from '@/domain/value-objects/diagnosisResult.js'
-import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
-import type { LiveData } from '@/domain/value-objects/liveData.js'
-import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
+import { DiagnosisResult, Severity } from '@/domain/value-objects/DiagnosisResult.js'
+import { FreezeFrame } from '@/domain/value-objects/FreezeFrame.js'
+import type { LiveData } from '@/domain/value-objects/LiveData.js'
+import type { DtcCode } from '@/domain/value-objects/DtcCode.js'
 
 const sampleLiveData: LiveData = { rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 }
 const sampleDtcCodes: DtcCode[] = [{ code: 'P0301', description: 'Cylinder 1 Misfire' }]

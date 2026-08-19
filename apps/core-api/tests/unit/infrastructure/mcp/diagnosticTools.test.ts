@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
+import { EcuInfo } from '@/domain/entities/EcuInfo.js'
+import type { PidDefinition } from '@/domain/entities/PidDefinition.js'
 import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
 import {
   mockObdRepo,

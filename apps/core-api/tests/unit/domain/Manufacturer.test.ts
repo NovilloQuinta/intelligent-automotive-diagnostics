@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { normalizeManufacturer } from '@/domain/value-objects/manufacturer.js'
+import { normalizeManufacturer } from '@/domain/value-objects/Manufacturer.js'
 
 describe('normalizeManufacturer', () => {
   it('should normalize to title case', () => {

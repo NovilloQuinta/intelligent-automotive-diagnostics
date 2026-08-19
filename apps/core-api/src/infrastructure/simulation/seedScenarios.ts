@@ -1,8 +1,8 @@
 import { VehicleType } from '@/infrastructure/simulation/scenario.js'
 import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
-import { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import { Vin } from '@/domain/value-objects/vin.js'
-import { LiveData } from '@/domain/value-objects/liveData.js'
+import { EcuInfo } from '@/domain/entities/EcuInfo.js'
+import { Vin } from '@/domain/value-objects/Vin.js'
+import { LiveData } from '@/domain/value-objects/LiveData.js'
 import {
   MODE_CURRENT_DATA,
   PID_AMBIENT_AIR_TEMP,

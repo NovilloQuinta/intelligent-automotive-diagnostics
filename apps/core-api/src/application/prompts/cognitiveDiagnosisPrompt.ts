@@ -1,4 +1,4 @@
-import { Severity } from '@/domain/value-objects/diagnosisResult.js'
+import { Severity } from '@/domain/value-objects/DiagnosisResult.js'
 
 /**
  * Prompt de sistema del diagnostico cognitivo, por bloques.

@@ -1,5 +1,5 @@
 import type { UserRepository } from '@/application/ports/UserRepository.js'
-import type { User } from '@/domain/entities/user.js'
+import type { User } from '@/domain/entities/User.js'
 import type { AdminUsersFilter } from '@/application/dto/admin/AdminUsersFilter.js'
 import type { AdminListResult } from '@/application/dto/admin/AdminListResult.js'
 import { stripPasswordHash } from '@/application/shared/safeUser.js'

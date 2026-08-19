@@ -1,6 +1,6 @@
-import type { LiveData } from './liveData.js'
-import type { DtcCode } from './dtcCode.js'
-import type { FreezeFrame } from './freezeFrame.js'
+import type { LiveData } from './LiveData.js'
+import type { DtcCode } from './DtcCode.js'
+import type { FreezeFrame } from './FreezeFrame.js'
 
 /** Nivel de criticidad de un diagnóstico. */
 export enum Severity {

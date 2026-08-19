@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { DtcCode, DtcCodeError } from '@/domain/value-objects/dtcCode.js'
+import { DtcCode, DtcCodeError } from '@/domain/value-objects/DtcCode.js'
 
 describe('DtcCode', () => {
   it('should reject a code that does not match SAE J2012', () => {

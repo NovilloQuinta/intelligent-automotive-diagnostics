@@ -2,7 +2,7 @@ import type {
   Elm327ExclusiveSession,
   Elm327TransportPort,
 } from '@/application/ports/Elm327TransportPort.js'
-import { EcuInfo } from '@/domain/entities/ecuInfo.js'
+import { EcuInfo } from '@/domain/entities/EcuInfo.js'
 import { resolveEcuAddress } from '@/domain/ecuAddressCatalog.js'
 import { parseCanHeaders } from './protocol.js'
 import { resolveCanBus, type CanBusDescriptor } from './protocolNumber.js'

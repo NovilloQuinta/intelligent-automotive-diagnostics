@@ -9,10 +9,10 @@ import {
   Elm327ParseError,
 } from '@/infrastructure/elm327/elm327Adapter.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
-import { PidDefinition } from '@/domain/entities/pidDefinition.js'
-import { PidCode } from '@/domain/value-objects/pidCode.js'
+import { PidDefinition } from '@/domain/entities/PidDefinition.js'
+import { PidCode } from '@/domain/value-objects/PidCode.js'
 import { UnsafeObdModeError } from '@/domain/obdServiceMode.js'
-import { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
+import { VehicleStatus } from '@/domain/value-objects/VehicleStatus.js'
 
 vi.mock('node:net', () => {
   const createConnection = vi.fn(() => {

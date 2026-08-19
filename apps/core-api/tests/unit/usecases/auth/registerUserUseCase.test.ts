@@ -4,7 +4,7 @@ import type { UserRepository } from '@/application/ports/UserRepository.js'
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
 import type { CreateUserInput } from '@/application/dto/auth/CreateUserInput.js'
-import { User } from '@/domain/entities/user.js'
+import { User } from '@/domain/entities/User.js'
 
 function createUserRepo(): UserRepository {
   return {

@@ -1,4 +1,4 @@
-import type { Severity } from '@/domain/value-objects/diagnosisResult.js'
+import type { Severity } from '@/domain/value-objects/DiagnosisResult.js'
 import type { ToolCallTrace } from '@/application/dto/llm/ToolCallTrace.js'
 import type { PidObservation } from '@/application/dto/diagnosis/PidObservation.js'
 

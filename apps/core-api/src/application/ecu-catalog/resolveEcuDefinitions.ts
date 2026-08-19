@@ -1,5 +1,5 @@
-import { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import type { EcuDefinition } from '@/domain/entities/ecuDefinition.js'
+import { EcuInfo } from '@/domain/entities/EcuInfo.js'
+import type { EcuDefinition } from '@/domain/entities/EcuDefinition.js'
 import { ECU_TYPE_UNKNOWN } from '@/domain/ecuAddressCatalog.js'
 
 /** Confianza mínima para resolver una ECU `UNKNOWN` a su nombre/tipo reales (ADR-007, opción B). */

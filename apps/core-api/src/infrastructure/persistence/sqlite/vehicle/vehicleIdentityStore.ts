@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import * as schema from '../schema.js'
-import { VehicleIdentity } from '@/domain/entities/vehicleIdentity.js'
+import { VehicleIdentity } from '@/domain/entities/VehicleIdentity.js'
 import type { DiagnosticsDb } from '../db.js'
 
 type VehicleIdentityRow = typeof schema.vehicleIdentities.$inferSelect

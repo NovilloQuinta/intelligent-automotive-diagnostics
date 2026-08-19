@@ -1,6 +1,6 @@
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
-import { DiagnosisResult } from '@/domain/value-objects/diagnosisResult.js'
-import { LiveData } from '@/domain/value-objects/liveData.js'
+import { DiagnosisResult } from '@/domain/value-objects/DiagnosisResult.js'
+import { LiveData } from '@/domain/value-objects/LiveData.js'
 import {
   MODE_CURRENT_DATA,
   PID_RPM,

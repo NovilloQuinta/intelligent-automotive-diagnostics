@@ -1,6 +1,6 @@
 import type { AppConfig } from '@/infrastructure/configuration/index.js'
-import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
-import { Vin } from '@/domain/value-objects/vin.js'
+import { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
+import { Vin } from '@/domain/value-objects/Vin.js'
 import type { ScenarioDescriptor } from '@/infrastructure/services/diagnosisTypes.js'
 
 /**

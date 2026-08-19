@@ -1,11 +1,11 @@
-import type { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
-import type { DiagnosisSession, SessionSeverity } from '@/domain/entities/diagnosisSession.js'
-import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
-import type { PidReading } from '@/domain/entities/pidReading.js'
-import type { DtcDefinition } from '@/domain/entities/dtcDefinition.js'
-import type { EcuDefinition } from '@/domain/entities/ecuDefinition.js'
-import type { VehicleIdentity } from '@/domain/entities/vehicleIdentity.js'
+import type { VehicleProfile } from '@/domain/entities/VehicleProfile.js'
+import type { DiagnosisSession, SessionSeverity } from '@/domain/entities/DiagnosisSession.js'
+import type { EcuInfo } from '@/domain/entities/EcuInfo.js'
+import type { PidDefinition } from '@/domain/entities/PidDefinition.js'
+import type { PidReading } from '@/domain/entities/PidReading.js'
+import type { DtcDefinition } from '@/domain/entities/DtcDefinition.js'
+import type { EcuDefinition } from '@/domain/entities/EcuDefinition.js'
+import type { VehicleIdentity } from '@/domain/entities/VehicleIdentity.js'
 
 /** Resultado de una consulta paginada de sesiones de diagnostico. */
 export interface DiagnosisSessionPage {

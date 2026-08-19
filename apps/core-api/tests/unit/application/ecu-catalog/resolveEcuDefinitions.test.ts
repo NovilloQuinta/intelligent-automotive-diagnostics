@@ -3,8 +3,8 @@ import {
   resolveEcuDefinitions,
   RESOLVE_CONFIDENCE_THRESHOLD,
 } from '@/application/ecu-catalog/resolveEcuDefinitions.js'
-import { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import { EcuDefinition } from '@/domain/entities/ecuDefinition.js'
+import { EcuInfo } from '@/domain/entities/EcuInfo.js'
+import { EcuDefinition } from '@/domain/entities/EcuDefinition.js'
 
 function unknownEcu(responseAddr: string): EcuInfo {
   return new EcuInfo({

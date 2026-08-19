@@ -1,7 +1,7 @@
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
-import { PidDefinition } from '@/domain/entities/pidDefinition.js'
-import type { DtcDefinition } from '@/domain/entities/dtcDefinition.js'
+import { PidDefinition } from '@/domain/entities/PidDefinition.js'
+import type { DtcDefinition } from '@/domain/entities/DtcDefinition.js'
 import {
   SYSTEM_BATTERY,
   SYSTEM_EMISSIONS,
@@ -10,7 +10,7 @@ import {
   SYSTEM_TRANSMISSION,
   SYSTEM_VEHICLE,
 } from '@/domain/systemVocabulary.js'
-import { PidCode } from '@/domain/value-objects/pidCode.js'
+import { PidCode } from '@/domain/value-objects/PidCode.js'
 
 /** Confianza asignada a los DTCs manufacturer-specific del seed (fuente documentada VAG/Ross-Tech). */
 const SEED_DTC_CONFIDENCE = 0.9

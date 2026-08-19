@@ -1,9 +1,9 @@
 import type { ObdRepository, PidReadResult } from '@/application/ports/ObdRepository.js'
-import { DtcCode } from '@/domain/value-objects/dtcCode.js'
-import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
-import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
-import type { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
+import { DtcCode } from '@/domain/value-objects/DtcCode.js'
+import type { EcuInfo } from '@/domain/entities/EcuInfo.js'
+import type { FreezeFrame } from '@/domain/value-objects/FreezeFrame.js'
+import type { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
+import type { VehicleStatus } from '@/domain/value-objects/VehicleStatus.js'
 import type { ObdSimulator } from './simulator.js'
 
 /** Adaptador que implementa {@link ObdRepository} usando el simulador de hardware. */

@@ -1,8 +1,8 @@
-import type { DtcCode } from '@/domain/value-objects/dtcCode.js'
-import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import type { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
-import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
-import type { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
+import type { DtcCode } from '@/domain/value-objects/DtcCode.js'
+import type { EcuInfo } from '@/domain/entities/EcuInfo.js'
+import type { FreezeFrame } from '@/domain/value-objects/FreezeFrame.js'
+import type { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
+import type { VehicleStatus } from '@/domain/value-objects/VehicleStatus.js'
 
 /** Lectura de un PID resuelta en una sola pasada: valor fisico y bytes de origen. */
 export interface PidReadResult {

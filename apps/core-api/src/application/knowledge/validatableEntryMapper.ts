@@ -1,5 +1,5 @@
 import type { MetadataValue } from '@/application/dto/vector/VectorRecord.js'
-import type { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
+import type { KnowledgeSource } from '@/domain/value-objects/KnowledgeSource.js'
 
 /**
  * Campos comunes a las entradas del catalogo que admiten validacion OBD (PIDs y DTCs).

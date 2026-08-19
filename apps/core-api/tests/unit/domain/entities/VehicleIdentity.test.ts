@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { VehicleIdentity, VehicleIdentityError } from '@/domain/entities/vehicleIdentity.js'
+import { VehicleIdentity, VehicleIdentityError } from '@/domain/entities/VehicleIdentity.js'
 
 /**
  * Identidad de fabricante aprendida por WMI.

@@ -1,10 +1,10 @@
 import { vi } from 'vitest'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
-import type { PidDefinition } from '@/domain/entities/pidDefinition.js'
-import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
-import { PidCode } from '@/domain/value-objects/pidCode.js'
-import { Vin } from '@/domain/value-objects/vin.js'
+import type { PidDefinition } from '@/domain/entities/PidDefinition.js'
+import { FreezeFrame } from '@/domain/value-objects/FreezeFrame.js'
+import { PidCode } from '@/domain/value-objects/PidCode.js'
+import { Vin } from '@/domain/value-objects/Vin.js'
 
 /** Bytes por defecto de una lectura simulada (0x0BB8 = 750 tras la formula de RPM). */
 const DEFAULT_RAW_BYTES = [0x0b, 0xb8]

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { ProcessVehicleDiagnosisUseCase } from '@/application/use-cases/ProcessVehicleDiagnosisUseCase.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
-import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
-import { Vin } from '@/domain/value-objects/vin.js'
+import { FreezeFrame } from '@/domain/value-objects/FreezeFrame.js'
+import { Vin } from '@/domain/value-objects/Vin.js'
 
 const sensorValues = { rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 }
 const dtcCodes = [{ code: 'P0301', description: 'Cylinder 1 Misfire' }]

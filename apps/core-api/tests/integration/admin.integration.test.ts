@@ -19,7 +19,7 @@ import { GetCurrentUserUseCase } from '@/application/use-cases/GetCurrentUserUse
 import { LogoutUserUseCase } from '@/application/use-cases/LogoutUserUseCase.js'
 import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
-import { Email } from '@/domain/value-objects/email.js'
+import { Email } from '@/domain/value-objects/Email.js'
 import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.js'
 import type { KnowledgeStackWithStores } from '@/infrastructure/composition/knowledge.js'
 import type { VectorStorePort } from '@/application/ports/VectorStorePort.js'

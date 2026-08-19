@@ -1,4 +1,4 @@
-import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
+import { KnowledgeSource } from '@/domain/value-objects/KnowledgeSource.js'
 
 /**
  * Tabla de confianza del catalogo auto-expansivo (ADR-007 §4).

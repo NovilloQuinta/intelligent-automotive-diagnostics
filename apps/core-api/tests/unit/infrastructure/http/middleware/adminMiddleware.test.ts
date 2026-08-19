@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createRequireAdmin } from '@/infrastructure/http/middleware/admin.middleware.js'
 import type { UserRepository } from '@/application/ports/UserRepository.js'
-import { User } from '@/domain/entities/user.js'
-import { Email } from '@/domain/value-objects/email.js'
+import { User } from '@/domain/entities/User.js'
+import { Email } from '@/domain/value-objects/Email.js'
 
 function buildUser(role: 'user' | 'admin'): User {
   return new User({

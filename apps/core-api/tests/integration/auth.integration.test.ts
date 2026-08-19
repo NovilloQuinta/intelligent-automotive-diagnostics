@@ -19,7 +19,7 @@ import { AuthController } from '@/infrastructure/http/controllers/AuthController
 import { ProfileController } from '@/infrastructure/http/controllers/ProfileController.js'
 import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
-import { Email } from '@/domain/value-objects/email.js'
+import { Email } from '@/domain/value-objects/Email.js'
 
 const mockAuditRepo: AuditLogRepository = {
   create: async () => {},

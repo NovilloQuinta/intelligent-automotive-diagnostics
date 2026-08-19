@@ -1,4 +1,4 @@
-import type { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
+import type { KnowledgeSource } from '@/domain/value-objects/KnowledgeSource.js'
 
 /**
  * Caso de diagnostico resuelto, guardado como memoria de taller.

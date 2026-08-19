@@ -1,6 +1,6 @@
 import type { MetadataValue } from '@/application/dto/vector/VectorRecord.js'
 import type { EcuKnowledgeEntry } from '@/application/dto/knowledge/EcuKnowledgeEntry.js'
-import type { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
+import type { KnowledgeSource } from '@/domain/value-objects/KnowledgeSource.js'
 
 /** Convierte una ECU aprendida en los metadatos que se guardan junto al vector. */
 export function toEcuMetadata(entry: EcuKnowledgeEntry): Record<string, MetadataValue> {

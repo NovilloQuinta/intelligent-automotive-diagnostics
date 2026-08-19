@@ -3,7 +3,7 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { SqlitePasswordResetTokenRepository } from '@/infrastructure/persistence/sqlite/passwordResetTokenRepository.js'
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
-import { Email } from '@/domain/value-objects/email.js'
+import { Email } from '@/domain/value-objects/Email.js'
 
 function createTestDb() {
   const sqlite = new Database(':memory:')

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { PidReading, PidReadingError } from '@/domain/entities/pidReading.js'
+import { PidReading, PidReadingError } from '@/domain/entities/PidReading.js'
 
 describe('PidReading', () => {
   it('should validate and normalize a valid reading', () => {

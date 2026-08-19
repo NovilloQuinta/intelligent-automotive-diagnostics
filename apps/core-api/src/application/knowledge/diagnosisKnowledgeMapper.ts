@@ -1,6 +1,6 @@
 import type { MetadataValue } from '@/application/dto/vector/VectorRecord.js'
 import type { DiagnosisKnowledgeEntry } from '@/application/dto/knowledge/DiagnosisKnowledgeEntry.js'
-import type { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
+import type { KnowledgeSource } from '@/domain/value-objects/KnowledgeSource.js'
 
 /** Los metadatos solo admiten escalares, asi que las listas se serializan aqui. */
 function serializeList(values: readonly string[]): string {

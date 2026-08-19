@@ -1,4 +1,4 @@
-import { EcuInfo } from '@/domain/entities/ecuInfo.js'
+import { EcuInfo } from '@/domain/entities/EcuInfo.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 
 /**

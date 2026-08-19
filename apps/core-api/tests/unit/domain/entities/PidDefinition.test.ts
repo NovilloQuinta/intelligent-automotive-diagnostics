@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { PidDefinition } from '@/domain/entities/pidDefinition.js'
-import { PidCode } from '@/domain/value-objects/pidCode.js'
+import { PidDefinition } from '@/domain/entities/PidDefinition.js'
+import { PidCode } from '@/domain/value-objects/PidCode.js'
 
 type PidDefinitionParams = ConstructorParameters<typeof PidDefinition>[0]
 

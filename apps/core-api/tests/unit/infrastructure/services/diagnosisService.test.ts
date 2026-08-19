@@ -1,10 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
 import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 import { DiagnosisScenarioNotFoundError } from '@/infrastructure/services/errors.js'
-import { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
-import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
-import { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
+import { EcuInfo } from '@/domain/entities/EcuInfo.js'
+import { Vin, FALLBACK_VIN } from '@/domain/value-objects/Vin.js'
+import { FreezeFrame } from '@/domain/value-objects/FreezeFrame.js'
+import { VehicleStatus } from '@/domain/value-objects/VehicleStatus.js'
 import type { KnowledgeStackPort } from '@/application/ports/KnowledgeStackPort.js'
 import type { PidVectorRepository } from '@/application/ports/PidVectorRepository.js'
 import type { DtcVectorRepository } from '@/application/ports/DtcVectorRepository.js'
@@ -17,7 +17,7 @@ import {
   createMockVehicleRepo,
   mockScenarios,
 } from './diagnosisServiceTestFactories.js'
-import { VehicleIdentity } from '@/domain/entities/vehicleIdentity.js'
+import { VehicleIdentity } from '@/domain/entities/VehicleIdentity.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 
 /**

@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm'
 import * as schema from '../schema.js'
-import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import { EcuDefinition } from '@/domain/entities/ecuDefinition.js'
+import type { EcuInfo } from '@/domain/entities/EcuInfo.js'
+import { EcuDefinition } from '@/domain/entities/EcuDefinition.js'
 import type { DiagnosticsDb } from '../db.js'
 
 type EcuDefinitionRow = typeof schema.ecuDefinitions.$inferSelect

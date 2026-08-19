@@ -1,8 +1,8 @@
 import type { SimulationScenario } from './scenario.js'
-import type { EcuInfo } from '@/domain/entities/ecuInfo.js'
-import { FreezeFrame } from '@/domain/value-objects/freezeFrame.js'
-import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
-import { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
+import type { EcuInfo } from '@/domain/entities/EcuInfo.js'
+import { FreezeFrame } from '@/domain/value-objects/FreezeFrame.js'
+import type { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
+import { VehicleStatus } from '@/domain/value-objects/VehicleStatus.js'
 import {
   MODE_CURRENT_DATA,
   MODE_DTC,

@@ -3,7 +3,7 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
 import type { CreateUserInput } from '@/application/dto/auth/CreateUserInput.js'
-import { Email } from '@/domain/value-objects/email.js'
+import { Email } from '@/domain/value-objects/Email.js'
 import { adminUsersFilterSchema } from '@/application/dto/admin/AdminUsersFilter.js'
 
 const mockUser: CreateUserInput = {

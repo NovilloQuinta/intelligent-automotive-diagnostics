@@ -4,8 +4,8 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import * as schema from '@/infrastructure/persistence/sqlite/schema.js'
 import { SqliteVehicleRepository } from '@/infrastructure/persistence/sqlite/vehicleRepository.js'
 import { seedManufacturerCatalog } from '@/infrastructure/persistence/sqlite/seedManufacturerCatalog.js'
-import { PidDefinition } from '@/domain/entities/pidDefinition.js'
-import { PidCode } from '@/domain/value-objects/pidCode.js'
+import { PidDefinition } from '@/domain/entities/PidDefinition.js'
+import { PidCode } from '@/domain/value-objects/PidCode.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 
 const DDL = `

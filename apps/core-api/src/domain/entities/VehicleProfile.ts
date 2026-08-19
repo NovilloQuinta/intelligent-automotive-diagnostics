@@ -1,6 +1,6 @@
-import type { EcuInfo } from './ecuInfo.js'
-import type { PidDefinition } from './pidDefinition.js'
-import type { Vin } from '../value-objects/vin.js'
+import type { EcuInfo } from './EcuInfo.js'
+import type { PidDefinition } from './PidDefinition.js'
+import type { Vin } from '../value-objects/Vin.js'
 
 /** Primer año de fabricación de un automóvil. */
 const MIN_YEAR = 1886

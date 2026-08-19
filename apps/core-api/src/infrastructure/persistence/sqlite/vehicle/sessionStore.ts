@@ -5,8 +5,8 @@ import type {
 } from '@/application/ports/VehicleRepository.js'
 import { eq, and, desc, gte, lte, count } from 'drizzle-orm'
 import * as schema from '../schema.js'
-import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
-import type { SessionSeverity } from '@/domain/entities/diagnosisSession.js'
+import { DiagnosisSession } from '@/domain/entities/DiagnosisSession.js'
+import type { SessionSeverity } from '@/domain/entities/DiagnosisSession.js'
 import type { DiagnosticsDb } from '../db.js'
 
 /** Acceso a sesiones de diagnostico y sus snapshots. */

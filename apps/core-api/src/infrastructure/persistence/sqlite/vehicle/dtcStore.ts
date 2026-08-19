@@ -1,6 +1,6 @@
 import { eq, sql, desc } from 'drizzle-orm'
 import * as schema from '../schema.js'
-import type { DtcDefinition } from '@/domain/entities/dtcDefinition.js'
+import type { DtcDefinition } from '@/domain/entities/DtcDefinition.js'
 import type { DiagnosticsDb } from '../db.js'
 
 type DtcDefinitionRow = typeof schema.dtcDefinitions.$inferSelect

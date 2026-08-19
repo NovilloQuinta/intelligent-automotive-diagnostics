@@ -3,8 +3,8 @@ import { ForgotPasswordUseCase } from '@/application/use-cases/ForgotPasswordUse
 import type { UserRepository } from '@/application/ports/UserRepository.js'
 import type { PasswordResetTokenRepository } from '@/application/ports/PasswordResetTokenRepository.js'
 import type { EmailSenderPort } from '@/application/ports/EmailSenderPort.js'
-import type { User } from '@/domain/entities/user.js'
-import { Email } from '@/domain/value-objects/email.js'
+import type { User } from '@/domain/entities/User.js'
+import { Email } from '@/domain/value-objects/Email.js'
 
 const USER: User = {
   id: 1,

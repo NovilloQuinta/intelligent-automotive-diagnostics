@@ -1,4 +1,4 @@
-import type { Vin } from './vin.js'
+import type { Vin } from './Vin.js'
 
 /** Primer año de fabricación de un automóvil (Benz Patent-Motorwagen). */
 const MIN_VEHICLE_YEAR = 1886

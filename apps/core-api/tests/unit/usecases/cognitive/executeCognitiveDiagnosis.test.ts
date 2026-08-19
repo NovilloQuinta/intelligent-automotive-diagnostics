@@ -7,9 +7,9 @@ import type {
   ToolCallTrace,
 } from '@/application/ports/LlmClientPort.js'
 import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
-import { Severity } from '@/domain/value-objects/diagnosisResult.js'
-import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
-import { Vin } from '@/domain/value-objects/vin.js'
+import { Severity } from '@/domain/value-objects/DiagnosisResult.js'
+import type { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
+import { Vin } from '@/domain/value-objects/Vin.js'
 import type { DiagnosisVectorRepository } from '@/application/ports/DiagnosisVectorRepository.js'
 import type { DiagnosisKnowledgeEntry } from '@/application/dto/knowledge/DiagnosisKnowledgeEntry.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'

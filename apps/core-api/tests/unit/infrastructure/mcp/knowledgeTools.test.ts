@@ -10,7 +10,7 @@ import type { PidKnowledgeEntry } from '@/application/dto/knowledge/PidKnowledge
 import type { DtcKnowledgeEntry } from '@/application/dto/knowledge/DtcKnowledgeEntry.js'
 import type { DiagnosisKnowledgeEntry } from '@/application/dto/knowledge/DiagnosisKnowledgeEntry.js'
 import type { EcuKnowledgeEntry } from '@/application/dto/knowledge/EcuKnowledgeEntry.js'
-import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
+import { KnowledgeSource } from '@/domain/value-objects/KnowledgeSource.js'
 import { mockObdRepo, mockVehicleRepo } from './mcpTestFactories.js'
 
 describe('knowledgeTools (via createMcpServer)', () => {

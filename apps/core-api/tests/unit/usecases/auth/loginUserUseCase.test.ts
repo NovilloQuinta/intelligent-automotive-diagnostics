@@ -7,8 +7,8 @@ import {
 import type { UserRepository } from '@/application/ports/UserRepository.js'
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
-import type { User } from '@/domain/entities/user.js'
-import { Email } from '@/domain/value-objects/email.js'
+import type { User } from '@/domain/entities/User.js'
+import { Email } from '@/domain/value-objects/Email.js'
 
 const USER: User = {
   id: 1,

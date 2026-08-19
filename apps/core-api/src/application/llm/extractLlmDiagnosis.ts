@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { Severity } from '@/domain/value-objects/diagnosisResult.js'
+import { Severity } from '@/domain/value-objects/DiagnosisResult.js'
 
 /**
  * Extrae el bloque JSON de la respuesta del LLM.

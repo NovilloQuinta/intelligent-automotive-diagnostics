@@ -7,7 +7,7 @@ import { PidRawReadNotSupportedError } from '@/application/obd/obdErrors.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { PidKnowledgeEntry } from '@/application/dto/knowledge/PidKnowledgeEntry.js'
 import type { PidFormulaSource } from '@/application/dto/diagnosis/PidFormulaSource.js'
-import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
+import { KnowledgeSource } from '@/domain/value-objects/KnowledgeSource.js'
 import { Elm327ConnectionError } from '@/infrastructure/elm327/errors.js'
 
 const entry: PidKnowledgeEntry = {

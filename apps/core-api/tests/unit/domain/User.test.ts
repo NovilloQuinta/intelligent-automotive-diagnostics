@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { User } from '@/domain/entities/user.js'
-import { Email } from '@/domain/value-objects/email.js'
+import { User } from '@/domain/entities/User.js'
+import { Email } from '@/domain/value-objects/Email.js'
 
 function buildUser(overrides: Partial<ConstructorParameters<typeof User>[0]> = {}): User {
   return new User({

@@ -1,4 +1,4 @@
-import type { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
+import type { KnowledgeSource } from '@/domain/value-objects/KnowledgeSource.js'
 
 /**
  * Definicion de ECU aprendida para el indice vectorial del catalogo.

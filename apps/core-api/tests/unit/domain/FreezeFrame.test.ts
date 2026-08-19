@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { FreezeFrame, FreezeFrameError } from '@/domain/value-objects/freezeFrame.js'
+import { FreezeFrame, FreezeFrameError } from '@/domain/value-objects/FreezeFrame.js'
 
 describe('FreezeFrame', () => {
   describe('create', () => {

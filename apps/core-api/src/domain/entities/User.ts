@@ -1,4 +1,4 @@
-import { Email } from '../value-objects/email.js'
+import { Email } from '../value-objects/Email.js'
 
 /** Error lanzado cuando falla la validacion de un User. */
 export class UserError extends Error {

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
 import { VehicleIdentificationUnavailableError } from '@/infrastructure/services/errors.js'
-import { VehicleIdentityError } from '@/domain/entities/vehicleIdentity.js'
+import { VehicleIdentityError } from '@/domain/entities/VehicleIdentity.js'
 import request from 'supertest'
 import express from 'express'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
 import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
-import { EcuInfo } from '@/domain/entities/ecuInfo.js'
+import { EcuInfo } from '@/domain/entities/EcuInfo.js'
 import {
   ToolCallTimeoutError,
   EmptyToolResultError,
@@ -19,8 +19,8 @@ import {
   DiagnosisSessionNotFoundError,
 } from '@/infrastructure/services/errors.js'
 import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
-import { Vin } from '@/domain/value-objects/vin.js'
-import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
+import { Vin } from '@/domain/value-objects/Vin.js'
+import { DiagnosisSession } from '@/domain/entities/DiagnosisSession.js'
 import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { ToolCallTrace } from '@/application/ports/LlmClientPort.js'
