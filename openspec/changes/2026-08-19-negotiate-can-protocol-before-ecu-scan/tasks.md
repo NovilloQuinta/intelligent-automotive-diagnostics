@@ -1,5 +1,27 @@
+> **El REFACTOR de cada ciclo tiene criterio de terminación, igual que RED y GREEN.**
+> Sin él se cae de la lista: «el test pasa» es binario y «mejora el código» no, así que
+> con prisa siempre gana el verde. El criterio es medible y lo dan las herramientas que ya
+> están puestas:
+>
+> 1. **Cero avisos nuevos de ESLint.** `max-lines-per-function` (40) y `complexity` (5).
+>    Se mide en `develop` antes de empezar y se compara al cerrar cada bloque. Un aviso
+>    nuevo cierra el bloque solo si se justifica con el disable razonado que exige
+>    `AGENTS.md` ("Excepciones al limite de 40 lineas"); si no, se parte.
+> 2. **Cero duplicación anunciada.** Los objetivos de este change están identificados de
+>    antemano en 2.6 y 3.8, no son un «revisa a ver si mejoras algo».
+> 3. **Tests verdes durante todo el REFACTOR**, sin tocar sus aserciones. Si hay que
+>    cambiar un test para que el refactor pase, no es refactor: es un cambio de
+>    comportamiento y va en su propio ciclo.
+>
+> Commit propio por refactor (`refactor(ámbito): …`), nunca mezclado con el GREEN que lo
+> provocó.
+
 ## 1. Traducir el protocolo negociado (aditivo, aislado)
 
+- [ ] 1.0 Medir la línea base en `develop`: número de avisos de `max-lines-per-function` y
+      de `complexity`, y las cifras concretas de las tres funciones que este change hace
+      crecer (`discoverEcus`, `parseCanHeaders`, `resolveEcuAddress`). Sin línea base no
+      hay criterio de cierre para los REFACTOR de 2.6 y 3.8.
 - [ ] 1.1 RED: `tests/unit/infrastructure/elm327/protocolNumber.test.ts` — los diez
       protocolos, el prefijo `A` (`'A6'`), la respuesta sucia (`'A6\r\r>'`) y la entrada
       irreconocible (`''`, `'?'`, `'BUS INIT: ERROR'`) devolviendo `null`.
@@ -25,6 +47,14 @@
 - [ ] 2.5 Verificar que **no** hace falta tocar `EcuInfo` ni el schema de SQLite (medido:
       regex sin límite de longitud, columnas `text` sin ancho). Si algún test lo desmiente,
       parar y replantear antes de tocar persistencia.
+- [ ] 2.6 **REFACTOR — duplicación anunciada**: 2.2 y 2.4 introducen la misma pregunta en
+      dos módulos distintos ("¿esta dirección es de 11 o de 29 bits?"). Extraer esa
+      discriminación a un único sitio —el descriptor de protocolo de 1.2, que ya conoce la
+      familia del bus— y que parser y catálogo la consuman en vez de reimplementarla cada
+      uno con su `length === 3`.
+      **Criterio de cierre**: una sola definición del ancho de dirección en el árbol
+      (`grep` no encuentra una segunda), avisos de ESLint sin subir respecto a 1.0, y los
+      tests de 2.1 y 2.4 pasando **sin tocar sus aserciones**.
 
 ## 3. El barrido pregunta el protocolo en vez de imponerlo
 
@@ -47,6 +77,16 @@
       `CAN_11_250`, protocolo 7 produce `CAN_29_500`. `DISCOVERED_ECU_PROTOCOL` desaparece.
 - [ ] 3.7 El fallback físico al ECM (`discoverPrimaryEcu`, `:80`) usa la dirección física
       del protocolo detectado (`7E0` o `18DA10F1`) y su dirección de respuesta.
+- [ ] 3.8 **REFACTOR — crecimiento anunciado de `discoverEcus`**: entre 3.3 y 3.7 gana la
+      consulta de protocolo, la guarda CAN/no-CAN y tres direcciones derivadas del
+      descriptor. Hoy es corta y de complejidad baja (medida en 1.0); con eso encima se
+      acerca a los dos límites de ESLint a la vez. Extraer la resolución del protocolo
+      —consultar `AT DPN`, traducir, decidir si se sigue— a su propia función, de modo que
+      `discoverEcus` quede como lo que es: reservar, resolver, barrer, restaurar.
+      **Criterio de cierre**: `discoverEcus` por debajo de 40 líneas y de complejidad 5 sin
+      necesidad de disable, avisos totales sin subir respecto a 1.0, y los 8 tests
+      existentes de `ecuDiscovery.test.ts` más los nuevos pasando **sin tocar sus
+      aserciones**.
 
 ## 4. Solo lectura forzada con un coche real conectado
 
@@ -66,7 +106,10 @@
       y el barrido del Audi sigue devolviendo las cinco ECUs del escenario.
 - [ ] 5.2 Descartar la regresión concreta: `GET /api/live-data` devuelve valores **antes y
       después** de un barrido de ECUs. Es el cabo suelto de `docs/deuda-conocida.md`.
-- [ ] 5.3 `pnpm verify` completo (lint + format + test + build + typecheck de ambas apps).
+- [ ] 5.3 **Cerrar el criterio de refactor**: recuento de avisos de ESLint comparado contra
+      la línea base de 1.0. Igual o menor. Si subió y el aviso no lleva disable razonado,
+      el change no está terminado — se vuelve a 2.6 o a 3.8, no se documenta como deuda.
+- [ ] 5.4 `pnpm verify` completo (lint + format + test + build + typecheck de ambas apps).
 
 ## 6. Cierre
 
