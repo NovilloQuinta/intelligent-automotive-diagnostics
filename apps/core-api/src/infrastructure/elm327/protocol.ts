@@ -237,8 +237,21 @@ export function parseSupportedPidBitmask(bytes: number[]): string[] {
   return pids
 }
 
-/** Header CAN al inicio de línea con `AT H1`: exactamente 3 dígitos hex seguidos de espacio o fin. */
-const CAN_HEADER_LINE_RE = /^([0-9A-F]{3})(?:\s|$)/i
+/**
+ * Header CAN al inicio de línea con `AT H1`: 8 dígitos hex (29 bits) o 3 (11 bits),
+ * seguidos de espacio o fin. El de 29 bits va primero para no depender del backtracking.
+ */
+const CAN_HEADER_LINE_RE = /^([0-9A-F]{8}|[0-9A-F]{3})(?:\s|$)/i
+
+/** Ancho en dígitos hex de un identificador CAN de 29 bits. */
+const CAN_29_HEADER_WIDTH = 8
+
+/**
+ * Prefijo ISO 15765-4 de una respuesta de 29 bits: `18DA` + `F1`, que es la
+ * dirección del equipo de diagnóstico como destinatario. Los dos últimos dígitos
+ * son la ECU que contesta (`18DAF110` = motor).
+ */
+const CAN_29_RESPONSE_PREFIX = '18DAF1'
 
 /** Límite inferior del rango ISO 15765-4 de direcciones de respuesta OBD (`0x7E8`). */
 const CAN_RESPONSE_ADDR_MIN = 0x7e8
@@ -246,20 +259,30 @@ const CAN_RESPONSE_ADDR_MIN = 0x7e8
 /** Límite superior del rango ISO 15765-4 de direcciones de respuesta OBD (`0x7EF`). */
 const CAN_RESPONSE_ADDR_MAX = 0x7ef
 
-/** Comprueba si una dirección CAN está dentro del rango de respuesta OBD ISO 15765-4 (`7E8-7EF`). */
-function isObdResponseAddr(addr: number): boolean {
+/**
+ * Comprueba si un header CAN es una respuesta de diagnóstico dirigida al tester.
+ *
+ * En 11 bits la norma reserva una ventana estrecha (`7E8-7EF`) y basta comprobar
+ * el rango. En 29 bits no hay ventana equivalente —la ECU es un byte cualquiera—,
+ * así que el criterio es estructural: la trama va dirigida a `F1`, el equipo de
+ * diagnóstico. Una petición (`18DB33F1` funcional, `18DA10F1` física) no lo cumple.
+ */
+function isObdResponseAddr(header: string): boolean {
+  if (header.length === CAN_29_HEADER_WIDTH) return header.startsWith(CAN_29_RESPONSE_PREFIX)
+  const addr = Number.parseInt(header, 16)
   return addr >= CAN_RESPONSE_ADDR_MIN && addr <= CAN_RESPONSE_ADDR_MAX
 }
 
 /**
  * Extrae los headers CAN únicos de una respuesta con `AT H1` activo.
  *
- * Cada línea de respuesta empieza por el CAN ID (3 dígitos hex) de la ECU que
- * responde. Solo se devuelven direcciones de respuesta OBD dentro del rango
- * estándar ISO 15765-4 `7E8-7EF`, en orden de aparición y sin duplicados.
- * Cualquier header 11-bit fuera de ese rango (p. ej. `7E7`, `7DA`, `768`,
- * `7F0`) y los headers 29-bit (p. ej. `18DAF110`) se descartan. Las líneas
- * vacías y el prompt `>` también se descartan.
+ * Cada línea de respuesta empieza por el CAN ID de la ECU que responde: 3 dígitos
+ * hex en 11 bits (`7E8`) u 8 en 29 bits (`18DAF110`). Se devuelven en orden de
+ * aparición y sin duplicados, filtrados por {@link isObdResponseAddr}: fuera
+ * quedan los 11-bit fuera del rango `7E8-7EF` (`7E7`, `7DA`, `768`, `7F0`) y los
+ * 29-bit que no van dirigidos al equipo de diagnóstico, que son las peticiones
+ * (`18DB33F1`, `18DA10F1`) y todo lo que no sea diagnóstico ISO 15765-4. Las
+ * líneas vacías y el prompt `>` también se descartan.
  *
  * @param raw - Respuesta cruda del adaptador ELM327.
  * @returns Lista de headers CAN (ej. `['7E8', '7E9']`), vacía si no hay ninguno.
@@ -271,8 +294,7 @@ export function parseCanHeaders(raw: string): string[] {
     const match = CAN_HEADER_LINE_RE.exec(line.trim())
     if (!match) continue
     const header = match[1].toUpperCase()
-    const addr = Number.parseInt(header, 16)
-    if (!isObdResponseAddr(addr) || seen.has(header)) continue
+    if (!isObdResponseAddr(header) || seen.has(header)) continue
     seen.add(header)
     headers.push(header)
   }

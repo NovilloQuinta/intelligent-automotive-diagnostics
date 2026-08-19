@@ -236,8 +236,29 @@ describe('protocol', () => {
       expect(parseCanHeaders('41 00 BE 3F A8 13\r>')).toEqual([])
     })
 
-    it('should ignore 29-bit CAN headers (extended addressing)', () => {
-      expect(parseCanHeaders('18DAF110 06 41 00 BE 3F A8 13\r>')).toEqual([])
+    it('should accept 29-bit CAN headers addressed to the tester', () => {
+      expect(parseCanHeaders('18DAF110 06 41 00 BE 3F A8 13\r>')).toEqual(['18DAF110'])
+    })
+
+    it('should accept several 29-bit responders preserving order', () => {
+      const raw = '18DAF110 06 41 00 BE 3F A8 13\r18DAF111 06 41 00 80 00 00 00\r>'
+      expect(parseCanHeaders(raw)).toEqual(['18DAF110', '18DAF111'])
+    })
+
+    it('should dedupe repeated 29-bit headers', () => {
+      const raw = '18DAF110 10 14 49 02 01\r18DAF110 21 57 41 55 5A\r>'
+      expect(parseCanHeaders(raw)).toEqual(['18DAF110'])
+    })
+
+    it('should discard 29-bit headers not addressed to the tester', () => {
+      // `18DB33F1` es la peticion funcional y `18DA10F1` la fisica: van hacia la
+      // ECU, no hacia el equipo de diagnostico. Solo `18DAF1xx` es una respuesta.
+      const raw = '18DB33F1 06 41 00 00 00 00 00\r18DA10F1 06 41 00 00 00 00 00\r>'
+      expect(parseCanHeaders(raw)).toEqual([])
+    })
+
+    it('should discard 29-bit headers that are not ISO 15765-4 diagnostics at all', () => {
+      expect(parseCanHeaders('18FEE000 06 41 00 00 00 00 00\r>')).toEqual([])
     })
 
     it('should discard empty lines and the ">" prompt', () => {
