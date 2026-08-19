@@ -8,7 +8,7 @@ import type { ListSystemLogsUseCase } from '@/application/use-cases/admin/ListSy
 import type { ListAuditLogsUseCase } from '@/application/use-cases/admin/ListAuditLogsUseCase.js'
 import type { ListUsersUseCase } from '@/application/use-cases/admin/ListUsersUseCase.js'
 import type { GetKnowledgeStatsUseCase } from '@/application/use-cases/admin/GetKnowledgeStatsUseCase.js'
-import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
+import type { KnowledgeStackPort } from '@/application/ports/KnowledgeStackPort.js'
 import { respondIfValidationError, respondInternalError } from './httpErrors.js'
 
 const ERROR_MESSAGES = {
@@ -23,10 +23,10 @@ export interface AdminControllerDeps {
   readonly listUsers: ListUsersUseCase
   /** `undefined` cuando el catalogo vectorial no esta disponible (ver `createKnowledgeStack`). */
   readonly getKnowledgeStats?: GetKnowledgeStatsUseCase
-  readonly knowledgeStack?: KnowledgeStack
+  readonly knowledgeStack?: KnowledgeStackPort
 }
 
-/** Mapa nombre corto de indice -> clave en {@link KnowledgeStack}. */
+/** Mapa nombre corto de indice -> clave en {@link KnowledgeStackPort}. */
 const KNOWLEDGE_STACK_KEY = {
   pids: 'pidsIndex',
   dtcs: 'dtcsIndex',
@@ -106,7 +106,7 @@ export class AdminController {
 
   /**
    * POST /api/admin/knowledge/search — busqueda de prueba contra el catalogo vectorial.
-   * Usa el mismo `VectorRepository.search()` (embed + `VectorStore.query()`) que el flujo
+   * Usa el mismo `VectorRepository.search()` (embed + `VectorStorePort.query()`) que el flujo
    * RAG real, para que el resultado sea representativo de lo que devolveria el diagnostico.
    */
   searchKnowledge = async (req: Request, res: Response): Promise<void> => {

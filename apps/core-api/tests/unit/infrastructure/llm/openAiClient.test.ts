@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createOpenAiClient } from '@/infrastructure/llm/openAiClient.js'
 import { LlmTimeoutError, LlmApiError } from '@/infrastructure/llm/llmErrors.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
-import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
+import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPort.js'
 import type OpenAI from 'openai'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 
@@ -97,7 +97,7 @@ const sampleToolDef = {
 
 describe('OpenAiClient', () => {
   let client: LlmClientPort
-  let handler: ToolCallHandler
+  let handler: ToolCallHandlerPort
 
   beforeEach(() => {
     vi.clearAllMocks()

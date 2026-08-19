@@ -2,7 +2,7 @@ import { z } from 'zod'
 import crypto from 'node:crypto'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
-import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
+import type { KnowledgeStackPort } from '@/application/ports/KnowledgeStackPort.js'
 import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
 import { initialConfidenceFor } from '@/application/knowledge/confidenceScale.js'
 import { EcuDefinition } from '@/domain/entities/ecuDefinition.js'
@@ -137,7 +137,7 @@ function pidFormulaFromArgs(args: Record<string, unknown>): PidFormulaSource | u
   return { pidCode: { key: `${mode} ${pid}` }, formula, dataBytes }
 }
 
-function handleIndexPid(stack: KnowledgeStack, obdRepo: ObdRepository): ToolHandler {
+function handleIndexPid(stack: KnowledgeStackPort, obdRepo: ObdRepository): ToolHandler {
   return async (args) => {
     const source = resolveKnowledgeSource(args)
     const entry: PidKnowledgeEntry = baseKnowledgeEntry(args, source)
@@ -165,7 +165,7 @@ function handleIndexPid(stack: KnowledgeStack, obdRepo: ObdRepository): ToolHand
   }
 }
 
-function handleIndexDtc(stack: KnowledgeStack, obdRepo: ObdRepository): ToolHandler {
+function handleIndexDtc(stack: KnowledgeStackPort, obdRepo: ObdRepository): ToolHandler {
   return async (args) => {
     const source = resolveKnowledgeSource(args)
     const entry: DtcKnowledgeEntry = baseKnowledgeEntry(args, source)
@@ -191,7 +191,7 @@ function handleIndexDtc(stack: KnowledgeStack, obdRepo: ObdRepository): ToolHand
   }
 }
 
-function handleIndexDiagnosis(stack: KnowledgeStack): ToolHandler {
+function handleIndexDiagnosis(stack: KnowledgeStackPort): ToolHandler {
   return async (args) => {
     const entry: DiagnosisKnowledgeEntry = {
       id: crypto.randomUUID(),
@@ -215,7 +215,7 @@ function handleIndexDiagnosis(stack: KnowledgeStack): ToolHandler {
  * validacion OBD, asi que la confianza sale de la fuente (`initialConfidenceFor`).
  */
 function handleIndexEcu(
-  stack: KnowledgeStack,
+  stack: KnowledgeStackPort,
   vehicleRepo: VehicleRepository | undefined,
 ): ToolHandler {
   return async (args) => {
@@ -266,7 +266,7 @@ function handleIndexEcu(
 // eslint-disable-next-line max-lines-per-function -- lista declarativa de registro (complejidad 1)
 export function registerKnowledgeTools(
   register: ToolRegistrar,
-  stack: KnowledgeStack,
+  stack: KnowledgeStackPort,
   repo: ObdRepository,
   vehicleRepo: VehicleRepository | undefined,
 ): void {

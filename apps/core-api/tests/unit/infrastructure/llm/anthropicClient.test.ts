@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createAnthropicClient } from '@/infrastructure/llm/anthropicClient.js'
 import { LlmTimeoutError, LlmApiError } from '@/infrastructure/llm/llmErrors.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
-import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
+import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 
 /** Logger de test: el cliente exige un LoggerPort explicito, sin fallback a console. */
@@ -59,7 +59,7 @@ const sampleToolDef = {
 
 describe('AnthropicClient', () => {
   let client: LlmClientPort
-  let handler: ToolCallHandler
+  let handler: ToolCallHandlerPort
 
   beforeEach(() => {
     vi.clearAllMocks()

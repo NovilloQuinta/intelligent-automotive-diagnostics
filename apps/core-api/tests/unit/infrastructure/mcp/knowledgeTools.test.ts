@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
+import type { KnowledgeStackPort } from '@/application/ports/KnowledgeStackPort.js'
 import type { PidVectorRepository } from '@/application/ports/PidVectorRepository.js'
 import type { DtcVectorRepository } from '@/application/ports/DtcVectorRepository.js'
 import type { DiagnosisVectorRepository } from '@/application/ports/DiagnosisVectorRepository.js'
@@ -66,7 +66,7 @@ describe('knowledgeTools (via createMcpServer)', () => {
       diagnosisIndex: Partial<DiagnosisVectorRepository>
       ecusIndex: Partial<EcuVectorRepository>
     }> = {},
-  ): KnowledgeStack {
+  ): KnowledgeStackPort {
     return {
       pidsIndex: {
         index: vi.fn<[PidKnowledgeEntry], Promise<void>>().mockResolvedValue(undefined),

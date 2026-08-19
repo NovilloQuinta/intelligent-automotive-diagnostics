@@ -15,26 +15,26 @@ import {
   toDiagnosisEntry,
 } from '@/application/knowledge/diagnosisKnowledgeMapper.js'
 import { toEcuMetadata, toEcuEntry } from '@/application/knowledge/ecuKnowledgeMapper.js'
-import type { EmbeddingGenerator } from '@/application/ports/EmbeddingGenerator.js'
-import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
+import type { EmbeddingGeneratorPort } from '@/application/ports/EmbeddingGeneratorPort.js'
+import type { KnowledgeStackPort } from '@/application/ports/KnowledgeStackPort.js'
 import type { KnowledgeVectorStores } from '@/application/use-cases/admin/GetKnowledgeStatsUseCase.js'
-import type { VectorStore } from '@/application/ports/VectorStore.js'
+import type { VectorStorePort } from '@/application/ports/VectorStorePort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { AppConfig } from '@/infrastructure/configuration/index.js'
 
 /** Composicion del catalogo auto-expansivo: base vectorial y sus cuatro indices. */
 
 /**
- * {@link KnowledgeStack} ampliado con los tres {@link VectorStore} crudos, para el panel de
- * administracion (`GetKnowledgeStatsUseCase.count()`/`sample()`). Extiende `KnowledgeStack`
- * (no lo sustituye) para que sigua siendo asignable donde se espera un `KnowledgeStack`
+ * {@link KnowledgeStackPort} ampliado con los tres {@link VectorStorePort} crudos, para el panel de
+ * administracion (`GetKnowledgeStatsUseCase.count()`/`sample()`). Extiende `KnowledgeStackPort`
+ * (no lo sustituye) para que sigua siendo asignable donde se espera un `KnowledgeStackPort`
  * simple (p. ej. `DiagnosisService`).
  *
  * El cuarto indice (`ecusIndex`) se crea aqui pero su store no se expone en `vectorStores`:
  * el panel de administracion sigue listando pids/dtcs/diagnoses (fuera del alcance de este
  * cambio).
  */
-export interface KnowledgeStackWithStores extends KnowledgeStack {
+export interface KnowledgeStackWithStores extends KnowledgeStackPort {
   readonly vectorStores: KnowledgeVectorStores
 }
 
@@ -60,10 +60,10 @@ export async function createKnowledgeStack(
 
 /** Los cuatro almacenes vectoriales ya abiertos, listos para envolverse en indices. */
 export interface KnowledgeStores {
-  readonly pidsStore: VectorStore
-  readonly dtcsStore: VectorStore
-  readonly diagnosesStore: VectorStore
-  readonly ecusStore: VectorStore
+  readonly pidsStore: VectorStorePort
+  readonly dtcsStore: VectorStorePort
+  readonly diagnosesStore: VectorStorePort
+  readonly ecusStore: VectorStorePort
 }
 
 /**
@@ -74,7 +74,7 @@ export interface KnowledgeStores {
  * vista lo unico que ramifica, que es el `try/catch` de disponibilidad de LanceDB.
  */
 export function buildKnowledgeIndexes(stores: KnowledgeStores): KnowledgeStackWithStores {
-  const embed: EmbeddingGenerator = createEmbedding
+  const embed: EmbeddingGeneratorPort = createEmbedding
   const { pidsStore, dtcsStore, diagnosesStore, ecusStore } = stores
   return {
     pidsIndex: createKnowledgeIndex({

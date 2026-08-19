@@ -1,6 +1,6 @@
 import { evaluatePid, bigEndian } from '@/domain/services/pidFormula.js'
 import type { PidFormulaEntry } from '@/domain/pidFormulaEntry.js'
-import type { PidFormulaCatalog } from '@/application/ports/PidFormulaCatalog.js'
+import type { PidFormulaCatalogPort } from '@/application/ports/PidFormulaCatalogPort.js'
 
 /** Construye la clave de búsqueda normalizada para el catálogo. */
 function pidKey(mode: string, pid: string): string {
@@ -22,7 +22,7 @@ function pidKey(mode: string, pid: string): string {
  */
 export function createPidFormulaCatalog(
   entries: Iterable<readonly [string, PidFormulaEntry]>,
-): PidFormulaCatalog {
+): PidFormulaCatalogPort {
   const map = new Map<string, PidFormulaEntry>(entries)
 
   return {

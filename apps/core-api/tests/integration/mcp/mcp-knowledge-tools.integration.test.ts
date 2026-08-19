@@ -21,12 +21,12 @@ import {
   DIAGNOSES_TABLE_CONFIG,
   ECUS_TABLE_CONFIG,
 } from '@/infrastructure/persistence/vector/vectorTableConfigs.js'
-import type { EmbeddingGenerator } from '@/application/ports/EmbeddingGenerator.js'
+import type { EmbeddingGeneratorPort } from '@/application/ports/EmbeddingGeneratorPort.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import { Vin } from '@/domain/value-objects/vin.js'
 
-const embed: EmbeddingGenerator = (text) => {
+const embed: EmbeddingGeneratorPort = (text) => {
   let hash = 0
   for (const char of text) {
     hash = (hash * 31 + char.charCodeAt(0)) % EMBEDDING_DIMENSIONS

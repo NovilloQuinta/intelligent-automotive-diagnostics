@@ -2,7 +2,7 @@ import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { LlmMessageInput } from '@/application/dto/llm/LlmMessageInput.js'
 import type { LlmResponse } from '@/application/dto/llm/LlmResponse.js'
 import type { LlmSingleResponse } from '@/application/dto/llm/LlmSingleResponse.js'
-import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
+import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { LlmSingleMessageSender } from '@/application/use-cases/ExecuteLlmToolCalling.js'
 import { ExecuteLlmToolCalling } from '@/application/use-cases/ExecuteLlmToolCalling.js'
@@ -16,7 +16,7 @@ export function composeLlmClient(
   const useCase = new ExecuteLlmToolCalling(sendSingleMessage, logger, maxIterations)
 
   return {
-    sendMessage(input: LlmMessageInput, handler: ToolCallHandler): Promise<LlmResponse> {
+    sendMessage(input: LlmMessageInput, handler: ToolCallHandlerPort): Promise<LlmResponse> {
       return useCase.execute(input, handler)
     },
     sendSingleMessage(input: LlmMessageInput): Promise<LlmSingleResponse> {

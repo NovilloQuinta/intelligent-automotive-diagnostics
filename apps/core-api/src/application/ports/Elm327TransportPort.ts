@@ -2,10 +2,10 @@
  * Vista del transporte dentro de una secuencia exclusiva.
  *
  * Sus comandos saltan la reserva porque son los que la poseen; los de
- * {@link Elm327Transport.sendCommand} esperan a que termine.
+ * {@link Elm327TransportPort.sendCommand} esperan a que termine.
  */
 export interface Elm327ExclusiveSession {
-  /** Igual que {@link Elm327Transport.sendCommand}, pero dentro de la reserva. */
+  /** Igual que {@link Elm327TransportPort.sendCommand}, pero dentro de la reserva. */
   sendCommand(cmd: string): Promise<string>
 }
 
@@ -19,7 +19,7 @@ export interface Elm327ExclusiveSession {
  * La cola FIFO, el mutex de escritura, la delimitación por prompt `>` y la
  * reconexión son responsabilidad interna de cada implementación.
  */
-export interface Elm327Transport {
+export interface Elm327TransportPort {
   /** Abre la conexión persistente al dispositivo. Idempotente: no-op si ya está abierta. */
   connect(): Promise<void>
 

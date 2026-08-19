@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
-import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
+import type { KnowledgeStackPort } from '@/application/ports/KnowledgeStackPort.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import type { McpToolDefinition } from '@/application/dto/llm/McpToolDefinition.js'
 import { ToolNotFoundError } from '@/infrastructure/mcp/errors.js'
@@ -77,7 +77,7 @@ function createToolRegistry(server: McpServer): ToolRegistry {
 export function createMcpServer(
   repo: ObdRepository,
   vehicleRepo?: VehicleRepository,
-  knowledgeStack?: KnowledgeStack,
+  knowledgeStack?: KnowledgeStackPort,
   webSearch?: WebSearchPort,
   sessionContext?: SessionContext,
 ): DiagnosticsMcpServer {

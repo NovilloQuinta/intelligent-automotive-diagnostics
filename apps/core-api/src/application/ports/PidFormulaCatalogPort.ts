@@ -1,7 +1,7 @@
 import type { PidFormulaEntry } from '@/domain/pidFormulaEntry.js'
 
 /** Catálogo de fórmulas PID con consulta `get(mode, pid)` y aplicación `apply`. */
-export interface PidFormulaCatalog {
+export interface PidFormulaCatalogPort {
   /**
    * Devuelve la entrada de fórmula para un PID, o `undefined` si no existe.
    * @param mode - Modo OBD (ej. `'01'`, `'22'`)

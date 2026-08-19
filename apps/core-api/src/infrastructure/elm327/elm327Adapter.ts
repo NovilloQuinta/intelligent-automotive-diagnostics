@@ -8,13 +8,13 @@ import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import { createPidFormulaCatalog } from './pidFormulaCatalog.js'
-import type { PidFormulaCatalog } from '@/application/ports/PidFormulaCatalog.js'
+import type { PidFormulaCatalogPort } from '@/application/ports/PidFormulaCatalogPort.js'
 import { toFormulaEntries } from '@/application/shared/formulaEntries.js'
 import { ALL_SEED_PIDS } from '@/domain/pidCatalog.js'
 import { dtcDescribe } from '@/domain/dtcCatalog.js'
 import { assertReadOnlyObdMode, UnsafeObdModeError } from '@/domain/obdServiceMode.js'
 
-import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
+import type { Elm327TransportPort } from '@/application/ports/Elm327TransportPort.js'
 import {
   Elm327BusError,
   Elm327ConnectionError,
@@ -82,7 +82,7 @@ export interface Elm327RepositoryOptions {
 /**
  * Adaptador OBD-II sobre transporte ELM327 (TCP, Serial o Bluetooth).
  *
- * Recibe un {@link Elm327Transport} ya construido desde la capa de composición
+ * Recibe un {@link Elm327TransportPort} ya construido desde la capa de composición
  * y lo reutiliza para todas las lecturas. El adaptador solo consume el
  * transporte; no lo construye ni conoce el medio físico.
  *
@@ -90,14 +90,14 @@ export interface Elm327RepositoryOptions {
  * del transporte restaura la conexión en la primera petición.
  */
 export class Elm327TcpRepository implements ObdRepository {
-  private readonly client: Elm327Transport
-  private readonly pidFormulas: PidFormulaCatalog
+  private readonly client: Elm327TransportPort
+  private readonly pidFormulas: PidFormulaCatalogPort
   private readonly vehicleRepo?: VehicleRepository
   private readonly readOnly: boolean
   private readonly readOnlyReason: string
 
   constructor(
-    transport: Elm327Transport,
+    transport: Elm327TransportPort,
     vehicleRepo?: VehicleRepository,
     logger?: LoggerPort,
     options?: Elm327RepositoryOptions,

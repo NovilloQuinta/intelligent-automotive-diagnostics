@@ -6,4 +6,4 @@
  * Si falla, lanza una excepcion que el adaptador captura
  * para reportar al LLM como error de herramienta.
  */
-export type ToolCallHandler = (name: string, args: Record<string, unknown>) => Promise<string>
+export type ToolCallHandlerPort = (name: string, args: Record<string, unknown>) => Promise<string>

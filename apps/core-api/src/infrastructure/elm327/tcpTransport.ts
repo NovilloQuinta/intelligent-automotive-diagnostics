@@ -1,6 +1,6 @@
 import { createConnection } from 'node:net'
 import type { Socket } from 'node:net'
-import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
+import type { Elm327TransportPort } from '@/application/ports/Elm327TransportPort.js'
 import type { TransportIoAdapter, ReliableTransportConfig } from './reliableTransport.js'
 import { createReliableTransport } from './reliableTransport.js'
 
@@ -32,13 +32,13 @@ const DEFAULT_BACKOFF_MS = 200
  * Crea un transporte TCP persistente para un dispositivo ELM327 con cola FIFO,
  * mutex de escritura y auto-reconexión con backoff exponencial.
  *
- * Implementa {@link Elm327Transport} sobre un socket TCP compartido, delegando
+ * Implementa {@link Elm327TransportPort} sobre un socket TCP compartido, delegando
  * la máquina de estados de cola/reconexión a {@link createReliableTransport}.
  *
  * @param config — host, port, timeout por comando y semántica de reintentos
  * @returns Transporte ELM327 con `connect()`, `sendCommand()` y `close()`
  */
-export function createElm327TcpClient(config: Elm327TcpConfig): Elm327Transport {
+export function createElm327TcpClient(config: Elm327TcpConfig): Elm327TransportPort {
   const timeoutMs = config.timeout ?? DEFAULT_TIMEOUT_MS
   const maxRetries = config.maxRetries ?? DEFAULT_MAX_RETRIES
   const backoffMs = config.backoffMs ?? DEFAULT_BACKOFF_MS

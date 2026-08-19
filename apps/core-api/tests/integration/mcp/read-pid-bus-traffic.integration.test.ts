@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
 import { Elm327TcpRepository } from '@/infrastructure/elm327/elm327Adapter.js'
-import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
+import type { Elm327TransportPort } from '@/application/ports/Elm327TransportPort.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 
 /**
@@ -17,9 +17,9 @@ import type { VehicleRepository } from '@/application/ports/VehicleRepository.js
 /** RPM a 800: respuesta del emulador a `01 0C`. */
 const RPM_RESPONSE = '01 0C\r41 0C 0C 80 \r\r>'
 
-function createRecordingTransport(): { transport: Elm327Transport; sent: string[] } {
+function createRecordingTransport(): { transport: Elm327TransportPort; sent: string[] } {
   const sent: string[] = []
-  const transport: Elm327Transport = {
+  const transport: Elm327TransportPort = {
     connect: async () => {},
     close: async () => {},
     sendCommand: async (cmd: string) => {

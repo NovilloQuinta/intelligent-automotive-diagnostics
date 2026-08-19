@@ -22,14 +22,14 @@ import { DiagnosisService } from '@/infrastructure/services/diagnosisService.js'
 import { Email } from '@/domain/value-objects/email.js'
 import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.js'
 import type { KnowledgeStackWithStores } from '@/infrastructure/composition/knowledge.js'
-import type { VectorStore } from '@/application/ports/VectorStore.js'
+import type { VectorStorePort } from '@/application/ports/VectorStorePort.js'
 import type { VectorRepository } from '@/application/ports/VectorRepository.js'
 
 const ACCESS_SECRET = 'admin-integration-access-secret'
 const REFRESH_SECRET = 'admin-integration-refresh-secret'
 
 /** Almacen vectorial de prueba: sin LanceDB real, solo lo que necesitan los tests. */
-function fakeVectorStore(count: number, sample: Record<string, unknown>[] = []): VectorStore {
+function fakeVectorStore(count: number, sample: Record<string, unknown>[] = []): VectorStorePort {
   return {
     upsert: vi.fn(),
     query: vi.fn().mockResolvedValue([]),

@@ -1,4 +1,4 @@
-import type { VectorStore } from '@/application/ports/VectorStore.js'
+import type { VectorStorePort } from '@/application/ports/VectorStorePort.js'
 import type {
   KnowledgeIndexSummary,
   KnowledgeStats,
@@ -7,11 +7,11 @@ import type {
 /** Numero de filas de muestra por indice cuando el caller no especifica otro. */
 const DEFAULT_SAMPLE_LIMIT = 5
 
-/** Los tres almacenes vectoriales del catalogo (ADR-007 §3), directamente como {@link VectorStore}. */
+/** Los tres almacenes vectoriales del catalogo (ADR-007 §3), directamente como {@link VectorStorePort}. */
 export interface KnowledgeVectorStores {
-  readonly pids: VectorStore
-  readonly dtcs: VectorStore
-  readonly diagnoses: VectorStore
+  readonly pids: VectorStorePort
+  readonly dtcs: VectorStorePort
+  readonly diagnoses: VectorStorePort
 }
 
 /**
@@ -34,7 +34,7 @@ export class GetKnowledgeStatsUseCase {
     return { pids, dtcs, diagnoses }
   }
 
-  private async summarize(store: VectorStore): Promise<KnowledgeIndexSummary> {
+  private async summarize(store: VectorStorePort): Promise<KnowledgeIndexSummary> {
     const [count, sample] = await Promise.all([store.count(), store.sample(this.sampleLimit)])
     return { count, sample }
   }

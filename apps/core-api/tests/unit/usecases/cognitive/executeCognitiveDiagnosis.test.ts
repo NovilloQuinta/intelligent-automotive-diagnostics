@@ -3,7 +3,7 @@ import { ExecuteCognitiveDiagnosisUseCase } from '@/application/use-cases/Execut
 import type {
   LlmClientPort,
   McpToolDefinition,
-  ToolCallHandler,
+  ToolCallHandlerPort,
   ToolCallTrace,
 } from '@/application/ports/LlmClientPort.js'
 import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
@@ -67,7 +67,7 @@ function cognitiveResponse(
 
 function makeUseCase(
   llmClient?: LlmClientPort,
-  handler?: ToolCallHandler,
+  handler?: ToolCallHandlerPort,
 ): ExecuteCognitiveDiagnosisUseCase {
   return new ExecuteCognitiveDiagnosisUseCase({
     llmClient: llmClient ?? mockLlmClient({ sendMessage: vi.fn() }),
@@ -123,7 +123,7 @@ describe('executeCognitiveDiagnosis', () => {
     const llmClient = mockLlmClient({
       sendMessage: vi.fn().mockResolvedValue(cognitiveResponse('ok')),
     })
-    const handler: ToolCallHandler = vi.fn(async () => 'result')
+    const handler: ToolCallHandlerPort = vi.fn(async () => 'result')
 
     await new ExecuteCognitiveDiagnosisUseCase({
       llmClient,
@@ -149,7 +149,7 @@ describe('executeCognitiveDiagnosis', () => {
 
   it('should forward a handler that bridges to mcpServer.callTool content text', async () => {
     const callTool = vi.fn().mockResolvedValue({ content: [{ type: 'text', text: '750' }] })
-    const handler: ToolCallHandler = async (name, args) => {
+    const handler: ToolCallHandlerPort = async (name, args) => {
       const result = await callTool(name, args)
       return result.content[0].text
     }
@@ -352,7 +352,7 @@ describe('executeCognitiveDiagnosis', () => {
     const llmClient = mockLlmClient({
       sendMessage: vi.fn().mockResolvedValue(cognitiveResponse('ok')),
     })
-    const handler: ToolCallHandler = vi.fn(async () => 'result')
+    const handler: ToolCallHandlerPort = vi.fn(async () => 'result')
 
     const useCase = new ExecuteCognitiveDiagnosisUseCase({
       llmClient,

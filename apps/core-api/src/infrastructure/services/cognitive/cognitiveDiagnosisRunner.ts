@@ -1,8 +1,8 @@
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
-import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
+import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPort.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
-import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
+import type { KnowledgeStackPort } from '@/application/ports/KnowledgeStackPort.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
 import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
@@ -54,7 +54,7 @@ export interface CognitiveDiagnosisDeps {
   readonly logger: LoggerPort
   readonly vehicleRepo?: VehicleRepository
   readonly llmClient?: LlmClientPort
-  readonly knowledgeStack?: KnowledgeStack
+  readonly knowledgeStack?: KnowledgeStackPort
   readonly cognitiveTimeoutMs: number
 }
 
@@ -81,7 +81,7 @@ export class CognitiveDiagnosisRunner {
   private readonly logger: LoggerPort
   private readonly vehicleRepo?: VehicleRepository
   private readonly llmClient?: LlmClientPort
-  private readonly knowledgeStack?: KnowledgeStack
+  private readonly knowledgeStack?: KnowledgeStackPort
   private readonly cognitiveTimeoutMs: number
 
   constructor(deps: CognitiveDiagnosisDeps) {
@@ -262,7 +262,7 @@ export class CognitiveDiagnosisRunner {
     },
   ): Promise<ExecuteCognitiveDiagnosisOutput> {
     const mcp = this.host.getMcpServer(scenarioId, session)
-    const handler: ToolCallHandler = async (name, args) => {
+    const handler: ToolCallHandlerPort = async (name, args) => {
       const result = await mcp.callTool(name, args)
       return this.host.firstText(result, name)
     }

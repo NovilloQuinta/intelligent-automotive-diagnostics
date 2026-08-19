@@ -1,7 +1,7 @@
 import type {
   Elm327ExclusiveSession,
-  Elm327Transport,
-} from '@/application/ports/Elm327Transport.js'
+  Elm327TransportPort,
+} from '@/application/ports/Elm327TransportPort.js'
 import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { resolveEcuAddress } from '@/domain/ecuAddressCatalog.js'
 import { parseCanHeaders } from './protocol.js'
@@ -51,7 +51,7 @@ function setHeader(address: string): string {
  * @param transport - Transporte ELM327 inyectado (frontera de infraestructura).
  * @returns ECUs descubiertas, aún sin persistir (`id`/`vehicleId` = 0).
  */
-export async function discoverEcus(transport: Elm327Transport): Promise<EcuInfo[]> {
+export async function discoverEcus(transport: Elm327TransportPort): Promise<EcuInfo[]> {
   // La reserva es obligatoria, no una optimizacion: el scan cambia `AT H1` y la
   // dirección de destino, que son estado global del adaptador. Sin ella, cualquier
   // lectura concurrente —la telemetria de la UI va a 1 Hz— cae entre medias y

@@ -10,7 +10,7 @@ import { ExecuteCognitiveDiagnosisUseCase } from '@/application/use-cases/Execut
 import { withTimeout } from '@/application/shared/withTimeout.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
-import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
+import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPort.js'
 import { EVAL_CASES, type CaseGroup, type EvalCase } from './eval/cases.js'
 import { INVARIANTS, type AgentAnswer } from './eval/invariants.js'
 import {
@@ -156,7 +156,7 @@ async function ask(
   const { mcp, knowledge } = createEvalHarness(evalCase)
   const capturing = createCapturingLlmClient(llm)
 
-  const handler: ToolCallHandler = async (name, args) => {
+  const handler: ToolCallHandlerPort = async (name, args) => {
     const result = await mcp.callTool(name, args)
     return result.content[0]?.text ?? ''
   }

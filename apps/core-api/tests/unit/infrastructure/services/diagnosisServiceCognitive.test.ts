@@ -10,7 +10,7 @@ import { VehicleProfile } from '@/domain/entities/vehicleProfile.js'
 import { VehicleIdentity } from '@/domain/entities/vehicleIdentity.js'
 import { DiagnosisSession } from '@/domain/entities/diagnosisSession.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
-import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
+import type { KnowledgeStackPort } from '@/application/ports/KnowledgeStackPort.js'
 import type { PidVectorRepository } from '@/application/ports/PidVectorRepository.js'
 import type { DtcVectorRepository } from '@/application/ports/DtcVectorRepository.js'
 import type { DiagnosisVectorRepository } from '@/application/ports/DiagnosisVectorRepository.js'
@@ -131,7 +131,7 @@ describe('DiagnosisService — diagnostico cognitivo y persistencia', () => {
       const pidsIndex = { index: vi.fn(), search: vi.fn() } as unknown as PidVectorRepository
       const dtcsIndex = { index: vi.fn(), search: vi.fn() } as unknown as DtcVectorRepository
       const ecusIndex = { index: vi.fn(), search: vi.fn() } as unknown as EcuVectorRepository
-      const knowledgeStack: KnowledgeStack = { pidsIndex, dtcsIndex, diagnosisIndex, ecusIndex }
+      const knowledgeStack: KnowledgeStackPort = { pidsIndex, dtcsIndex, diagnosisIndex, ecusIndex }
       const service = new DiagnosisService({
         scenarios: mockScenarios,
         obdRepos: createMockObdRepos(),

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { ExecuteCognitiveDiagnosisUseCase } from '@/application/use-cases/ExecuteCognitiveDiagnosisUseCase.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
-import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
+import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { ToolCallTrace } from '@/application/dto/llm/ToolCallTrace.js'
 import type { DiagnosisVectorRepository } from '@/application/ports/DiagnosisVectorRepository.js'
@@ -31,7 +31,7 @@ function useCaseWith(rawText: string, diagnosisIndex?: DiagnosisVectorRepository
   const useCase = new ExecuteCognitiveDiagnosisUseCase({
     llmClient,
     tools: [],
-    handler: vi.fn<ToolCallHandler>(),
+    handler: vi.fn<ToolCallHandlerPort>(),
     logger: testLogger,
     diagnosisIndex,
   })

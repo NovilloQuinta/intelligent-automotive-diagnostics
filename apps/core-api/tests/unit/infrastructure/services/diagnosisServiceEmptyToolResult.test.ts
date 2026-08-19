@@ -3,7 +3,7 @@ import { Vin } from '@/domain/value-objects/vin.js'
 import { VehicleType, type SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
-import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
+import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 
 /**
@@ -91,7 +91,7 @@ describe('DiagnosisService with an MCP tool returning empty content', () => {
 
   it('the cognitive tool handler should also reject with EmptyToolResultError', async () => {
     const llmClient = {
-      sendMessage: vi.fn(async (_input: unknown, handler: ToolCallHandler) => {
+      sendMessage: vi.fn(async (_input: unknown, handler: ToolCallHandlerPort) => {
         await handler('read_pid', {})
         return { text: 'unreachable', toolCalls: [] }
       }),

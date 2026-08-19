@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { discoverEcus } from '@/infrastructure/elm327/ecuDiscovery.js'
-import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
+import type { Elm327TransportPort } from '@/application/ports/Elm327TransportPort.js'
 
 /** Consulta del protocolo ya negociado. Primer comando del barrido, siempre. */
 const PROTOCOL_QUERY = 'AT DPN'
@@ -25,12 +25,12 @@ const CAN_11_500 = 'A6\r\r>'
 
 /** Transporte de prueba que guiona respuestas por comando y registra los comandos emitidos. */
 function createScriptedTransport(script: Record<string, string>): {
-  transport: Elm327Transport
+  transport: Elm327TransportPort
   sent: string[]
 } {
   const sent: string[] = []
   const answers = { [PROTOCOL_QUERY]: CAN_11_500, ...script }
-  const transport: Elm327Transport = {
+  const transport: Elm327TransportPort = {
     connect: vi.fn().mockResolvedValue(undefined),
     sendCommand: vi.fn(async (cmd: string) => {
       sent.push(cmd)
@@ -44,11 +44,11 @@ function createScriptedTransport(script: Record<string, string>): {
 
 /** Transporte de prueba que lanza al recibir un comando concreto y registra todo lo emitido. */
 function createThrowingTransport(throwingCommand: string): {
-  transport: Elm327Transport
+  transport: Elm327TransportPort
   sent: string[]
 } {
   const sent: string[] = []
-  const transport: Elm327Transport = {
+  const transport: Elm327TransportPort = {
     connect: vi.fn().mockResolvedValue(undefined),
     sendCommand: vi.fn(async (cmd: string) => {
       sent.push(cmd)

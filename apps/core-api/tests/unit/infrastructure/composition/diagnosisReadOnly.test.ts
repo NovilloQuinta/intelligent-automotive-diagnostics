@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
-import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
+import type { Elm327TransportPort } from '@/application/ports/Elm327TransportPort.js'
 
 /** Doble del transporte: la frontera de infraestructura, lo único que se mockea. */
-function createStubTransport(): Elm327Transport {
+function createStubTransport(): Elm327TransportPort {
   return {
     connect: vi.fn().mockResolvedValue(undefined),
     sendCommand: vi.fn().mockResolvedValue('OK\r>'),

@@ -2,7 +2,7 @@ import type { VehicleScope } from '@/application/dto/vector/VehicleScope.js'
 import type { VectorMatch } from '@/application/dto/vector/VectorMatch.js'
 import type { VectorQuery } from '@/application/dto/vector/VectorQuery.js'
 import type { VectorRecord } from '@/application/dto/vector/VectorRecord.js'
-import type { VectorStore } from '@/application/ports/VectorStore.js'
+import type { VectorStorePort } from '@/application/ports/VectorStorePort.js'
 import {
   assertVectorDimensions,
   ensureVectorTable,
@@ -57,7 +57,7 @@ function extractMetadata(row: Record<string, unknown>): Record<string, unknown> 
 export async function createLanceVectorStore(
   db: LanceDbSchemaOps,
   config: LanceVectorStoreConfig,
-): Promise<VectorStore> {
+): Promise<VectorStorePort> {
   const table = await ensureVectorTable(db, config.table, {
     dimensions: config.dimensions,
     columns: [...config.columns],

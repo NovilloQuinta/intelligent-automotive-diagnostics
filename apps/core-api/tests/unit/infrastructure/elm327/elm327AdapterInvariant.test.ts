@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { Elm327TcpRepository } from '@/infrastructure/elm327/elm327Adapter.js'
-import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
+import type { Elm327TransportPort } from '@/application/ports/Elm327TransportPort.js'
 import { READ_ONLY_OBD_MODES } from '@/domain/obdServiceMode.js'
 
 /**
@@ -21,9 +21,9 @@ const HOSTILE_MODE = '2F'
 const CANNED_RESPONSE = '41 00 00 00 00 00\r\r>'
 
 /** Transporte falso que solo registra lo que se le pide enviar. */
-function createRecordingTransport(): { transport: Elm327Transport; sent: string[] } {
+function createRecordingTransport(): { transport: Elm327TransportPort; sent: string[] } {
   const sent: string[] = []
-  const transport: Elm327Transport = {
+  const transport: Elm327TransportPort = {
     connect: async () => {},
     close: async () => {},
     sendCommand: async (cmd: string) => {

@@ -1,7 +1,7 @@
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
-import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
+import type { KnowledgeStackPort } from '@/application/ports/KnowledgeStackPort.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
@@ -195,7 +195,7 @@ export interface DiagnosisServiceOptions {
   /** Cliente LLM; ausente deshabilita el diagnostico cognitivo. */
   readonly llmClient?: LlmClientPort
   /** Stack de conocimiento vectorial RAG; ausente deshabilita busqueda/indexado. */
-  readonly knowledgeStack?: KnowledgeStack
+  readonly knowledgeStack?: KnowledgeStackPort
   /** Puerto de búsqueda web externa; ausente deshabilita la tool `web_search`. */
   readonly webSearch?: WebSearchPort
   /** Repositorio de vehículos; ausente deshabilita `get_available_pids`. */

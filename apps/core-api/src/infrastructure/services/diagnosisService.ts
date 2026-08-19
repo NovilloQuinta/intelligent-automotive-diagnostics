@@ -38,7 +38,7 @@ import {
 import type { VehicleStatus } from '@/domain/value-objects/vehicleStatus.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/vin.js'
 import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
-import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
+import type { KnowledgeStackPort } from '@/application/ports/KnowledgeStackPort.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import { loadEcuDefinitionLookup } from '@/application/ecu-catalog/loadEcuDefinitionLookup.js'
@@ -101,7 +101,7 @@ export class DiagnosisService {
   private readonly obdRepo: ObdRepository | undefined
   private readonly directScenario: ScenarioDescriptor
   private readonly llmClient: LlmClientPort | undefined
-  private readonly knowledgeStack: KnowledgeStack | undefined
+  private readonly knowledgeStack: KnowledgeStackPort | undefined
   private readonly webSearch: WebSearchPort | undefined
   private readonly vehicleRepo: VehicleRepository | undefined
   private readonly logger: LoggerPort

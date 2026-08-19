@@ -3,7 +3,7 @@ import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
-import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
+import type { KnowledgeStackPort } from '@/application/ports/KnowledgeStackPort.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import {
   Elm327TcpRepository,
@@ -83,7 +83,7 @@ function createObdRepoMap(
 export interface CreateDiagnosisServiceOptions {
   readonly config: AppConfig
   readonly llmClient: LlmClientPort | undefined
-  readonly knowledgeStack: KnowledgeStack | undefined
+  readonly knowledgeStack: KnowledgeStackPort | undefined
   readonly webSearch: WebSearchPort | undefined
   readonly vehicleRepo: VehicleRepository
   readonly logger: LoggerPort

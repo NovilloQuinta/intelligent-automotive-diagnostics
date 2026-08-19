@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
+import type { Elm327TransportPort } from '@/application/ports/Elm327TransportPort.js'
 
 /**
- * Verifica que la interfaz Elm327Transport define el contrato correcto
+ * Verifica que la interfaz Elm327TransportPort define el contrato correcto
  * para que las implementaciones (TCP, Serial) sean intercambiables.
  *
  * Al ser una interfaz TypeScript (sin runtime), este test valida:
@@ -10,9 +10,9 @@ import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
  * 2. Que un objeto con los métodos esperados satisface el tipado estructural
  * 3. Que los métodos devuelven los tipos correctos
  */
-describe('Elm327Transport interface', () => {
+describe('Elm327TransportPort interface', () => {
   it('should accept objects with connect, sendCommand, and close methods', () => {
-    const mockTransport: Elm327Transport = {
+    const mockTransport: Elm327TransportPort = {
       connect: async () => {
         /* no-op */
       },
@@ -28,7 +28,7 @@ describe('Elm327Transport interface', () => {
   })
 
   it('connect() should return Promise<void>', async () => {
-    const transport: Elm327Transport = {
+    const transport: Elm327TransportPort = {
       connect: async () => {
         /* no-op */
       },
@@ -44,7 +44,7 @@ describe('Elm327Transport interface', () => {
   })
 
   it('sendCommand() should return Promise<string>', async () => {
-    const transport: Elm327Transport = {
+    const transport: Elm327TransportPort = {
       connect: async () => {
         /* no-op */
       },
@@ -60,7 +60,7 @@ describe('Elm327Transport interface', () => {
   })
 
   it('close() should return Promise<void>', async () => {
-    const transport: Elm327Transport = {
+    const transport: Elm327TransportPort = {
       connect: async () => {
         /* no-op */
       },

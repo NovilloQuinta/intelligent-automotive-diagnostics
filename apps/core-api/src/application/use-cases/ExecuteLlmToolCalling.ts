@@ -2,7 +2,7 @@ import type { LlmMessageInput, LlmConversationItem } from '@/application/dto/llm
 import type { LlmResponse } from '@/application/dto/llm/LlmResponse.js'
 import type { LlmSingleResponse } from '@/application/dto/llm/LlmSingleResponse.js'
 import type { ToolCallTrace } from '@/application/dto/llm/ToolCallTrace.js'
-import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
+import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
 
@@ -36,7 +36,7 @@ export class ExecuteLlmToolCalling {
     name: string,
     args: Record<string, unknown>,
     toolNames: Set<string>,
-    handler: ToolCallHandler,
+    handler: ToolCallHandlerPort,
   ): Promise<ToolExecutionResult> {
     if (!toolNames.has(name)) return { ok: false, text: `Unknown tool: ${name}` }
     try {
@@ -56,7 +56,7 @@ export class ExecuteLlmToolCalling {
    *
    * @throws {MaxToolCallIterationsError} Si se agotan las iteraciones sin respuesta final.
    */
-  async execute(input: LlmMessageInput, handler: ToolCallHandler): Promise<LlmResponse> {
+  async execute(input: LlmMessageInput, handler: ToolCallHandlerPort): Promise<LlmResponse> {
     const { systemPrompt, userMessage, tools } = input
     const toolNames = new Set(tools.map((t) => t.name))
     const conversationHistory: LlmConversationItem[] = input.conversationHistory

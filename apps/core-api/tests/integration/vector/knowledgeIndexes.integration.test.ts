@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
-import type { EmbeddingGenerator } from '@/application/ports/EmbeddingGenerator.js'
-import type { VectorStore } from '@/application/ports/VectorStore.js'
+import type { EmbeddingGeneratorPort } from '@/application/ports/EmbeddingGeneratorPort.js'
+import type { VectorStorePort } from '@/application/ports/VectorStorePort.js'
 import { createKnowledgeIndex } from '@/application/knowledge/createKnowledgeIndex.js'
 import { toPidMetadata, toPidEntry } from '@/application/knowledge/pidKnowledgeMapper.js'
 import { toDtcMetadata, toDtcEntry } from '@/application/knowledge/dtcKnowledgeMapper.js'
@@ -23,14 +23,14 @@ import {
 } from '@/infrastructure/persistence/vector/vectorTableConfigs.js'
 
 /**
- * Recorre la cadena completa: indice de conocimiento → puerto VectorStore → adaptador
+ * Recorre la cadena completa: indice de conocimiento → puerto VectorStorePort → adaptador
  * LanceDB → base real en disco. Verifica de paso el contrato entre los mappers y las
  * columnas de `vectorTableConfigs`.
  *
  * El embedding es determinista y falso —reparte cada texto en un eje segun su hash— para no
  * arrastrar la descarga de 118 MB del modelo real.
  */
-const embed: EmbeddingGenerator = (text) => {
+const embed: EmbeddingGeneratorPort = (text) => {
   let hash = 0
   for (const char of text) {
     hash = (hash * 31 + char.charCodeAt(0)) % EMBEDDING_DIMENSIONS
@@ -40,13 +40,13 @@ const embed: EmbeddingGenerator = (text) => {
   return Promise.resolve(vector)
 }
 
-const pidIndex = (store: VectorStore) =>
+const pidIndex = (store: VectorStorePort) =>
   createKnowledgeIndex({ store, embed, toMetadata: toPidMetadata, fromMetadata: toPidEntry })
 
-const dtcIndex = (store: VectorStore) =>
+const dtcIndex = (store: VectorStorePort) =>
   createKnowledgeIndex({ store, embed, toMetadata: toDtcMetadata, fromMetadata: toDtcEntry })
 
-const diagnosisIndex = (store: VectorStore) =>
+const diagnosisIndex = (store: VectorStorePort) =>
   createKnowledgeIndex({
     store,
     embed,

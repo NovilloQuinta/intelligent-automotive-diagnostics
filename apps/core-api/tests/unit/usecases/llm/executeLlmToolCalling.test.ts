@@ -4,7 +4,7 @@ import {
   type LlmSingleMessageSender,
 } from '@/application/use-cases/ExecuteLlmToolCalling.js'
 import type { LlmSingleResponse } from '@/application/dto/llm/LlmSingleResponse.js'
-import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
+import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 
 /** Tool definition de ejemplo. */
@@ -47,7 +47,7 @@ describe('ExecuteLlmToolCalling', () => {
     const mockSendSingle = vi
       .fn<LlmSingleMessageSender>()
       .mockResolvedValue(textSingleResponse('Diagnostico completo.'))
-    const handler: ToolCallHandler = vi.fn()
+    const handler: ToolCallHandlerPort = vi.fn()
     const mockLogger = createMockLogger()
     const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
 
@@ -78,7 +78,7 @@ describe('ExecuteLlmToolCalling', () => {
       )
       .mockResolvedValueOnce(textSingleResponse('RPM: 800 — normal.'))
 
-    const mockHandler = vi.fn<ToolCallHandler>().mockResolvedValue('RPM value: 800')
+    const mockHandler = vi.fn<ToolCallHandlerPort>().mockResolvedValue('RPM value: 800')
     const mockLogger = createMockLogger()
     const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
 
@@ -113,7 +113,7 @@ describe('ExecuteLlmToolCalling', () => {
       .fn<LlmSingleMessageSender>()
       .mockResolvedValueOnce(textSingleResponse('Diagnostico completo.'))
 
-    const mockHandler = vi.fn<ToolCallHandler>()
+    const mockHandler = vi.fn<ToolCallHandlerPort>()
     const mockLogger = createMockLogger()
     const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
 
@@ -156,7 +156,7 @@ describe('ExecuteLlmToolCalling', () => {
       .mockResolvedValueOnce(textSingleResponse('Diagnostico completo.'))
 
     const mockHandler = vi
-      .fn<ToolCallHandler>()
+      .fn<ToolCallHandlerPort>()
       .mockResolvedValueOnce('RPM: 800')
       .mockResolvedValueOnce('DTCs: P0101, P0302')
       .mockResolvedValueOnce('VIN: WAUZZZ8X')
@@ -195,7 +195,7 @@ describe('ExecuteLlmToolCalling', () => {
       )
       .mockResolvedValueOnce(textSingleResponse('No pude leer el PID.'))
 
-    const mockHandler = vi.fn<ToolCallHandler>().mockRejectedValue(new Error('OBD timeout'))
+    const mockHandler = vi.fn<ToolCallHandlerPort>().mockRejectedValue(new Error('OBD timeout'))
     const mockLogger = createMockLogger()
     const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
 
@@ -257,7 +257,7 @@ describe('ExecuteLlmToolCalling', () => {
         ]),
       )
     }
-    const mockHandler = vi.fn<ToolCallHandler>().mockResolvedValue('RPM: 800')
+    const mockHandler = vi.fn<ToolCallHandlerPort>().mockResolvedValue('RPM: 800')
     const mockLogger = createMockLogger()
     const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
 
@@ -287,7 +287,7 @@ describe('ExecuteLlmToolCalling', () => {
         ]),
       )
     }
-    const mockHandler = vi.fn<ToolCallHandler>().mockResolvedValue('RPM: 800')
+    const mockHandler = vi.fn<ToolCallHandlerPort>().mockResolvedValue('RPM: 800')
     const mockLogger = createMockLogger()
     const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 3)
 

@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest'
 import { createMcpServer } from '@/infrastructure/mcp/mcpServer.js'
 import { Elm327TcpRepository } from '@/infrastructure/elm327/elm327Adapter.js'
 import { ExecuteLlmToolCalling } from '@/application/use-cases/ExecuteLlmToolCalling.js'
-import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
+import type { Elm327TransportPort } from '@/application/ports/Elm327TransportPort.js'
 import type { LlmSingleResponse } from '@/application/dto/llm/LlmSingleResponse.js'
-import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
+import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 
 /**
@@ -29,9 +29,9 @@ const silentLogger: LoggerPort = {
 }
 
 /** Transporte falso que registra cada comando que llegaria al cable. */
-function createRecordingTransport(): { transport: Elm327Transport; sent: string[] } {
+function createRecordingTransport(): { transport: Elm327TransportPort; sent: string[] } {
   const sent: string[] = []
-  const transport: Elm327Transport = {
+  const transport: Elm327TransportPort = {
     connect: async () => {},
     close: async () => {},
     sendCommand: async (cmd: string) => {
@@ -77,7 +77,7 @@ describe('LLM pidiendo un servicio de control', () => {
     const { transport, sent } = createRecordingTransport()
     const repo = new Elm327TcpRepository(transport)
     const mcp = createMcpServer(repo)
-    const handler: ToolCallHandler = async (name, args) => {
+    const handler: ToolCallHandlerPort = async (name, args) => {
       const result = await mcp.callTool(name, args)
       return result.content[0].text
     }

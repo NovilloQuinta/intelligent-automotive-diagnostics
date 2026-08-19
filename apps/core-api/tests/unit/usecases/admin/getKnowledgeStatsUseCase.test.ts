@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { GetKnowledgeStatsUseCase } from '@/application/use-cases/admin/GetKnowledgeStatsUseCase.js'
-import type { VectorStore } from '@/application/ports/VectorStore.js'
+import type { VectorStorePort } from '@/application/ports/VectorStorePort.js'
 
-function createStore(count: number, sample: Record<string, unknown>[]): VectorStore {
+function createStore(count: number, sample: Record<string, unknown>[]): VectorStorePort {
   return {
     upsert: vi.fn(),
     query: vi.fn(),

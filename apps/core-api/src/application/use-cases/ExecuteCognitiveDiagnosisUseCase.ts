@@ -3,7 +3,7 @@ import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 import { parseCognitiveDiagnosis, JSON_BLOCK_REGEX } from '@/application/llm/extractLlmDiagnosis.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { McpToolDefinition } from '@/application/dto/llm/McpToolDefinition.js'
-import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
+import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPort.js'
 import type { ExecuteCognitiveDiagnosisInput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisInput.js'
 import type { ExecuteCognitiveDiagnosisOutput } from '@/application/dto/diagnosis/ExecuteCognitiveDiagnosisOutput.js'
 import type { DiagnosisVectorRepository } from '@/application/ports/DiagnosisVectorRepository.js'
@@ -118,7 +118,7 @@ export interface ExecuteCognitiveDiagnosisUseCaseOptions {
   /** Definiciones de herramientas MCP expuestas al LLM. */
   readonly tools: readonly McpToolDefinition[]
   /** Manejador que ejecuta llamadas a herramientas MCP. */
-  readonly handler: ToolCallHandler
+  readonly handler: ToolCallHandlerPort
   /** Logger para registrar advertencias y errores. */
   readonly logger: LoggerPort
   /** Repositorio vectorial opcional para inyeccion de conocimiento RAG. */

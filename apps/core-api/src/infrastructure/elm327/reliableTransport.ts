@@ -1,7 +1,7 @@
 import type {
   Elm327ExclusiveSession,
-  Elm327Transport,
-} from '@/application/ports/Elm327Transport.js'
+  Elm327TransportPort,
+} from '@/application/ports/Elm327TransportPort.js'
 import { Elm327ConnectionError } from './errors.js'
 
 const RECONNECT_BASE_MS = 100
@@ -133,7 +133,7 @@ export function createReliableTransport<TConn>(
     initTimeoutMs,
     onTrace,
   }: ReliableTransportConfig,
-): Elm327Transport {
+): Elm327TransportPort {
   const initMs = initTimeoutMs ?? timeoutMs
   // Se rearma en cada apertura de conexión: el adaptador olvida su configuración.
   let initPending = initCommands.length > 0
@@ -367,7 +367,7 @@ export function createReliableTransport<TConn>(
   }
 
   /**
-   * Reserva la conexion para una secuencia entera. Ver {@link Elm327Transport.runExclusive}.
+   * Reserva la conexion para una secuencia entera. Ver {@link Elm327TransportPort.runExclusive}.
    *
    * `exclusiveTail` encadena las reservas entre si (dos barridos concurrentes no se
    * mezclan) y `exclusiveRelease` es lo que hace esperar a `sendCommand`.

@@ -6,11 +6,11 @@ import type { EcuVectorRepository } from './EcuVectorRepository.js'
 /**
  * Los cuatro indices de conocimiento del catalogo auto-expansivo (ADR-007 §3).
  *
- * Se agrupan porque comparten conexion LanceDB y {@link EmbeddingGenerator} en
+ * Se agrupan porque comparten conexion LanceDB y {@link EmbeddingGeneratorPort} en
  * `composition.ts`. Esta interfaz es un contrato de aplicacion — no un detalle
  * de wiring — y por tanto vive en `application/ports/`, no en `composition.ts`.
  */
-export interface KnowledgeStack {
+export interface KnowledgeStackPort {
   readonly pidsIndex: PidVectorRepository
   readonly dtcsIndex: DtcVectorRepository
   readonly diagnosisIndex: DiagnosisVectorRepository

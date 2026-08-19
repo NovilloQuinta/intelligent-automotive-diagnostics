@@ -6,9 +6,9 @@ import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
 import { ExecuteCognitiveDiagnosisUseCase } from '@/application/use-cases/ExecuteCognitiveDiagnosisUseCase.js'
 import type { LlmClientPort, ToolCallTrace } from '@/application/ports/LlmClientPort.js'
 import type { McpToolDefinition } from '@/application/dto/llm/McpToolDefinition.js'
-import type { ToolCallHandler } from '@/application/ports/ToolCallHandler.js'
+import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
-import type { EmbeddingGenerator } from '@/application/ports/EmbeddingGenerator.js'
+import type { EmbeddingGeneratorPort } from '@/application/ports/EmbeddingGeneratorPort.js'
 import type { DiagnosisVectorRepository } from '@/application/ports/DiagnosisVectorRepository.js'
 import { createKnowledgeIndex } from '@/application/knowledge/createKnowledgeIndex.js'
 import {
@@ -31,7 +31,7 @@ import type { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
  *
  * Evita descargar el modelo de 118 MB en el pipeline de CI.
  */
-const embed: EmbeddingGenerator = (text) => {
+const embed: EmbeddingGeneratorPort = (text) => {
   let hash = 0
   for (const char of text) {
     hash = (hash * 31 + char.charCodeAt(0)) % EMBEDDING_DIMENSIONS
@@ -117,7 +117,7 @@ describe('RAG loop e2e', () => {
     const llmClient1: LlmClientPort = {
       sendMessage: vi.fn().mockResolvedValue(cognitiveResponse(firstText, firstToolCalls)),
     }
-    const handler1: ToolCallHandler = vi.fn()
+    const handler1: ToolCallHandlerPort = vi.fn()
     const logger1 = createMockLogger()
 
     const useCase1 = new ExecuteCognitiveDiagnosisUseCase({

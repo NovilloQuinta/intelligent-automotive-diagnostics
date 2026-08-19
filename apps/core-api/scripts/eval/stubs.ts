@@ -6,7 +6,7 @@ import { Vin } from '@/domain/value-objects/vin.js'
 import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { KnowledgeSource } from '@/domain/value-objects/knowledgeSource.js'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
-import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
+import type { KnowledgeStackPort } from '@/application/ports/KnowledgeStackPort.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
@@ -123,7 +123,7 @@ function catalogHit(text: string): VectorSearchResult<DiagnosisKnowledgeEntry> {
  * otro usuario sembro en el catalogo y que `search_similar_*` devuelve sin
  * filtrar por usuario.
  */
-export function createStubKnowledgeStack(catalogText?: string): KnowledgeStack {
+export function createStubKnowledgeStack(catalogText?: string): KnowledgeStackPort {
   const emptyIndex = { index: async () => undefined, search: async () => [] }
   return {
     pidsIndex: { ...emptyIndex },
@@ -133,7 +133,7 @@ export function createStubKnowledgeStack(catalogText?: string): KnowledgeStack {
       index: async () => undefined,
       search: async () => (catalogText ? [catalogHit(catalogText)] : []),
     },
-  } as KnowledgeStack
+  } as KnowledgeStackPort
 }
 
 /** Buscador web que devuelve el snippet del caso (canal de inyeccion C4). */
@@ -164,7 +164,7 @@ const ERROR_FIXTURE_KEY = '__error'
 export interface EvalHarness {
   readonly mcp: DiagnosticsMcpServer
   /** El mismo indice que ven las tools, para que C6 llegue por los dos caminos. */
-  readonly knowledge: KnowledgeStack
+  readonly knowledge: KnowledgeStackPort
 }
 
 /**
@@ -175,7 +175,7 @@ export interface EvalHarness {
  * su envoltorio untrusted de verdad. El override solo tapa las respuestas OBD,
  * porque un caso quiere "105 grados" sin montar un emulador.
  *
- * El `KnowledgeStack` se devuelve ademas de inyectarse: el use case lo usa por
+ * El `KnowledgeStackPort` se devuelve ademas de inyectarse: el use case lo usa por
  * su cuenta para la seccion "Casos similares previos", asi que ambos caminos
  * tienen que compartir instancia o el caso C6 solo se probaria a medias.
  */

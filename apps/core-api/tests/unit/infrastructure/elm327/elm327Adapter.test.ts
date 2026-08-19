@@ -758,11 +758,11 @@ describe('Elm327TcpRepository', () => {
 describe('lectura de DTC con origen', () => {
   /** Transporte guionizado que registra los comandos, como el de `ecuDiscovery.test.ts`. */
   function createScriptedTransport(script: Record<string, string>): {
-    transport: Elm327Transport
+    transport: Elm327TransportPort
     sent: string[]
   } {
     const sent: string[] = []
-    const transport: Elm327Transport = {
+    const transport: Elm327TransportPort = {
       connect: vi.fn().mockResolvedValue(undefined),
       sendCommand: vi.fn(async (cmd: string) => {
         sent.push(cmd)
@@ -803,7 +803,7 @@ describe('lectura de DTC con origen', () => {
 
   it('should restore the headers even if the read throws', async () => {
     const sent: string[] = []
-    const transport: Elm327Transport = {
+    const transport: Elm327TransportPort = {
       connect: vi.fn().mockResolvedValue(undefined),
       sendCommand: vi.fn(async (cmd: string) => {
         sent.push(cmd)
