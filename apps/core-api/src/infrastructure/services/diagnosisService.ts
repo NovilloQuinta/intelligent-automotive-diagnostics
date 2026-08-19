@@ -41,6 +41,7 @@ import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.
 import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
+import { persistDiscoveredEcus } from '@/application/shared/persistDiscoveredEcus.js'
 import type {
   DiagnosisSessionFilter,
   DiagnosisSessionPage,
@@ -264,7 +265,29 @@ export class DiagnosisService {
    */
   async getEcuInfo(scenarioId?: string): Promise<EcuInfo[]> {
     const repository = this.resolveRepository(scenarioId)
-    return repository.getEcuInfo()
+    const ecus = await repository.getEcuInfo()
+    void this.persistDiscovered(repository, ecus)
+    return ecus
+  }
+
+  /**
+   * Guarda las ECUs descubiertas contra el vehiculo activo, sin bloquear la respuesta.
+   *
+   * Best-effort a proposito: descubrir no depende de poder guardar. Si el vehiculo
+   * no esta identificado todavia, o la escritura falla, el barrido se devuelve igual
+   * y solo queda el aviso en el log.
+   */
+  private async persistDiscovered(repository: ObdRepository, ecus: EcuInfo[]): Promise<void> {
+    if (!this.vehicleRepo || ecus.length === 0) return
+    try {
+      const identified = await this.identify(await repository.getVehicleInfo())
+      const { id } = await this.vehicleRepo.upsertVehicle(this.toVehicleProfile(identified))
+      await persistDiscoveredEcus(this.vehicleRepo, id, ecus)
+    } catch (e) {
+      this.logger.warn('Failed to persist discovered ECUs', {
+        err: e instanceof Error ? e : String(e),
+      })
+    }
   }
 
   /**

@@ -404,6 +404,102 @@ describe('DiagnosisService — OBD, telemetria y passthrough MCP', () => {
 
       await expect(service.getEcuInfo('no-existe')).rejects.toThrow(DiagnosisScenarioNotFoundError)
     })
+
+    /**
+     * Persistencia de lo descubierto.
+     *
+     * El barrido pintaba el mapa y no dejaba rastro: `ecus` se quedaba a cero por
+     * mucho que se escanease desde la UI, porque la unica llamada a `persistEcus`
+     * colgaba del `sessionContext` que arma el runner cognitivo. Sin clave de LLM,
+     * ese camino no corre nunca.
+     */
+    describe('persistencia de las ECUs descubiertas', () => {
+      const descubierta = (responseAddr: string, requestAddr: string): EcuInfo =>
+        new EcuInfo({
+          id: 0,
+          vehicleId: 0,
+          name: `ECU ${responseAddr}`,
+          requestAddr,
+          responseAddr,
+          type: 'UNKNOWN',
+          protocol: 'CAN_11_500',
+        })
+
+      it('guarda las ECUs nuevas contra el vehiculo identificado', async () => {
+        const vehicleRepo = createMockVehicleRepo({
+          upsertVehicle: vi.fn().mockResolvedValue({ id: 7 }),
+        })
+        const ecus = [descubierta('7E8', '7E0'), descubierta('7E9', '7E1')]
+        const service = new DiagnosisService({
+          scenarios: mockScenarios,
+          obdRepos: new Map([['audi-a3-idle', createMockObdRepo({ ecus })]]),
+          vehicleRepo,
+          logger: createMockLogger(),
+        })
+
+        await service.getEcuInfo('audi-a3-idle')
+        await vi.waitFor(() => expect(vehicleRepo.insertEcu).toHaveBeenCalledTimes(2))
+
+        const guardadas = vi
+          .mocked(vehicleRepo.insertEcu as ReturnType<typeof vi.fn>)
+          .mock.calls.map(([ecu]) => (ecu as EcuInfo).responseAddr)
+        expect(guardadas.sort()).toEqual(['7E8', '7E9'])
+        expect(
+          vi.mocked(vehicleRepo.insertEcu as ReturnType<typeof vi.fn>).mock.calls[0][0].vehicleId,
+        ).toBe(7)
+      })
+
+      it('refresca la fecha en vez de duplicar cuando la ECU ya estaba', async () => {
+        const vehicleRepo = createMockVehicleRepo({
+          upsertVehicle: vi.fn().mockResolvedValue({ id: 7 }),
+          findEcuByAddress: vi.fn().mockResolvedValue({ id: 42 }),
+        })
+        const service = new DiagnosisService({
+          scenarios: mockScenarios,
+          obdRepos: new Map([
+            ['audi-a3-idle', createMockObdRepo({ ecus: [descubierta('7E8', '7E0')] })],
+          ]),
+          vehicleRepo,
+          logger: createMockLogger(),
+        })
+
+        await service.getEcuInfo('audi-a3-idle')
+        await vi.waitFor(() => expect(vehicleRepo.updateEcuDiscoveredAt).toHaveBeenCalledWith(42))
+
+        expect(vehicleRepo.insertEcu).not.toHaveBeenCalled()
+      })
+
+      it('devuelve las ECUs aunque la escritura falle: descubrir no depende de guardar', async () => {
+        const vehicleRepo = createMockVehicleRepo({
+          upsertVehicle: vi.fn().mockRejectedValue(new Error('disco lleno')),
+        })
+        const service = new DiagnosisService({
+          scenarios: mockScenarios,
+          obdRepos: new Map([
+            ['audi-a3-idle', createMockObdRepo({ ecus: [descubierta('7E8', '7E0')] })],
+          ]),
+          vehicleRepo,
+          logger: createMockLogger(),
+        })
+
+        const result = await service.getEcuInfo('audi-a3-idle')
+
+        expect(result).toHaveLength(1)
+        expect(vehicleRepo.insertEcu).not.toHaveBeenCalled()
+      })
+
+      it('no intenta guardar si no hay repositorio', async () => {
+        const service = new DiagnosisService({
+          scenarios: mockScenarios,
+          obdRepos: new Map([
+            ['audi-a3-idle', createMockObdRepo({ ecus: [descubierta('7E8', '7E0')] })],
+          ]),
+          logger: createMockLogger(),
+        })
+
+        await expect(service.getEcuInfo('audi-a3-idle')).resolves.toHaveLength(1)
+      })
+    })
   })
 
   describe('getVehicleInfo', () => {

@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
+import { persistDiscoveredEcus } from '@/application/shared/persistDiscoveredEcus.js'
 import { PidCode } from '@/domain/value-objects/pidCode.js'
 import { PidDefinition } from '@/domain/entities/pidDefinition.js'
 import { PidReading } from '@/domain/entities/pidReading.js'
@@ -19,7 +20,7 @@ import {
  * Contexto opcional de sesion de diagnostico para persistencia MCP.
  *
  * `sessionId` habilita {@link persistPidReading}; `vehicleId` habilita
- * {@link persistEcus}. `manufacturer`/`model` habilitan la deduplicacion
+ * {@link persistDiscoveredEcus}. `manufacturer`/`model` habilitan la deduplicacion
  * de PIDs y DTCs por fabricante/modelo. Todos son `undefined` cuando el MCP
  * se usa fuera de una sesion de diagnostico (ej. `callMcpTool` directo).
  */
@@ -121,43 +122,6 @@ function persistPidReading(ctx: PidPersistenceContext): void {
     .catch(() => {
       // best-effort: never let persistence failure bubble up to the LLM
     })
-}
-
-/**
- * Persiste las ECUs descubiertas con deduplicacion por direcciones CAN.
- *
- * Usa {@link VehicleRepository.findEcuByAddress} para evitar duplicados:
- * si la ECU ya existe, actualiza `discoveredAt`; si no, la inserta.
- */
-async function persistEcus(
-  vehicleRepo: VehicleRepository,
-  vehicleId: number,
-  ecus: EcuInfo[],
-): Promise<void> {
-  await Promise.all(
-    ecus.map(async (ecu) => {
-      const existing = await vehicleRepo.findEcuByAddress(
-        vehicleId,
-        ecu.requestAddr,
-        ecu.responseAddr,
-      )
-      if (existing?.id) {
-        await vehicleRepo.updateEcuDiscoveredAt(existing.id)
-      } else {
-        await vehicleRepo.insertEcu(
-          new EcuInfo({
-            id: 0,
-            vehicleId,
-            name: ecu.name,
-            requestAddr: ecu.requestAddr,
-            responseAddr: ecu.responseAddr,
-            type: ecu.type,
-            protocol: ecu.protocol,
-          }),
-        )
-      }
-    }),
-  )
 }
 
 /** Lo observado al leer un PID, con el repositorio de persistencia si lo hay. */
@@ -300,7 +264,7 @@ function handleGetEcuInfo(
 
     // Persistir ECUs descubiertas si hay sesion activa (fire-and-forget)
     if (vehicleRepo && sessionContext?.vehicleId !== undefined) {
-      void persistEcus(vehicleRepo, sessionContext.vehicleId, resolved).catch(() => {})
+      void persistDiscoveredEcus(vehicleRepo, sessionContext.vehicleId, resolved).catch(() => {})
     }
 
     return text(
