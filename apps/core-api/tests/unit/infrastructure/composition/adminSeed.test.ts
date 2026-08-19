@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { seedAdminUser } from '@/infrastructure/composition/composition.js'
+import { seedAdminUser } from '@/infrastructure/composition/auth.js'
 import type { UserRepository } from '@/application/ports/UserRepository.js'
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'

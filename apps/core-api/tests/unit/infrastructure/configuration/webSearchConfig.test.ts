@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import { loadConfig } from '@/infrastructure/configuration/index.js'
-import { createWebSearchPort } from '@/infrastructure/composition/composition.js'
+import { createWebSearchPort } from '@/infrastructure/composition/llm.js'
 import type { AppConfig } from '@/infrastructure/configuration/index.js'
 
 describe('WEB_SEARCH_API_KEY configuration', () => {

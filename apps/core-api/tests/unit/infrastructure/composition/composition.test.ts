@@ -57,7 +57,7 @@ describe('createKnowledgeStack', () => {
 
   it('should create four knowledge indices from LanceDB configs', { timeout: 15000 }, async () => {
     // Dynamically import after mocks are set up
-    const { createKnowledgeStack } = await import('@/infrastructure/composition/composition.js')
+    const { createKnowledgeStack } = await import('@/infrastructure/composition/knowledge.js')
 
     const lanceDb = mockLanceDb()
     vi.mocked(initLanceDb).mockResolvedValue(lanceDb)
@@ -81,7 +81,7 @@ describe('createKnowledgeStack', () => {
   })
 
   it('should also expose the three raw vector stores for admin stats (count/sample)', async () => {
-    const { createKnowledgeStack } = await import('@/infrastructure/composition/composition.js')
+    const { createKnowledgeStack } = await import('@/infrastructure/composition/knowledge.js')
 
     const lanceDb = mockLanceDb()
     vi.mocked(initLanceDb).mockResolvedValue(lanceDb)
@@ -108,7 +108,7 @@ describe('createKnowledgeStack', () => {
   })
 
   it('should return undefined when initLanceDb throws', async () => {
-    const { createKnowledgeStack } = await import('@/infrastructure/composition/composition.js')
+    const { createKnowledgeStack } = await import('@/infrastructure/composition/knowledge.js')
 
     vi.mocked(initLanceDb).mockRejectedValue(new Error('LanceDB unavailable'))
     const logger = createMockLogger()
@@ -123,7 +123,7 @@ describe('createKnowledgeStack', () => {
   })
 
   it('should return undefined when createLanceVectorStore throws', async () => {
-    const { createKnowledgeStack } = await import('@/infrastructure/composition/composition.js')
+    const { createKnowledgeStack } = await import('@/infrastructure/composition/knowledge.js')
 
     vi.mocked(initLanceDb).mockResolvedValue(mockLanceDb())
     vi.mocked(createLanceVectorStore).mockRejectedValue(new Error('Table creation failed'))
