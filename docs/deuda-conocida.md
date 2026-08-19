@@ -26,46 +26,67 @@ Lo que falta es leer las 30 respuestas y calibrar el prompt con ellas delante:
 Pendiente relacionado: no hay `LLM_TEMPERATURE`. Hoy se corre al 1.0 por defecto
 de Anthropic, que es lo peor para evaluar. `seed` no: no existe en su Messages API.
 
-## El bucle de aprendizaje de ECUs no se ejercita
+## El bucle de aprendizaje de ECUs: escrito, sin calibrar
 
-Medido el 2026-08-18 sobre `develop`. El system prompt (`application/prompts/cognitiveDiagnosisPrompt.ts`)
-tiene bloques explícitos que le dicen al agente qué hacer cuando descubre un PID desconocido y cuando
-descubre un DTC desconocido. **No hay bloque equivalente para ECUs.**
+Actualizado el 2026-08-19. El bloque `ECU_LEARNING_INSTRUCTIONS` **ya existe** en
+`application/prompts/cognitiveDiagnosisPrompt.ts`, simetrico a los de PID y DTC, con cinco
+tests que lo blindan: nombra las tres tools de la cadena (`get_ecu_info`,
+`search_similar_ecus`, `index_ecu`), exige buscar antes de indexar, pide los cuatro campos
+obligatorios del schema de `index_ecu` y prohibe inventar nombres.
 
-Consecuencia: de las 16 tools registradas, cuatro no se nombran en el prompt —`get_freeze_frame`,
-`get_ecu_info`, `search_similar_ecus` e `index_ecu`—. Las tres últimas son la cadena completa de
-aprendizaje de ECUs, así que la tabla `ecu_definitions` y su índice vectorial existen, están
-testeados y en la práctica se quedan vacíos: el agente solo llegaría a ellos por la descripción de la
-tool, sin ninguna instrucción que se lo sugiera. `get_freeze_frame` es distinto: no es una cadena de
-aprendizaje y el flujo determinista sí lo usa.
+**Lo que sigue pendiente es medirlo.** Tocar el system prompt cambia el comportamiento del
+agente, y este proyecto calibra esos cambios con `pnpm eval:agent`, que necesita la clave
+del LLM y no se ha corrido nunca (ver la seccion anterior). Hay que correr **el grupo A
+entero**, no solo B-E: un bloque nuevo de instrucciones puede volver al agente mas verboso
+o mas reticente en consultas legitimas.
 
-No se corrige aquí a propósito. Tocar el system prompt cambia el comportamiento del agente, y este
-proyecto calibra los cambios de prompt con `pnpm eval:agent` — que necesita la clave del LLM y no se
-ha corrido nunca (ver la sección anterior). Añadir un bloque a ciegas la víspera de una demo es
-justo el cambio que no se debe hacer sin medir.
+`get_freeze_frame` sigue sin nombrarse en el prompt, y es distinto: no es una cadena de
+aprendizaje y el flujo determinista si lo usa.
 
-**Pendiente: abrir un change OpenSpec para esto.** No es un parche de una línea, es una decisión de
-producto con verificación asociada, y merece su propio ciclo propose → apply. El change debe cubrir:
-escribir el bloque de ECUs simétrico a los de PID y DTC, y correr **el grupo A entero** de la
-batería, no solo B-E, porque un bloque nuevo de instrucciones puede volver al agente más verboso o
-más reticente en consultas legítimas.
+## El transporte no se recupera tras agotar la reconexion
+
+Detectado el 2026-08-19 grabando trazas, y reproducido dos veces. Si el dispositivo se cae
+mas de 30 s, `createReliableTransport` agota su ventana de reconexion y **se queda muerto
+para siempre**: la API responde `500` con `Reconnection failed after 30s` aunque el
+emulador (o el coche) haya vuelto. Solo se arregla reiniciando el proceso.
+
+En la demo con el coche real esto es un riesgo concreto: un cable de OBD movido medio
+minuto deja la herramienta inservible hasta reiniciar. Documentado en `docs/guion-demo.md`
+como paso de recuperacion.
+
+## `cognitive-diagnosis` responde 404 donde el spec dice 503
+
+`DiagnosisController.ts:451` devuelve `404` con `Cognitive diagnosis is not available`
+cuando falta la configuracion del LLM, pero `openapi/routes/mcp.ts:78` documenta `503`
+para ese caso. Ademas un `404` es el codigo equivocado: el recurso existe, lo que falta es
+configuracion del despliegue.
+
+## Las ECU aprendidas no llegan al mapa de topologia
+
+`resolveDiscoveredEcus` (`mcp/diagnosticTools.ts`) cruza las ECU `UNKNOWN` contra
+`ecu_definitions` y resuelve el nombre aprendido, pero **solo en la tool del agente**. El
+camino REST (`GET /api/ecu-info`, que es el que pinta la pantalla de Topologia) devuelve
+`ECU 7E9 / UNKNOWN` aunque el agente ya haya averiguado que es la caja de cambios.
+
+No es una incoherencia aislada: **los PIDs se comportan igual**, la resolucion contra lo
+aprendido vive en la capa MCP. Cambiarlo es una decision de diseno, no un parche.
 
 ## Funciones que superan las 40 lineas (13)
 
 Las marca ESLint (`max-lines-per-function`, warn, solo `src/`). Ver "Excepciones
 al limite de 40 lineas" en `AGENTS.md` antes de marcar ninguna como legitima.
 
-| Funcion | Lineas |
-|---|---|
-| `createReliableTransport` | **182** |
-| `tokenize` / `evaluatePostfix` (math-parsers) | 57 |
-| `createAuthService` | 54 |
-| `buildApp` | 50 |
-| `createAuthStack` / `upsertEcuDefinition` | 49 |
-| `createDiagnosisService` | 47 |
-| `createKnowledgeStack` / `findSessions` | 45 |
-| Constructor (DiagnosisService) | 42 |
-| `cognitiveDiagnosis` / `createLanceVectorStore` | 41 |
+| Funcion                                         | Lineas  |
+| ----------------------------------------------- | ------- |
+| `createReliableTransport`                       | **182** |
+| `tokenize` / `evaluatePostfix` (math-parsers)   | 57      |
+| `createAuthService`                             | 54      |
+| `buildApp`                                      | 50      |
+| `createAuthStack` / `upsertEcuDefinition`       | 49      |
+| `createDiagnosisService`                        | 47      |
+| `createKnowledgeStack` / `findSessions`         | 45      |
+| Constructor (DiagnosisService)                  | 42      |
+| `cognitiveDiagnosis` / `createLanceVectorStore` | 41      |
 
 `createReliableTransport` es el peor del repo con diferencia.
 
@@ -101,20 +122,20 @@ la entrada pero no la salida.
 
 ## God files (coste de contexto)
 
-| Modulo | Estado |
-|---|---|
-| `infrastructure/mcp/mcpServer.ts` | ~~848 L~~ → 98 L — **RESUELTO** (Fases A y B) |
-| `infrastructure/services/diagnosisService.ts` | ~~969 L~~ → ~~786 L~~ → **586 L** — **REDUCIDO, no resuelto**: el flujo cognitivo salio a `services/cognitive/cognitiveDiagnosisRunner.ts`, pero sigue siendo el fichero mas grande del backend |
-| `infrastructure/persistence/sqlite/vehicleRepository.ts` | ~~632 L~~ → **181 L** — **RESUELTO**: un store por agregado en `sqlite/vehicle/` |
-| `infrastructure/composition/composition.ts` | ~~579 L~~ → **100 L** — **RESUELTO**: repartido por areas en `composition/` |
-| `infrastructure/http/controllers/DiagnosisController.ts` | ~~578 L~~ → **479 L** — **REDUCIDO, no resuelto**: los schemas Zod viven ya en `application/dto/diagnosis/`, pero partir el controlador obligaria a tocar `diagnosis.routes.test.ts` (1241 L) |
-| `apps/ui/src/lib/api.ts` | ~~658 L~~ → **438 L** (test 1582 L) — el fichero bajo; el test sigue siendo el mas grande del repo |
+| Modulo                                                   | Estado                                                                                                                                                                                          |
+| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `infrastructure/mcp/mcpServer.ts`                        | ~~848 L~~ → 98 L — **RESUELTO** (Fases A y B)                                                                                                                                                   |
+| `infrastructure/services/diagnosisService.ts`            | ~~969 L~~ → ~~786 L~~ → **586 L** — **REDUCIDO, no resuelto**: el flujo cognitivo salio a `services/cognitive/cognitiveDiagnosisRunner.ts`, pero sigue siendo el fichero mas grande del backend |
+| `infrastructure/persistence/sqlite/vehicleRepository.ts` | ~~632 L~~ → **181 L** — **RESUELTO**: un store por agregado en `sqlite/vehicle/`                                                                                                                |
+| `infrastructure/composition/composition.ts`              | ~~579 L~~ → **100 L** — **RESUELTO**: repartido por areas en `composition/`                                                                                                                     |
+| `infrastructure/http/controllers/DiagnosisController.ts` | ~~578 L~~ → **479 L** — **REDUCIDO, no resuelto**: los schemas Zod viven ya en `application/dto/diagnosis/`, pero partir el controlador obligaria a tocar `diagnosis.routes.test.ts` (1241 L)   |
+| `apps/ui/src/lib/api.ts`                                 | ~~658 L~~ → **438 L** (test 1582 L) — el fichero bajo; el test sigue siendo el mas grande del repo                                                                                              |
 
 > Cifras remedidas el 2026-08-19. `seedManufacturerCatalog.ts` (645 L) **no** cuenta:
 > son 73 entradas de datos sembrados, no logica.
 >
 > **Ojo con el "RESUELTO"**: solo lo son los tres que bajaron de 200 lineas
-> (`mcpServer`, `vehicleRepository`, `composition`). Los dos marcados *reducido* siguen
+> (`mcpServer`, `vehicleRepository`, `composition`). Los dos marcados _reducido_ siguen
 > siendo los ficheros mas grandes del backend y siguen contando como deuda.
 
 ## Tests sin factories compartidas
@@ -182,9 +203,9 @@ GitHub; su contenido ya esta integrado, asi que borrarlas no pierde nada:
   `application/shared/errorCategory.ts`, y el toolkit no conoce ningun tipo
   concreto. Guardas repetidas de `vehicleRepo` aisladas. El modulo entero quedo
   con **0 warnings**.
-  - *No* se unificaron `handleIndexPid`/`handleIndexDtc`: el patron se repite 2
+  - _No_ se unificaron `handleIndexPid`/`handleIndexDtc`: el patron se repite 2
     veces, no 3+, y la regla DRY del proyecto pide 3+.
-  - *No* se aplico Null Object a `VehicleRepository | undefined`: ~19 stubs no-op
+  - _No_ se aplico Null Object a `VehicleRepository | undefined`: ~19 stubs no-op
     para eliminar 4 guardas, y ni asi bajaba del umbral de complejidad.
 - **GGA vs lint/prettier**: el repo no estaba prettier-limpio (7 ficheros), asi que
   cualquier `format:fix` arrastraba ficheros no tocados. Resuelto pasando prettier
