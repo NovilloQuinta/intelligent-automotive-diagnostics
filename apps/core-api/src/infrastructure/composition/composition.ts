@@ -1,4 +1,5 @@
 import type { Application } from 'express'
+import { createDiagnosisService } from '@/infrastructure/composition/obd.js'
 import { getDb } from '@/infrastructure/persistence/sqlite/db.js'
 import { createServer } from '@/infrastructure/http/server.js'
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
@@ -10,16 +11,6 @@ import { createAuthService } from '@/infrastructure/services/authService.js'
 import { createNodemailerEmailSender } from '@/infrastructure/email/nodemailerEmailSender.js'
 import { createConsoleEmailSender } from '@/infrastructure/email/consoleEmailSender.js'
 import type { EmailSenderPort } from '@/application/ports/EmailSenderPort.js'
-import { Elm327TcpRepository } from '@/infrastructure/elm327/elm327Adapter.js'
-import { createElm327TcpClient } from '@/infrastructure/elm327/tcpTransport.js'
-import { createElm327SerialClient } from '@/infrastructure/elm327/serialTransport.js'
-import {
-  ELM327_INIT_COMMANDS,
-  ELM327_INIT_TIMEOUT_MS,
-} from '@/infrastructure/elm327/initSequence.js'
-import { createConsoleTracer } from '@/infrastructure/elm327/traceConsole.js'
-import type { ObdRepository } from '@/application/ports/ObdRepository.js'
-import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import { createAnthropicClient } from '@/infrastructure/llm/anthropicClient.js'
 import { createOpenAiClient } from '@/infrastructure/llm/openAiClient.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
@@ -46,11 +37,7 @@ import { UpdateProfileUseCase } from '@/application/use-cases/UpdateProfileUseCa
 import { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 import { ProfileController } from '@/infrastructure/http/controllers/ProfileController.js'
 import { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
-import {
-  DiagnosisService,
-  SERIAL_DIRECT_SCENARIO,
-  type ScenarioDescriptor,
-} from '@/infrastructure/services/diagnosisService.js'
+import type { VectorStore } from '@/application/ports/VectorStore.js'
 import type { AppConfig } from '@/infrastructure/configuration/index.js'
 import type { UserRepository } from '@/application/ports/UserRepository.js'
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
@@ -77,8 +64,6 @@ import type { KnowledgeStack } from '@/application/ports/KnowledgeStack.js'
 import type { KnowledgeVectorStores } from '@/application/use-cases/admin/GetKnowledgeStatsUseCase.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import { createSerpApiClient } from '@/infrastructure/web-search/serpApiClient.js'
-import { Vin } from '@/domain/value-objects/vin.js'
-import { VehicleInfo } from '@/domain/value-objects/vehicleInfo.js'
 
 /** Falla con un mensaje de configuracion, no con un ZodError de "string too small". */
 function requireConfig(value: string | undefined, name: string): string {
@@ -158,6 +143,7 @@ interface AuthStack {
 }
 
 /** Crea el servicio de autenticacion y sus casos de uso. */
+// eslint-disable-next-line max-lines-per-function -- lista declarativa de casos de uso
 function createAuthStack(
   config: AppConfig,
   repos: Pick<PersistenceRepositories, 'userRepo' | 'tokenStore' | 'passwordResetTokenRepo'>,
@@ -273,93 +259,6 @@ export async function seedAdminUser(
 }
 
 /**
- * Escenarios disponibles en modo Docker emulador.
- *
- * La telemetria (PIDs 05, 0C, 0D, 0F) y los codigos de averia se leen en
- * tiempo real del emulador via `GET /api/live-data` y `GET /api/dtc-codes`.
- * No se hardcodean valores que el emulador ya provee.
- */
-function toyotaScenario(config: AppConfig): ScenarioDescriptor {
-  return {
-    id: 'toyota',
-    name: 'Toyota (Built-in)',
-    vehicleType: 'car',
-    connectionType: 'wifi',
-    dtcConfig: [],
-    vehicleInfo: new VehicleInfo({
-      make: 'Toyota',
-      model: 'Auris Hybrid',
-      year: 2016,
-      engineType: '1.8L Hybrid',
-      vin: new Vin('JTDKN3DU60A123456'),
-    }),
-    host: config.ELM327_TOYOTA_HOST,
-    port: config.ELM327_TOYOTA_PORT,
-  }
-}
-
-function audiScenario(config: AppConfig): ScenarioDescriptor {
-  return {
-    id: 'audi-a3-tdi',
-    name: 'Audi A3 2.0 TDI',
-    vehicleType: 'car',
-    connectionType: 'wifi',
-    vehicleInfo: new VehicleInfo({
-      make: 'Audi',
-      model: 'A3',
-      year: 2018,
-      engineType: '2.0 TDI',
-      vin: new Vin('WAUZZZ8V5JA123456'),
-    }),
-    host: config.ELM327_AUDI_HOST,
-    port: config.ELM327_AUDI_PORT,
-  }
-}
-
-function kawasakiScenario(config: AppConfig): ScenarioDescriptor {
-  return {
-    id: 'kawasaki-z900',
-    name: 'Kawasaki Z900',
-    vehicleType: 'motorcycle',
-    connectionType: 'wifi',
-    dtcConfig: [],
-    vehicleInfo: new VehicleInfo({
-      make: 'Kawasaki',
-      model: 'Z900',
-      year: 2020,
-      engineType: '948cc Inline-4',
-      vin: new Vin('JKAZR2A1XLA000111'),
-    }),
-    host: config.ELM327_KAWASAKI_HOST,
-    port: config.ELM327_KAWASAKI_PORT,
-  }
-}
-
-function createDockerScenarios(config: AppConfig): ScenarioDescriptor[] {
-  return [toyotaScenario(config), audiScenario(config), kawasakiScenario(config)]
-}
-
-/** Mapa scenarioId → ObdRepository creado a partir de los descriptores de escenarios. */
-function createObdRepoMap(
-  scenarios: ScenarioDescriptor[],
-  vehicleRepo: VehicleRepository,
-  logger: LoggerPort,
-  trace = false,
-  readOnly = false,
-): Map<string, ObdRepository> {
-  const map = new Map<string, ObdRepository>()
-  for (const s of scenarios) {
-    const transport = createElm327TcpClient({
-      host: s.host,
-      port: s.port,
-      onTrace: trace ? createConsoleTracer(s.id) : undefined,
-    })
-    map.set(s.id, new Elm327TcpRepository(transport, vehicleRepo, logger, { readOnly }))
-  }
-  return map
-}
-
-/**
  * {@link KnowledgeStack} ampliado con los tres {@link VectorStore} crudos, para el panel de
  * administracion (`GetKnowledgeStatsUseCase.count()`/`sample()`). Extiende `KnowledgeStack`
  * (no lo sustituye) para que sigua siendo asignable donde se espera un `KnowledgeStack`
@@ -380,43 +279,63 @@ export async function createKnowledgeStack(
 ): Promise<KnowledgeStackWithStores | undefined> {
   try {
     const { db } = await initLanceDb(config.LANCEDB_PATH)
-    const embed: EmbeddingGenerator = createEmbedding
     const [pidsStore, dtcsStore, diagnosesStore, ecusStore] = await Promise.all([
       createLanceVectorStore(db, PIDS_TABLE_CONFIG),
       createLanceVectorStore(db, DTCS_TABLE_CONFIG),
       createLanceVectorStore(db, DIAGNOSES_TABLE_CONFIG),
       createLanceVectorStore(db, ECUS_TABLE_CONFIG),
     ])
-    return {
-      pidsIndex: createKnowledgeIndex({
-        store: pidsStore,
-        embed,
-        toMetadata: toPidMetadata,
-        fromMetadata: toPidEntry,
-      }),
-      dtcsIndex: createKnowledgeIndex({
-        store: dtcsStore,
-        embed,
-        toMetadata: toDtcMetadata,
-        fromMetadata: toDtcEntry,
-      }),
-      diagnosisIndex: createKnowledgeIndex({
-        store: diagnosesStore,
-        embed,
-        toMetadata: toDiagnosisMetadata,
-        fromMetadata: toDiagnosisEntry,
-      }),
-      ecusIndex: createKnowledgeIndex({
-        store: ecusStore,
-        embed,
-        toMetadata: toEcuMetadata,
-        fromMetadata: toEcuEntry,
-      }),
-      vectorStores: { pids: pidsStore, dtcs: dtcsStore, diagnoses: diagnosesStore },
-    }
+    return buildKnowledgeIndexes({ pidsStore, dtcsStore, diagnosesStore, ecusStore })
   } catch (err) {
     logger.warn('RAG knowledge stack unavailable, continuing without it', { err: String(err) })
     return undefined
+  }
+}
+
+/** Los cuatro almacenes vectoriales ya abiertos, listos para envolverse en indices. */
+interface KnowledgeStores {
+  readonly pidsStore: VectorStore
+  readonly dtcsStore: VectorStore
+  readonly diagnosesStore: VectorStore
+  readonly ecusStore: VectorStore
+}
+
+/**
+ * Envuelve cada almacen en su indice con el par de mappers que le corresponde.
+ *
+ * Lista declarativa: los cuatro indices comparten forma y solo cambian el store y sus
+ * dos mappers. Vive aparte de {@link createKnowledgeStack} para que alli quede a la
+ * vista lo unico que ramifica, que es el `try/catch` de disponibilidad de LanceDB.
+ */
+function buildKnowledgeIndexes(stores: KnowledgeStores): KnowledgeStackWithStores {
+  const embed: EmbeddingGenerator = createEmbedding
+  const { pidsStore, dtcsStore, diagnosesStore, ecusStore } = stores
+  return {
+    pidsIndex: createKnowledgeIndex({
+      store: pidsStore,
+      embed,
+      toMetadata: toPidMetadata,
+      fromMetadata: toPidEntry,
+    }),
+    dtcsIndex: createKnowledgeIndex({
+      store: dtcsStore,
+      embed,
+      toMetadata: toDtcMetadata,
+      fromMetadata: toDtcEntry,
+    }),
+    diagnosisIndex: createKnowledgeIndex({
+      store: diagnosesStore,
+      embed,
+      toMetadata: toDiagnosisMetadata,
+      fromMetadata: toDiagnosisEntry,
+    }),
+    ecusIndex: createKnowledgeIndex({
+      store: ecusStore,
+      embed,
+      toMetadata: toEcuMetadata,
+      fromMetadata: toEcuEntry,
+    }),
+    vectorStores: { pids: pidsStore, dtcs: dtcsStore, diagnoses: diagnosesStore },
   }
 }
 
@@ -447,6 +366,56 @@ export function createAdminController(
   })
 }
 
+/** Traduce el stack de auth a los siete casos de uso que espera el controlador. */
+function createAuthController(auth: AuthStack): AuthController {
+  return new AuthController({
+    registerUser: auth.registerUseCase,
+    loginUser: auth.loginUseCase,
+    refreshToken: auth.refreshUseCase,
+    getCurrentUser: auth.getCurrentUserUseCase,
+    logoutUser: auth.logoutUseCase,
+    forgotPassword: auth.forgotPasswordUseCase,
+    resetPassword: auth.resetPasswordUseCase,
+  })
+}
+
+/** Repositorios que necesita la capa de diagnostico y administracion. */
+interface DiagnosisLayerRepos {
+  readonly vehicleRepo: SqliteVehicleRepository
+  readonly userRepo: SqliteUserRepository
+  readonly logRepo: PersistenceRepositories['logRepo']
+  readonly auditRepo: PersistenceRepositories['auditRepo']
+}
+
+/**
+ * Monta todo lo que cuelga del LLM y del vehiculo: cliente del modelo, catalogo
+ * vectorial, busqueda web, servicio de diagnostico y los dos controladores que los
+ * exponen. Es la mitad cara del arranque, y la unica con `await`.
+ */
+async function createDiagnosisLayer(
+  config: AppConfig,
+  logger: LoggerPort,
+  repos: DiagnosisLayerRepos,
+): Promise<{ diagnosisController: DiagnosisController; adminController: AdminController }> {
+  const llmClient = createLlmClient(config, logger)
+  const knowledgeStack = await createKnowledgeStack(config, logger)
+  const diagnosisService = createDiagnosisService({
+    config,
+    llmClient,
+    knowledgeStack,
+    webSearch: createWebSearchPort(config),
+    vehicleRepo: repos.vehicleRepo,
+    logger,
+  })
+  return {
+    diagnosisController: new DiagnosisController(diagnosisService, logger),
+    adminController: createAdminController(
+      { userRepo: repos.userRepo, logRepo: repos.logRepo, auditRepo: repos.auditRepo },
+      knowledgeStack,
+    ),
+  }
+}
+
 /** Composition Root: cablea todas las dependencias y devuelve la app Express configurada. */
 export async function buildApp(config: AppConfig): Promise<Application> {
   const { db, auditRepo, userRepo, tokenStore, logRepo, passwordResetTokenRepo } =
@@ -462,31 +431,15 @@ export async function buildApp(config: AppConfig): Promise<Application> {
   )
   await seedAdminUser(config, userRepo, auth.authService, logger)
   await seedManufacturerCatalog(vehicleRepo, logger)
-  const authController = new AuthController({
-    registerUser: auth.registerUseCase,
-    loginUser: auth.loginUseCase,
-    refreshToken: auth.refreshUseCase,
-    getCurrentUser: auth.getCurrentUserUseCase,
-    logoutUser: auth.logoutUseCase,
-    forgotPassword: auth.forgotPasswordUseCase,
-    resetPassword: auth.resetPasswordUseCase,
-  })
-
+  const authController = createAuthController(auth)
   const profile = createProfileStack({ userRepo, tokenStore }, auth.authService, logger)
 
-  const llmClient = createLlmClient(config, logger)
-  const knowledgeStack = await createKnowledgeStack(config, logger)
-  const webSearch = createWebSearchPort(config)
-  const diagnosisService = createDiagnosisService({
-    config,
-    llmClient,
-    knowledgeStack,
-    webSearch,
+  const { diagnosisController, adminController } = await createDiagnosisLayer(config, logger, {
     vehicleRepo,
-    logger,
+    userRepo,
+    logRepo,
+    auditRepo,
   })
-  const diagnosisController = new DiagnosisController(diagnosisService, logger)
-  const adminController = createAdminController({ userRepo, logRepo, auditRepo }, knowledgeStack)
 
   return createServer({
     authController,
@@ -499,81 +452,5 @@ export async function buildApp(config: AppConfig): Promise<Application> {
     allowedOrigins: config.ALLOWED_ORIGINS,
     nodeEnv: config.NODE_ENV,
     accessTokenSecret: config.ACCESS_TOKEN_SECRET,
-  })
-}
-
-interface CreateDiagnosisServiceOptions {
-  readonly config: AppConfig
-  readonly llmClient: LlmClientPort | undefined
-  readonly knowledgeStack: KnowledgeStack | undefined
-  readonly webSearch: WebSearchPort | undefined
-  readonly vehicleRepo: VehicleRepository
-  readonly logger: LoggerPort
-}
-
-/** Crea el servicio de diagnostico con el repositorio OBD adecuado segun el modo. */
-function createDiagnosisService(opts: CreateDiagnosisServiceOptions): DiagnosisService {
-  const { config, llmClient, knowledgeStack, webSearch, vehicleRepo, logger } = opts
-  if (config.OBD_MODE === 'docker') {
-    const scenarios = createDockerScenarios(config)
-    const obdRepos = createObdRepoMap(
-      scenarios,
-      vehicleRepo,
-      logger,
-      config.OBD_TRACE,
-      config.OBD_READ_ONLY,
-    )
-    return new DiagnosisService({
-      scenarios,
-      obdRepos,
-      llmClient,
-      logger,
-      knowledgeStack,
-      webSearch,
-      vehicleRepo,
-    })
-  }
-  if (config.OBD_MODE === 'serial') {
-    const transport = createElm327SerialClient({
-      path: config.SERIAL_PORT_PATH,
-      baudRate: config.SERIAL_BAUD_RATE,
-      initCommands: ELM327_INIT_COMMANDS,
-      initTimeoutMs: ELM327_INIT_TIMEOUT_MS,
-      onTrace: config.OBD_TRACE ? createConsoleTracer('serie') : undefined,
-    })
-    const obdRepo = new Elm327TcpRepository(transport, vehicleRepo, logger, {
-      readOnly: config.OBD_READ_ONLY,
-    })
-    return new DiagnosisService({
-      scenarios: [],
-      obdRepo,
-      directScenario: SERIAL_DIRECT_SCENARIO,
-      llmClient,
-      logger,
-      knowledgeStack,
-      webSearch,
-      vehicleRepo,
-    })
-  }
-  // Modo tcp = dongle WiFi real: negocia igual que el serie. Los escenarios
-  // docker se construyen en createObdRepoMap y siguen sin negociar nada.
-  const transport = createElm327TcpClient({
-    host: config.ELM327_HOST,
-    port: config.ELM327_PORT,
-    initCommands: ELM327_INIT_COMMANDS,
-    initTimeoutMs: ELM327_INIT_TIMEOUT_MS,
-    onTrace: config.OBD_TRACE ? createConsoleTracer('wifi') : undefined,
-  })
-  const obdRepo = new Elm327TcpRepository(transport, vehicleRepo, logger, {
-    readOnly: config.OBD_READ_ONLY,
-  })
-  return new DiagnosisService({
-    scenarios: [],
-    obdRepo,
-    llmClient,
-    logger,
-    knowledgeStack,
-    webSearch,
-    vehicleRepo,
   })
 }
