@@ -156,12 +156,15 @@ SERIAL_PORT_PATH=/dev/ttyUSB0     # confirmalo con `pnpm obd:probe`
 OBD_READ_ONLY=true
 ```
 
-`OBD_READ_ONLY=true` **no es opcional**: bloquea el borrado de DTC, que en un coche de
-verdad es irreversible.
+`OBD_READ_ONLY=true` es ya **redundante pero recomendable dejarlo escrito**: desde la
+revision del 19/08 el solo lectura se fuerza solo con `OBD_MODE=serial` o `tcp`, asi que el
+borrado de DTC queda bloqueado aunque se olvide. Ponerlo explicito documenta la intencion.
 
 Orden de la sesion:
 
-1. `pnpm obd:probe` en la mesa, con el adaptador conectado pero sin coche.
+1. `pnpm obd:probe` en la mesa, con el adaptador conectado pero sin coche. Con el coche
+   ya enchufado, la sonda imprime ademas el protocolo (`ATDPN` + `ATDP`) y si el barrido
+   de ECUs esta disponible en ese bus.
 2. Pegar el bloque que imprime en el `.env`.
 3. Contacto puesto, motor en marcha o no segun lo que quieras ensenar.
 4. `pnpm start` y conectar.
@@ -174,8 +177,11 @@ legislado y se leen por protocolos de fabricante, que este proyecto no implement
 preguntan, esa es la respuesta, y esta documentada en
 `docs/infrastructure/elm327-emulator.md`.
 
-Un aviso: `ecuDiscovery.ts` fuerza `AT SP 6` (CAN 11 bits, 500 kbps). Un A3 de 2018 lo es,
-pero esta clavado a fuego y no se negocia con el coche.
+El barrido ya no impone el protocolo: pregunta con `AT DPN` cual negocio el adaptador y
+deriva de ahi la direccion de broadcast. Cubre los cuatro buses CAN (6, 7, 8 y 9). Si el
+coche habla un protocolo anterior a CAN, no barre y devuelve lista vacia **sin tocar el
+adaptador**, asi que la telemetria, los DTC y el VIN siguen funcionando. Un A3 de 2018 es
+protocolo 6, el caso comun. Detalle en `docs/adr/009-negociacion-de-protocolo-obd.md`.
 
 ---
 

@@ -178,8 +178,15 @@ Sospecha sin confirmar: estado de la conexion TCP del emulador tras un scan de
 ECUs que deja `AT H1`/`AT SH 7DF` puestos, aunque `discoverEcus` restaura en
 `finally`.
 
-Merece un vistazo si aparecen lecturas intermitentes con el coche real. No afecta
-al repo: fue un entorno de pruebas local, y ninguna suite lo reproduce.
+**Actualizado el 2026-08-19**: la sospecha era correcta en su mitad. El barrido dejaba
+`AT SH 7E0` puesto —addressing fisico al motor— cuando el estado previo era el default del
+ELM327, la direccion funcional `7DF`, porque el init nunca emite `AT SH`. Y ademas dejaba
+`AT SP 6` sin deshacer. Las dos cosas estan corregidas: el restore devuelve la direccion
+funcional del bus negociado y `AT SP` ha desaparecido del codigo.
+
+**No se cierra esta entrada**: el fallo original no se ha reproducido, asi que no se puede
+afirmar que fuera esta la causa. Si vuelve a aparecer con el coche real, esta pista ya no
+sirve y hay que buscar en otro sitio.
 
 ## Vectorial
 

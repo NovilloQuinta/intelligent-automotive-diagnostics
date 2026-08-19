@@ -3,7 +3,7 @@
 > **TFM — Master IA** · Jesus Novillo · Julio 2026
 >
 > Simulacion de telemetria vehicular y diagnostico con IA mediante el protocolo MCP (Model Context Protocol).
-> Clean Architecture + Hexagonal. Cumplimiento SAE J1979 / ISO 15031 / ISO 3779.
+> Clean Architecture + Hexagonal. Cumplimiento SAE J1979 / ISO 15031 / ISO 15765-4 / ISO 3779.
 
 ## Stack
 
@@ -20,7 +20,7 @@
 | Dev tooling | tsx (dev), tsc (build) |
 | Documentacion API | Swagger UI + OpenAPI 3.0 |
 | CI | GitHub Actions |
-| Normativa | SAE J1979, ISO 15031-5, ISO 3779 (VIN) |
+| Normativa | SAE J1979, ISO 15031-5, ISO 15765-4 (CAN), ISO 3779 (VIN) |
 | OBD Reference | ELM327-emulator v3.0.5 (Python, sidecar Docker) |
 
 ## Inicio rapido
@@ -105,6 +105,7 @@ Lista completa en Swagger UI (`/api-docs`). Resumen por familia:
 
 ```env
 OBD_MODE=docker                # docker = emulador | serial = ELM327 USB | tcp = ELM327 WiFi
+OBD_READ_ONLY=false            # forzado a true en serial/tcp: Mode 04 es irreversible
 ELM327_HOST=localhost          # solo OBD_MODE=tcp
 ELM327_PORT=35000
 SERIAL_PORT_PATH=/dev/ttyUSB0  # solo OBD_MODE=serial — descubrelo con `pnpm obd:probe`

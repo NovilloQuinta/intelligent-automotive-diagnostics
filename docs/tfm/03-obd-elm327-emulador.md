@@ -217,6 +217,58 @@ El `Elm327ConnectionError` incluye un flag `connectionLost` que el `tcpTransport
 
 ---
 
+## 3.4 Protocolos de bus soportados
+
+Un modo de servicio dice **qué se pregunta**; el protocolo dice **en qué idioma**. Son dos
+ejes independientes, y conviene no confundirlos: los modos de la sección 4 funcionan en
+todos los protocolos de esta tabla.
+
+| Nº | Protocolo | Típico en | Lectura de PID/DTC/VIN | Barrido de ECUs |
+|---|---|---|---|---|
+| 1 | SAE J1850 PWM | Ford hasta ~2003 | ✅ Sí | ❌ No |
+| 2 | SAE J1850 VPW | GM hasta ~2005 | ✅ Sí | ❌ No |
+| 3 | ISO 9141-2 | Europeos y asiáticos hasta ~2004 | ✅ Sí | ❌ No |
+| 4 | ISO 14230-4 KWP (init lento) | ~2003–2008, muchas motos | ✅ Sí | ❌ No |
+| 5 | ISO 14230-4 KWP (init rápido) | Ídem | ✅ Sí | ❌ No |
+| **6** | **ISO 15765-4 CAN 11 bits / 500 kbps** | **Mayoría desde 2008** | ✅ Sí | ✅ Sí |
+| 7 | ISO 15765-4 CAN 29 bits / 500 kbps | Americanos y algún europeo | ✅ Sí | ✅ Sí |
+| 8 | ISO 15765-4 CAN 11 bits / 250 kbps | Híbridos y vehículo ligero | ✅ Sí | ✅ Sí |
+| 9 | ISO 15765-4 CAN 29 bits / 250 kbps | Raro en turismos | ✅ Sí | ✅ Sí |
+| A | SAE J1939 | Camiones y maquinaria | — | ❌ No |
+
+### 3.4.1 El bitrate no lo fija este proyecto
+
+Hay dos velocidades en juego y solo una es nuestra:
+
+| | Entre qué y qué | Quién la fija | Valor |
+|---|---|---|---|
+| Baudios del enlace serie | Portátil ↔ adaptador ELM327 | La aplicación (`SERIAL_BAUD_RATE`) | 38400 |
+| Bitrate del bus CAN | Adaptador ↔ vehículo | **El adaptador, solo** | 500 o 250 kbps |
+
+El ELM327 tiene su propio controlador CAN y lo configura al seleccionar el protocolo:
+elegir el 6 *es* elegir 11 bits a 500 kbps. No son dos ajustes. El `ATSP0` de la secuencia
+de negociación (`initSequence.ts`) le dice que los pruebe todos y se quede con el que
+conteste, y `AT DPN` pregunta después cuál eligió.
+
+Esto importa porque hasta la revisión de agosto de 2026 el barrido de ECUs emitía `AT SP 6`,
+que era el único punto donde el código decidía la velocidad del bus — a ciegas y sin
+deshacerlo. En un vehículo que no fuera protocolo 6 dejaba el adaptador fijado a un bus que
+el coche no habla, y con él caían también las lecturas normales. Ver
+[ADR 009](../adr/009-negociacion-de-protocolo-obd.md).
+
+### 3.4.2 Por qué el barrido solo existe en CAN
+
+El descubrimiento de ECUs pregunta a la dirección de broadcast funcional y recoge quién
+contesta. Esa dirección es propia de ISO 15765-4 —`7DF` en 11 bits, `18DB33F1` en 29— y no
+tiene equivalente directo en los protocolos anteriores, donde el direccionamiento y la
+inicialización son otra cosa.
+
+Fuera de CAN, `discoverEcus` devuelve una lista vacía **sin emitir ningún comando de
+configuración**. Abstenerse es deliberado: es lo que garantiza que la telemetría, los
+códigos de avería y el VIN sigan funcionando en un coche antiguo.
+
+---
+
 ## 4. Modos de servicio OBD-II implementados
 
 ### 4.1 Tabla completa de modos

@@ -152,11 +152,15 @@ async function probePort(path: string, bauds: number[]): Promise<ProbeHit | null
 }
 
 /** Interpreta la respuesta a `0100`, que es la que dice si hay coche de verdad detras. */
-function reportBusState(pidsRaw: string, protocolRaw: string): void {
+function reportBusState(pidsRaw: string, protocolRaw: string, protocolNameRaw: string): void {
   const pids = clean(pidsRaw)
   if (/41\s*00/i.test(pids)) {
     console.log(`  ECU responde         : SI (${pids})`)
+    // El numero es lo que consume la aplicacion (`resolveCanBus`); el nombre es
+    // para confirmar de un vistazo, con el coche delante, que los dos coinciden.
     console.log(`  Protocolo detectado  : ${clean(protocolRaw)}  (ATDPN)`)
+    console.log(`  Protocolo (nombre)   : ${clean(protocolNameRaw)}  (ATDP)`)
+    reportEcuScanSupport(clean(protocolRaw))
     return
   }
   console.log(`  ECU responde         : NO (${pids})`)
@@ -167,6 +171,26 @@ function reportBusState(pidsRaw: string, protocolRaw: string): void {
   } else {
     console.log(`  -> Respuesta inesperada. Guarda esta salida: es util para depurar el parser.`)
   }
+}
+
+/** Numeros de protocolo ELM327 que corresponden a un bus CAN (ISO 15765-4). */
+const CAN_PROTOCOL_NUMBERS = ['6', '7', '8', '9']
+
+/**
+ * Avisa de si el barrido de ECUs va a funcionar en este vehiculo.
+ *
+ * Las lecturas —PID, DTC, VIN— funcionan en los diez protocolos. El barrido por
+ * broadcast funcional solo existe en CAN, asi que fuera de el la aplicacion se
+ * abstiene en vez de tocar el adaptador. Mejor saberlo aqui que delante del coche.
+ */
+function reportEcuScanSupport(protocolNumber: string): void {
+  const number = protocolNumber.replace(/^A/i, '')
+  if (CAN_PROTOCOL_NUMBERS.includes(number)) {
+    console.log(`  Barrido de ECUs      : disponible (bus CAN)`)
+    return
+  }
+  console.log(`  Barrido de ECUs      : no disponible en este bus (solo CAN)`)
+  console.log(`  -> Las lecturas de PID, DTC y VIN si funcionan con normalidad.`)
 }
 
 /** Secuencia de identificacion sobre el puerto ya validado. */
@@ -180,12 +204,13 @@ async function identify(hit: ProbeHit): Promise<void> {
     await converse(port, 'ATSP0', AT_TIMEOUT_MS)
     const pids = await converse(port, '0100', BUS_TIMEOUT_MS)
     const protocol = await converse(port, 'ATDPN', AT_TIMEOUT_MS)
+    const protocolName = await converse(port, 'ATDP', AT_TIMEOUT_MS)
 
     console.log(`\n--- Identificacion ---`)
     console.log(`  Firmware             : ${clean(version)}`)
     console.log(`  Tension de bateria   : ${clean(voltage)}`)
     warnOnLowVoltage(voltage)
-    reportBusState(pids, protocol)
+    reportBusState(pids, protocol, protocolName)
   } finally {
     await closePort(port)
   }
