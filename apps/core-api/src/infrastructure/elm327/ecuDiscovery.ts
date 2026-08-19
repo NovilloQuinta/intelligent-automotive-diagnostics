@@ -5,88 +5,115 @@ import type {
 import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { resolveEcuAddress } from '@/domain/ecuAddressCatalog.js'
 import { parseCanHeaders } from './protocol.js'
+import { resolveCanBus, type CanBusDescriptor } from './protocolNumber.js'
 
-/** Secuencia de inicialización AT previa al broadcast de descubrimiento. */
-const ECU_SCAN_INIT_SEQUENCE = ['AT E0', 'AT L0', 'AT H1', 'AT SP 6', 'AT SH 7DF'] as const
+/**
+ * Consulta del protocolo que el adaptador ya negoció con el vehículo.
+ *
+ * Es el primer comando del barrido y no modifica nada: solo pregunta. Antes aquí
+ * se emitía `AT SP 6`, que **imponía** CAN de 11 bits a 500 kbps y no se
+ * deshacía al terminar, de modo que en un vehículo con cualquier otro bus el
+ * barrido no solo fallaba — dejaba el adaptador fijado a un protocolo que el
+ * coche no habla, y con él caían también la telemetría, los DTC y el VIN.
+ */
+const PROTOCOL_QUERY = 'AT DPN'
+
+/** Secuencia de inicialización AT previa al broadcast, sin la dirección de destino. */
+const ECU_SCAN_INIT_SEQUENCE = ['AT E0', 'AT L0', 'AT H1'] as const
 
 /** Broadcast functional addressing: pregunta a todas las ECUs por su PID 00 soportado. */
 const BROADCAST_REQUEST = '01 00'
 
-/** Addressing físico al ECM (`AT SH 7E0`): fallback Mode 09 y header por defecto al restaurar. */
-const ECM_REQUEST_ADDRESS = 'AT SH 7E0'
-
-/**
- * Secuencia de restauración del estado ELM327 tras el scan.
- *
- * `readPid`/`readPids` no configuran headers propios y asumen el estado por
- * defecto (headers OFF + header físico ECM `7E0`); por eso se revierte el
- * `AT H1` (headers ON) y el `AT SH 7DF` (functional addressing) del scan.
- */
-const ECU_SCAN_RESTORE_SEQUENCE = ['AT H0', ECM_REQUEST_ADDRESS] as const
-
 /** Mode 09 PID 0A (ECU name): lee el nombre del ECM en el fallback. */
 const ECU_NAME_REQUEST = '09 0A'
-
-/** Dirección de respuesta del ECM (única estandarizada ISO 15765-4). */
-const ECM_RESPONSE_ADDRESS = '7E8'
-
-/** Protocolo del bus para ECUs descubiertas (ISO 15765-4 CAN 11-bit/500 kbps). */
-const DISCOVERED_ECU_PROTOCOL = 'CAN_11_500'
 
 /** Id provisional para ECUs aún no persistidas (autogenerado en la capa de persistencia). */
 const UNASSIGNED_ID = 0
 
+/** Construye el comando que fija la dirección de destino de las peticiones. */
+function setHeader(address: string): string {
+  return `AT SH ${address}`
+}
+
 /**
  * Descubre las ECUs presentes en el bus CAN vía functional addressing.
  *
- * Emite la secuencia de inicialización AT (`ECU_SCAN_INIT_SEQUENCE`), lanza un
- * broadcast `01 00`, parsea los headers CAN de la respuesta y resuelve cada
- * dirección vía {@link resolveEcuAddress}. Si el broadcast no produce ninguna
- * ECU (adaptador/coche que no tolera functional addressing), cae al fallback:
- * addressing físico al ECM (`AT SH 7E0`) + Mode 09 PID 0A, devolviendo un único
- * ECM (`7E0`/`7E8`). Si ambos fallan, devuelve `[]`.
+ * Pregunta primero qué protocolo negoció el adaptador ({@link PROTOCOL_QUERY}) y
+ * deriva de ahí la dirección de broadcast. Si el vehículo no habla CAN —J1850,
+ * ISO 9141-2, KWP2000— **se abstiene sin emitir un solo comando de
+ * configuración**: el descubrimiento por broadcast no tiene equivalente fuera de
+ * CAN, y tocar el adaptador para nada rompería las lecturas que sí funcionan.
+ *
+ * Si el broadcast no produce ninguna ECU (adaptador o coche que no tolera
+ * functional addressing), cae al fallback: addressing físico al ECM + Mode 09
+ * PID 0A. Si ambos fallan, devuelve `[]`.
  *
  * @param transport - Transporte ELM327 inyectado (frontera de infraestructura).
  * @returns ECUs descubiertas, aún sin persistir (`id`/`vehicleId` = 0).
  */
 export async function discoverEcus(transport: Elm327Transport): Promise<EcuInfo[]> {
-  // La reserva es obligatoria, no una optimizacion: el scan cambia `AT H1` y
-  // `AT SH 7DF`, que son estado global del adaptador. Sin ella, cualquier lectura
-  // concurrente —la telemetria de la UI va a 1 Hz— cae entre medias y vuelve con
-  // el header puesto o dirigida al broadcast.
+  // La reserva es obligatoria, no una optimizacion: el scan cambia `AT H1` y la
+  // dirección de destino, que son estado global del adaptador. Sin ella, cualquier
+  // lectura concurrente —la telemetria de la UI va a 1 Hz— cae entre medias y
+  // vuelve con el header puesto o dirigida al broadcast.
   return transport.runExclusive(async (session) => {
+    const bus = resolveCanBus(await session.sendCommand(PROTOCOL_QUERY))
+    if (bus === null) return []
     try {
-      for (const command of ECU_SCAN_INIT_SEQUENCE) {
-        await session.sendCommand(command)
-      }
-      const broadcastHeaders = parseCanHeaders(await session.sendCommand(BROADCAST_REQUEST))
-      if (broadcastHeaders.length > 0) {
-        return broadcastHeaders.map(toDiscoveredEcu)
-      }
-      return await discoverPrimaryEcu(session)
+      return await scanCanBus(session, bus)
     } finally {
-      await restoreElm327State(session)
+      await restoreElm327State(session, bus)
     }
   })
 }
 
-/** Restaura el estado del ELM327 (headers OFF + header físico ECM) tras el scan. */
-async function restoreElm327State(session: Elm327ExclusiveSession): Promise<void> {
-  for (const command of ECU_SCAN_RESTORE_SEQUENCE) {
+/** Barre el bus ya sabiendo cuál es: broadcast funcional y, si calla, fallback al ECM. */
+async function scanCanBus(
+  session: Elm327ExclusiveSession,
+  bus: CanBusDescriptor,
+): Promise<EcuInfo[]> {
+  for (const command of ECU_SCAN_INIT_SEQUENCE) {
     await session.sendCommand(command)
   }
+  await session.sendCommand(setHeader(bus.functionalAddress))
+  const broadcastHeaders = parseCanHeaders(await session.sendCommand(BROADCAST_REQUEST))
+  if (broadcastHeaders.length > 0) {
+    return broadcastHeaders.map((header) => toDiscoveredEcu(header, bus))
+  }
+  return await discoverPrimaryEcu(session, bus)
+}
+
+/**
+ * Restaura el estado del ELM327 tras el scan: headers apagados y la dirección
+ * funcional del bus negociado.
+ *
+ * Se restaura a la dirección **funcional**, no a la física del ECM, porque es el
+ * estado sobre el que operan las lecturas normales: el init nunca emite `AT SH`,
+ * así que antes del primer barrido el adaptador está en su valor por defecto, que
+ * es el broadcast. Dejarlo apuntando al ECM hacía que las lecturas se comportaran
+ * distinto antes y después de un barrido.
+ */
+async function restoreElm327State(
+  session: Elm327ExclusiveSession,
+  bus: CanBusDescriptor,
+): Promise<void> {
+  await session.sendCommand('AT H0')
+  await session.sendCommand(setHeader(bus.functionalAddress))
 }
 
 /** Fallback Mode 09 PID 0A: devuelve el ECM si el bus responde, `[]` en caso contrario. */
-async function discoverPrimaryEcu(session: Elm327ExclusiveSession): Promise<EcuInfo[]> {
-  await session.sendCommand(ECM_REQUEST_ADDRESS)
+async function discoverPrimaryEcu(
+  session: Elm327ExclusiveSession,
+  bus: CanBusDescriptor,
+): Promise<EcuInfo[]> {
+  await session.sendCommand(setHeader(bus.ecmRequestAddress))
   const nameResponse = await session.sendCommand(ECU_NAME_REQUEST)
   if (isNoData(nameResponse)) return []
-  return [toDiscoveredEcu(ECM_RESPONSE_ADDRESS)]
+  return [toDiscoveredEcu(bus.ecmResponseAddress, bus)]
 }
 
 /** Construye la EcuInfo de una dirección de respuesta CAN resuelta. */
-function toDiscoveredEcu(responseAddr: string): EcuInfo {
+function toDiscoveredEcu(responseAddr: string, bus: CanBusDescriptor): EcuInfo {
   const resolved = resolveEcuAddress(responseAddr)
   return new EcuInfo({
     id: UNASSIGNED_ID,
@@ -95,7 +122,7 @@ function toDiscoveredEcu(responseAddr: string): EcuInfo {
     requestAddr: resolved.requestAddr,
     responseAddr,
     type: resolved.type,
-    protocol: DISCOVERED_ECU_PROTOCOL,
+    protocol: bus.label,
   })
 }
 

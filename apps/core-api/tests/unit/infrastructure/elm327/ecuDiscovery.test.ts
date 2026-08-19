@@ -2,8 +2,20 @@ import { describe, it, expect, vi } from 'vitest'
 import { discoverEcus } from '@/infrastructure/elm327/ecuDiscovery.js'
 import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
 
-const ECU_SCAN_INIT_SEQUENCE = ['AT E0', 'AT L0', 'AT H1', 'AT SP 6', 'AT SH 7DF']
-const ECU_SCAN_RESTORE_SEQUENCE = ['AT H0', 'AT SH 7E0']
+/** Consulta del protocolo ya negociado. Primer comando del barrido, siempre. */
+const PROTOCOL_QUERY = 'AT DPN'
+
+/** Secuencia AT del barrido en CAN de 11 bits, tras conocer el protocolo. */
+const SCAN_11_BIT = ['AT E0', 'AT L0', 'AT H1', 'AT SH 7DF']
+
+/** Restauración al estado previo: headers off y la dirección funcional del bus. */
+const RESTORE_11_BIT = ['AT H0', 'AT SH 7DF']
+
+const SCAN_29_BIT = ['AT E0', 'AT L0', 'AT H1', 'AT SH 18DB33F1']
+const RESTORE_29_BIT = ['AT H0', 'AT SH 18DB33F1']
+
+/** Respuesta por defecto de `AT DPN`: CAN 11 bits / 500 kbps negociado en automático. */
+const CAN_11_500 = 'A6\r\r>'
 
 /** Transporte de prueba que guiona respuestas por comando y registra los comandos emitidos. */
 function createScriptedTransport(script: Record<string, string>): {
@@ -11,11 +23,12 @@ function createScriptedTransport(script: Record<string, string>): {
   sent: string[]
 } {
   const sent: string[] = []
+  const answers = { [PROTOCOL_QUERY]: CAN_11_500, ...script }
   const transport: Elm327Transport = {
     connect: vi.fn().mockResolvedValue(undefined),
     sendCommand: vi.fn(async (cmd: string) => {
       sent.push(cmd)
-      return script[cmd] ?? ''
+      return answers[cmd] ?? ''
     }),
     runExclusive: (fn) => fn({ sendCommand: (cmd) => transport.sendCommand(cmd) }),
     close: vi.fn().mockResolvedValue(undefined),
@@ -34,7 +47,7 @@ function createThrowingTransport(throwingCommand: string): {
     sendCommand: vi.fn(async (cmd: string) => {
       sent.push(cmd)
       if (cmd === throwingCommand) throw new Error('bus unavailable')
-      return 'OK\r>'
+      return cmd === PROTOCOL_QUERY ? CAN_11_500 : 'OK\r>'
     }),
     runExclusive: (fn) => fn({ sendCommand: (cmd) => transport.sendCommand(cmd) }),
     close: vi.fn().mockResolvedValue(undefined),
@@ -45,17 +58,29 @@ function createThrowingTransport(throwingCommand: string): {
 const DISCOVERED_PROTOCOL = 'CAN_11_500'
 
 describe('discoverEcus', () => {
-  it('emite la secuencia AT, el broadcast 01 00 y restaura el estado ELM327 en orden', async () => {
+  it('should ask for the negotiated protocol before configuring anything', async () => {
     const { transport, sent } = createScriptedTransport({
       '01 00': '7E8 06 41 00 BE 3F A8 13\r>',
     })
 
     await discoverEcus(transport)
 
-    expect(sent).toEqual([...ECU_SCAN_INIT_SEQUENCE, '01 00', ...ECU_SCAN_RESTORE_SEQUENCE])
+    expect(sent[0]).toBe(PROTOCOL_QUERY)
+    expect(sent).not.toContain('AT SP 6')
+    expect(sent.some((cmd) => cmd.startsWith('AT SP'))).toBe(false)
   })
 
-  it('mapea un broadcast multi-ECU (7E8/7E9/7EA) a 3 EcuInfo resueltas', async () => {
+  it('should emit the AT sequence, the broadcast and the restore in order', async () => {
+    const { transport, sent } = createScriptedTransport({
+      '01 00': '7E8 06 41 00 BE 3F A8 13\r>',
+    })
+
+    await discoverEcus(transport)
+
+    expect(sent).toEqual([PROTOCOL_QUERY, ...SCAN_11_BIT, '01 00', ...RESTORE_11_BIT])
+  })
+
+  it('should map a multi-ECU broadcast (7E8/7E9/7EA) to 3 resolved EcuInfo', async () => {
     const { transport } = createScriptedTransport({
       '01 00': '7E8 06 41 00 BE 3F A8 13\r7E9 06 41 00 80 00 00 00\r7EA 06 41 00 00 00 00 00\r>',
     })
@@ -93,7 +118,7 @@ describe('discoverEcus', () => {
     ])
   })
 
-  it('cae al fallback (AT SH 7E0 + 09 0A) y devuelve 1 ECM cuando el broadcast esta vacio', async () => {
+  it('should fall back to physical addressing and return 1 ECM when the broadcast is empty', async () => {
     const { transport, sent } = createScriptedTransport({
       '01 00': '\r>',
       '09 0A': '49 0A 01 45 43 4D\r>',
@@ -102,16 +127,15 @@ describe('discoverEcus', () => {
     const ecus = await discoverEcus(transport)
 
     expect(sent).toEqual([
-      ...ECU_SCAN_INIT_SEQUENCE,
+      PROTOCOL_QUERY,
+      ...SCAN_11_BIT,
       '01 00',
       'AT SH 7E0',
       '09 0A',
-      ...ECU_SCAN_RESTORE_SEQUENCE,
+      ...RESTORE_11_BIT,
     ])
     expect(ecus).toMatchObject([
       {
-        id: 0,
-        vehicleId: 0,
         name: 'Engine Control Module',
         requestAddr: '7E0',
         responseAddr: '7E8',
@@ -121,61 +145,116 @@ describe('discoverEcus', () => {
     ])
   })
 
-  it('devuelve [] cuando broadcast y 09 0A responden NO DATA', async () => {
-    const { transport } = createScriptedTransport({
-      '01 00': 'NO DATA\r>',
-      '09 0A': 'NO DATA\r>',
-    })
+  it.each([
+    ['NO DATA', 'NO DATA\r>'],
+    ['empty', '\r>'],
+    ['CAN ERROR', 'CAN ERROR\r\r>'],
+    ['?', '?\r\r>'],
+  ])('should return [] when broadcast and 09 0A answer %s', async (_label, answer) => {
+    const { transport } = createScriptedTransport({ '01 00': answer, '09 0A': answer })
 
     await expect(discoverEcus(transport)).resolves.toEqual([])
   })
 
-  it('devuelve [] cuando broadcast y 09 0A responden vacio', async () => {
-    const { transport } = createScriptedTransport({
-      '01 00': '\r>',
-      '09 0A': '\r>',
-    })
-
-    await expect(discoverEcus(transport)).resolves.toEqual([])
-  })
-
-  it('devuelve [] cuando 09 0A responde CAN ERROR', async () => {
-    const { transport } = createScriptedTransport({
-      '01 00': '\r>',
-      '09 0A': 'CAN ERROR\r\r>',
-    })
-
-    await expect(discoverEcus(transport)).resolves.toEqual([])
-  })
-
-  it('devuelve [] cuando 09 0A responde ?', async () => {
-    const { transport } = createScriptedTransport({
-      '01 00': '\r>',
-      '09 0A': '?\r\r>',
-    })
-
-    await expect(discoverEcus(transport)).resolves.toEqual([])
-  })
-
-  it('restaura el estado ELM327 aunque el broadcast lance', async () => {
+  it('should restore the ELM327 state even if the broadcast throws', async () => {
     const { transport, sent } = createThrowingTransport('01 00')
 
     await expect(discoverEcus(transport)).rejects.toThrow('bus unavailable')
 
-    expect(sent).toEqual([...ECU_SCAN_INIT_SEQUENCE, '01 00', ...ECU_SCAN_RESTORE_SEQUENCE])
+    expect(sent).toEqual([PROTOCOL_QUERY, ...SCAN_11_BIT, '01 00', ...RESTORE_11_BIT])
   })
 
-  it('restaura el estado ELM327 aunque el fallback 09 0A lance', async () => {
+  it('should restore the ELM327 state even if the 09 0A fallback throws', async () => {
     const { transport, sent } = createThrowingTransport('09 0A')
 
     await expect(discoverEcus(transport)).rejects.toThrow('bus unavailable')
 
     expect(sent).toEqual([
-      ...ECU_SCAN_INIT_SEQUENCE,
+      PROTOCOL_QUERY,
+      ...SCAN_11_BIT,
       '01 00',
       'AT SH 7E0',
       '09 0A',
-      ...ECU_SCAN_RESTORE_SEQUENCE,
+      ...RESTORE_11_BIT,
     ])
+  })
+
+  describe('when the vehicle does not speak CAN', () => {
+    it.each([
+      ['3', 'ISO 9141-2'],
+      ['5', 'ISO 14230-4 KWP fast init'],
+      ['1', 'SAE J1850 PWM'],
+    ])('should abstain on protocol %s (%s) without touching the adapter', async (dpn) => {
+      const { transport, sent } = createScriptedTransport({ [PROTOCOL_QUERY]: `A${dpn}\r>` })
+
+      await expect(discoverEcus(transport)).resolves.toEqual([])
+
+      // La aserción que blinda el bug: nada más sale al bus. Ni un `AT SH`, ni un
+      // `AT H1`, ni un `AT SP`. Las lecturas siguientes encuentran el adaptador
+      // exactamente como estaba.
+      expect(sent).toEqual([PROTOCOL_QUERY])
+    })
+
+    it('should abstain when the protocol answer is unrecognizable', async () => {
+      const { transport, sent } = createScriptedTransport({
+        [PROTOCOL_QUERY]: 'BUS INIT: ERROR\r>',
+      })
+
+      await expect(discoverEcus(transport)).resolves.toEqual([])
+      expect(sent).toEqual([PROTOCOL_QUERY])
+    })
+  })
+
+  describe('on a 29-bit CAN bus', () => {
+    it('should broadcast to the 29-bit functional address and resolve its responders', async () => {
+      const { transport, sent } = createScriptedTransport({
+        [PROTOCOL_QUERY]: 'A7\r>',
+        '01 00': '18DAF110 06 41 00 BE 3F A8 13\r18DAF111 06 41 00 80 00 00 00\r>',
+      })
+
+      const ecus = await discoverEcus(transport)
+
+      expect(sent).toEqual([PROTOCOL_QUERY, ...SCAN_29_BIT, '01 00', ...RESTORE_29_BIT])
+      expect(ecus).toMatchObject([
+        {
+          name: 'Engine Control Module',
+          requestAddr: '18DA10F1',
+          responseAddr: '18DAF110',
+          type: 'ECM',
+          protocol: 'CAN_29_500',
+        },
+        {
+          name: 'ECU 18DAF111',
+          requestAddr: '18DA11F1',
+          responseAddr: '18DAF111',
+          type: 'UNKNOWN',
+          protocol: 'CAN_29_500',
+        },
+      ])
+    })
+
+    it('should use the 29-bit physical address in the fallback', async () => {
+      const { transport, sent } = createScriptedTransport({
+        [PROTOCOL_QUERY]: 'A7\r>',
+        '01 00': '\r>',
+        '09 0A': '49 0A 01 45 43 4D\r>',
+      })
+
+      const ecus = await discoverEcus(transport)
+
+      expect(sent).toContain('AT SH 18DA10F1')
+      expect(ecus).toMatchObject([{ responseAddr: '18DAF110', requestAddr: '18DA10F1' }])
+    })
+  })
+
+  it('should report the real bus, not a hardcoded one', async () => {
+    const { transport } = createScriptedTransport({
+      [PROTOCOL_QUERY]: 'A8\r>',
+      '01 00': '7E8 06 41 00 BE 3F A8 13\r>',
+    })
+
+    const ecus = await discoverEcus(transport)
+
+    expect(ecus[0].protocol).toBe('CAN_11_250')
   })
 })

@@ -571,7 +571,10 @@ describe('Elm327TcpRepository', () => {
     const repo = makeRepo(100)
     const promise = repo.getEcuInfo()
 
-    for (let i = 1; i <= 5; i++) {
+    // El primer comando ya no configura nada: pregunta que protocolo se negocio.
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(1))
+    respond('A6\r\r>')
+    for (let i = 2; i <= 5; i++) {
       await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(i))
       respond('OK\r>')
     }
@@ -595,14 +598,14 @@ describe('Elm327TcpRepository', () => {
       },
     ])
     expect(lastSocket().write.mock.calls.map((call) => call[0])).toEqual([
+      'AT DPN\r\n',
       'AT E0\r\n',
       'AT L0\r\n',
       'AT H1\r\n',
-      'AT SP 6\r\n',
       'AT SH 7DF\r\n',
       '01 00\r\n',
       'AT H0\r\n',
-      'AT SH 7E0\r\n',
+      'AT SH 7DF\r\n',
     ])
   })
 
