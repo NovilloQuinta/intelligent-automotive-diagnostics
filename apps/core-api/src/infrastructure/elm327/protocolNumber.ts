@@ -22,43 +22,48 @@ export interface CanBusDescriptor {
 }
 
 /**
+ * Direccionamiento ISO 15765-4, que depende del ancho del identificador CAN y no
+ * del bitrate: los protocolos 6 y 8 comparten el de 11 bits, y el 7 y el 9 el de
+ * 29 bits.
+ *
+ * En 29 bits la respuesta **no** es la petición más 8 como en 11 bits: se
+ * intercambian los dos últimos bytes (`18DA10F1` pregunta, `18DAF110` contesta).
+ */
+const ISO_15765_4_ADDRESSING = {
+  CAN_11: { functionalAddress: '7DF', ecmRequestAddress: '7E0', ecmResponseAddress: '7E8' },
+  CAN_29: {
+    functionalAddress: '18DB33F1',
+    ecmRequestAddress: '18DA10F1',
+    ecmResponseAddress: '18DAF110',
+  },
+} as const
+
+/**
  * Los cuatro buses CAN de ISO 15765-4, indexados por su número de protocolo ELM327.
+ *
+ * La tabla es dato puro: número → ancho de identificador y bitrate. Lo demás lo
+ * aporta {@link ISO_15765_4_ADDRESSING}.
  *
  * Deliberadamente fuera: los protocolos 1–5 (J1850, ISO 9141-2, KWP2000) y el A
  * (J1939). No es que no se puedan leer —las lecturas normales funcionan en todos—,
  * es que el descubrimiento por broadcast funcional que hace {@link ./ecuDiscovery.ts}
  * no tiene equivalente fuera de CAN.
  */
-const CAN_BUSES: Readonly<Record<string, CanBusDescriptor>> = {
-  '6': {
-    number: '6',
-    label: 'CAN_11_500',
-    functionalAddress: '7DF',
-    ecmRequestAddress: '7E0',
-    ecmResponseAddress: '7E8',
-  },
-  '7': {
-    number: '7',
-    label: 'CAN_29_500',
-    functionalAddress: '18DB33F1',
-    ecmRequestAddress: '18DA10F1',
-    ecmResponseAddress: '18DAF110',
-  },
-  '8': {
-    number: '8',
-    label: 'CAN_11_250',
-    functionalAddress: '7DF',
-    ecmRequestAddress: '7E0',
-    ecmResponseAddress: '7E8',
-  },
-  '9': {
-    number: '9',
-    label: 'CAN_29_250',
-    functionalAddress: '18DB33F1',
-    ecmRequestAddress: '18DA10F1',
-    ecmResponseAddress: '18DAF110',
-  },
-}
+const CAN_BUS_TABLE: ReadonlyArray<
+  readonly [number: string, width: 'CAN_11' | 'CAN_29', kbps: string]
+> = [
+  ['6', 'CAN_11', '500'],
+  ['7', 'CAN_29', '500'],
+  ['8', 'CAN_11', '250'],
+  ['9', 'CAN_29', '250'],
+]
+
+const CAN_BUSES: Readonly<Record<string, CanBusDescriptor>> = Object.fromEntries(
+  CAN_BUS_TABLE.map(([number, width, kbps]) => [
+    number,
+    { number, label: `${width}_${kbps}`, ...ISO_15765_4_ADDRESSING[width] },
+  ]),
+)
 
 /**
  * Respuesta de `AT DPN`: un solo carácter, con `A` delante si el protocolo se
