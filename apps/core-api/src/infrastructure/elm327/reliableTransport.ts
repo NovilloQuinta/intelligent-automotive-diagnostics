@@ -1,4 +1,7 @@
-import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
+import type {
+  Elm327ExclusiveSession,
+  Elm327Transport,
+} from '@/application/ports/Elm327Transport.js'
 import { Elm327ConnectionError } from './errors.js'
 
 const RECONNECT_BASE_MS = 100
@@ -144,6 +147,12 @@ export function createReliableTransport<TConn>(
   let activeCommand: ActiveCommand | null = null
   const commandQueue: CommandEntry[] = []
   let isProcessing = false
+
+  /** Reserva viva, o `null` si la conexion esta libre. `sendCommand` espera a que resuelva. */
+  let exclusiveRelease: Promise<void> | null = null
+
+  /** Cola de reservas: encadena `runExclusive` entre si para que no se solapen. */
+  let exclusiveTail: Promise<void> = Promise.resolve()
 
   // ── Internal helpers ──────────────────────────────────────────
 
@@ -343,11 +352,41 @@ export function createReliableTransport<TConn>(
     isProcessing = false
   }
 
-  async function sendCommand(cmd: string): Promise<string> {
+  /** Encola el comando sin mirar la reserva: es la via que usa la propia secuencia. */
+  function enqueue(cmd: string): Promise<string> {
     return new Promise<string>((resolve, reject) => {
       commandQueue.push({ cmd, resolve, reject, attempts: 0 })
       void processQueue()
     })
+  }
+
+  async function sendCommand(cmd: string): Promise<string> {
+    // `while` y no `if`: al despertar puede haber empezado ya la siguiente reserva.
+    while (exclusiveRelease !== null) await exclusiveRelease
+    return enqueue(cmd)
+  }
+
+  /**
+   * Reserva la conexion para una secuencia entera. Ver {@link Elm327Transport.runExclusive}.
+   *
+   * `exclusiveTail` encadena las reservas entre si (dos barridos concurrentes no se
+   * mezclan) y `exclusiveRelease` es lo que hace esperar a `sendCommand`.
+   */
+  async function runExclusive<T>(fn: (session: Elm327ExclusiveSession) => Promise<T>): Promise<T> {
+    const previous = exclusiveTail
+    let release!: () => void
+    const held = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    exclusiveTail = previous.then(() => held)
+    await previous
+    exclusiveRelease = held
+    try {
+      return await fn({ sendCommand: enqueue })
+    } finally {
+      exclusiveRelease = null
+      release()
+    }
   }
 
   async function close(): Promise<void> {
@@ -370,5 +409,5 @@ export function createReliableTransport<TConn>(
     failQueue(new Elm327ConnectionError('ELM327 Connection closed'))
   }
 
-  return { connect, sendCommand, close }
+  return { connect, sendCommand, runExclusive, close }
 }

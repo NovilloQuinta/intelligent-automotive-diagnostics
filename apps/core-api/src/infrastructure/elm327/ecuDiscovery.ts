@@ -1,4 +1,7 @@
-import type { Elm327Transport } from '@/application/ports/Elm327Transport.js'
+import type {
+  Elm327ExclusiveSession,
+  Elm327Transport,
+} from '@/application/ports/Elm327Transport.js'
 import { EcuInfo } from '@/domain/entities/ecuInfo.js'
 import { resolveEcuAddress } from '@/domain/ecuAddressCatalog.js'
 import { parseCanHeaders } from './protocol.js'
@@ -47,31 +50,37 @@ const UNASSIGNED_ID = 0
  * @returns ECUs descubiertas, aún sin persistir (`id`/`vehicleId` = 0).
  */
 export async function discoverEcus(transport: Elm327Transport): Promise<EcuInfo[]> {
-  try {
-    for (const command of ECU_SCAN_INIT_SEQUENCE) {
-      await transport.sendCommand(command)
+  // La reserva es obligatoria, no una optimizacion: el scan cambia `AT H1` y
+  // `AT SH 7DF`, que son estado global del adaptador. Sin ella, cualquier lectura
+  // concurrente —la telemetria de la UI va a 1 Hz— cae entre medias y vuelve con
+  // el header puesto o dirigida al broadcast.
+  return transport.runExclusive(async (session) => {
+    try {
+      for (const command of ECU_SCAN_INIT_SEQUENCE) {
+        await session.sendCommand(command)
+      }
+      const broadcastHeaders = parseCanHeaders(await session.sendCommand(BROADCAST_REQUEST))
+      if (broadcastHeaders.length > 0) {
+        return broadcastHeaders.map(toDiscoveredEcu)
+      }
+      return await discoverPrimaryEcu(session)
+    } finally {
+      await restoreElm327State(session)
     }
-    const broadcastHeaders = parseCanHeaders(await transport.sendCommand(BROADCAST_REQUEST))
-    if (broadcastHeaders.length > 0) {
-      return broadcastHeaders.map(toDiscoveredEcu)
-    }
-    return await discoverPrimaryEcu(transport)
-  } finally {
-    await restoreElm327State(transport)
-  }
+  })
 }
 
 /** Restaura el estado del ELM327 (headers OFF + header físico ECM) tras el scan. */
-async function restoreElm327State(transport: Elm327Transport): Promise<void> {
+async function restoreElm327State(session: Elm327ExclusiveSession): Promise<void> {
   for (const command of ECU_SCAN_RESTORE_SEQUENCE) {
-    await transport.sendCommand(command)
+    await session.sendCommand(command)
   }
 }
 
 /** Fallback Mode 09 PID 0A: devuelve el ECM si el bus responde, `[]` en caso contrario. */
-async function discoverPrimaryEcu(transport: Elm327Transport): Promise<EcuInfo[]> {
-  await transport.sendCommand(ECM_REQUEST_ADDRESS)
-  const nameResponse = await transport.sendCommand(ECU_NAME_REQUEST)
+async function discoverPrimaryEcu(session: Elm327ExclusiveSession): Promise<EcuInfo[]> {
+  await session.sendCommand(ECM_REQUEST_ADDRESS)
+  const nameResponse = await session.sendCommand(ECU_NAME_REQUEST)
   if (isNoData(nameResponse)) return []
   return [toDiscoveredEcu(ECM_RESPONSE_ADDRESS)]
 }

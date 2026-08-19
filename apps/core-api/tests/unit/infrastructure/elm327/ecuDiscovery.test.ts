@@ -17,6 +17,7 @@ function createScriptedTransport(script: Record<string, string>): {
       sent.push(cmd)
       return script[cmd] ?? ''
     }),
+    runExclusive: (fn) => fn({ sendCommand: (cmd) => transport.sendCommand(cmd) }),
     close: vi.fn().mockResolvedValue(undefined),
   }
   return { transport, sent }
@@ -35,6 +36,7 @@ function createThrowingTransport(throwingCommand: string): {
       if (cmd === throwingCommand) throw new Error('bus unavailable')
       return 'OK\r>'
     }),
+    runExclusive: (fn) => fn({ sendCommand: (cmd) => transport.sendCommand(cmd) }),
     close: vi.fn().mockResolvedValue(undefined),
   }
   return { transport, sent }

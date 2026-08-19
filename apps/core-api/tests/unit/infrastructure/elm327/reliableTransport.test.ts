@@ -193,3 +193,95 @@ describe('createReliableTransport — secuencia de inicialización', () => {
     }
   })
 })
+
+/**
+ * Secuencias exclusivas.
+ *
+ * El ELM327 es un dispositivo con estado global: `AT H1` y `AT SH xxx` cambian
+ * como responde a *todos* los comandos siguientes. Una secuencia que los toca
+ * —el barrido de ECUs— tiene que poder reservar la conexión de principio a fin:
+ * la cola FIFO ordena comandos sueltos, no secuencias, y un `01 0C` colado en
+ * medio vuelve con el header puesto o dirigido a la dirección equivocada.
+ */
+describe('createReliableTransport — secuencias exclusivas', () => {
+  let fake: FakeIo
+
+  beforeEach(() => {
+    fake = createFakeIo()
+  })
+
+  it('no intercala comandos ajenos dentro de una secuencia exclusiva', async () => {
+    const transport = createReliableTransport(fake.io, BASE_CONFIG)
+
+    const barrido = transport.runExclusive(async (tx) => {
+      await tx.sendCommand('AT H1')
+      await tx.sendCommand('AT SH 7DF')
+      await tx.sendCommand('01 00')
+      await tx.sendCommand('AT H0')
+      await tx.sendCommand('AT SH 7E0')
+    })
+    const telemetria = [
+      transport.sendCommand('01 0C'),
+      transport.sendCommand('01 05'),
+      transport.sendCommand('01 0D'),
+    ]
+
+    await Promise.all([barrido, ...telemetria])
+
+    const enviados = fake.sentOn(0)
+    const inicio = enviados.indexOf('AT H1')
+    const fin = enviados.indexOf('AT SH 7E0')
+    expect(inicio).toBeGreaterThanOrEqual(0)
+    expect(enviados.slice(inicio, fin + 1)).toEqual([
+      'AT H1',
+      'AT SH 7DF',
+      '01 00',
+      'AT H0',
+      'AT SH 7E0',
+    ])
+  })
+
+  it('devuelve el valor de la secuencia', async () => {
+    const transport = createReliableTransport(fake.io, BASE_CONFIG)
+
+    const resultado = await transport.runExclusive(async (tx) => {
+      await tx.sendCommand('01 00')
+      return 'listo'
+    })
+
+    expect(resultado).toBe('listo')
+  })
+
+  it('libera la conexión aunque la secuencia falle', async () => {
+    const transport = createReliableTransport(fake.io, BASE_CONFIG)
+
+    await expect(
+      transport.runExclusive(async (tx) => {
+        await tx.sendCommand('AT H1')
+        throw new Error('el bus se cayó')
+      }),
+    ).rejects.toThrow('el bus se cayó')
+
+    await transport.sendCommand('01 0C')
+    expect(fake.sentOn(0)).toEqual(['AT H1', '01 0C'])
+  })
+
+  it('serializa dos secuencias exclusivas concurrentes', async () => {
+    const transport = createReliableTransport(fake.io, BASE_CONFIG)
+
+    await Promise.all([
+      transport.runExclusive(async (tx) => {
+        await tx.sendCommand('A1')
+        await tx.sendCommand('A2')
+      }),
+      transport.runExclusive(async (tx) => {
+        await tx.sendCommand('B1')
+        await tx.sendCommand('B2')
+      }),
+    ])
+
+    const enviados = fake.sentOn(0)
+    expect(enviados.indexOf('A2')).toBe(enviados.indexOf('A1') + 1)
+    expect(enviados.indexOf('B2')).toBe(enviados.indexOf('B1') + 1)
+  })
+})
