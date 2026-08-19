@@ -36,9 +36,9 @@
 
 > Va al final a propósito: es lo único que no se puede validar en este entorno.
 
-- [ ] 3.1 Escribir el bloque de aprendizaje de ECUs en `cognitiveDiagnosisPrompt.ts`,
+- [x] 3.1 Escribir el bloque de aprendizaje de ECUs en `cognitiveDiagnosisPrompt.ts`,
       simétrico a los de PID y DTC: `get_ecu_info` → `search_similar_ecus` → `index_ecu`.
-- [ ] 3.2 Test de que el prompt nombra las tres tools de la cadena de ECU.
+- [x] 3.2 Test de que el prompt nombra las tres tools de la cadena de ECU.
 - [ ] 3.3 **Requiere clave del usuario**: `pnpm eval:agent --only=B,C,D,E` y después
       **el grupo A entero**, porque un bloque nuevo puede volver al agente más verboso o
       más reticente en consultas legítimas.

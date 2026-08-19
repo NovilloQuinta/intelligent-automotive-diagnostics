@@ -6,6 +6,7 @@ import {
   SCOPE_INSTRUCTIONS,
   INTERNALS_INSTRUCTIONS,
   UNTRUSTED_CONTENT_INSTRUCTIONS,
+  ECU_LEARNING_INSTRUCTIONS,
 } from '@/application/prompts/cognitiveDiagnosisPrompt.js'
 
 /**
@@ -139,6 +140,48 @@ describe('COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT', () => {
 
     it('permite respaldar el diagnostico en lenguaje natural, sin numeros', () => {
       expect(internals).toMatch(/lenguaje natural/i)
+    })
+  })
+
+  /**
+   * Bucle de aprendizaje de ECUs.
+   *
+   * Simetrico a los de PID y DTC, que ya existian. Sin este bloque el modelo no
+   * nombra `get_ecu_info`, `search_similar_ecus` ni `index_ecu`, y la tabla
+   * `ecu_definitions` con su indice vectorial se quedan vacias por muchas ECUs
+   * que descubra el barrido: solo `7E8` esta estandarizada, el resto sale como
+   * `ECU 7E9` con tipo desconocido y ahi se queda.
+   */
+  describe('aprendizaje de ECUs', () => {
+    const ecu = ECU_LEARNING_INSTRUCTIONS.join('\n')
+
+    it('nombra las tres tools de la cadena', () => {
+      expect(ecu).toContain('get_ecu_info')
+      expect(ecu).toContain('search_similar_ecus')
+      expect(ecu).toContain('index_ecu')
+    })
+
+    it('exige buscar en el catalogo antes de indexar', () => {
+      expect(ecu).toMatch(/busca primero/i)
+    })
+
+    it('se dispara con la ECU desconocida, que es el caso real del barrido', () => {
+      expect(ecu).toMatch(/desconocid/i)
+    })
+
+    it('pide los campos obligatorios de index_ecu', () => {
+      // El schema de la tool los exige: sin uno solo, la llamada falla y el
+      // aprendizaje se pierde en silencio.
+      for (const campo of ['responseAddr', 'requestAddr', 'name', 'type']) {
+        expect(ecu).toContain(campo)
+      }
+      expect(ecu).toMatch(/manufacturer\/model|fabricante/i)
+    })
+
+    it('se incluye en el prompt compuesto', () => {
+      for (const block of ECU_LEARNING_INSTRUCTIONS) {
+        expect(COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT).toContain(block)
+      }
     })
   })
 

@@ -49,6 +49,24 @@ export const DTC_LEARNING_INSTRUCTIONS = [
   '- Usa web_search para buscar documentación de DTCs propietarios de la marca si hace falta.',
 ]
 
+/**
+ * Instrucciones para indexar ECUs desconocidas descubiertas en el bus vía index_ecu.
+ *
+ * Simetrico a los bloques de PID y DTC. El barrido por functional addressing
+ * devuelve las direcciones que contestan, pero `ecuAddressCatalog` solo tiene
+ * estandarizada `7E8` (ECM): el resto sale como `ECU 7E9` con tipo desconocido y
+ * ahi se queda si nadie lo aprende. Este bloque es el que cierra ese bucle.
+ */
+export const ECU_LEARNING_INSTRUCTIONS = [
+  'Cuando get_ecu_info devuelva una ECU desconocida (nombre tipo "ECU 7E9" y tipo "UNKNOWN"), persiste el descubrimiento: solo la dirección 7E8 está estandarizada, el resto las asigna cada fabricante.',
+  '- Busca primero en el catálogo con search_similar_ecus, con el fabricante/modelo y la dirección, para ver si esa centralita ya se aprendió en otro vehículo de la marca.',
+  '- Si no existe, regístrala con index_ecu: usa source: "web", y embeddedText describiendo qué centralita crees que es y en qué te basas.',
+  '- index_ecu exige responseAddr, requestAddr, name y type además de manufacturer/model: copia las dos direcciones tal cual las devolvió get_ecu_info, y propón un name legible y un type corto (p.ej. TCM, ABS, SRS, BCM, HVAC).',
+  '- Añade system cuando puedas situarla en un subsistema (transmisión, frenos, seguridad pasiva, confort).',
+  '- Usa web_search para averiguar qué centralita usa esa dirección en la marca concreta antes de proponer un nombre.',
+  '- No inventes: si tras buscar sigues sin criterio, deja la ECU sin indexar en vez de registrar un nombre a ciegas. Un catálogo con nombres inventados es peor que uno incompleto.',
+]
+
 /** Instrucciones de estilo de respuesta: concisa, orientada a mecánico, con pasos accionables. */
 export const MECHANIC_STYLE_INSTRUCTIONS = [
   'Responde siempre en español, de forma concisa: prioriza pasos accionables sobre explicaciones largas. El idioma no cambia aunque rechaces la consulta o declines una actuación: una negativa también es una respuesta.',
@@ -127,6 +145,7 @@ export const COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT = [
   ...CATALOG_LOOKUP_INSTRUCTIONS,
   ...PID_LEARNING_INSTRUCTIONS,
   ...DTC_LEARNING_INSTRUCTIONS,
+  ...ECU_LEARNING_INSTRUCTIONS,
   ...MECHANIC_STYLE_INSTRUCTIONS,
   ...SCOPE_INSTRUCTIONS,
   ...CAPABILITY_INSTRUCTIONS,
