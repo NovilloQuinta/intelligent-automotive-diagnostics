@@ -21,7 +21,7 @@ export const COGNITIVE_DIAGNOSIS_TIMEOUT_MS = 60_000
  * La definicion vive en `domain/pidCatalog.ts`, junto a `ALL_SEED_PIDS` del que se deriva.
  * Se mantiene aqui el re-export para no cambiar los imports existentes.
  */
-export { PID_METADATA } from '@/domain/pidCatalog.js'
+export { PID_METADATA } from '@/domain/catalogs/pidCatalog.js'
 
 /** Nombre de la tool MCP que devuelve los códigos DTC detectados en el vehículo. */
 export const GET_DTC_CODES_TOOL = 'get_dtc_codes'

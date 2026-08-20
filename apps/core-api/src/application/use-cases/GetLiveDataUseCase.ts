@@ -1,7 +1,7 @@
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { TelemetryOutput } from '@/application/dto/diagnosis/TelemetryOutput.js'
 import type { PidReading } from '@/application/dto/diagnosis/PidReading.js'
-import { PID_METADATA } from '@/domain/pidCatalog.js'
+import { PID_METADATA } from '@/domain/catalogs/pidCatalog.js'
 import {
   MODE_CURRENT_DATA,
   PID_COOLANT_TEMP,

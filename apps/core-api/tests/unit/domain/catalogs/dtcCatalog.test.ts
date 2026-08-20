@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { dtcDescribe } from '@/domain/dtcCatalog.js'
+import { dtcDescribe } from '@/domain/catalogs/dtcCatalog.js'
 
 describe('dtcCatalog', () => {
   describe('dtcDescribe', () => {

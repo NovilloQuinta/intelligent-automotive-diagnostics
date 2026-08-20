@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { EcuAddressError, resolveEcuAddress } from '@/domain/ecuAddressCatalog.js'
+import { EcuAddressError, resolveEcuAddress } from '@/domain/catalogs/ecuAddressCatalog.js'
 
 describe('ecuAddressCatalog', () => {
   describe('resolveEcuAddress', () => {

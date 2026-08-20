@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   PID_OBSERVATION_CATALOG,
   resolvePidObservationStatus,
-} from '@/domain/pidObservationCatalog.js'
+} from '@/domain/catalogs/pidObservationCatalog.js'
 
 describe('PID_OBSERVATION_CATALOG', () => {
   const expectedKeys = [

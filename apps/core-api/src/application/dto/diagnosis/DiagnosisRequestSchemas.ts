@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 import { LlmConversationItemSchema } from '@/application/dto/llm/LlmConversationItemSchema.js'
-import { ALL_SEED_PIDS } from '@/domain/pidCatalog.js'
+import { ALL_SEED_PIDS } from '@/domain/catalogs/pidCatalog.js'
 import { MODE_CURRENT_DATA } from '@/domain/pids.js'
 
 /**

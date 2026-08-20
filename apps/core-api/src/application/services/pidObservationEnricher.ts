@@ -3,7 +3,7 @@ import type { PidObservation } from '@/application/dto/diagnosis/PidObservation.
 import {
   PID_OBSERVATION_CATALOG,
   resolvePidObservationStatus,
-} from '@/domain/pidObservationCatalog.js'
+} from '@/domain/catalogs/pidObservationCatalog.js'
 import { PidCode } from '@/domain/value-objects/PidCode.js'
 import { READ_PID_TOOL } from '@/application/shared/mcpToolNames.js'
 

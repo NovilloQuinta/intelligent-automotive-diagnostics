@@ -8,7 +8,7 @@ import { EcuDefinition } from '@/domain/entities/EcuDefinition.js'
 import { VehicleProfile } from '@/domain/entities/VehicleProfile.js'
 import { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
 import { Vin } from '@/domain/value-objects/Vin.js'
-import { ECU_TYPE_UNKNOWN } from '@/domain/ecuAddressCatalog.js'
+import { ECU_TYPE_UNKNOWN } from '@/domain/catalogs/ecuAddressCatalog.js'
 import { UNKNOWN_VEHICLE_FIELD } from '@/application/use-cases/ResolveVehicleIdentityUseCase.js'
 
 const VIN = 'WAUZZZ8V5JA123456'

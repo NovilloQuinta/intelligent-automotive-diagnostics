@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ALL_SEED_PIDS } from '@/domain/pidCatalog.js'
+import { ALL_SEED_PIDS } from '@/domain/catalogs/pidCatalog.js'
 
 describe('seed-pids', () => {
   describe('ALL_SEED_PIDS', () => {

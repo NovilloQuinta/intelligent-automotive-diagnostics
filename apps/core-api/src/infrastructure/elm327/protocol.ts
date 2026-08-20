@@ -1,4 +1,4 @@
-import { isEcuResponseAddress, looksLikeCanAddress } from '@/domain/ecuAddressCatalog.js'
+import { isEcuResponseAddress, looksLikeCanAddress } from '@/domain/catalogs/ecuAddressCatalog.js'
 import { Elm327BusError, Elm327NoDataError, Elm327ParseError } from './errors.js'
 
 /**
