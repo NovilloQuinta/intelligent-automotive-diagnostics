@@ -41,9 +41,7 @@ import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.
 import type { KnowledgeStackPort } from '@/application/ports/KnowledgeStackPort.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
-import { loadEcuDefinitionLookup } from '@/application/ecu-catalog/loadEcuDefinitionLookup.js'
-import { resolveEcuDefinitions } from '@/application/ecu-catalog/resolveEcuDefinitions.js'
-import { persistDiscoveredEcus } from '@/application/shared/persistDiscoveredEcus.js'
+import { GetEcuInfoUseCase } from '@/application/use-cases/GetEcuInfoUseCase.js'
 import type {
   DiagnosisSessionFilter,
   DiagnosisSessionPage,
@@ -109,6 +107,7 @@ export class DiagnosisService {
   private readonly toolCallTimeoutMs: number
   private readonly identityResolver: ResolveVehicleIdentityUseCase
   private readonly cognitiveRunner: CognitiveDiagnosisRunner
+  private readonly getEcuInfoUseCase: GetEcuInfoUseCase
 
   constructor(options: DiagnosisServiceOptions) {
     this.scenarios = options.scenarios
@@ -143,6 +142,12 @@ export class DiagnosisService {
       llmClient: this.llmClient,
       knowledgeStack: this.knowledgeStack,
       cognitiveTimeoutMs: this.cognitiveTimeoutMs,
+    })
+    this.getEcuInfoUseCase = new GetEcuInfoUseCase({
+      vehicleRepo: this.vehicleRepo,
+      logger: this.logger,
+      identify: (vehicleInfo) => this.identify(vehicleInfo),
+      toVehicleProfile: (vehicleInfo) => this.toVehicleProfile(vehicleInfo),
     })
   }
 
@@ -266,59 +271,7 @@ export class DiagnosisService {
    * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
    */
   async getEcuInfo(scenarioId?: string): Promise<EcuInfo[]> {
-    const repository = this.resolveRepository(scenarioId)
-    const ecus = await repository.getEcuInfo()
-    void this.persistDiscovered(repository, ecus)
-    return this.resolveLearnedNames(repository, ecus)
-  }
-
-  /**
-   * Sustituye el nombre de las ECUs sin catalogar por el que aprendio el agente.
-   *
-   * Es la misma resolucion que ya hacia la tool MCP, aplicada tambien al camino
-   * REST: el mapa de topologia mostraba `ECU 7E9 / UNKNOWN` aunque el catalogo ya
-   * supiera que era la caja de cambios. Lo resuelto se marca con `source: 'ai'`
-   * para que la pantalla lo distinga de lo que dicta la norma.
-   *
-   * Best-effort: si el vehiculo no esta identificado o el catalogo falla, se
-   * devuelven las ECUs tal cual. Descubrir no depende de poder resolver.
-   */
-  private async resolveLearnedNames(
-    repository: ObdRepository,
-    ecus: EcuInfo[],
-  ): Promise<EcuInfo[]> {
-    if (!this.vehicleRepo || ecus.length === 0) return ecus
-    try {
-      const { make, model } = await this.identify(await repository.getVehicleInfo())
-      if (make === UNKNOWN_VEHICLE_FIELD || model === UNKNOWN_VEHICLE_FIELD) return ecus
-      const lookup = await loadEcuDefinitionLookup(this.vehicleRepo, make, model, ecus)
-      return resolveEcuDefinitions(ecus, lookup)
-    } catch (e) {
-      this.logger.warn('Failed to resolve learned ECU names', {
-        err: e instanceof Error ? e : String(e),
-      })
-      return ecus
-    }
-  }
-
-  /**
-   * Guarda las ECUs descubiertas contra el vehiculo activo, sin bloquear la respuesta.
-   *
-   * Best-effort a proposito: descubrir no depende de poder guardar. Si el vehiculo
-   * no esta identificado todavia, o la escritura falla, el barrido se devuelve igual
-   * y solo queda el aviso en el log.
-   */
-  private async persistDiscovered(repository: ObdRepository, ecus: EcuInfo[]): Promise<void> {
-    if (!this.vehicleRepo || ecus.length === 0) return
-    try {
-      const identified = await this.identify(await repository.getVehicleInfo())
-      const { id } = await this.vehicleRepo.upsertVehicle(this.toVehicleProfile(identified))
-      await persistDiscoveredEcus(this.vehicleRepo, id, ecus)
-    } catch (e) {
-      this.logger.warn('Failed to persist discovered ECUs', {
-        err: e instanceof Error ? e : String(e),
-      })
-    }
+    return this.getEcuInfoUseCase.execute(this.resolveRepository(scenarioId))
   }
 
   /**
