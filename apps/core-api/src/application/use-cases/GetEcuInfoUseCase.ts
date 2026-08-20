@@ -2,9 +2,8 @@ import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { EcuInfo } from '@/domain/entities/EcuInfo.js'
-import type { VehicleProfile } from '@/domain/entities/VehicleProfile.js'
-import type { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
 import { UNKNOWN_VEHICLE_FIELD } from '@/application/use-cases/ResolveVehicleIdentityUseCase.js'
+import type { IdentifyVehicleUseCase } from '@/application/use-cases/IdentifyVehicleUseCase.js'
 import { loadEcuDefinitionLookup } from '@/application/ecu-catalog/loadEcuDefinitionLookup.js'
 import { resolveEcuDefinitions } from '@/application/ecu-catalog/resolveEcuDefinitions.js'
 import { persistDiscoveredEcus } from '@/application/shared/persistDiscoveredEcus.js'
@@ -15,9 +14,7 @@ export interface GetEcuInfoUseCaseOptions {
   readonly vehicleRepo: VehicleRepository | undefined
   readonly logger: LoggerPort
   /** Completa el fabricante/modelo cuando el vehiculo no se identifica solo por el VIN. */
-  readonly identify: (vehicleInfo: VehicleInfo) => Promise<VehicleInfo>
-  /** Proyecta el vehiculo identificado al agregado que persiste el catalogo. */
-  readonly toVehicleProfile: (vehicleInfo: VehicleInfo) => VehicleProfile
+  readonly identifyVehicle: IdentifyVehicleUseCase
 }
 
 /**
@@ -27,9 +24,9 @@ export interface GetEcuInfoUseCaseOptions {
  * que adaptador corresponde a cada escenario es infraestructura**, y este caso de uso no
  * debe conocer ni los escenarios ni el modo de conexion.
  *
- * `identify` y `toVehicleProfile` llegan como funciones porque las comparte con el resto
- * del flujo de diagnostico; es el mismo patron con el que `CognitiveDiagnosisRunner`
- * recibe su `host`.
+ * La identificacion del vehiculo llega inyectada como {@link IdentifyVehicleUseCase}, que
+ * es tambien de aplicacion: descubrir ECUs necesita saber que coche es, pero no tiene por
+ * que saber como se averigua.
  */
 export class GetEcuInfoUseCase {
   constructor(private readonly options: GetEcuInfoUseCaseOptions) {}
@@ -57,10 +54,10 @@ export class GetEcuInfoUseCase {
     repository: ObdRepository,
     ecus: EcuInfo[],
   ): Promise<EcuInfo[]> {
-    const { vehicleRepo, logger, identify } = this.options
+    const { vehicleRepo, logger, identifyVehicle } = this.options
     if (!vehicleRepo || ecus.length === 0) return ecus
     try {
-      const { make, model } = await identify(await repository.getVehicleInfo())
+      const { make, model } = await identifyVehicle.execute(await repository.getVehicleInfo())
       if (make === UNKNOWN_VEHICLE_FIELD || model === UNKNOWN_VEHICLE_FIELD) return ecus
       const lookup = await loadEcuDefinitionLookup(vehicleRepo, make, model, ecus)
       return resolveEcuDefinitions(ecus, lookup)
@@ -80,11 +77,11 @@ export class GetEcuInfoUseCase {
    * queda el aviso en el log.
    */
   private async persistDiscovered(repository: ObdRepository, ecus: EcuInfo[]): Promise<void> {
-    const { vehicleRepo, logger, identify, toVehicleProfile } = this.options
+    const { vehicleRepo, logger, identifyVehicle } = this.options
     if (!vehicleRepo || ecus.length === 0) return
     try {
-      const identified = await identify(await repository.getVehicleInfo())
-      const { id } = await vehicleRepo.upsertVehicle(toVehicleProfile(identified))
+      const identified = await identifyVehicle.execute(await repository.getVehicleInfo())
+      const { id } = await vehicleRepo.upsertVehicle(identifyVehicle.toVehicleProfile(identified))
       await persistDiscoveredEcus(vehicleRepo, id, ecus)
     } catch (e) {
       logger.warn('Failed to persist discovered ECUs', {

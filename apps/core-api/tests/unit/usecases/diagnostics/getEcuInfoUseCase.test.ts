@@ -9,7 +9,11 @@ import { VehicleProfile } from '@/domain/entities/VehicleProfile.js'
 import { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
 import { Vin } from '@/domain/value-objects/Vin.js'
 import { ECU_TYPE_UNKNOWN } from '@/domain/catalogs/ecuAddressCatalog.js'
-import { UNKNOWN_VEHICLE_FIELD } from '@/application/use-cases/ResolveVehicleIdentityUseCase.js'
+import {
+  UNKNOWN_VEHICLE_FIELD,
+  type ResolveVehicleIdentityUseCase,
+} from '@/application/use-cases/ResolveVehicleIdentityUseCase.js'
+import { IdentifyVehicleUseCase } from '@/application/use-cases/IdentifyVehicleUseCase.js'
 
 const VIN = 'WAUZZZ8V5JA123456'
 
@@ -84,20 +88,12 @@ function buildUseCase(
   vehicleRepo: VehicleRepository | undefined,
   logger: LoggerPort = mockLogger(),
 ): GetEcuInfoUseCase {
-  return new GetEcuInfoUseCase({
-    vehicleRepo,
-    logger,
-    identify: (vehicleInfo) => Promise.resolve(vehicleInfo),
-    toVehicleProfile: (vehicleInfo) =>
-      new VehicleProfile({
-        id: 0,
-        vin: new Vin(vehicleInfo.vin.value),
-        make: vehicleInfo.make,
-        model: vehicleInfo.model,
-        year: vehicleInfo.year,
-        engineType: vehicleInfo.engineType,
-      }),
+  // El vehiculo ya llega identificado en estos casos, asi que la cascada no se ejercita:
+  // lo suyo se prueba en identifyVehicleUseCase.test.ts.
+  const identifyVehicle = new IdentifyVehicleUseCase({
+    identityResolver: { execute: vi.fn() } as unknown as ResolveVehicleIdentityUseCase,
   })
+  return new GetEcuInfoUseCase({ vehicleRepo, logger, identifyVehicle })
 }
 
 function learnedDefinition(confidence: number): EcuDefinition {

@@ -26,11 +26,7 @@ import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { DiagnosisResult } from '@/domain/value-objects/DiagnosisResult.js'
 import type { FreezeFrame } from '@/domain/value-objects/FreezeFrame.js'
 import type { DtcCode } from '@/domain/value-objects/DtcCode.js'
-import { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
-import {
-  ResolveVehicleIdentityUseCase,
-  UNKNOWN_VEHICLE_FIELD,
-} from '@/application/use-cases/ResolveVehicleIdentityUseCase.js'
+import { ResolveVehicleIdentityUseCase } from '@/application/use-cases/ResolveVehicleIdentityUseCase.js'
 import {
   ConfirmVehicleIdentityUseCase,
   type ConfirmVehicleIdentityOutput,
@@ -47,11 +43,11 @@ import {
   type GetLiveDataOutput,
 } from '@/application/use-cases/GetLiveDataUseCase.js'
 import { GetVehicleInfoUseCase } from '@/application/use-cases/GetVehicleInfoUseCase.js'
+import { IdentifyVehicleUseCase } from '@/application/use-cases/IdentifyVehicleUseCase.js'
 import type {
   DiagnosisSessionFilter,
   DiagnosisSessionPage,
 } from '@/application/ports/VehicleRepository.js'
-import { VehicleProfile } from '@/domain/entities/VehicleProfile.js'
 import { DiagnosisSession } from '@/domain/entities/DiagnosisSession.js'
 import { MODE_CURRENT_DATA } from '@/domain/pids.js'
 
@@ -105,6 +101,7 @@ export class DiagnosisService {
   private readonly getEcuInfoUseCase: GetEcuInfoUseCase
   private readonly getLiveDataUseCase: GetLiveDataUseCase
   private readonly getVehicleInfoUseCase: GetVehicleInfoUseCase
+  private readonly identifyVehicle: IdentifyVehicleUseCase
 
   constructor(options: DiagnosisServiceOptions) {
     this.scenarios = options.scenarios
@@ -124,13 +121,31 @@ export class DiagnosisService {
       llmClient: this.llmClient,
       logger: this.logger,
     })
-    // El host se arma con metodos ligados: son las cinco capacidades que el flujo
-    // cognitivo necesita de este servicio, y declararlas aqui las deja a la vista.
-    this.cognitiveRunner = new CognitiveDiagnosisRunner({
+    this.identifyVehicle = new IdentifyVehicleUseCase({ identityResolver: this.identityResolver })
+    this.getEcuInfoUseCase = new GetEcuInfoUseCase({
+      vehicleRepo: this.vehicleRepo,
+      logger: this.logger,
+      identifyVehicle: this.identifyVehicle,
+    })
+    this.getLiveDataUseCase = new GetLiveDataUseCase()
+    this.getVehicleInfoUseCase = new GetVehicleInfoUseCase({
+      identityResolver: this.identityResolver,
+    })
+    this.cognitiveRunner = this.buildCognitiveRunner()
+  }
+
+  /**
+   * Arma el flujo cognitivo con las cinco capacidades que necesita de este servicio.
+   *
+   * Sale del constructor porque es lo unico que se cablea con metodos ligados en vez de
+   * con dependencias planas, y declararlo aparte lo deja a la vista.
+   */
+  private buildCognitiveRunner(): CognitiveDiagnosisRunner {
+    return new CognitiveDiagnosisRunner({
       host: {
         resolveRepository: (scenarioId) => this.resolveRepository(scenarioId),
-        identify: (vehicleInfo) => this.identify(vehicleInfo),
-        toVehicleProfile: (vehicleInfo) => this.toVehicleProfile(vehicleInfo),
+        identify: (vehicleInfo) => this.identifyVehicle.execute(vehicleInfo),
+        toVehicleProfile: (vehicleInfo) => this.identifyVehicle.toVehicleProfile(vehicleInfo),
         getMcpServer: (scenarioId, session) => this.getMcpServer(scenarioId, session),
         firstText: (result, toolName) => this.firstText(result, toolName),
       },
@@ -139,16 +154,6 @@ export class DiagnosisService {
       llmClient: this.llmClient,
       knowledgeStack: this.knowledgeStack,
       cognitiveTimeoutMs: this.cognitiveTimeoutMs,
-    })
-    this.getEcuInfoUseCase = new GetEcuInfoUseCase({
-      vehicleRepo: this.vehicleRepo,
-      logger: this.logger,
-      identify: (vehicleInfo) => this.identify(vehicleInfo),
-      toVehicleProfile: (vehicleInfo) => this.toVehicleProfile(vehicleInfo),
-    })
-    this.getLiveDataUseCase = new GetLiveDataUseCase()
-    this.getVehicleInfoUseCase = new GetVehicleInfoUseCase({
-      identityResolver: this.identityResolver,
     })
   }
 
@@ -360,49 +365,6 @@ export class DiagnosisService {
       logger: this.logger,
     })
     return useCase.execute({ ...input, vin: new Vin(input.vin) })
-  }
-
-  /**
-   * Convierte un value object {@link VehicleInfo} al perfil de entidad {@link VehicleProfile}
-   * requerido por {@link VehicleRepository.upsertVehicle}.
-   *
-   * `id: 0` indica clave autogenerada en la capa de persistencia.
-   */
-  /**
-   * Completa marca/modelo/año/motor con la cascada de identificación.
-   *
-   * Solo rellena lo que falta: si el escenario o el adaptador ya traen el dato
-   * (modo Docker, donde el descriptor conoce el vehículo), se respeta. La cascada
-   * es para el coche real, donde lo único que hay es el VIN.
-   */
-  private async identify(vehicleInfo: VehicleInfo): Promise<VehicleInfo> {
-    if (vehicleInfo.make !== UNKNOWN_VEHICLE_FIELD) return vehicleInfo
-
-    const resolved = await this.identityResolver.execute(vehicleInfo.vin)
-    if (resolved.origin === 'none') return vehicleInfo
-
-    return new VehicleInfo({
-      make: resolved.make,
-      model: vehicleInfo.model === UNKNOWN_VEHICLE_FIELD ? resolved.model : vehicleInfo.model,
-      year: vehicleInfo.year === 0 ? resolved.year : vehicleInfo.year,
-      engineType:
-        vehicleInfo.engineType === UNKNOWN_VEHICLE_FIELD
-          ? resolved.engineType
-          : vehicleInfo.engineType,
-      vin: vehicleInfo.vin,
-      vinStatus: vehicleInfo.vinStatus,
-    })
-  }
-
-  private toVehicleProfile(vehicleInfo: VehicleInfo): VehicleProfile {
-    return new VehicleProfile({
-      id: 0,
-      vin: new Vin(vehicleInfo.vin.value),
-      make: vehicleInfo.make,
-      model: vehicleInfo.model,
-      year: vehicleInfo.year,
-      engineType: vehicleInfo.engineType,
-    })
   }
 
   /**
