@@ -111,8 +111,16 @@ export class EcuStore {
     // No se filtra por modelo: dentro de una marca, los modelos de la misma plataforma
     // comparten direcciones del bus, y filtrar en estricto dejaria lo aprendido en un A3
     // invisible para un A5. Se ensancha a la marca y se ordena, que es lo que ya hace
-    // `pidStore.findPidDefinition`. El modelo exacto gana siempre; si no lo hay, entra el
-    // hermano mas fiable. **La marca nunca se cruza**: cada fabricante asigna las suyas.
+    // `pidStore.findPidDefinition`. **La marca nunca se cruza**: cada fabricante asigna
+    // las suyas.
+    //
+    // Tres escalones, de mas fiable a menos:
+    //   0. el modelo exacto
+    //   1. lo declarado para toda la marca (`model = ''`), que es conocimiento deliberado
+    //   2. un modelo hermano, que es una extrapolacion
+    //
+    // El escalon 1 gana al 2 aunque el hermano tenga mas confianza: alguien afirmo que vale
+    // para la marca entera, mientras que del hermano solo estamos suponiendo.
     const rows = await this.db
       .select()
       .from(schema.ecuDefinitions)
@@ -120,7 +128,11 @@ export class EcuStore {
         sql`${schema.ecuDefinitions.manufacturer} = ${manufacturer} AND ${schema.ecuDefinitions.responseAddr} = ${normalized}`,
       )
       .orderBy(
-        sql`CASE WHEN ${schema.ecuDefinitions.model} = ${model} THEN 0 ELSE 1 END`,
+        sql`CASE
+              WHEN ${schema.ecuDefinitions.model} = ${model} THEN 0
+              WHEN ${schema.ecuDefinitions.model} = '' THEN 1
+              ELSE 2
+            END`,
         desc(schema.ecuDefinitions.confidence),
         schema.ecuDefinitions.id,
       )
@@ -131,9 +143,34 @@ export class EcuStore {
     return toEcuDefinition(rows[0])
   }
 
+  /**
+   * Busca la fila exacta de la clave unica `(manufacturer, model, response_addr)`.
+   *
+   * Existe aparte de {@link findEcuDefinitionByAddress} porque las dos consultas responden
+   * preguntas distintas: aquella resuelve **que nombre mostrar** y por eso ensancha a la
+   * marca para heredar entre modelos; esta decide **si insertar o actualizar** y no puede
+   * ensanchar nada — si lo hiciera, indexar una definicion de marca machacaria la de un
+   * modelo concreto y el catalogo se corromperia en silencio.
+   */
+  private async findExactEcuDefinition(
+    manufacturer: string,
+    model: string,
+    responseAddr: string,
+  ): Promise<EcuDefinition | null> {
+    const rows = await this.db
+      .select()
+      .from(schema.ecuDefinitions)
+      .where(
+        sql`${schema.ecuDefinitions.manufacturer} = ${manufacturer} AND ${schema.ecuDefinitions.model} = ${model} AND ${schema.ecuDefinitions.responseAddr} = ${responseAddr.trim().toUpperCase()}`,
+      )
+      .limit(1)
+
+    return rows.length === 0 ? null : toEcuDefinition(rows[0])
+  }
+
   async upsertEcuDefinition(def: Omit<EcuDefinition, 'id' | 'createdAt'>): Promise<EcuDefinition> {
     const definition = new EcuDefinition({ id: 0, ...def })
-    const existing = await this.findEcuDefinitionByAddress(
+    const existing = await this.findExactEcuDefinition(
       definition.manufacturer,
       definition.model,
       definition.responseAddr,
@@ -174,7 +211,7 @@ export class EcuStore {
     } catch (err) {
       // Carrera con un insert concurrente de la misma clave única
       // (manufacturer + model + response_addr): re-consultar y devolver la fila ganadora.
-      const raced = await this.findEcuDefinitionByAddress(
+      const raced = await this.findExactEcuDefinition(
         definition.manufacturer,
         definition.model,
         definition.responseAddr,

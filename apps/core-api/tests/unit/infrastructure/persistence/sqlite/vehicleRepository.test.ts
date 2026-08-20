@@ -868,6 +868,34 @@ describe('SqliteVehicleRepository', () => {
       expect(second.confidence).toBe(0.9)
     })
 
+    // La busqueda de resolucion ensancha a la marca para poder heredar entre modelos, pero
+    // el upsert **no** puede usar esa consulta: decidir si inserta o actualiza exige la
+    // clave unica exacta, o una definicion de marca machacaria la de un modelo concreto.
+    it('upsertEcuDefinition keeps definitions of different models apart', async () => {
+      await repo.upsertEcuDefinition({
+        ...sampleEcu,
+        model: 'A1',
+        responseAddr: '7FA',
+        name: 'Del A1',
+        confidence: 0.9,
+      })
+      await repo.upsertEcuDefinition({
+        ...sampleEcu,
+        model: '',
+        responseAddr: '7FA',
+        name: 'De la marca',
+        confidence: 0.3,
+      })
+
+      const delA1 = await repo.findEcuDefinitionByAddress('Audi', 'A1', '7FA')
+      const deLaMarca = await repo.findEcuDefinitionByAddress('Audi', '', '7FA')
+
+      expect(delA1!.name).toBe('Del A1')
+      expect(delA1!.confidence).toBe(0.9)
+      expect(deLaMarca!.name).toBe('De la marca')
+      expect(deLaMarca!.id).not.toBe(delA1!.id)
+    })
+
     it('findEcuDefinitionByAddress returns the matching definition', async () => {
       await repo.upsertEcuDefinition(sampleEcu)
 
@@ -943,6 +971,83 @@ describe('SqliteVehicleRepository', () => {
       const result = await repo.findEcuDefinitionByAddress('Audi', 'A6', '7ED')
 
       expect(result!.name).toBe('Mas fiable')
+    })
+
+    // El modelo vacio significa "vale para toda la marca", igual que el fabricante vacio en
+    // `pid_definitions` marca los PID estandar. Es lo que el agente escribe cuando sabe que
+    // la centralita es comun a la plataforma y no de un modelo concreto.
+    it('findEcuDefinitionByAddress accepts a brand-wide definition (empty model)', async () => {
+      await repo.upsertEcuDefinition({
+        ...sampleEcu,
+        model: '',
+        responseAddr: '7F0',
+        name: 'Comun a la marca',
+        confidence: 0.3,
+      })
+
+      const result = await repo.findEcuDefinitionByAddress('Audi', 'Q7', '7F0')
+
+      expect(result!.name).toBe('Comun a la marca')
+    })
+
+    it('findEcuDefinitionByAddress prefers a brand-wide definition over a sibling model', async () => {
+      await repo.upsertEcuDefinition({
+        ...sampleEcu,
+        model: 'A1',
+        responseAddr: '7F1',
+        name: 'Extrapolado del A1',
+        confidence: 0.9,
+      })
+      await repo.upsertEcuDefinition({
+        ...sampleEcu,
+        model: '',
+        responseAddr: '7F1',
+        name: 'Declarado para la marca',
+        confidence: 0.3,
+      })
+
+      const result = await repo.findEcuDefinitionByAddress('Audi', 'Q7', '7F1')
+
+      // Lo declarado a proposito para la marca gana a la extrapolacion desde un hermano,
+      // aunque el hermano tenga mas confianza.
+      expect(result!.name).toBe('Declarado para la marca')
+    })
+
+    it('findEcuDefinitionByAddress still prefers the exact model over a brand-wide one', async () => {
+      await repo.upsertEcuDefinition({
+        ...sampleEcu,
+        model: '',
+        responseAddr: '7F2',
+        name: 'De la marca',
+        confidence: 0.9,
+      })
+      await repo.upsertEcuDefinition({
+        ...sampleEcu,
+        model: 'Q7',
+        responseAddr: '7F2',
+        name: 'Del Q7',
+        confidence: 0.3,
+      })
+
+      const result = await repo.findEcuDefinitionByAddress('Audi', 'Q7', '7F2')
+
+      expect(result!.name).toBe('Del Q7')
+    })
+
+    // Con un coche real el modelo nunca se conoce: el WMI da la marca, no el modelo.
+    it('findEcuDefinitionByAddress serves a brand-wide definition when the model is unknown', async () => {
+      await repo.upsertEcuDefinition({
+        ...sampleEcu,
+        manufacturer: 'Ford',
+        model: '',
+        responseAddr: '7F3',
+        name: 'Modulo de carroceria',
+        confidence: 0.3,
+      })
+
+      const result = await repo.findEcuDefinitionByAddress('Ford', 'unknown', '7F3')
+
+      expect(result!.name).toBe('Modulo de carroceria')
     })
 
     it('findEcuDefinitionByAddress never crosses manufacturers', async () => {

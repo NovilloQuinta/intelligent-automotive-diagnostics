@@ -223,7 +223,9 @@ function handleIndexEcu(
     const definition = new EcuDefinition({
       id: 0,
       manufacturer: args.manufacturer as string,
-      model: args.model as string,
+      // Sin modelo = vale para toda la marca. Mismo criterio que el fabricante vacio en
+      // `pid_definitions`, que es como se expresan ahi los PID estandar.
+      model: (args.model as string | undefined) ?? '',
       responseAddr: args.responseAddr as string,
       requestAddr: args.requestAddr as string,
       name: args.name as string,
@@ -368,7 +370,8 @@ export function registerKnowledgeTools(
     {
       embeddedText: z.string(),
       manufacturer: z.string(),
-      model: z.string(),
+      /** Omitir cuando la centralita es comun a toda la marca o plataforma. */
+      model: z.string().optional(),
       source: z.string(),
       responseAddr: z.string(),
       requestAddr: z.string(),

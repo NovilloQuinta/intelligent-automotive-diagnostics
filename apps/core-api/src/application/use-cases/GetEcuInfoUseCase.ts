@@ -58,7 +58,12 @@ export class GetEcuInfoUseCase {
     if (!vehicleRepo || ecus.length === 0) return ecus
     try {
       const { make, model } = await identifyVehicle.execute(await repository.getVehicleInfo())
-      if (make === UNKNOWN_VEHICLE_FIELD || model === UNKNOWN_VEHICLE_FIELD) return ecus
+      // Solo se exige la marca. Con un coche real el modelo **nunca se conoce**: el
+      // adaptador lo deja en `unknown` y la cascada resuelve el fabricante desde el WMI,
+      // que identifica a la marca y no al modelo. Exigirlo abandonaba la resolucion antes
+      // de consultar el catalogo, asi que nada de lo aprendido llegaba a un coche de verdad.
+      // El modelo sigue afinando la busqueda cuando se sabe.
+      if (make === UNKNOWN_VEHICLE_FIELD) return ecus
       const lookup = await loadEcuDefinitionLookup(vehicleRepo, make, model, ecus)
       return resolveEcuDefinitions(ecus, lookup)
     } catch (e) {
