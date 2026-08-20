@@ -90,29 +90,8 @@ export interface DiagnoseOutput {
   readonly severity: Severity
 }
 
-/** Identificacion del vehiculo activo, con los campos derivados del VO {@link Vin}. */
-export interface VehicleInfoOutput {
-  readonly vin: string
-  readonly make: string
-  readonly model: string
-  readonly year: number
-  readonly engineType: string
-  /** Fabricante deducido del WMI; `null` si el VIN no es decodificable. */
-  readonly manufacturer: string | null
-  /** Pais/region deducidos del WMI; `null` si el VIN no es decodificable. */
-  readonly region: { country: string; region: string } | null
-  /** Anio de modelo deducido de la posicion 10; `null` si el VIN no es decodificable. */
-  readonly modelYearDecoded: number | null
-  /** Estado de la lectura del VIN. */
-  readonly vinStatus: 'read' | 'unsupported' | 'unreadable'
-}
-
-/** Campos decodificados vacios: VIN ausente, con ruido o {@link FALLBACK_VIN}. */
-export const UNDECODED_VIN = {
-  manufacturer: null,
-  region: null,
-  modelYearDecoded: null,
-} as const
+/** Identificacion del vehiculo activo, re-exportada desde la capa de aplicacion. */
+export type { VehicleInfoOutput } from '@/application/dto/diagnosis/VehicleInfoOutput.js'
 
 /** Telemetria en vivo por PID, re-exportada desde la capa de aplicacion. */
 export type { TelemetryOutput } from '@/application/dto/diagnosis/TelemetryOutput.js'

@@ -36,7 +36,7 @@ import {
   type ConfirmVehicleIdentityOutput,
 } from '@/application/use-cases/ConfirmVehicleIdentityUseCase.js'
 import type { VehicleStatus } from '@/domain/value-objects/VehicleStatus.js'
-import { Vin, FALLBACK_VIN } from '@/domain/value-objects/Vin.js'
+import { Vin } from '@/domain/value-objects/Vin.js'
 import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
 import type { KnowledgeStackPort } from '@/application/ports/KnowledgeStackPort.js'
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
@@ -46,6 +46,7 @@ import {
   GetLiveDataUseCase,
   type GetLiveDataOutput,
 } from '@/application/use-cases/GetLiveDataUseCase.js'
+import { GetVehicleInfoUseCase } from '@/application/use-cases/GetVehicleInfoUseCase.js'
 import type {
   DiagnosisSessionFilter,
   DiagnosisSessionPage,
@@ -58,7 +59,6 @@ import {
   COGNITIVE_DIAGNOSIS_TIMEOUT_MS,
   PID_METADATA,
   TCP_DIRECT_SCENARIO,
-  UNDECODED_VIN,
   type DiagnosisServiceOptions,
   type ScenarioDescriptor,
   type AvailablePid,
@@ -104,6 +104,7 @@ export class DiagnosisService {
   private readonly cognitiveRunner: CognitiveDiagnosisRunner
   private readonly getEcuInfoUseCase: GetEcuInfoUseCase
   private readonly getLiveDataUseCase: GetLiveDataUseCase
+  private readonly getVehicleInfoUseCase: GetVehicleInfoUseCase
 
   constructor(options: DiagnosisServiceOptions) {
     this.scenarios = options.scenarios
@@ -146,6 +147,9 @@ export class DiagnosisService {
       toVehicleProfile: (vehicleInfo) => this.toVehicleProfile(vehicleInfo),
     })
     this.getLiveDataUseCase = new GetLiveDataUseCase()
+    this.getVehicleInfoUseCase = new GetVehicleInfoUseCase({
+      identityResolver: this.identityResolver,
+    })
   }
 
   /** True cuando se opera contra un unico ELM327 TCP real (scenarioId opcional). */
@@ -327,25 +331,12 @@ export class DiagnosisService {
    * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
    */
   async getVehicleInfo(scenarioId?: string): Promise<VehicleInfoOutput> {
-    const repository = this.resolveRepository(scenarioId)
-    const info = await repository.getVehicleInfo()
-    const vin = String(info.vin)
-    const vinStatus: VehicleInfoOutput['vinStatus'] =
-      info.vinStatus ?? (vin === FALLBACK_VIN ? 'unreadable' : 'read')
-
-    // En modo Docker, fusionar metadatos del descriptor (make/model/year/engineType)
-    // con el VIN del ECU. En modo TCP no hay descriptor: se mantiene lo que devuelve el adaptador.
+    // El descriptor se resuelve aqui: saber que escenarios existen es infraestructura.
     const descriptor = scenarioId ? this.scenarios.find((s) => s.id === scenarioId) : undefined
-
-    return {
-      vin,
-      make: descriptor?.vehicleInfo.make ?? info.make,
-      model: descriptor?.vehicleInfo.model ?? info.model,
-      year: descriptor?.vehicleInfo.year ?? info.year,
-      engineType: descriptor?.vehicleInfo.engineType ?? info.engineType,
-      vinStatus,
-      ...(await this.decodeVin(vin)),
-    }
+    return this.getVehicleInfoUseCase.execute(
+      this.resolveRepository(scenarioId),
+      descriptor?.vehicleInfo,
+    )
   }
 
   /**
@@ -369,37 +360,6 @@ export class DiagnosisService {
       logger: this.logger,
     })
     return useCase.execute({ ...input, vin: new Vin(input.vin) })
-  }
-
-  /**
-   * Deriva fabricante/region/anio del VIN reutilizando los getters del VO {@link Vin}.
-   *
-   * Un VIN ilegible no debe cortar la identificacion: el ELM327 puede devolver
-   * ruido y los escenarios de demo usan {@link FALLBACK_VIN}. En ambos casos los
-   * campos derivados van a `null` en vez de propagar `VinDecodeError`.
-   */
-  private async decodeVin(raw: string): Promise<{
-    manufacturer: string | null
-    region: { country: string; region: string } | null
-    modelYearDecoded: number | null
-  }> {
-    // FALLBACK_VIN es sintacticamente valido (17 'X'), asi que el VO le asignaria
-    // un anio de modelo real por la posicion 10. Es un placeholder, no un vehiculo:
-    // se descarta antes de decodificar.
-    if (raw === FALLBACK_VIN) return UNDECODED_VIN
-    try {
-      const vin = new Vin(raw)
-      // Region y anio son reglas posicionales de la ISO 3779 y las resuelve el VO.
-      // El fabricante no: es una consulta al catalogo, que puede aprender.
-      const identity = await this.identityResolver.execute(vin)
-      return {
-        manufacturer: identity.make === UNKNOWN_VEHICLE_FIELD ? null : identity.make,
-        region: vin.wmiRegion,
-        modelYearDecoded: vin.modelYear,
-      }
-    } catch {
-      return UNDECODED_VIN
-    }
   }
 
   /**
