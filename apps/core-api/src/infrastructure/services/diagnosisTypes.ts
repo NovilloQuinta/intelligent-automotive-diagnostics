@@ -11,27 +11,17 @@ import type { DtcCode } from '@/domain/value-objects/DtcCode.js'
 import { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/Vin.js'
 import { DiagnosisSession } from '@/domain/entities/DiagnosisSession.js'
-import { ALL_SEED_PIDS } from '@/domain/pidCatalog.js'
-import { MODE_CURRENT_DATA } from '@/domain/pids.js'
 
 /** Timeout por defecto del diagnostico cognitivo (60 s). */
 export const COGNITIVE_DIAGNOSIS_TIMEOUT_MS = 60_000
 
 /**
- * Metadatos de presentación (nombre + unidad) de los PIDs Mode 01 del catálogo
- * {@link ALL_SEED_PIDS}, indexados por código hex (ej. "0C" → "Engine RPM"/"rpm").
+ * Metadatos de los PIDs Mode 01, re-exportados desde el dominio.
  *
- * Se usa `ALL_SEED_PIDS` (en inglés, SAE J1979) y no `PID_OBSERVATION_CATALOG`
- * (español) porque este último solo define 7 PIDs y la respuesta genérica
- * `readings` debe cubrir los 16 Mode 01 para poder mostrar un gauge por PID.
+ * La definicion vive en `domain/pidCatalog.ts`, junto a `ALL_SEED_PIDS` del que se deriva.
+ * Se mantiene aqui el re-export para no cambiar los imports existentes.
  */
-export const PID_METADATA: ReadonlyMap<string, { readonly name: string; readonly unit: string }> =
-  new Map(
-    ALL_SEED_PIDS.filter((p) => p.pidCode.mode === MODE_CURRENT_DATA).map((p) => [
-      p.pidCode.pid,
-      { name: p.name, unit: p.unit ?? '' },
-    ]),
-  )
+export { PID_METADATA } from '@/domain/pidCatalog.js'
 
 /** Nombre de la tool MCP que devuelve los códigos DTC detectados en el vehículo. */
 export const GET_DTC_CODES_TOOL = 'get_dtc_codes'
@@ -124,25 +114,11 @@ export const UNDECODED_VIN = {
   modelYearDecoded: null,
 } as const
 
-/** Telemetria en vivo con degradacion por PID: un valor `null` indica lectura fallida. */
-export interface TelemetryOutput {
-  rpm: number | null
-  coolantTemp: number | null
-  speed: number | null
-  intakeTemp: number | null
-}
+/** Telemetria en vivo por PID, re-exportada desde la capa de aplicacion. */
+export type { TelemetryOutput } from '@/application/dto/diagnosis/TelemetryOutput.js'
 
-/** Lectura genérica de un PID en la respuesta `readings` de {@link DiagnosisService.getLiveData}. */
-export interface PidReading {
-  /** Clave compuesta modo + PID separados por espacio (ej. "01 0C"). */
-  readonly code: string
-  /** Nombre legible del PID (del catálogo `ALL_SEED_PIDS`). */
-  readonly name: string
-  /** Unidad física del valor (ej. "rpm", "°C"). */
-  readonly unit: string
-  /** Valor físico resuelto; `null` si la lectura falló (NO DATA). */
-  readonly value: number | null
-}
+/** Lectura generica de un PID, re-exportada desde la capa de aplicacion. */
+export type { PidReading } from '@/application/dto/diagnosis/PidReading.js'
 
 /** PID Mode 01 disponible en el selector de telemetría en vivo. */
 export interface AvailablePid {

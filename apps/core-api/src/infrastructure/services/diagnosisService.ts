@@ -42,20 +42,17 @@ import type { KnowledgeStackPort } from '@/application/ports/KnowledgeStackPort.
 import type { WebSearchPort } from '@/application/ports/WebSearchPort.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import { GetEcuInfoUseCase } from '@/application/use-cases/GetEcuInfoUseCase.js'
+import {
+  GetLiveDataUseCase,
+  type GetLiveDataOutput,
+} from '@/application/use-cases/GetLiveDataUseCase.js'
 import type {
   DiagnosisSessionFilter,
   DiagnosisSessionPage,
 } from '@/application/ports/VehicleRepository.js'
 import { VehicleProfile } from '@/domain/entities/VehicleProfile.js'
 import { DiagnosisSession } from '@/domain/entities/DiagnosisSession.js'
-import {
-  MODE_CURRENT_DATA,
-  PID_COOLANT_TEMP,
-  PID_RPM,
-  PID_SPEED,
-  PID_INTAKE_TEMP,
-  DEFAULT_LIVE_PIDS,
-} from '@/domain/pids.js'
+import { MODE_CURRENT_DATA } from '@/domain/pids.js'
 
 import {
   COGNITIVE_DIAGNOSIS_TIMEOUT_MS,
@@ -67,8 +64,6 @@ import {
   type AvailablePid,
   type CognitiveDiagnosisResult,
   type DiagnoseOutput,
-  type PidReading,
-  type TelemetryOutput,
   type VehicleInfoOutput,
 } from '@/infrastructure/services/diagnosisTypes.js'
 
@@ -108,6 +103,7 @@ export class DiagnosisService {
   private readonly identityResolver: ResolveVehicleIdentityUseCase
   private readonly cognitiveRunner: CognitiveDiagnosisRunner
   private readonly getEcuInfoUseCase: GetEcuInfoUseCase
+  private readonly getLiveDataUseCase: GetLiveDataUseCase
 
   constructor(options: DiagnosisServiceOptions) {
     this.scenarios = options.scenarios
@@ -149,6 +145,7 @@ export class DiagnosisService {
       identify: (vehicleInfo) => this.identify(vehicleInfo),
       toVehicleProfile: (vehicleInfo) => this.toVehicleProfile(vehicleInfo),
     })
+    this.getLiveDataUseCase = new GetLiveDataUseCase()
   }
 
   /** True cuando se opera contra un unico ELM327 TCP real (scenarioId opcional). */
@@ -214,36 +211,8 @@ export class DiagnosisService {
    * @param pids — Codigos de PID Mode 01 opcionales (ej. `['0C', '0D']`).
    * @throws {DiagnosisScenarioNotFoundError} Si `scenarioId` no existe.
    */
-  async getLiveData(
-    scenarioId?: string,
-    pids?: readonly string[],
-  ): Promise<Partial<TelemetryOutput> & { readonly readings: PidReading[] }> {
-    const repository = this.resolveRepository(scenarioId)
-    const requested = (pids && pids.length > 0 ? pids : DEFAULT_LIVE_PIDS).map((pid) =>
-      pid.toUpperCase(),
-    )
-    const values = await repository.readPids(MODE_CURRENT_DATA, requested)
-
-    const pidToField: Record<string, keyof TelemetryOutput> = {
-      [PID_COOLANT_TEMP]: 'coolantTemp',
-      [PID_RPM]: 'rpm',
-      [PID_SPEED]: 'speed',
-      [PID_INTAKE_TEMP]: 'intakeTemp',
-    }
-    const result: Partial<TelemetryOutput> = {}
-    const readings: PidReading[] = []
-    for (const pid of requested) {
-      const field = pidToField[pid]
-      if (field) result[field] = values.get(pid) ?? null
-      const metadata = PID_METADATA.get(pid)
-      readings.push({
-        code: `${MODE_CURRENT_DATA} ${pid}`,
-        name: metadata?.name ?? pid,
-        unit: metadata?.unit ?? '',
-        value: values.get(pid) ?? null,
-      })
-    }
-    return { ...result, readings }
+  async getLiveData(scenarioId?: string, pids?: readonly string[]): Promise<GetLiveDataOutput> {
+    return this.getLiveDataUseCase.execute(this.resolveRepository(scenarioId), pids)
   }
 
   /**

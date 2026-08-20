@@ -2,6 +2,7 @@ import type { PidDefinition } from '@/domain/entities/PidDefinition.js'
 import { SYSTEM_ENGINE, SYSTEM_VEHICLE } from '@/domain/systemVocabulary.js'
 import { Formula } from '@/domain/value-objects/Formula.js'
 import { PidCode } from '@/domain/value-objects/PidCode.js'
+import { MODE_CURRENT_DATA } from '@/domain/pids.js'
 
 /** PIDs estándar Mode 01 (SAE J1979) — globales, para cualquier vehículo. */
 export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
@@ -238,3 +239,22 @@ export const STANDARD_MODE_01_PIDS: PidDefinition[] = [
  * vía {@link seedManufacturerCatalog}, no desde código.
  */
 export const ALL_SEED_PIDS: PidDefinition[] = [...STANDARD_MODE_01_PIDS]
+
+/**
+ * Metadatos (nombre + unidad) de los PIDs Mode 01 de {@link ALL_SEED_PIDS},
+ * indexados por codigo hex (ej. "0C" → "Engine RPM"/"rpm").
+ *
+ * Vive aqui, junto a su fuente, porque nombre y unidad de un PID los fija la SAE J1979:
+ * son dato de dominio, no de presentacion.
+ *
+ * Se deriva de `ALL_SEED_PIDS` (en ingles, SAE J1979) y no de `PID_OBSERVATION_CATALOG`
+ * (español) porque este ultimo solo define 7 PIDs y la respuesta generica `readings` debe
+ * cubrir los 16 Mode 01 para poder mostrar un gauge por PID.
+ */
+export const PID_METADATA: ReadonlyMap<string, { readonly name: string; readonly unit: string }> =
+  new Map(
+    ALL_SEED_PIDS.filter((p) => p.pidCode.mode === MODE_CURRENT_DATA).map((p) => [
+      p.pidCode.pid,
+      { name: p.name, unit: p.unit ?? '' },
+    ]),
+  )
