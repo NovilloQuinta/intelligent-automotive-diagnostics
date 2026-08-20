@@ -7,6 +7,7 @@ const HTTP_GATEWAY_TIMEOUT = 504
 const HTTP_NOT_FOUND = 404
 const HTTP_UNPROCESSABLE_ENTITY = 422
 const HTTP_PAYLOAD_TOO_LARGE = 413
+const HTTP_BAD_GATEWAY = 502
 
 /**
  * Presupuesto del hilo que se reenvia en cada pregunta (~60 KB serializados).
@@ -23,7 +24,13 @@ const THREAD_TOO_LONG_MESSAGE =
 
 /** Kind of failure behind a cognitive diagnosis error, derived from the HTTP status. */
 export type CognitiveDiagnosisErrorKind =
-  'timeout' | 'unavailable' | 'too_many_steps' | 'thread_too_long' | 'unknown'
+  | 'timeout'
+  | 'unavailable'
+  | 'too_many_steps'
+  | 'thread_too_long'
+  /** El modelo termino pero no dejo narrativa legible que ensenar. */
+  | 'empty_answer'
+  | 'unknown'
 
 /**
  * Recorta el hilo que viaja al servidor, descartando los turnos mas antiguos
@@ -76,7 +83,9 @@ export function deriveCognitiveDiagnosisError(error: unknown): CognitiveDiagnosi
           ? 'unavailable'
           : error.status === HTTP_UNPROCESSABLE_ENTITY
             ? 'too_many_steps'
-            : 'unknown'
+            : error.status === HTTP_BAD_GATEWAY
+              ? 'empty_answer'
+              : 'unknown'
     return { message: error.message, kind }
   }
   const message = error instanceof Error && error.message ? error.message : GENERIC_ERROR_MESSAGE

@@ -335,6 +335,30 @@ describe('useCognitiveDiagnosis', () => {
     )
   })
 
+  it("exposes error.kind 'empty_answer' on a 502 rejection", async () => {
+    // El modelo termino pero no dejo narrativa: antes salia como 200 con el texto vacio y
+    // la pantalla pintaba una burbuja en blanco, sin respuesta ni error.
+    vi.mocked(api.getCognitiveDiagnosis).mockRejectedValue(
+      new ApiHttpError(
+        'El modelo no devolvió una respuesta legible. Vuelve a preguntar, a ser posible reformulando.',
+        502,
+      ),
+    )
+
+    const { result } = renderHook(() => useCognitiveDiagnosis('kawa-z900'), {
+      wrapper: Wrapper,
+    })
+
+    await act(async () => {
+      await result.current.trigger()
+    })
+
+    await waitFor(() => {
+      expect(result.current.error?.kind).toBe('empty_answer')
+    })
+    expect(result.current.error?.message).toContain('no devolvió una respuesta legible')
+  })
+
   it("exposes error.kind 'unavailable' on a 404 rejection", async () => {
     vi.mocked(api.getCognitiveDiagnosis).mockRejectedValue(new ApiHttpError('No disponible', 404))
 

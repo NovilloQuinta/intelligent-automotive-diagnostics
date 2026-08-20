@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { ExecuteCognitiveDiagnosisUseCase } from '@/application/use-cases/ExecuteCognitiveDiagnosisUseCase.js'
+import { EmptyDiagnosisError } from '@/application/llm/llmErrors.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
@@ -85,6 +86,26 @@ describe('fugas de internos en la narrativa', () => {
     const result = await useCase.execute({ userQuery: '¿Frena mal?' })
 
     expect(result.diagnosis).toContain('La distancia de frenado se alarga')
+  })
+
+  // El sintoma que reportaba el usuario: tras 3-4 preguntas el agente "no responde y no
+  // hay error". En los seguimientos el modelo contesta mas seco y a veces suelta solo el
+  // bloque; al quitarselo no queda nada, y un 200 con el texto vacio pinta una burbuja en
+  // blanco que no explica nada.
+  it('VACIO-1: no devuelve un diagnostico vacio cuando el modelo solo manda el bloque', async () => {
+    const { useCase } = useCaseWith(JSON_BLOCK)
+
+    await expect(useCase.execute({ userQuery: '¿Y ahora?' })).rejects.toBeInstanceOf(
+      EmptyDiagnosisError,
+    )
+  })
+
+  it('VACIO-2: una respuesta normal sigue devolviendo su prosa intacta', async () => {
+    const { useCase } = useCaseWith('Revisa la bujia del cilindro 1.\n' + JSON_BLOCK)
+
+    const result = await useCase.execute({ userQuery: '¿Que falla?' })
+
+    expect(result.diagnosis).toBe('Revisa la bujia del cilindro 1.')
   })
 
   it('LEAK-3: no filtra el bloque JSON crudo cuando falta el cierre', async () => {
@@ -191,8 +212,12 @@ describe('fugas de internos en la narrativa', () => {
       search: vi.fn().mockResolvedValue([]),
     } as unknown as DiagnosisVectorRepository
 
+    // La narrativa lleva prosa real ademas del ruido: un texto que fuese SOLO la linea
+    // interna se queda vacio al sanearlo y ahora lanza `EmptyDiagnosisError`, que es lo
+    // correcto pero no es lo que mide este test.
     const { useCase } = useCaseWith(
-      'Indexed diagnosis 3f2504e0-4f89-11d3-9a0c-0305e82c3301 (confidence 0.6, unvalidated)\n' +
+      'La EGR esta obstruida.\n' +
+        'Indexed diagnosis 3f2504e0-4f89-11d3-9a0c-0305e82c3301 (confidence 0.6, unvalidated)\n' +
         JSON_BLOCK,
       diagnosisIndex,
     )

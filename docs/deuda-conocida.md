@@ -44,6 +44,20 @@ o mas reticente en consultas legitimas.
 `get_freeze_frame` sigue sin nombrarse en el prompt, y es distinto: no es una cadena de
 aprendizaje y el flujo determinista si lo usa.
 
+## Dos cabos del diagnostico cognitivo
+
+**Prosa perdida tras un bloque sin cerrar.** `JSON_BLOCK_REGEX` remata en `(?:\s*---|\s*$)`:
+sin el `---` de cierre se come todo hasta el final, asi que la prosa escrita **despues** del
+bloque se pierde. Es deliberado y lo blinda `LEAK-3` — sin esa alternativa el JSON crudo
+acabaria en la cara del mecanico, que es peor. Afinarlo pide un escaner de llaves
+balanceadas para cortar justo al final del objeto.
+
+**Cliente y servidor comparten timeout, 60 s los dos** (`COGNITIVE_TIMEOUT_MS` en la UI,
+`COGNITIVE_DIAGNOSIS_TIMEOUT_MS` en el backend). Con el hilo largo van a cruzarse y gana
+quien llegue antes por milisegundos, con lo que el mismo fallo sale unas veces como 504 del
+servidor y otras como aborto del navegador. Darle aire al cliente es una linea, pero cambia
+que error ve el mecanico.
+
 ## El transporte no se recupera tras agotar la reconexion
 
 Detectado el 2026-08-19 grabando trazas, y reproducido dos veces. Si el dispositivo se cae

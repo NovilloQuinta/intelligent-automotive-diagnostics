@@ -1,6 +1,7 @@
 import crypto from 'node:crypto'
 import type { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
 import { parseCognitiveDiagnosis, JSON_BLOCK_REGEX } from '@/application/llm/extractLlmDiagnosis.js'
+import { EmptyDiagnosisError } from '@/application/llm/llmErrors.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { McpToolDefinition } from '@/application/dto/llm/McpToolDefinition.js'
 import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPort.js'
@@ -160,6 +161,9 @@ export class ExecuteCognitiveDiagnosisUseCase {
     // Saneado ANTES de indexar: si el corpus se contamina, el ruido vuelve en
     // futuros prompts como "caso similar" y se retroalimenta.
     const cleanedText = redactInternals(text.replace(JSON_BLOCK_REGEX, '').trim())
+    // Sin narrativa no hay respuesta que dar. Se lanza **antes de indexar**: un caso vacio
+    // en el corpus vuelve luego como "caso similar" y contamina futuros prompts.
+    if (cleanedText.trim() === '') throw new EmptyDiagnosisError()
 
     await this.indexResolvedCase(cleanedText, toolCalls, userQuery, vehicleContext)
 

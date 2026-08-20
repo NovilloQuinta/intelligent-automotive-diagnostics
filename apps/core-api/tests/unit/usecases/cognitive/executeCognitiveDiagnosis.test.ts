@@ -274,7 +274,10 @@ describe('executeCognitiveDiagnosis', () => {
   })
 
   it('should fall back to defaults when confidence is out of range', async () => {
-    const text = '---JSON---{"severity":"high","confidence":2,"recommendations":["x"]}---'
+    // Con prosa delante: un texto que sea SOLO el bloque se queda vacio al limpiarlo y
+    // lanza `EmptyDiagnosisError`. Aqui se mide el fallback de la confianza, no eso.
+    const text =
+      'Narrativa.\n---JSON---{"severity":"high","confidence":2,"recommendations":["x"]}---'
     const llmClient = mockLlmClient({
       sendMessage: vi.fn().mockResolvedValue(cognitiveResponse(text)),
     })

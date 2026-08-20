@@ -18,7 +18,7 @@ import {
   CognitiveDiagnosisTimeoutError,
   DiagnosisSessionNotFoundError,
 } from '@/infrastructure/services/errors.js'
-import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
+import { MaxToolCallIterationsError, EmptyDiagnosisError } from '@/application/llm/llmErrors.js'
 import { Vin } from '@/domain/value-objects/Vin.js'
 import { DiagnosisSession } from '@/domain/entities/DiagnosisSession.js'
 import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
@@ -1075,6 +1075,24 @@ describe('diagnosisRoutes', () => {
 
       expect(res.status).toBe(422)
       expect(res.body.error).toMatch(/demasiados pasos/i)
+    })
+
+    it('should return 502, not a generic 500, when the model leaves no readable answer', async () => {
+      const service = createServiceStub({
+        cognitiveDiagnosis: vi.fn(async () => {
+          throw new EmptyDiagnosisError()
+        }),
+      })
+      const { app } = createApp(service)
+
+      const res = await request(app)
+        .post('/api/mcp/cognitive-diagnosis')
+        .send({ scenarioId: 'audi-a3-idle', query: 'x' })
+
+      // 502 y no 422: el LLM si termino, lo que no vale es lo que devolvio. Y no 500,
+      // que se traga el mensaje y deja al mecanico sin saber que ha pasado.
+      expect(res.status).toBe(502)
+      expect(res.body.error).toMatch(/respuesta legible/i)
     })
   })
 

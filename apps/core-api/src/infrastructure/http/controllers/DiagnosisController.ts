@@ -15,7 +15,7 @@ import {
   DiagnosisSessionNotFoundError,
   VehicleIdentificationUnavailableError,
 } from '@/infrastructure/services/errors.js'
-import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
+import { MaxToolCallIterationsError, EmptyDiagnosisError } from '@/application/llm/llmErrors.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
 import {
@@ -60,6 +60,8 @@ const ERROR_MESSAGES = {
   invalidVehicleIdentity: 'Invalid vehicle identity',
   cognitiveTooManySteps:
     'El diagnóstico necesitó demasiados pasos. Prueba con una pregunta más concreta.',
+  cognitiveEmptyAnswer:
+    'El modelo no devolvió una respuesta legible. Vuelve a preguntar, a ser posible reformulando.',
   internalError: 'Internal server error',
   invalidDateRange: 'from must be before to',
   sessionNotFound: 'Diagnosis session not found',
@@ -457,6 +459,13 @@ export class DiagnosisController {
     }
     if (err instanceof DiagnosisSessionNotFoundError) {
       res.status(404).json({ error: ERROR_MESSAGES.sessionNotFound })
+      return
+    }
+    if (err instanceof EmptyDiagnosisError) {
+      // 502: la peticion era valida y el modelo si termino, pero lo que devolvio no es
+      // presentable. Es un fallo del proveedor de arriba, no del cliente ni nuestro, y por
+      // eso no comparte el 422 con `MaxToolCallIterationsError`, que es otra causa.
+      res.status(502).json({ error: ERROR_MESSAGES.cognitiveEmptyAnswer })
       return
     }
     if (err instanceof MaxToolCallIterationsError) {
