@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { derivePidObservations } from '@/application/services/pidObservationEnricher.js'
+import { derivePidObservations } from '@/application/obd/pidObservationEnricher.js'
 import type { ToolCallTrace } from '@/application/dto/llm/ToolCallTrace.js'
 
 function readPid(mode: string, pid: string, result: string): ToolCallTrace {

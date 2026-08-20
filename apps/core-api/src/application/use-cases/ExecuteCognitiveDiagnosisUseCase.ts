@@ -14,7 +14,7 @@ import { initialConfidenceFor } from '@/application/knowledge/confidenceScale.js
 import { KnowledgeSource } from '@/domain/value-objects/KnowledgeSource.js'
 import type { ToolCallTrace } from '@/application/dto/llm/ToolCallTrace.js'
 import { DEFAULT_SEARCH_LIMIT } from '@/application/knowledge/createKnowledgeIndex.js'
-import { derivePidObservations } from '@/application/services/pidObservationEnricher.js'
+import { derivePidObservations } from '@/application/obd/pidObservationEnricher.js'
 import { READ_PID_TOOL } from '@/application/shared/mcpToolNames.js'
 import { redactInternals } from '@/application/llm/redactInternals.js'
 import { COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT } from '@/application/prompts/cognitiveDiagnosisPrompt.js'

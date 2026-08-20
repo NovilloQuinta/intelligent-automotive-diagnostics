@@ -19,7 +19,8 @@ The authority for these rules is `docs/adr/001-arquitectura-del-sistema.md`. Thi
 - **Entities** (`domain/entities/`): classes with a mandatory `id: number` in the constructor, `readonly` properties, and typed errors (`User`, `EcuInfo`, `PidDefinition`, `VehicleProfile`)
 - **Value objects** (`domain/value-objects/`): immutable classes without identity, public constructor with inline validation and derived getters (`Vin`, `PidCode`, `FreezeFrame`, `DiagnosisResult`)
 - **Domain services** (`domain/services/`): pure functions over domain concepts (`pidFormula.ts`)
-- **Catalogs and constants** at the root of `domain/`: seeded reference data and OBD-II constants (`pidCatalog.ts`, `dtcCatalog.ts`, `ecuAddressCatalog.ts`, `pids.ts`)
+- **Catalogs** (`domain/catalogs/`): reference data and its lookup (`pidCatalog.ts`, `dtcCatalog.ts`, `ecuAddressCatalog.ts`, `pidObservationCatalog.ts`)
+- **Constants and vocabulary** at the root of `domain/`: OBD-II modes and PIDs (`pids.ts`), read-only mode policy (`obdServiceMode.ts`), system names (`systemVocabulary.ts`)
 
 **Forbidden:**
 - NO imports from `application/` or `infrastructure/`
@@ -38,7 +39,7 @@ domain/value-objects/Vin.ts            ← OK: value object (validation + VinDec
 domain/value-objects/PidCode.ts        ← OK: value object (key getter)
 domain/value-objects/DiagnosisResult.ts ← OK: value object (derives severity, no presentation)
 domain/services/pidFormula.ts          ← OK: pure functions over PIDs
-domain/pidCatalog.ts                   ← OK: SAE J1979 reference data
+domain/catalogs/pidCatalog.ts          ← OK: SAE J1979 reference data
 ```
 
 ### `application/` — Ports & Use Cases (middle layer)
@@ -47,7 +48,7 @@ domain/pidCatalog.ts                   ← OK: SAE J1979 reference data
 - **Ports** (`application/ports/`): interfaces defining the contracts infrastructure must implement
 - **Use cases** (`application/use-cases/`): classes with an `execute()` method and dependencies injected through the constructor. Admin use cases live in `application/use-cases/admin/`
 - **DTOs** (`application/dto/`): pure data interfaces, one per file, grouped by area (`auth/`, `admin/`, `diagnosis/`, `llm/`, `knowledge/`, `vector/`, `audit/`, `profile/`, `web-search/`)
-- **Supporting modules**: `llm/` (anti-corruption parser), `knowledge/` (confidence scale and mappers), `prompts/`, `templates/`, `obd/`, `ecu-catalog/`, `services/`, `shared/`
+- **Supporting modules**: `llm/` (anti-corruption parser), `knowledge/` (confidence scale and mappers), `ecu-catalog/` (resolution against the learned catalog), `obd/` (OBD-II errors and derivations), `prompts/`, `templates/`, `shared/`
 
 **Allowed imports:**
 - `domain/**` — YES
@@ -123,8 +124,9 @@ apps/core-api/src/
 ├── domain/                          # Inner layer: pure business concepts
 │   ├── entities/                    #   9 entities, PascalCase, mandatory id
 │   ├── value-objects/               #   12 value objects, PascalCase, immutable
+│   ├── catalogs/                    #   Reference data + its lookup (camelCase)
 │   ├── services/                    #   Pure domain functions
-│   └── *.ts                         #   Catalogs and OBD-II constants (camelCase)
+│   └── *.ts                         #   OBD-II constants and vocabulary (camelCase)
 │
 ├── application/                     # Middle layer: ports + use cases
 │   ├── ports/                       #   23 contracts (Repository / …Port)
@@ -135,8 +137,7 @@ apps/core-api/src/
 │   ├── ecu-catalog/                 #   ECU definition resolution
 │   ├── prompts/                     #   System prompt blocks
 │   ├── templates/                   #   Text templates
-│   ├── obd/                         #   OBD error types
-│   ├── services/                    #   Application-level helpers
+│   ├── obd/                         #   OBD-II errors and derivations
 │   └── shared/                      #   Cross-cutting pure utilities
 │
 └── infrastructure/                  # Outer layer: concrete adapters

@@ -54,6 +54,11 @@ src/
 │   │   └── ...
 │   ├── dto/                    #   Data Transfer Objects (1 por fichero)
 │   ├── llm/                    #   Anti-corruption parser LLM
+│   ├── knowledge/              #   Escala de confianza y mappers del catalogo RAG
+│   ├── ecu-catalog/            #   Resolucion de ECUs contra el catalogo aprendido
+│   ├── obd/                    #   Errores y derivaciones propias de OBD-II
+│   ├── prompts/                #   Bloques del system prompt del agente
+│   ├── templates/              #   Plantillas de texto (email)
 │   └── shared/                 #   Utilidades compartidas
 │
 └── infrastructure/             # Capa externa
