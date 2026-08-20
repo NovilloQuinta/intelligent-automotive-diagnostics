@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm'
+import { eq, sql, desc } from 'drizzle-orm'
 import * as schema from '../schema.js'
 import type { EcuInfo } from '@/domain/entities/EcuInfo.js'
 import { EcuDefinition } from '@/domain/entities/EcuDefinition.js'
@@ -108,11 +108,21 @@ export class EcuStore {
     responseAddr: string,
   ): Promise<EcuDefinition | null> {
     const normalized = responseAddr.trim().toUpperCase()
+    // No se filtra por modelo: dentro de una marca, los modelos de la misma plataforma
+    // comparten direcciones del bus, y filtrar en estricto dejaria lo aprendido en un A3
+    // invisible para un A5. Se ensancha a la marca y se ordena, que es lo que ya hace
+    // `pidStore.findPidDefinition`. El modelo exacto gana siempre; si no lo hay, entra el
+    // hermano mas fiable. **La marca nunca se cruza**: cada fabricante asigna las suyas.
     const rows = await this.db
       .select()
       .from(schema.ecuDefinitions)
       .where(
-        sql`${schema.ecuDefinitions.manufacturer} = ${manufacturer} AND ${schema.ecuDefinitions.model} = ${model} AND ${schema.ecuDefinitions.responseAddr} = ${normalized}`,
+        sql`${schema.ecuDefinitions.manufacturer} = ${manufacturer} AND ${schema.ecuDefinitions.responseAddr} = ${normalized}`,
+      )
+      .orderBy(
+        sql`CASE WHEN ${schema.ecuDefinitions.model} = ${model} THEN 0 ELSE 1 END`,
+        desc(schema.ecuDefinitions.confidence),
+        schema.ecuDefinitions.id,
       )
       .limit(1)
 

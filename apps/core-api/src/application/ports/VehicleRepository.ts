@@ -132,8 +132,14 @@ export interface VehicleRepository {
   /** Actualiza la marca de tiempo de descubrimiento de una ECU. */
   updateEcuDiscoveredAt(ecuId: number): Promise<void>
 
-  /** Busca una definición de ECU del catálogo auto-expansivo por fabricante,
-   * modelo y dirección de respuesta. Retorna null si no existe. */
+  /**
+   * Busca una definición de ECU del catálogo auto-expansivo por fabricante y dirección
+   * de respuesta. Retorna null si no existe.
+   *
+   * `model` no acota, **ordena**: dentro de una marca los modelos de la misma plataforma
+   * comparten direcciones, así que si no hay definición del modelo exacto se devuelve la
+   * del modelo hermano más fiable. La marca nunca se cruza.
+   */
   findEcuDefinitionByAddress(
     manufacturer: string,
     model: string,

@@ -884,6 +884,80 @@ describe('SqliteVehicleRepository', () => {
 
       expect(result).toBeNull()
     })
+
+    // Un A3 y un A5 comparten plataforma y, con ella, las direcciones del bus. Buscar en
+    // estricto por modelo dejaria lo aprendido en uno invisible para el otro.
+    it('findEcuDefinitionByAddress falls back to another model of the same manufacturer', async () => {
+      await repo.upsertEcuDefinition({
+        ...sampleEcu,
+        model: 'A3',
+        responseAddr: '7EB',
+        name: 'Airbag A3',
+        confidence: 0.5,
+      })
+
+      const result = await repo.findEcuDefinitionByAddress('Audi', 'A5', '7EB')
+
+      expect(result).not.toBeNull()
+      expect(result!.name).toBe('Airbag A3')
+    })
+
+    it('findEcuDefinitionByAddress prefers the exact model over a sibling one', async () => {
+      await repo.upsertEcuDefinition({
+        ...sampleEcu,
+        model: 'A3',
+        responseAddr: '7EC',
+        name: 'Del A3',
+        confidence: 0.9,
+      })
+      await repo.upsertEcuDefinition({
+        ...sampleEcu,
+        model: 'A5',
+        responseAddr: '7EC',
+        name: 'Del A5',
+        confidence: 0.3,
+      })
+
+      const result = await repo.findEcuDefinitionByAddress('Audi', 'A5', '7EC')
+
+      // Gana el modelo exacto aunque su confianza sea la mas baja de las dos.
+      expect(result!.name).toBe('Del A5')
+    })
+
+    it('findEcuDefinitionByAddress ranks sibling models by confidence', async () => {
+      await repo.upsertEcuDefinition({
+        ...sampleEcu,
+        model: 'A1',
+        responseAddr: '7ED',
+        name: 'Poco fiable',
+        confidence: 0.3,
+      })
+      await repo.upsertEcuDefinition({
+        ...sampleEcu,
+        model: 'A4',
+        responseAddr: '7ED',
+        name: 'Mas fiable',
+        confidence: 0.8,
+      })
+
+      const result = await repo.findEcuDefinitionByAddress('Audi', 'A6', '7ED')
+
+      expect(result!.name).toBe('Mas fiable')
+    })
+
+    it('findEcuDefinitionByAddress never crosses manufacturers', async () => {
+      await repo.upsertEcuDefinition({
+        ...sampleEcu,
+        manufacturer: 'Audi',
+        model: 'A3',
+        responseAddr: '7EE',
+        name: 'De un Audi',
+      })
+
+      const result = await repo.findEcuDefinitionByAddress('Toyota', 'Corolla', '7EE')
+
+      expect(result).toBeNull()
+    })
   })
 
   describe('ecuLookups', () => {

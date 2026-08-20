@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import {
-  resolveEcuDefinitions,
-  RESOLVE_CONFIDENCE_THRESHOLD,
-} from '@/application/ecu-catalog/resolveEcuDefinitions.js'
+import { resolveEcuDefinitions } from '@/application/ecu-catalog/resolveEcuDefinitions.js'
 import { EcuInfo } from '@/domain/entities/EcuInfo.js'
 import { EcuDefinition } from '@/domain/entities/EcuDefinition.js'
 
@@ -34,7 +31,7 @@ function ecuDefinition(overrides: Partial<ConstructorParameters<typeof EcuDefini
 }
 
 describe('resolveEcuDefinitions', () => {
-  it(`should resolve an UNKNOWN ECU when a definition has confidence >= ${RESOLVE_CONFIDENCE_THRESHOLD}`, () => {
+  it('should resolve an UNKNOWN ECU from a learned definition', () => {
     const ecus = [unknownEcu('7E9')]
     const lookup = (addr: string) => (addr === '7E9' ? ecuDefinition() : undefined)
 
@@ -43,6 +40,7 @@ describe('resolveEcuDefinitions', () => {
     expect(resolved[0].name).toBe('Transmission Control Module')
     expect(resolved[0].type).toBe('TCM')
     expect(resolved[0].responseAddr).toBe('7E9')
+    expect(resolved[0].source).toBe('ai')
   })
 
   it('should keep UNKNOWN when there is no matching definition', () => {
@@ -54,15 +52,19 @@ describe('resolveEcuDefinitions', () => {
     expect(resolved[0].name).toBe('ECU 7DA')
   })
 
-  it('should keep UNKNOWN when confidence is below the threshold', () => {
+  it('should resolve a low-confidence definition too, marked as AI-sourced', () => {
+    // 0.3 es la unica confianza que el agente puede producir (procedencia `web`). Si se
+    // filtrara por confianza, nada de lo que aprende se mostraria jamas. La advertencia no
+    // es ocultarlo: es la marca `IA` que lo distingue de lo que dicta la norma.
     const ecus = [unknownEcu('7E9')]
     const lookup = (addr: string) =>
       addr === '7E9' ? ecuDefinition({ confidence: 0.3, source: 'web' }) : undefined
 
     const resolved = resolveEcuDefinitions(ecus, lookup)
 
-    expect(resolved[0].type).toBe('UNKNOWN')
-    expect(resolved[0].name).toBe('ECU 7E9')
+    expect(resolved[0].name).toBe('Transmission Control Module')
+    expect(resolved[0].type).toBe('TCM')
+    expect(resolved[0].source).toBe('ai')
   })
 
   it('should leave already-resolved ECUs (e.g. ECM) untouched', () => {
