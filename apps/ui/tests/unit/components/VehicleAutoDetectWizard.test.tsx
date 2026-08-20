@@ -191,6 +191,58 @@ describe('VehicleAutoDetectWizard', () => {
       expect(screen.queryByText('Identificar a mano')).toBeNull()
     })
 
+    /** Coche real recien enchufado: el WMI da la marca, pero el modelo nunca se sabe. */
+    const brandOnly: VehicleInfoResponse = {
+      vin: 'WF0AXXGCDA1234567',
+      make: 'Ford',
+      model: 'unknown',
+      year: 2019,
+      engineType: 'unknown',
+      manufacturer: 'Ford',
+      region: { country: 'Germany', region: 'Europe' },
+      modelYearDecoded: 2019,
+    }
+
+    it('ofrece completar cuando se sabe la marca pero no el modelo', () => {
+      renderWizard({ step: 'confirming', scenarioId: 'tcp', vehicle: brandOnly })
+
+      expect(screen.getByText('Completar datos')).toBeDefined()
+    })
+
+    it('parte de lo que ya se sabe, para no hacer teclear la marca otra vez', () => {
+      renderWizard({ step: 'confirming', scenarioId: 'tcp', vehicle: brandOnly })
+
+      fireEvent.click(screen.getByText('Completar datos'))
+
+      expect((screen.getByLabelText('Marca') as HTMLInputElement).value).toBe('Ford')
+      expect((screen.getByLabelText('Modelo') as HTMLInputElement).value).toBe('')
+      expect((screen.getByLabelText('Año') as HTMLInputElement).value).toBe('2019')
+    })
+
+    it('envía año y motorización cuando el mecánico los rellena', async () => {
+      const onSaveIdentity = vi.fn().mockResolvedValue({
+        vehicle: { make: 'Ford', model: 'Focus', year: 2019, engineType: '1.5 TDCi' },
+        promoted: true,
+        warnings: [],
+      })
+      renderWizard({ step: 'confirming', scenarioId: 'tcp', vehicle: brandOnly, onSaveIdentity })
+
+      fireEvent.click(screen.getByText('Completar datos'))
+      fireEvent.change(screen.getByLabelText('Modelo'), { target: { value: 'Focus' } })
+      fireEvent.change(screen.getByLabelText('Motor'), { target: { value: '1.5 TDCi' } })
+      fireEvent.click(screen.getByText('Guardar identificación'))
+
+      await waitFor(() =>
+        expect(onSaveIdentity).toHaveBeenCalledWith({
+          vin: 'WF0AXXGCDA1234567',
+          make: 'Ford',
+          model: 'Focus',
+          year: 2019,
+          engineType: '1.5 TDCi',
+        }),
+      )
+    })
+
     it('envía marca y modelo, y el VIN leído del coche', async () => {
       const onSaveIdentity = vi.fn().mockResolvedValue({
         vehicle: { make: 'Peugeot', model: '208', year: 2021, engineType: 'unknown' },
@@ -216,6 +268,9 @@ describe('VehicleAutoDetectWizard', () => {
           vin: 'VR3ABCDEFM1234567',
           make: 'Peugeot',
           model: '208',
+          // El ano no lo teclea nadie: sale de la posicion 10 del VIN y viaja con lo demas,
+          // para que el vehiculo entre completo al diagnostico.
+          year: 2021,
         }),
       )
     })

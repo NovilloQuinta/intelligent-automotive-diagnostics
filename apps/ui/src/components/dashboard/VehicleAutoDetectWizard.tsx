@@ -185,14 +185,20 @@ function TextField({
  */
 function ManualIdentityForm({
   vin,
+  known,
   onSaveIdentity,
 }: {
   readonly vin: string
+  /** Lo que la cascada ya sacó. Se usa de valor inicial para no hacerlo teclear otra vez. */
+  readonly known: { make: string; model: string; year: number; engineType: string }
   readonly onSaveIdentity: (input: VehicleIdentityInput) => Promise<VehicleIdentityConfirmation>
 }) {
+  const initial = (value: string) => (value === UNIDENTIFIED ? '' : value)
   const [open, setOpen] = useState(false)
-  const [make, setMake] = useState('')
-  const [model, setModel] = useState('')
+  const [make, setMake] = useState(initial(known.make))
+  const [model, setModel] = useState(initial(known.model))
+  const [year, setYear] = useState(known.year > 0 ? String(known.year) : '')
+  const [engineType, setEngineType] = useState(initial(known.engineType))
   const [saving, setSaving] = useState(false)
   const [result, setResult] = useState<VehicleIdentityConfirmation | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -203,7 +209,7 @@ function ManualIdentityForm({
         onClick={() => setOpen(true)}
         className="rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-xs font-semibold text-accent transition hover:bg-accent/20"
       >
-        Identificar a mano
+        {known.make === UNIDENTIFIED ? 'Identificar a mano' : 'Completar datos'}
       </button>
     )
   }
@@ -216,11 +222,15 @@ function ManualIdentityForm({
     setError(null)
     try {
       const trimmedModel = model.trim()
+      const trimmedEngine = engineType.trim()
+      const parsedYear = Number.parseInt(year, 10)
       setResult(
         await onSaveIdentity({
           vin,
           make: make.trim(),
           ...(trimmedModel ? { model: trimmedModel } : {}),
+          ...(Number.isFinite(parsedYear) && parsedYear > 0 ? { year: parsedYear } : {}),
+          ...(trimmedEngine ? { engineType: trimmedEngine } : {}),
         }),
       )
     } catch (e: unknown) {
@@ -233,12 +243,21 @@ function ManualIdentityForm({
   return (
     <div className="space-y-3 rounded-lg border border-accent/30 bg-accent/5 p-4">
       <p className="text-xs text-muted-foreground">
-        No hemos podido identificar el vehículo. Indícalo tú y quedará aprendido para la próxima.
+        {known.make === UNIDENTIFIED
+          ? 'No hemos podido identificar el vehículo. Indícalo tú y quedará aprendido para la próxima.'
+          : 'El bastidor da la marca, pero no el modelo. Complétalo y el vehículo entra entero al diagnóstico.'}
       </p>
 
       <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
         <TextField label="Marca" value={make} onChange={setMake} placeholder="Peugeot" />
         <TextField label="Modelo" value={model} onChange={setModel} placeholder="208" />
+        <TextField label="Año" value={year} onChange={setYear} placeholder="2021" />
+        <TextField
+          label="Motor"
+          value={engineType}
+          onChange={setEngineType}
+          placeholder="1.5 BlueHDi"
+        />
       </div>
 
       {error && <p className="text-xs text-destructive">{error}</p>}
@@ -285,7 +304,9 @@ function ConfirmingStep({
   onSaveIdentity: (input: VehicleIdentityInput) => Promise<VehicleIdentityConfirmation>
 }) {
   const decoded = vehicle.manufacturer ?? vehicle.region ?? vehicle.modelYearDecoded
-  const needsIdentity = vehicle.make === UNIDENTIFIED
+  // Tambien se ofrece cuando la marca si se saco pero el modelo no, que es lo que pasa
+  // con un coche real: el WMI identifica al fabricante y nada mas.
+  const needsIdentity = vehicle.make === UNIDENTIFIED || vehicle.model === UNIDENTIFIED
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-accent/30 bg-accent/5 px-4 py-3">
@@ -322,7 +343,18 @@ function ConfirmingStep({
         </div>
       )}
 
-      {needsIdentity && <ManualIdentityForm vin={vehicle.vin} onSaveIdentity={onSaveIdentity} />}
+      {needsIdentity && (
+        <ManualIdentityForm
+          vin={vehicle.vin}
+          known={{
+            make: vehicle.make,
+            model: vehicle.model,
+            year: vehicle.year,
+            engineType: vehicle.engineType,
+          }}
+          onSaveIdentity={onSaveIdentity}
+        />
+      )}
 
       <div className="flex items-center justify-end gap-3">
         <button
