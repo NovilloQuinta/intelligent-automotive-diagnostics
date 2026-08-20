@@ -51,7 +51,9 @@
 
 ## 4. Cierre
 
-- [ ] 4.1 Retirar de `docs/deuda-conocida.md` la entrada "El bucle de aprendizaje de
-      ECUs no se ejercita".
-- [ ] 4.2 Actualizar `docs/estado-actual.md`.
+- [x] 4.1 Reescrita (no retirada) la entrada de `docs/deuda-conocida.md`: el bucle sigue
+      sin calibrar contra un LLM real, pero el candado que lo hacia invisible ya no esta.
+      Documentados ademas dos hallazgos nuevos: las tablas write-only y la asimetria entre
+      el catalogo de PID y el de ECU.
+- [x] 4.2 Actualizado `docs/estado-actual.md`.
 - [ ] 4.3 Archivar el change y sincronizar la spec.

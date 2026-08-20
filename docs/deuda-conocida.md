@@ -4,7 +4,8 @@
 > de editar aqui**: este fichero se ha desincronizado dos veces por actualizarlo
 > de memoria.
 >
-> Estado general: 2003 tests en verde (1410 core-api + 593 ui), 0 errores de lint, 79 avisos (72 + 7).
+> Estado general: 2131 tests en verde (1527 core-api + 604 ui), 0 errores de lint, 76 avisos (69 + 7).
+> Remedido el 2026-08-19 tras sacar la orquestacion del diagnostico a casos de uso.
 > Nada de lo que sigue es bloqueante.
 
 ## Bateria del agente: construida, sin ejecutar
@@ -61,40 +62,87 @@ cuando falta la configuracion del LLM, pero `openapi/routes/mcp.ts:78` documenta
 para ese caso. Ademas un `404` es el codigo equivocado: el recurso existe, lo que falta es
 configuracion del despliegue.
 
-## Las ECU aprendidas no llegan al mapa de topologia
+## Las ECU aprendidas no llegan al mapa de topologia — RESUELTO
 
-`resolveDiscoveredEcus` (`mcp/diagnosticTools.ts`) cruza las ECU `UNKNOWN` contra
-`ecu_definitions` y resuelve el nombre aprendido, pero **solo en la tool del agente**. El
-camino REST (`GET /api/ecu-info`, que es el que pinta la pantalla de Topologia) devuelve
-`ECU 7E9 / UNKNOWN` aunque el agente ya haya averiguado que es la caja de cambios.
+Eran dos candados encadenados, y hasta el 19/08 solo se habia visto el primero.
 
-No es una incoherencia aislada: **los PIDs se comportan igual**, la resolucion contra lo
-aprendido vive en la capa MCP. Cambiarlo es una decision de diseno, no un parche.
+**El primero**: la resolucion contra `ecu_definitions` vivia solo en la tool del agente, asi
+que `GET /api/ecu-info` —el que pinta el mapa— devolvia `ECU 7E9 / UNKNOWN` aunque el
+catalogo ya supiera que era la caja de cambios. Cerrado extrayendo `loadEcuDefinitionLookup`
+a la capa de aplicacion, que ahora consumen los dos caminos.
+
+**El segundo, que el primero tapaba**: una definicion aprendida nace con confianza `0.3`
+(procedencia `web`, la unica que el prompt permite al agente) y mostrarla exigia `0.7`. No
+existia ningun camino que la subiera —las ECU no admiten validacion OBD—, asi que la
+condicion no se cumplia **nunca**. Y habia un test fijando ese fallo como correcto, usando
+justo `confidence: 0.3, source: 'web'`.
+
+Resuelto separando las dos cosas que ese numero decidia a la vez: la confianza **ordena**
+la busqueda pero ya no filtra, y la advertencia es la marca `IA` en pantalla. Que la
+direccion conteste en el bus confirma que hay una centralita ahi, no que sea la caja de
+cambios: inflar el numero habria sido mentir sobre lo que sabemos.
+
+De paso, la busqueda dejo de ser estricta por modelo (mismo patron que
+`pidStore.findPidDefinition`): dentro de una marca los modelos de la misma plataforma
+comparten direcciones, asi que lo aprendido en un A3 ya sirve en un A5. El modelo exacto
+gana; si no lo hay, entra el hermano mas fiable. **La marca nunca se cruza.**
+
+Comprobado end-to-end: Audi A3 y A5 muestran `Caja de cambios / TCM / source=ai`, un Toyota
+con la misma direccion sigue en `UNKNOWN`, y `7E8` sale siempre como `catalog` porque lo
+dicta ISO 15765-4.
+
+**Limitacion abierta**: marca es mas ancho que plataforma. Un A3 (MQB) y un A8 (MLB) pueden
+no compartir direcciones y este cambio los trata igual. Afinar exige un dato —VIN a
+plataforma— que el proyecto no tiene.
+
+## Dos tablas que solo se escriben
+
+`ecus` (por vehiculo) y `pid_readings` (por sesion) **no se leen desde ningun sitio del
+codigo de produccion**: `findEcusByVehicle` solo aparece en mocks de tests, y `pid_readings`
+solo tiene un `insert`. La tabla `ecus` unicamente se consulta via `findEcuByAddress`, y
+solo para decidir si insertar o refrescar `discovered_at`.
+
+No es un despiste de las ECU: es el mismo patron en los dos. El historico de verdad es el
+snapshot inmutable de `diagnosis_sessions.result_json`, que si se lee y es lo que alimenta
+la pantalla de Historial. Las dos tablas son redundantes con el.
+
+Decidir: o se les da uso (pintar la topologia desde BD sin coche conectado) o se retiran.
+
+## Asimetria entre el catalogo de PID y el de ECU
+
+En `pid_definitions` el fabricante y el modelo son *nullable*, y eso significa "vale para
+cualquier coche": asi entran los 16 PID estandar de la SAE J1979. En `ecu_definitions` son
+obligatorios, y por eso `7E8` (el motor, que ISO 15765-4 estandariza para todos los
+vehiculos) vive en codigo, en `domain/catalogs/ecuAddressCatalog.ts`, en vez de en la BD.
+
+Dos mecanismos para el mismo concepto. Funciona, pero cuesta explicarlo.
 
 ## Funciones que superan las 40 lineas (13)
 
 Las marca ESLint (`max-lines-per-function`, warn, solo `src/`). Ver "Excepciones
 al limite de 40 lineas" en `AGENTS.md` antes de marcar ninguna como legitima.
 
-| Funcion                                         | Lineas  |
-| ----------------------------------------------- | ------- |
-| `createReliableTransport`                       | **182** |
-| `tokenize` / `evaluatePostfix` (math-parsers)   | 57      |
-| `createAuthService`                             | 54      |
-| `buildApp`                                      | 50      |
-| `createAuthStack` / `upsertEcuDefinition`       | 49      |
-| `createDiagnosisService`                        | 47      |
-| `createKnowledgeStack` / `findSessions`         | 45      |
-| Constructor (DiagnosisService)                  | 42      |
-| `cognitiveDiagnosis` / `createLanceVectorStore` | 41      |
+| Funcion                                       | Lineas  |
+| --------------------------------------------- | ------- |
+| `createReliableTransport`                     | **236** |
+| `tokenize` / `evaluatePostfix` (math-parsers) | 57      |
+| `createAuthService`                           | 54      |
+| `upsertEcuDefinition`                         | 49      |
+| `findSessions`                                | 45      |
+| Constructor (DiagnosisService)                | 42      |
+| `createLanceVectorStore`                      | 41      |
 
-`createReliableTransport` es el peor del repo con diferencia.
+`createReliableTransport` es el peor del repo con diferencia, y **ha crecido**: 182 → 236
+lineas. Es la misma funcion que no se recupera tras agotar la reconexion (ver arriba); las
+dos cosas apuntan al mismo sitio.
 
 ## Complejidad ciclomatica >5
 
-52 avisos en `src`. Los mayores: `wrapSdkError` (8), y un grupo en 6-7
-(`validateVin`, `upsertEcuDefinition`, `upsertDtcDefinition`, `updateProfile`).
-En `DiagnosisService` quedan `getVehicleInfo` (12) y `getLiveData` (11).
+61 avisos en `src`. Los mayores siguen siendo `wrapSdkError` (8) y un grupo de
+constructores en 6-7.
+
+**En `DiagnosisService` ya no queda ninguno**: `getVehicleInfo` (12) y `getLiveData` (11)
+—los dos peores del backend— desaparecieron al mover esos metodos a casos de uso.
 
 ## Documentacion de la API: generada, no escrita
 
@@ -125,7 +173,7 @@ la entrada pero no la salida.
 | Modulo                                                   | Estado                                                                                                                                                                                          |
 | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `infrastructure/mcp/mcpServer.ts`                        | ~~848 L~~ → 98 L — **RESUELTO** (Fases A y B)                                                                                                                                                   |
-| `infrastructure/services/diagnosisService.ts`            | ~~969 L~~ → ~~786 L~~ → **586 L** — **REDUCIDO, no resuelto**: el flujo cognitivo salio a `services/cognitive/cognitiveDiagnosisRunner.ts`, pero sigue siendo el fichero mas grande del backend |
+| `infrastructure/services/diagnosisService.ts`            | ~~969 L~~ → ~~786 L~~ → ~~586 L~~ → **484 L** — la orquestacion salio a cuatro casos de uso (`GetEcuInfo`, `GetLiveData`, `GetVehicleInfo`, `IdentifyVehicle`); lo que queda resuelve el adaptador y delega |
 | `infrastructure/persistence/sqlite/vehicleRepository.ts` | ~~632 L~~ → **181 L** — **RESUELTO**: un store por agregado en `sqlite/vehicle/`                                                                                                                |
 | `infrastructure/composition/composition.ts`              | ~~579 L~~ → **100 L** — **RESUELTO**: repartido por areas en `composition/`                                                                                                                     |
 | `infrastructure/http/controllers/DiagnosisController.ts` | ~~578 L~~ → **479 L** — **REDUCIDO, no resuelto**: los schemas Zod viven ya en `application/dto/diagnosis/`, pero partir el controlador obligaria a tocar `diagnosis.routes.test.ts` (1241 L)   |
