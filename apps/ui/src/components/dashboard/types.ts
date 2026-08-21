@@ -69,6 +69,14 @@ export type AvailablePid = {
   readonly code: string
   readonly name: string
   readonly unit: string
+  /**
+   * Healthy operating window decided by the domain, absent when the catalog does
+   * not judge this PID. The dashboard applies it; it never defines it.
+   */
+  readonly operatingWindow?: {
+    readonly min?: number
+    readonly max?: number
+  }
 }
 
 /** OBD-II freeze frame snapshot as returned by GET /api/freeze-frame. */
@@ -234,13 +242,19 @@ export const COLORS = {
   accentMuted: '#7fe9d0',
 } as const
 
+/**
+ * Drawing scales of the dashboard gauges — how far the dial goes, not when to worry.
+ *
+ * The health thresholds that used to live here (`RPM_DANGER`, `COOLANT_ALARM`,
+ * `INTAKE_WARN`) were a copy of the domain's operating windows. They now travel with
+ * the PID catalog (`AvailablePid.operatingWindow`) so the OK/Revisar verdict is decided
+ * in one place. What stays is presentation: the full-scale value of each gauge and the
+ * SVG geometry.
+ */
 export const GAUGE = {
   RPM_MAX: 8_000,
-  RPM_DANGER: 6_500,
   COOLANT_MAX: 130,
-  COOLANT_ALARM: 100,
   INTAKE_MAX: 120,
-  INTAKE_WARN: 80,
   ANIM_DURATION_MS: 400,
   SVG_RADIUS: 78,
   SVG_CENTER_X: 100,

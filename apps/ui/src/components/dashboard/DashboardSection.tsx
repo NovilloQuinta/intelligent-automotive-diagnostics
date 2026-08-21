@@ -115,6 +115,7 @@ export function DashboardSection({
             onDiagnose={onDiagnose}
             pids={pids}
             readings={readings}
+            availablePids={pidSelection.availablePids}
           />
           <PidsTable
             parsedValues={result?.parsedValues ?? null}

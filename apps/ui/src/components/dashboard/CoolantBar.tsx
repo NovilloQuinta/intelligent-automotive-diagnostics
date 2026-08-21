@@ -3,17 +3,31 @@ import { useAnimatedNumber } from './useAnimatedNumber'
 import { COOLANT_TICK_POSITIONS, GAUGE, GRADIENTS } from './types'
 import { clampPct } from '@/lib/utils'
 
-/** Vertical thermometer bar showing coolant temperature with alarm threshold. */
-export function CoolantBar({ value, loading }: { value: number | null; loading: boolean }) {
+/**
+ * Vertical thermometer bar showing coolant temperature with alarm threshold.
+ *
+ * @param alarmAt - Upper bound of the healthy window, from the PID catalog served
+ *   by the API. Without it the bar renders the reading but raises no alarm: the
+ *   threshold is the domain's to define, not this component's to assume.
+ */
+export function CoolantBar({
+  value,
+  loading,
+  alarmAt,
+}: {
+  value: number | null
+  loading: boolean
+  alarmAt?: number
+}) {
   const display = useAnimatedNumber(value)
   const v = value ?? 0
-  const alarm = v > GAUGE.COOLANT_ALARM
+  const alarm = alarmAt !== undefined && v > alarmAt
   const pct = clampPct(display / GAUGE.COOLANT_MAX)
 
   return (
     <div
       className="panel relative flex flex-col p-4"
-      title="Temperatura del refrigerante. Rango normal: 85–95°C. Alarma > 100°C."
+      title={`Temperatura del refrigerante. Rango normal: 85–95°C.${alarmAt !== undefined ? ` Alarma > ${alarmAt}°C.` : ''}`}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">

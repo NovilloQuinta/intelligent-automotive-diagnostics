@@ -6,6 +6,19 @@ import type { PidRow } from '../../../src/components/dashboard/pidCatalog'
 
 const NORMAL_VALUES = { rpm: 850, coolantTemp: 90, speed: 50, intakeTemp: 35 }
 
+/**
+ * Catalogo servido por `GET /api/available-pids` para las 4 lecturas fijas.
+ *
+ * La velocidad va deliberadamente sin ventana: el catalogo de dominio tampoco la
+ * juzga, asi que su fila se pinta sin veredicto.
+ */
+const FIXED_CATALOG = [
+  { code: '01 0C', name: 'Engine RPM', unit: 'rpm', operatingWindow: { max: 6500 } },
+  { code: '01 05', name: 'Engine Coolant Temperature', unit: '°C', operatingWindow: { max: 100 } },
+  { code: '01 0D', name: 'Vehicle Speed', unit: 'km/h' },
+  { code: '01 0F', name: 'Intake Air Temperature', unit: '°C', operatingWindow: { max: 80 } },
+]
+
 function aiRow(code: string, description: string, value: string): PidRow {
   return { code, description, value, status: 'ok', source: 'ai' }
 }
@@ -45,49 +58,97 @@ describe('PidsTable', () => {
     expect(screen.getByText('35°C')).toBeDefined()
   })
 
-  it('should mark every PID as OK when all values are within normal range', () => {
-    render(<PidsTable parsedValues={NORMAL_VALUES} empty={false} />)
+  it('should mark every judged PID as OK when all values are within normal range', () => {
+    render(<PidsTable parsedValues={NORMAL_VALUES} empty={false} availablePids={FIXED_CATALOG} />)
 
-    expect(screen.getAllByText('OK')).toHaveLength(4)
-    expect(screen.queryByText('Revisar')).toBeNull()
-  })
-
-  it('should mark RPM as Revisar above the danger threshold, OK at the boundary', () => {
-    const { rerender } = render(
-      <PidsTable parsedValues={{ ...NORMAL_VALUES, rpm: 6500 }} empty={false} />,
-    )
-    expect(screen.getAllByText('OK')).toHaveLength(4)
-
-    rerender(<PidsTable parsedValues={{ ...NORMAL_VALUES, rpm: 6501 }} empty={false} />)
-    expect(screen.getAllByText('Revisar')).toHaveLength(1)
+    // 3 y no 4: la velocidad no tiene ventana operativa, asi que no se juzga.
     expect(screen.getAllByText('OK')).toHaveLength(3)
-  })
-
-  it('should mark coolant temp as Revisar above the alarm threshold, OK at the boundary', () => {
-    const { rerender } = render(
-      <PidsTable parsedValues={{ ...NORMAL_VALUES, coolantTemp: 100 }} empty={false} />,
-    )
-    expect(screen.getAllByText('OK')).toHaveLength(4)
-
-    rerender(<PidsTable parsedValues={{ ...NORMAL_VALUES, coolantTemp: 101 }} empty={false} />)
-    expect(screen.getAllByText('Revisar')).toHaveLength(1)
-  })
-
-  it('should mark intake temp as Revisar above the warn threshold, OK at the boundary', () => {
-    const { rerender } = render(
-      <PidsTable parsedValues={{ ...NORMAL_VALUES, intakeTemp: 80 }} empty={false} />,
-    )
-    expect(screen.getAllByText('OK')).toHaveLength(4)
-
-    rerender(<PidsTable parsedValues={{ ...NORMAL_VALUES, intakeTemp: 81 }} empty={false} />)
-    expect(screen.getAllByText('Revisar')).toHaveLength(1)
-  })
-
-  it('should always mark speed as OK regardless of magnitude', () => {
-    render(<PidsTable parsedValues={{ ...NORMAL_VALUES, speed: 999 }} empty={false} />)
-
-    expect(screen.getAllByText('OK')).toHaveLength(4)
     expect(screen.queryByText('Revisar')).toBeNull()
+  })
+
+  it('should judge no PID at all until the catalog with the windows arrives', () => {
+    render(<PidsTable parsedValues={{ ...NORMAL_VALUES, rpm: 7000 }} empty={false} />)
+
+    expect(screen.queryByText('OK')).toBeNull()
+    expect(screen.queryByText('Revisar')).toBeNull()
+    expect(screen.getByText('7000 RPM')).toBeDefined()
+  })
+
+  it('should mark RPM as Revisar above the catalog window, OK at the boundary', () => {
+    const { rerender } = render(
+      <PidsTable
+        parsedValues={{ ...NORMAL_VALUES, rpm: 6500 }}
+        empty={false}
+        availablePids={FIXED_CATALOG}
+      />,
+    )
+    expect(screen.getAllByText('OK')).toHaveLength(3)
+
+    rerender(
+      <PidsTable
+        parsedValues={{ ...NORMAL_VALUES, rpm: 6501 }}
+        empty={false}
+        availablePids={FIXED_CATALOG}
+      />,
+    )
+    expect(screen.getAllByText('Revisar')).toHaveLength(1)
+    expect(screen.getAllByText('OK')).toHaveLength(2)
+  })
+
+  it('should mark coolant temp as Revisar above the catalog window, OK at the boundary', () => {
+    const { rerender } = render(
+      <PidsTable
+        parsedValues={{ ...NORMAL_VALUES, coolantTemp: 100 }}
+        empty={false}
+        availablePids={FIXED_CATALOG}
+      />,
+    )
+    expect(screen.getAllByText('OK')).toHaveLength(3)
+
+    rerender(
+      <PidsTable
+        parsedValues={{ ...NORMAL_VALUES, coolantTemp: 101 }}
+        empty={false}
+        availablePids={FIXED_CATALOG}
+      />,
+    )
+    expect(screen.getAllByText('Revisar')).toHaveLength(1)
+  })
+
+  it('should mark intake temp as Revisar above the catalog window, OK at the boundary', () => {
+    const { rerender } = render(
+      <PidsTable
+        parsedValues={{ ...NORMAL_VALUES, intakeTemp: 80 }}
+        empty={false}
+        availablePids={FIXED_CATALOG}
+      />,
+    )
+    expect(screen.getAllByText('OK')).toHaveLength(3)
+
+    rerender(
+      <PidsTable
+        parsedValues={{ ...NORMAL_VALUES, intakeTemp: 81 }}
+        empty={false}
+        availablePids={FIXED_CATALOG}
+      />,
+    )
+    expect(screen.getAllByText('Revisar')).toHaveLength(1)
+  })
+
+  it('should leave speed unjudged, because the catalog defines no window for it', () => {
+    // Antes se marcaba OK a cualquier velocidad — un veredicto inventado en la UI.
+    // Sin ventana no hay criterio, y la fila se pinta sin insignia.
+    render(
+      <PidsTable
+        parsedValues={{ ...NORMAL_VALUES, speed: 999 }}
+        empty={false}
+        availablePids={FIXED_CATALOG}
+      />,
+    )
+
+    expect(screen.getAllByText('OK')).toHaveLength(3)
+    expect(screen.queryByText('Revisar')).toBeNull()
+    expect(screen.getByText('999 km/h')).toBeDefined()
   })
 
   it('should list the AI rows after the 4 fixed ones with an AI origin badge', () => {

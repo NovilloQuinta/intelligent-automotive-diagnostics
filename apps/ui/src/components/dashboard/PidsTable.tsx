@@ -13,6 +13,7 @@ import type { DiagnosisResponse, AvailablePid, PidReading } from './types'
 import {
   buildPidRows,
   buildSelectablePidRows,
+  pidWindows,
   mergePidRows,
   pidStatusMeta,
   togglePid,
@@ -246,7 +247,7 @@ export function PidsTable({
   const baseRows = hasCatalog
     ? buildSelectablePidRows(availablePids, parsedValues, readings)
     : parsedValues
-      ? buildPidRows(parsedValues)
+      ? buildPidRows(parsedValues, pidWindows([]))
       : null
   const rows = baseRows ? mergePidRows(baseRows, aiRows) : null
 

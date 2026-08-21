@@ -1,7 +1,7 @@
 import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import type { PidObservation } from '@/lib/api'
 import type { AvailablePid, DiagnosisResponse, PidReading } from './types'
-import { COLORS, GAUGE } from './types'
+import { COLORS } from './types'
 
 export type PidStatus = 'ok' | 'review'
 
@@ -114,37 +114,85 @@ export function pidStatusMeta(status: PidStatus | null): PidStatusMeta | null {
   }
 }
 
+/**
+ * Healthy operating window of a PID, as served by `GET /api/available-pids`.
+ *
+ * The numbers are the domain's (`PID_OBSERVATION_CATALOG`), never the UI's: the
+ * dashboard applies the threshold, it does not decide it. Note this is not the
+ * physical range SAE J1979 allows for the sensor — coolant transmits up to 215 °C
+ * while its health limit is 100 °C.
+ */
+export type PidOperatingWindow = {
+  readonly min?: number
+  readonly max?: number
+}
+
+/**
+ * Applies a PID's operating window to a reading.
+ *
+ * @returns `'review'` outside the window, `'ok'` inside it, and `null` when there
+ *   is no window to apply — an unjudged PID is not a healthy one, so it renders
+ *   with no badge rather than a green one.
+ */
+export function resolvePidStatus(
+  value: number,
+  window: PidOperatingWindow | undefined,
+): PidStatus | null {
+  if (!window || (window.min === undefined && window.max === undefined)) return null
+  if (window.min !== undefined && value < window.min) return 'review'
+  if (window.max !== undefined && value > window.max) return 'review'
+  return 'ok'
+}
+
+/** Indexes the operating windows of an `available-pids` catalog by full PID code. */
+export function pidWindows(
+  availablePids: readonly AvailablePid[],
+): ReadonlyMap<string, PidOperatingWindow> {
+  const byCode = new Map<string, PidOperatingWindow>()
+  for (const pid of availablePids) {
+    if (pid.operatingWindow) byCode.set(pid.code.toUpperCase(), pid.operatingWindow)
+  }
+  return byCode
+}
+
 /** Builds the fixed PID rows read during a diagnosis session from its parsed OBD-II values. */
-export function buildPidRows(parsedValues: DiagnosisResponse['parsedValues']): PidRow[] {
+export function buildPidRows(
+  parsedValues: DiagnosisResponse['parsedValues'],
+  windows: ReadonlyMap<string, PidOperatingWindow>,
+): PidRow[] {
   const { rpm, coolantTemp, speed, intakeTemp } = parsedValues
   const rows = [
     {
       code: mode01Code(PID_RPM),
       description: 'Régimen del motor',
       value: `${rpm} RPM`,
-      status: rpm > GAUGE.RPM_DANGER ? 'review' : 'ok',
+      reading: rpm,
     },
     {
       code: mode01Code(PID_COOLANT),
       description: 'Temperatura del refrigerante',
       value: `${coolantTemp}°C`,
-      status: coolantTemp > GAUGE.COOLANT_ALARM ? 'review' : 'ok',
+      reading: coolantTemp,
     },
     {
       code: mode01Code(PID_SPEED),
       description: 'Velocidad del vehículo',
       value: `${speed} km/h`,
-      status: 'ok',
+      reading: speed,
     },
     {
       code: mode01Code(PID_INTAKE),
       description: 'Temperatura del aire de admisión',
       value: `${intakeTemp}°C`,
-      status: intakeTemp > GAUGE.INTAKE_WARN ? 'review' : 'ok',
+      reading: intakeTemp,
     },
-  ] satisfies Omit<PidRow, 'source'>[]
+  ]
 
-  return rows.map((row) => ({ ...row, source: 'fixed' }))
+  return rows.map(({ reading, ...row }) => ({
+    ...row,
+    status: resolvePidStatus(reading, windows.get(row.code)),
+    source: 'fixed' as const,
+  }))
 }
 
 /** Maps a backend PID observation to a table row tagged as AI-discovered. */
@@ -181,11 +229,12 @@ export function mergePidRows(baseRows: PidRow[], aiRows: PidRow[] | null): PidRo
  * for the rest. Catalog PIDs without a live reading render `—` with no verdict.
  */
 export function buildSelectablePidRows(
-  availablePids: readonly { code: string; name: string; unit: string }[],
+  availablePids: readonly AvailablePid[],
   parsedValues: DiagnosisResponse['parsedValues'] | null,
   readings: readonly PidReading[] | null | undefined,
 ): PidRow[] {
-  const fixedRows = parsedValues ? buildPidRows(parsedValues) : []
+  const windows = pidWindows(availablePids)
+  const fixedRows = parsedValues ? buildPidRows(parsedValues, windows) : []
   const fixedByCode = new Map(fixedRows.map((row) => [row.code, row]))
   const readingByCode = new Map((readings ?? []).map((r) => [r.code.toUpperCase(), r]))
 
@@ -200,7 +249,7 @@ export function buildSelectablePidRows(
       code,
       description: pid.name,
       value: value == null ? '—' : reading?.unit ? `${value} ${reading.unit}` : `${value}`,
-      status: null,
+      status: value == null ? null : resolvePidStatus(value, windows.get(code)),
       source: 'catalog',
     }
   })

@@ -3,12 +3,25 @@ import { useAnimatedNumber } from './useAnimatedNumber'
 import { GAUGE, GRADIENTS } from './types'
 import { clampPct } from '@/lib/utils'
 
-/** Horizontal bar showing intake air temperature with warning threshold. */
-export function IntakeThermo({ value, loading }: { value: number | null; loading: boolean }) {
+/**
+ * Horizontal bar showing intake air temperature with warning threshold.
+ *
+ * @param warnAt - Upper bound of the healthy window, from the PID catalog served
+ *   by the API. Absent means no criterion, so no warning is raised.
+ */
+export function IntakeThermo({
+  value,
+  loading,
+  warnAt,
+}: {
+  value: number | null
+  loading: boolean
+  warnAt?: number
+}) {
   const display = useAnimatedNumber(value)
   const v = value ?? 0
   const pct = clampPct(display / GAUGE.INTAKE_MAX)
-  const warn = v > GAUGE.INTAKE_WARN
+  const warn = warnAt !== undefined && v > warnAt
 
   return (
     <div

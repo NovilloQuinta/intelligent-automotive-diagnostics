@@ -99,6 +99,22 @@ export type { TelemetryOutput } from '@/application/dto/diagnosis/TelemetryOutpu
 /** Lectura generica de un PID, re-exportada desde la capa de aplicacion. */
 export type { PidReading } from '@/application/dto/diagnosis/PidReading.js'
 
+/**
+ * Ventana operativa saludable de un PID: fuera de ella, la lectura merece revisarse.
+ *
+ * **No es el rango fisico del sensor.** `PidDefinition` ya declara `minValue`/`maxValue`
+ * con ese otro significado —lo que SAE J1979 permite transmitir, p. ej. -40..215 °C para
+ * el refrigerante—, que sirve para validar una lectura, no para juzgarla. Esto es
+ * criterio de diagnostico: 100 °C es un refrigerante caliente aunque 215 sea
+ * representable. Los dos conviven y confundirlos daria un dashboard que nunca alerta.
+ *
+ * Cada extremo ausente deja ese lado abierto; sin ningun extremo, el PID no se juzga.
+ */
+export interface PidOperatingWindow {
+  readonly min?: number
+  readonly max?: number
+}
+
 /** PID Mode 01 disponible en el selector de telemetría en vivo. */
 export interface AvailablePid {
   /** Clave compuesta modo + PID separados por espacio (ej. "01 0C"). */
@@ -107,6 +123,13 @@ export interface AvailablePid {
   readonly name: string
   /** Unidad física del valor (ej. "rpm", "°C"). */
   readonly unit: string
+  /**
+   * Ventana de salud del PID, ausente cuando el catálogo de observacion no lo juzga.
+   *
+   * Viaja con el catálogo para que el veredicto OK/Revisar lo decida el dominio una
+   * sola vez: la UI aplica el umbral, no lo define.
+   */
+  readonly operatingWindow?: PidOperatingWindow
 }
 
 /** Rol de un turno dentro de la conversación persistida del diagnóstico. */

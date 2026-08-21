@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   buildPidRows,
   buildSelectablePidRows,
+  resolvePidStatus,
+  pidWindows,
   mergePidRows,
   pidObservationToRow,
   togglePid,
@@ -68,16 +70,24 @@ describe('FIXED_PID_CODES', () => {
   })
 })
 
+/** Catalogo servido por `GET /api/available-pids` para las 4 lecturas fijas. */
+const FIXED_CATALOG = [
+  { code: '01 0C', name: 'Engine RPM', unit: 'rpm', operatingWindow: { max: 6500 } },
+  { code: '01 05', name: 'Engine Coolant Temperature', unit: '°C', operatingWindow: { max: 100 } },
+  { code: '01 0D', name: 'Vehicle Speed', unit: 'km/h' },
+  { code: '01 0F', name: 'Intake Air Temperature', unit: '°C', operatingWindow: { max: 80 } },
+]
+
 describe('buildPidRows', () => {
   it('marks every fixed row with source fixed', () => {
-    const rows = buildPidRows(PARSED_VALUES)
+    const rows = buildPidRows(PARSED_VALUES, pidWindows(FIXED_CATALOG))
 
     expect(rows).toHaveLength(4)
     expect(rows.every((r) => r.source === 'fixed')).toBe(true)
   })
 
   it('derives each row code from the shared short code constants', () => {
-    const rows = buildPidRows(PARSED_VALUES)
+    const rows = buildPidRows(PARSED_VALUES, pidWindows(FIXED_CATALOG))
 
     expect(rows.map((r) => r.code)).toEqual([
       mode01Code(PID_RPM),
@@ -175,7 +185,7 @@ describe('pidObservationToRow', () => {
 
 describe('mergePidRows', () => {
   it('appends AI rows whose code is not a fixed one', () => {
-    const fixed = buildPidRows(PARSED_VALUES)
+    const fixed = buildPidRows(PARSED_VALUES, pidWindows(FIXED_CATALOG))
 
     const merged = mergePidRows(fixed, [aiRow('01 11'), aiRow('01 42')])
 
@@ -185,7 +195,7 @@ describe('mergePidRows', () => {
   })
 
   it('discards AI rows whose code is already a fixed one', () => {
-    const fixed = buildPidRows(PARSED_VALUES)
+    const fixed = buildPidRows(PARSED_VALUES, pidWindows(FIXED_CATALOG))
 
     const merged = mergePidRows(fixed, [
       aiRow('01 0C'),
@@ -199,7 +209,7 @@ describe('mergePidRows', () => {
   })
 
   it('deduplicates AI rows by code keeping the last one', () => {
-    const fixed = buildPidRows(PARSED_VALUES)
+    const fixed = buildPidRows(PARSED_VALUES, pidWindows(FIXED_CATALOG))
 
     const merged = mergePidRows(fixed, [aiRow('01 11', '14 %'), aiRow('01 11', '52 %')])
 
@@ -208,7 +218,7 @@ describe('mergePidRows', () => {
   })
 
   it('returns only the fixed rows when there are no AI rows', () => {
-    const fixed = buildPidRows(PARSED_VALUES)
+    const fixed = buildPidRows(PARSED_VALUES, pidWindows(FIXED_CATALOG))
 
     expect(mergePidRows(fixed, null)).toEqual(fixed)
     expect(mergePidRows(fixed, [])).toEqual(fixed)
@@ -217,9 +227,14 @@ describe('mergePidRows', () => {
 
 describe('buildSelectablePidRows', () => {
   const CATALOG = [
-    { code: '01 0C', name: 'Engine RPM', unit: 'rpm' },
-    { code: '01 05', name: 'Engine Coolant Temperature', unit: '°C' },
-    { code: '01 11', name: 'Throttle Position', unit: '%' },
+    { code: '01 0C', name: 'Engine RPM', unit: 'rpm', operatingWindow: { max: 6500 } },
+    {
+      code: '01 05',
+      name: 'Engine Coolant Temperature',
+      unit: '°C',
+      operatingWindow: { max: 100 },
+    },
+    { code: '01 11', name: 'Throttle Position', unit: '%', operatingWindow: { max: 90 } },
   ]
 
   it('overlays the deterministic value + verdict for the 4 fixed PIDs', () => {
@@ -246,5 +261,64 @@ describe('buildSelectablePidRows', () => {
     const rows = buildSelectablePidRows(CATALOG, PARSED_VALUES, readings)
 
     expect(rows.find((r) => r.code === '01 11')!.value).toBe('14 %')
+  })
+})
+
+describe('resolvePidStatus', () => {
+  it('should return no verdict when the catalog defines no operating window', () => {
+    expect(resolvePidStatus(9999, undefined)).toBeNull()
+    expect(resolvePidStatus(9999, {})).toBeNull()
+  })
+
+  it('should flag a reading outside the window and pass one inside it', () => {
+    expect(resolvePidStatus(6600, { max: 6500 })).toBe('review')
+    expect(resolvePidStatus(6500, { max: 6500 })).toBe('ok')
+    expect(resolvePidStatus(11, { min: 11.5, max: 15.5 })).toBe('review')
+    expect(resolvePidStatus(13.8, { min: 11.5, max: 15.5 })).toBe('ok')
+  })
+
+  it('should leave an absent bound open', () => {
+    expect(resolvePidStatus(-273, { max: 100 })).toBe('ok')
+    expect(resolvePidStatus(1e6, { min: 0 })).toBe('ok')
+  })
+})
+
+describe('operating windows from the catalog', () => {
+  const catalog = [
+    { code: '01 0C', name: 'Engine RPM', unit: 'rpm', operatingWindow: { max: 6500 } },
+    { code: '01 05', name: 'Coolant', unit: '°C', operatingWindow: { max: 100 } },
+    { code: '01 0D', name: 'Speed', unit: 'km/h' },
+    { code: '01 0F', name: 'Intake', unit: '°C', operatingWindow: { max: 80 } },
+    { code: '01 11', name: 'Throttle', unit: '%', operatingWindow: { max: 90 } },
+  ]
+  const parsedValues = { rpm: 7000, coolantTemp: 90, speed: 0, intakeTemp: 25 }
+
+  it('should judge the fixed rows with the window served by the API', () => {
+    const rows = buildPidRows(parsedValues, pidWindows(catalog))
+
+    expect(rows.find((r) => r.code === '01 0C')?.status).toBe('review')
+    expect(rows.find((r) => r.code === '01 05')?.status).toBe('ok')
+  })
+
+  it('should leave the fixed rows unjudged when the catalog has not loaded', () => {
+    const rows = buildPidRows(parsedValues, pidWindows([]))
+
+    expect(rows.every((row) => row.status === null)).toBe(true)
+  })
+
+  it('should judge catalog PIDs beyond the four fixed ones', () => {
+    const readings = [{ code: '01 11', name: 'Throttle', unit: '%', value: 95 }]
+
+    const rows = buildSelectablePidRows(catalog, parsedValues, readings)
+
+    expect(rows.find((r) => r.code === '01 11')?.status).toBe('review')
+  })
+
+  it('should leave a catalog PID without window unjudged even when it has a reading', () => {
+    const readings = [{ code: '01 0D', name: 'Speed', unit: 'km/h', value: 240 }]
+
+    const rows = buildSelectablePidRows(catalog, parsedValues, readings)
+
+    expect(rows.find((r) => r.code === '01 0D')?.status).toBeNull()
   })
 })

@@ -295,11 +295,52 @@ describe('DiagnosisService — OBD, telemetria y passthrough MCP', () => {
       const pids = service.listAvailablePids()
 
       expect(pids).toHaveLength(16)
-      expect(pids).toContainEqual({ code: '01 0C', name: 'Engine RPM', unit: 'rpm' })
-      expect(pids).toContainEqual({ code: '01 05', name: 'Engine Coolant Temperature', unit: '°C' })
-      expect(pids).toContainEqual({ code: '01 42', name: 'Control Module Voltage', unit: 'V' })
+      expect(pids).toContainEqual({
+        code: '01 0C',
+        name: 'Engine RPM',
+        unit: 'rpm',
+        operatingWindow: { max: 6500 },
+      })
+      expect(pids).toContainEqual({
+        code: '01 42',
+        name: 'Control Module Voltage',
+        unit: 'V',
+        operatingWindow: { min: 11.5, max: 15.5 },
+      })
       expect(repo.readPid).not.toHaveBeenCalled()
       expect(repo.getSupportedPids).not.toHaveBeenCalled()
+    })
+
+    it('omits the operating window for PIDs the observation catalog does not judge', () => {
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        logger: createMockLogger(),
+      })
+
+      const pids = service.listAvailablePids()
+
+      // El catalogo declara rango fisico para el ajuste de combustible (-100..99.2 %),
+      // pero no una ventana de salud: sin criterio, la fila se pinta sin veredicto.
+      expect(pids).toContainEqual({
+        code: '01 06',
+        name: 'Short Term Fuel Trim — Bank 1',
+        unit: '%',
+      })
+    })
+
+    it('never exposes the physical range as if it were an operating window', () => {
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos: createMockObdRepos(),
+        logger: createMockLogger(),
+      })
+
+      const coolant = service.listAvailablePids().find((pid) => pid.code === '01 05')
+
+      // El catalogo SAE J1979 declara -40..215 °C como rango fisico del sensor.
+      // La ventana operativa es otra cosa: 100 °C es el limite de salud del motor.
+      expect(coolant?.operatingWindow).toEqual({ max: 100 })
     })
   })
 

@@ -26,6 +26,19 @@ export const availablePidSchema = z
     code: z.string().describe('Codigo del PID en notacion `modo PID`, por ejemplo `01 0C`'),
     name: z.string().describe('Nombre del parametro segun el catalogo SAE J1979'),
     unit: z.string().describe('Unidad de medida del valor'),
+    operatingWindow: z
+      .object({
+        min: z.number().optional().describe('Limite inferior saludable'),
+        max: z.number().optional().describe('Limite superior saludable'),
+      })
+      .optional()
+      .describe(
+        'Ventana de salud del PID: fuera de ella la lectura merece revisarse. ' +
+          'No es el rango fisico del sensor que declara SAE J1979 (el refrigerante ' +
+          'transmite hasta 215 °C, pero su limite de salud son 100 °C): es criterio ' +
+          'de diagnostico. Ausente cuando el catalogo no juzga ese PID, en cuyo caso ' +
+          'la lectura se muestra sin veredicto.',
+      ),
   })
   .describe('PID soportado por el vehiculo, ya resuelto contra el catalogo')
 

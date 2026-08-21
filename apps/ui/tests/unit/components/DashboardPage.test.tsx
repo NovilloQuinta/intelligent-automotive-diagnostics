@@ -446,6 +446,19 @@ describe('DashboardPage', () => {
       runDiagnosis: vi.fn(),
     })
     mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true })
+    // El veredicto OK/Revisar sale de la ventana operativa que sirve la API,
+    // asi que el catalogo tiene que estar cargado para que la tabla lo pinte.
+    mockUseAvailablePids.mockReturnValue([
+      { code: '01 0C', name: 'Engine RPM', unit: 'rpm', operatingWindow: { max: 6500 } },
+      {
+        code: '01 05',
+        name: 'Engine Coolant Temperature',
+        unit: '°C',
+        operatingWindow: { max: 100 },
+      },
+      { code: '01 0D', name: 'Vehicle Speed', unit: 'km/h' },
+      { code: '01 0F', name: 'Intake Air Temperature', unit: '°C', operatingWindow: { max: 80 } },
+    ])
 
     render(<DashboardPage />)
 
@@ -466,7 +479,8 @@ describe('DashboardPage', () => {
     expect(screen.getByText('4 registrados')).toBeDefined()
     expect(screen.getByText('01 0C')).toBeDefined()
     expect(screen.getByText('850 RPM')).toBeDefined()
-    expect(screen.getAllByText('OK')).toHaveLength(4)
+    // 3 de las 4: la velocidad no tiene ventana operativa y se queda sin veredicto.
+    expect(screen.getAllByText('OK')).toHaveLength(3)
   })
 
   it('should navigate to freeze-frame when DTC row is selected', async () => {

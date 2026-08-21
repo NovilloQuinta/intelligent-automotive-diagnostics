@@ -21,7 +21,7 @@ describe('RpmGauge', () => {
   }
 
   it('should render the SVG arc, ticks and the rounded RPM value when a number is provided', () => {
-    const { container } = render(<RpmGauge value={850} loading={false} />)
+    const { container } = render(<RpmGauge value={850} loading={false} dangerAt={6500} />)
 
     expect(screen.getByText('RPM')).toBeDefined()
     expect(screen.getByText('850')).toBeDefined()
@@ -33,14 +33,14 @@ describe('RpmGauge', () => {
   })
 
   it('should draw the progress arc with the small-arc flag when below 50%', () => {
-    const { container } = render(<RpmGauge value={850} loading={false} />)
+    const { container } = render(<RpmGauge value={850} loading={false} dangerAt={6500} />)
 
     const progressArc = gaugeSvg(container).querySelectorAll('path')[2]
     expect(progressArc.getAttribute('d')).toContain('A 78 78 0 0 1')
   })
 
   it('should render 0 and no progress arc when value is null', () => {
-    const { container } = render(<RpmGauge value={null} loading={false} />)
+    const { container } = render(<RpmGauge value={null} loading={false} dangerAt={6500} />)
 
     expect(screen.getByText('0')).toBeDefined()
     // Only bgArc + dangerZone are drawn when pct = 0
@@ -48,9 +48,8 @@ describe('RpmGauge', () => {
   })
 
   it('should use the large-arc flag and danger styling when RPM exceeds the danger threshold', () => {
-    const { container } = render(<RpmGauge value={7000} loading={false} />)
+    const { container } = render(<RpmGauge value={7000} loading={false} dangerAt={6500} />)
 
-    expect(GAUGE.RPM_DANGER).toBe(6500)
     const progressArc = gaugeSvg(container).querySelectorAll('path')[2]
     expect(progressArc.getAttribute('d')).toContain('A 78 78 0 1 1')
     const valueSpan = container.querySelector('span.text-destructive')
@@ -58,15 +57,25 @@ describe('RpmGauge', () => {
     expect(valueSpan?.textContent).toMatch(/7[.,]?000/)
   })
 
+  it('should draw neither the red zone nor danger styling without a threshold', () => {
+    // La zona roja es criterio, no decoracion: sin ventana operativa del catalogo
+    // el gauge pinta el valor y nada mas, aunque la aguja este arriba del todo.
+    const { container } = render(<RpmGauge value={7000} loading={false} />)
+
+    expect(container.querySelector('span.text-destructive')).toBeNull()
+    // bgArc + progressArc, sin la zona de peligro
+    expect(gaugeSvg(container).querySelectorAll('path')).toHaveLength(2)
+  })
+
   it('should not apply danger styling below the danger threshold', () => {
-    const { container } = render(<RpmGauge value={850} loading={false} />)
+    const { container } = render(<RpmGauge value={850} loading={false} dangerAt={6500} />)
 
     expect(container.querySelector('span.text-destructive')).toBeNull()
     expect(container.querySelector('span.text-foreground')).not.toBeNull()
   })
 
   it('should show the loading placeholder instead of the number', () => {
-    render(<RpmGauge value={850} loading={true} />)
+    render(<RpmGauge value={850} loading={true} dangerAt={6500} />)
 
     expect(screen.getByText('----')).toBeDefined()
     expect(screen.queryByText('850')).toBeNull()

@@ -39,9 +39,11 @@ type SvgProps = {
   pct: number
   danger: boolean
   angle: number
+  /** Start of the red zone as a fraction of the dial, or `null` when there is no threshold. */
+  dangerPct: number | null
 }
 
-function GaugeSVG({ g, pct, danger, angle }: SvgProps) {
+function GaugeSVG({ g, pct, danger, angle, dangerPct }: SvgProps) {
   const { r, cx, cy, startX, endX } = g
   const progAngle = -180 + pct * 180
   const progEndX = cx + r * Math.cos((progAngle * Math.PI) / 180)
@@ -57,13 +59,15 @@ function GaugeSVG({ g, pct, danger, angle }: SvgProps) {
         strokeWidth="10"
         strokeLinecap="round"
       />
-      <path
-        d={`M ${cx + r * Math.cos(((-180 + (GAUGE.RPM_DANGER / GAUGE.RPM_MAX) * 180) * Math.PI) / 180)} ${cy + r * Math.sin(((-180 + (GAUGE.RPM_DANGER / GAUGE.RPM_MAX) * 180) * Math.PI) / 180)} A ${r} ${r} 0 0 1 ${endX} ${cy}`}
-        fill="none"
-        stroke={SVG_STROKES.dangerZone}
-        strokeWidth="10"
-        strokeLinecap="round"
-      />
+      {dangerPct !== null && (
+        <path
+          d={`M ${cx + r * Math.cos(((-180 + dangerPct * 180) * Math.PI) / 180)} ${cy + r * Math.sin(((-180 + dangerPct * 180) * Math.PI) / 180)} A ${r} ${r} 0 0 1 ${endX} ${cy}`}
+          fill="none"
+          stroke={SVG_STROKES.dangerZone}
+          strokeWidth="10"
+          strokeLinecap="round"
+        />
+      )}
       {pct > 0 && (
         <path
           d={`M ${startX} ${cy} A ${r} ${r} 0 ${pct > 0.5 ? 1 : 0} 1 ${progEndX} ${progEndY}`}
@@ -92,19 +96,34 @@ function GaugeSVG({ g, pct, danger, angle }: SvgProps) {
   )
 }
 
-/** Animated SVG semicircle gauge displaying engine RPM with danger zone indicator. */
-export function RpmGauge({ value, loading }: { value: number | null; loading: boolean }) {
+/**
+ * Animated SVG semicircle gauge displaying engine RPM with danger zone indicator.
+ *
+ * @param dangerAt - Upper bound of the healthy window, from the PID catalog served
+ *   by the API. Without it neither the red zone nor the danger styling is drawn:
+ *   where the redline sits is the domain's call, not the gauge's.
+ */
+export function RpmGauge({
+  value,
+  loading,
+  dangerAt,
+}: {
+  value: number | null
+  loading: boolean
+  dangerAt?: number
+}) {
   const display = useAnimatedNumber(value)
   const v = value ?? 0
   const pct = clampPct(display / GAUGE.RPM_MAX)
   const angle = -90 + pct * 180
-  const danger = v > GAUGE.RPM_DANGER
+  const danger = dangerAt !== undefined && v > dangerAt
+  const dangerPct = dangerAt === undefined ? null : clampPct(dangerAt / GAUGE.RPM_MAX)
   const g = gaugeGeo()
 
   return (
     <div
       className="panel relative flex flex-col p-4"
-      title="Régimen del motor. Rango normal en ralentí: 650–950 RPM. Anómalo > 6500 RPM."
+      title={`Régimen del motor. Rango normal en ralentí: 650–950 RPM.${dangerAt !== undefined ? ` Anómalo > ${dangerAt} RPM.` : ''}`}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
@@ -116,7 +135,7 @@ export function RpmGauge({ value, loading }: { value: number | null; loading: bo
         </span>
       </div>
       <div className="relative mt-1 flex justify-center">
-        <GaugeSVG g={g} pct={pct} danger={danger} angle={angle} />
+        <GaugeSVG g={g} pct={pct} danger={danger} angle={angle} dangerPct={dangerPct} />
       </div>
       <div className="-mt-4 flex items-baseline justify-center gap-2">
         <span

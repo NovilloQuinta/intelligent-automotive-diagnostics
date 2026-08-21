@@ -50,6 +50,10 @@ import type {
 } from '@/application/ports/VehicleRepository.js'
 import { DiagnosisSession } from '@/domain/entities/DiagnosisSession.js'
 import { MODE_CURRENT_DATA } from '@/domain/pids.js'
+import {
+  PID_OBSERVATION_CATALOG,
+  type PidObservationDefinition,
+} from '@/domain/catalogs/pidObservationCatalog.js'
 
 import {
   COGNITIVE_DIAGNOSIS_TIMEOUT_MS,
@@ -58,10 +62,30 @@ import {
   type DiagnosisServiceOptions,
   type ScenarioDescriptor,
   type AvailablePid,
+  type PidOperatingWindow,
   type CognitiveDiagnosisResult,
   type DiagnoseOutput,
   type VehicleInfoOutput,
 } from '@/infrastructure/services/diagnosisTypes.js'
+
+/**
+ * Extrae la ventana operativa de una definicion de observacion, o `undefined` si el
+ * PID no declara ningun extremo.
+ *
+ * Devolver `{}` seria peor que no devolver nada: una ventana vacia parece un criterio
+ * que siempre aprueba, cuando lo que ocurre es que no hay criterio que aplicar.
+ */
+function toOperatingWindow(
+  definition: PidObservationDefinition | undefined,
+): PidOperatingWindow | undefined {
+  if (definition === undefined) return undefined
+  const { minValue, maxValue } = definition
+  if (minValue === undefined && maxValue === undefined) return undefined
+  return {
+    ...(minValue !== undefined && { min: minValue }),
+    ...(maxValue !== undefined && { max: maxValue }),
+  }
+}
 
 /**
  * Tipos y descriptores de escenario re-exportados desde `diagnosisTypes`.
@@ -232,14 +256,24 @@ export class DiagnosisService {
    * soporta un PID, la lectura degrada a `null` en {@link getLiveData} y el
    * gauge muestra `—`.
    *
-   * @returns Los 16 PIDs Mode 01 con su nombre y unidad, en orden de catalogo.
+   * Cada PID viaja con su ventana operativa cuando el catalogo de observacion la
+   * define, para que el veredicto OK/Revisar del dashboard salga del dominio y no
+   * de umbrales reescritos en el navegador. Los PIDs sin ventana se pintan sin
+   * veredicto: no tener criterio no es lo mismo que estar bien.
+   *
+   * @returns Los 16 PIDs Mode 01 con su nombre, unidad y ventana, en orden de catalogo.
    */
   listAvailablePids(): AvailablePid[] {
-    return Array.from(PID_METADATA.entries()).map(([pid, meta]) => ({
-      code: `${MODE_CURRENT_DATA} ${pid}`,
-      name: meta.name,
-      unit: meta.unit,
-    }))
+    return Array.from(PID_METADATA.entries()).map(([pid, meta]) => {
+      const code = `${MODE_CURRENT_DATA} ${pid}`
+      const operatingWindow = toOperatingWindow(PID_OBSERVATION_CATALOG.get(code))
+      return {
+        code,
+        name: meta.name,
+        unit: meta.unit,
+        ...(operatingWindow !== undefined && { operatingWindow }),
+      }
+    })
   }
 
   /**
