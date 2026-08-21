@@ -258,3 +258,23 @@ export const PID_METADATA: ReadonlyMap<string, { readonly name: string; readonly
       { name: p.name, unit: p.unit ?? '' },
     ]),
   )
+
+/**
+ * Formula con la que se interpreta un PID recien descubierto cuyo significado
+ * todavia no esta en el catalogo (tipicamente un Mode 22 propietario).
+ *
+ * Es una asuncion normativa, no una decision del adaptador: a falta de
+ * documentacion del fabricante, el supuesto razonable para un DID desconocido es
+ * un entero sin signo big-endian de dos bytes, que es como SAE J1979 codifica
+ * todos sus PIDs de dos bytes (`(A*256+B)/4` para el regimen, `(A*256+B)/100`
+ * para el caudal masico...) sin el factor de escala, que si es especifico de
+ * cada PID y no se puede adivinar.
+ *
+ * El valor resultante se registra con confianza baja precisamente porque la
+ * escala se desconoce: la politica de confianza vive en la capa que registra el
+ * hallazgo, no aqui.
+ */
+export const AUTO_DISCOVERY_PID_FORMULA = '(A*256+B)'
+
+/** Bytes de datos que consume {@link AUTO_DISCOVERY_PID_FORMULA}. */
+export const AUTO_DISCOVERY_PID_DATA_BYTES = 2

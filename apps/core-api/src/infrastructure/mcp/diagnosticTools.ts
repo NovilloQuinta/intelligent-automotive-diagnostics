@@ -2,6 +2,10 @@ import { z } from 'zod'
 import type { ObdRepository } from '@/application/ports/ObdRepository.js'
 import type { VehicleRepository } from '@/application/ports/VehicleRepository.js'
 import { persistDiscoveredEcus } from '@/application/shared/persistDiscoveredEcus.js'
+import {
+  AUTO_DISCOVERY_PID_DATA_BYTES,
+  AUTO_DISCOVERY_PID_FORMULA,
+} from '@/domain/catalogs/pidCatalog.js'
 import { PidCode } from '@/domain/value-objects/PidCode.js'
 import { PidDefinition } from '@/domain/entities/PidDefinition.js'
 import { PidReading } from '@/domain/entities/PidReading.js'
@@ -30,8 +34,14 @@ export interface SessionContext {
   readonly model?: string
 }
 
-const AUTO_DISCOVERY_FORMULA = '(A*256+B)'
-const AUTO_DISCOVERY_DATA_BYTES = 2
+/**
+ * Confianza con la que se registra un PID auto-descubierto.
+ *
+ * Es politica del catalogo auto-expansivo, no normativa: la formula asumida
+ * ({@link AUTO_DISCOVERY_PID_FORMULA}) acierta el tamano y el orden de los bytes,
+ * pero no el factor de escala, asi que la lectura vale como pista y no como dato
+ * confirmado hasta que la valide {@link ValidateDiscoveredPidUseCase}.
+ */
 const AUTO_DISCOVERY_CONFIDENCE = 0.3
 
 function autoRegisterPid(
@@ -50,8 +60,8 @@ function autoRegisterPid(
           id: 0,
           pidCode: new PidCode(modeStr, pidStr),
           name: `${modeStr} ${pidStr}`,
-          formula: AUTO_DISCOVERY_FORMULA,
-          dataBytes: AUTO_DISCOVERY_DATA_BYTES,
+          formula: AUTO_DISCOVERY_PID_FORMULA,
+          dataBytes: AUTO_DISCOVERY_PID_DATA_BYTES,
           pidType: 'formula',
           manufacturer,
           model,

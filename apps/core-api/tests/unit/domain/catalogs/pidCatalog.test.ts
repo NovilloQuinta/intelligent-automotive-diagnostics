@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { ALL_SEED_PIDS } from '@/domain/catalogs/pidCatalog.js'
+import {
+  ALL_SEED_PIDS,
+  AUTO_DISCOVERY_PID_FORMULA,
+  AUTO_DISCOVERY_PID_DATA_BYTES,
+} from '@/domain/catalogs/pidCatalog.js'
+import { evaluatePid } from '@/domain/services/pidFormula.js'
 
 describe('seed-pids', () => {
   describe('ALL_SEED_PIDS', () => {
@@ -31,5 +36,17 @@ describe('seed-pids', () => {
       )
       expect(vehicleScoped.sort()).toEqual(['0D', '2F', '46'])
     })
+  })
+})
+
+describe('auto-discovery PID defaults', () => {
+  it('should assume a 2-byte big-endian formula for an unknown PID', () => {
+    expect(AUTO_DISCOVERY_PID_FORMULA).toBe('(A*256+B)')
+    expect(AUTO_DISCOVERY_PID_DATA_BYTES).toBe(2)
+  })
+
+  it('should be evaluable by the domain formula evaluator over its own byte count', () => {
+    const bytes = [0x12, 0x34].slice(0, AUTO_DISCOVERY_PID_DATA_BYTES)
+    expect(evaluatePid(AUTO_DISCOVERY_PID_FORMULA, bytes)).toBe(0x1234)
   })
 })
