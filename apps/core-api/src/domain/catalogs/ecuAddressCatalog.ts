@@ -40,18 +40,109 @@ const CAN_29_TESTER_ADDRESS = 'F1'
 /** Formato valido de direccion CAN de respuesta: 3 digitos hex (11 bits) u 8 (29 bits). */
 const CAN_ADDRESS_REGEX = /^([0-9A-Fa-f]{3}|[0-9A-Fa-f]{8})$/
 
+/** Nombre con el que ISO 15765-4 identifica al unico ECU que estandariza. */
+const ECM_NAME = 'Engine Control Module'
+
+/** Ancho del identificador CAN, que es lo que decide el direccionamiento de la norma. */
+type CanAddressWidth = 'CAN_11' | 'CAN_29'
+
+/**
+ * Direccionamiento ISO 15765-4, que depende del ancho del identificador CAN y no
+ * del bitrate: los protocolos 6 y 8 comparten el de 11 bits, y el 7 y el 9 el de
+ * 29 bits.
+ *
+ * En 29 bits la respuesta **no** es la peticion mas 8 como en 11 bits: se
+ * intercambian los dos ultimos bytes (`18DA10F1` pregunta, `18DAF110` contesta).
+ */
+const ISO_15765_4_ADDRESSING: Readonly<
+  Record<
+    CanAddressWidth,
+    {
+      readonly functionalAddress: string
+      readonly ecmRequestAddress: string
+      readonly ecmResponseAddress: string
+    }
+  >
+> = {
+  CAN_11: { functionalAddress: '7DF', ecmRequestAddress: '7E0', ecmResponseAddress: '7E8' },
+  CAN_29: {
+    functionalAddress: '18DB33F1',
+    ecmRequestAddress: '18DA10F1',
+    ecmResponseAddress: '18DAF110',
+  },
+}
+
+/** Bus CAN de ISO 15765-4, con las direcciones que la norma le asigna. */
+export interface CanBusDescriptor {
+  /** Numero de protocolo ELM327, ya sin el prefijo de negociacion automatica. */
+  readonly number: string
+  /** Etiqueta que se persiste en `EcuInfo.protocol`. */
+  readonly label: string
+  /** Direccion de broadcast funcional: a quien se pregunta para descubrir ECUs. */
+  readonly functionalAddress: string
+  /** Direccion fisica de peticion al ECU de motor. */
+  readonly ecmRequestAddress: string
+  /** Direccion desde la que responde el ECU de motor. */
+  readonly ecmResponseAddress: string
+}
+
+/**
+ * Los cuatro buses CAN de ISO 15765-4, indexados por su numero de protocolo ELM327.
+ *
+ * La tabla es dato puro: numero → ancho de identificador y bitrate. Lo demas lo
+ * aporta {@link ISO_15765_4_ADDRESSING}.
+ *
+ * Deliberadamente fuera: los protocolos 1-5 (J1850, ISO 9141-2, KWP2000) y el A
+ * (J1939). No es que no se puedan leer —las lecturas normales funcionan en todos—,
+ * es que el descubrimiento por broadcast funcional no tiene equivalente fuera de CAN.
+ */
+const CAN_BUS_TABLE: ReadonlyArray<
+  readonly [number: string, width: CanAddressWidth, kbps: string]
+> = [
+  ['6', 'CAN_11', '500'],
+  ['7', 'CAN_29', '500'],
+  ['8', 'CAN_11', '250'],
+  ['9', 'CAN_29', '250'],
+]
+
+const CAN_BUSES: Readonly<Record<string, CanBusDescriptor>> = Object.fromEntries(
+  CAN_BUS_TABLE.map(([number, width, kbps]) => [
+    number,
+    { number, label: `${width}_${kbps}`, ...ISO_15765_4_ADDRESSING[width] },
+  ]),
+)
+
+/**
+ * Resuelve el bus CAN correspondiente a un numero de protocolo ELM327.
+ *
+ * Vive en el dominio porque la tabla es la norma: que el protocolo 6 sea CAN de
+ * 11 bits a 500 kbps y que su broadcast funcional sea `7DF` lo fija ISO 15765-4,
+ * no el adaptador. Quien traduce la respuesta concreta de `AT DPN` a un numero es
+ * infraestructura.
+ *
+ * @param number - Numero de protocolo, sin el prefijo `A` de negociacion automatica.
+ * @returns El bus si el numero identifica uno de los cuatro CAN; `null` en cualquier
+ *   otro caso, incluido un protocolo anterior a CAN. **Nunca supone un bus por defecto.**
+ */
+export function resolveCanBusByNumber(number: string): CanBusDescriptor | null {
+  return CAN_BUSES[number.trim().toUpperCase()] ?? null
+}
+
 /**
  * Catalogo ISO 15765-4 de direcciones CAN estandarizadas, en los dos anchos.
  *
- * Solo el ECM esta estandarizado por la norma: `7E8`/`7E0` en 11 bits y
- * `18DAF110`/`18DA10F1` en 29. Cualquier otra direccion fisica la asigna cada
- * fabricante, por lo que se devuelve como `UNKNOWN` y su `requestAddr` se deriva
- * aritmeticamente. Nunca se inventa un nombre ni un tipo.
+ * Solo el ECM esta estandarizado por la norma, y sus direcciones se derivan de
+ * {@link ISO_15765_4_ADDRESSING} para que la pareja peticion/respuesta este escrita
+ * una sola vez. Cualquier otra direccion fisica la asigna cada fabricante, por lo
+ * que se devuelve como `UNKNOWN` y su `requestAddr` se deriva aritmeticamente.
+ * Nunca se inventa un nombre ni un tipo.
  */
-const STANDARD_ECU_ADDRESSES: Readonly<Record<string, EcuAddressResolution>> = {
-  '7E8': { type: ECU_TYPE_ECM, name: 'Engine Control Module', requestAddr: '7E0' },
-  '18DAF110': { type: ECU_TYPE_ECM, name: 'Engine Control Module', requestAddr: '18DA10F1' },
-}
+const STANDARD_ECU_ADDRESSES: Readonly<Record<string, EcuAddressResolution>> = Object.fromEntries(
+  Object.values(ISO_15765_4_ADDRESSING).map((addressing) => [
+    addressing.ecmResponseAddress,
+    { type: ECU_TYPE_ECM, name: ECM_NAME, requestAddr: addressing.ecmRequestAddress },
+  ]),
+)
 
 /**
  * Deriva la direccion de peticion ISO 15765-4 desde la de respuesta.

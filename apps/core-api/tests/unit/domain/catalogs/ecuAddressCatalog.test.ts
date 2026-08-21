@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { EcuAddressError, resolveEcuAddress } from '@/domain/catalogs/ecuAddressCatalog.js'
+import {
+  EcuAddressError,
+  resolveCanBusByNumber,
+  resolveEcuAddress,
+} from '@/domain/catalogs/ecuAddressCatalog.js'
 
 describe('ecuAddressCatalog', () => {
   describe('resolveEcuAddress', () => {
@@ -100,5 +104,47 @@ describe('ecuAddressCatalog', () => {
     it('should normalize lowercase 29-bit input', () => {
       expect(resolveEcuAddress('18daf110')).toEqual(resolveEcuAddress('18DAF110'))
     })
+  })
+})
+
+describe('resolveCanBusByNumber', () => {
+  it('should describe the four ISO 15765-4 CAN buses by their ELM327 protocol number', () => {
+    expect(resolveCanBusByNumber('6')).toEqual({
+      number: '6',
+      label: 'CAN_11_500',
+      functionalAddress: '7DF',
+      ecmRequestAddress: '7E0',
+      ecmResponseAddress: '7E8',
+    })
+    expect(resolveCanBusByNumber('7')).toEqual({
+      number: '7',
+      label: 'CAN_29_500',
+      functionalAddress: '18DB33F1',
+      ecmRequestAddress: '18DA10F1',
+      ecmResponseAddress: '18DAF110',
+    })
+    expect(resolveCanBusByNumber('8')).toMatchObject({
+      label: 'CAN_11_250',
+      functionalAddress: '7DF',
+    })
+    expect(resolveCanBusByNumber('9')).toMatchObject({
+      label: 'CAN_29_250',
+      functionalAddress: '18DB33F1',
+    })
+  })
+
+  it('should return null for protocols that are not CAN', () => {
+    for (const number of ['1', '2', '3', '4', '5', 'A', 'B', 'C', '']) {
+      expect(resolveCanBusByNumber(number)).toBeNull()
+    }
+  })
+
+  it('should agree with resolveEcuAddress on the ECM request address in both widths', () => {
+    expect(resolveEcuAddress(resolveCanBusByNumber('6')!.ecmResponseAddress).requestAddr).toBe(
+      resolveCanBusByNumber('6')!.ecmRequestAddress,
+    )
+    expect(resolveEcuAddress(resolveCanBusByNumber('7')!.ecmResponseAddress).requestAddr).toBe(
+      resolveCanBusByNumber('7')!.ecmRequestAddress,
+    )
   })
 })

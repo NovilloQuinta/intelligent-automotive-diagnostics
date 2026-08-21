@@ -1,3 +1,8 @@
+import {
+  resolveCanBusByNumber,
+  type CanBusDescriptor,
+} from '@/domain/catalogs/ecuAddressCatalog.js'
+
 /**
  * Traduce el protocolo que el adaptador ELM327 ya negoció con el vehículo.
  *
@@ -5,65 +10,15 @@
  * durante el `ATSP0` del init ({@link ./initSequence.ts}), que prueba los diez
  * protocolos y se queda con el que conteste. Elegir el protocolo *es* elegir el
  * bitrate — no son dos ajustes. Aquí solo se pregunta cuál salió, con `AT DPN`.
+ *
+ * Qué significa cada número —qué ancho de identificador, qué bitrate, qué
+ * direcciones— lo fija ISO 15765-4 y vive en el catálogo de dominio
+ * ({@link resolveCanBusByNumber}). Este módulo solo se ocupa de la parte que es
+ * dialecto del adaptador: extraer el número de una respuesta concreta de `AT DPN`.
  */
 
 /** Bus CAN negociado, con las direcciones que ISO 15765-4 le asigna. */
-export interface CanBusDescriptor {
-  /** Número de protocolo ELM327, ya sin el prefijo de negociación automática. */
-  readonly number: string
-  /** Etiqueta que se persiste en `EcuInfo.protocol`. */
-  readonly label: string
-  /** Dirección de broadcast funcional: a quién se pregunta para descubrir ECUs. */
-  readonly functionalAddress: string
-  /** Dirección física de petición al ECU de motor. */
-  readonly ecmRequestAddress: string
-  /** Dirección desde la que responde el ECU de motor. */
-  readonly ecmResponseAddress: string
-}
-
-/**
- * Direccionamiento ISO 15765-4, que depende del ancho del identificador CAN y no
- * del bitrate: los protocolos 6 y 8 comparten el de 11 bits, y el 7 y el 9 el de
- * 29 bits.
- *
- * En 29 bits la respuesta **no** es la petición más 8 como en 11 bits: se
- * intercambian los dos últimos bytes (`18DA10F1` pregunta, `18DAF110` contesta).
- */
-const ISO_15765_4_ADDRESSING = {
-  CAN_11: { functionalAddress: '7DF', ecmRequestAddress: '7E0', ecmResponseAddress: '7E8' },
-  CAN_29: {
-    functionalAddress: '18DB33F1',
-    ecmRequestAddress: '18DA10F1',
-    ecmResponseAddress: '18DAF110',
-  },
-} as const
-
-/**
- * Los cuatro buses CAN de ISO 15765-4, indexados por su número de protocolo ELM327.
- *
- * La tabla es dato puro: número → ancho de identificador y bitrate. Lo demás lo
- * aporta {@link ISO_15765_4_ADDRESSING}.
- *
- * Deliberadamente fuera: los protocolos 1–5 (J1850, ISO 9141-2, KWP2000) y el A
- * (J1939). No es que no se puedan leer —las lecturas normales funcionan en todos—,
- * es que el descubrimiento por broadcast funcional que hace {@link ./ecuDiscovery.ts}
- * no tiene equivalente fuera de CAN.
- */
-const CAN_BUS_TABLE: ReadonlyArray<
-  readonly [number: string, width: 'CAN_11' | 'CAN_29', kbps: string]
-> = [
-  ['6', 'CAN_11', '500'],
-  ['7', 'CAN_29', '500'],
-  ['8', 'CAN_11', '250'],
-  ['9', 'CAN_29', '250'],
-]
-
-const CAN_BUSES: Readonly<Record<string, CanBusDescriptor>> = Object.fromEntries(
-  CAN_BUS_TABLE.map(([number, width, kbps]) => [
-    number,
-    { number, label: `${width}_${kbps}`, ...ISO_15765_4_ADDRESSING[width] },
-  ]),
-)
+export type { CanBusDescriptor }
 
 /**
  * Respuesta de `AT DPN`: un solo carácter, con `A` delante si el protocolo se
@@ -91,7 +46,7 @@ export function resolveCanBus(raw: string): CanBusDescriptor | null {
     const cleaned = line.replace(/>/g, '').trim().toUpperCase()
     if (cleaned === '') continue
     const match = PROTOCOL_NUMBER_RE.exec(cleaned)
-    if (match) return CAN_BUSES[match[1]] ?? null
+    if (match) return resolveCanBusByNumber(match[1])
   }
   return null
 }

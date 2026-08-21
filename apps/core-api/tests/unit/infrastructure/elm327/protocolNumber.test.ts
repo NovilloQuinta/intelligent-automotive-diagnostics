@@ -1,39 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import { resolveCanBus } from '@/infrastructure/elm327/protocolNumber.js'
+import { resolveCanBusByNumber } from '@/domain/catalogs/ecuAddressCatalog.js'
 
 describe('resolveCanBus', () => {
-  it('should resolve protocol 6 to CAN 11-bit at 500 kbps', () => {
-    expect(resolveCanBus('6')).toEqual({
-      number: '6',
-      label: 'CAN_11_500',
-      functionalAddress: '7DF',
-      ecmRequestAddress: '7E0',
-      ecmResponseAddress: '7E8',
-    })
-  })
-
-  it('should resolve protocol 7 to CAN 29-bit at 500 kbps', () => {
-    expect(resolveCanBus('7')).toEqual({
-      number: '7',
-      label: 'CAN_29_500',
-      functionalAddress: '18DB33F1',
-      ecmRequestAddress: '18DA10F1',
-      ecmResponseAddress: '18DAF110',
-    })
-  })
-
-  it('should resolve protocol 8 to CAN 11-bit at 250 kbps', () => {
-    expect(resolveCanBus('8')).toMatchObject({
-      label: 'CAN_11_250',
-      functionalAddress: '7DF',
-    })
-  })
-
-  it('should resolve protocol 9 to CAN 29-bit at 250 kbps', () => {
-    expect(resolveCanBus('9')).toMatchObject({
-      label: 'CAN_29_250',
-      functionalAddress: '18DB33F1',
-    })
+  it('should hand the parsed protocol number to the ISO 15765-4 catalog', () => {
+    // La tabla numero -> bus es normativa y se prueba en el dominio
+    // (`ecuAddressCatalog.test.ts`). Aqui solo importa que el numero extraido de
+    // la respuesta llegue hasta ella.
+    expect(resolveCanBus('6')).toEqual(resolveCanBusByNumber('6'))
+    expect(resolveCanBus('9')).toEqual(resolveCanBusByNumber('9'))
   })
 
   it.each([
@@ -88,11 +63,4 @@ describe('resolveCanBus', () => {
       expect(resolveCanBus(raw)).toBeNull()
     },
   )
-
-  it('should never derive the ECM response address from the request by subtracting 8 in 29-bit', () => {
-    // En 11 bits la respuesta es peticion + 8; en 29 bits se intercambian los
-    // dos ultimos bytes. Confundirlos daria `18DA10F9`, que no existe en el bus.
-    const bus = resolveCanBus('7')
-    expect(bus?.ecmResponseAddress).toBe('18DAF110')
-  })
 })
