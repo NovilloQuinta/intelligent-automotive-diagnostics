@@ -35,7 +35,7 @@ El proyecto adopta los siguientes estándares con cobertura parcial pero demostr
 | **03** | `0x03` | Stored DTCs | Sí | `readDtcCodes()` |
 | **04** | `0x04` | Clear DTCs | Sí (única escritura del sistema) | `clearDtcCodes()` |
 | **07** | `0x07` | Pending DTCs | Sí | `readPendingDtcCodes()` |
-| **09** | `0x09` | Vehicle information (VIN) | Sí | `readVin()` + `vinDecoder` |
+| **09** | `0x09` | Vehicle information (VIN) | Sí | `readVin()` + `Vin.fromBytes()` |
 | **0A** | `0x0A` | Permanent DTCs | Sí | `readPermanentDtcCodes()` |
 
 `03`, `07` y `0A` comparten implementación: `fetchDtcCodes(mode)` en `elm327Adapter.ts` está tipado
