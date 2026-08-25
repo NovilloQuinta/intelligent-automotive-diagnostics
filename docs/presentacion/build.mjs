@@ -106,18 +106,18 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Una herramienta de diagnóstico de averías de coche', {
+  s.addText('Diagnóstico de averías de vehículos asistido por IA', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.9, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
   })
-  s.addText('Se enchufa al coche, lee sus centralitas y le dice al mecánico qué le pasa y por dónde mirar.', {
+  s.addText('Se conecta al vehículo, interpreta los datos de sus centralitas y propone las causas de la avería.', {
     x: 0.85, y: 1.7, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
 
   const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.55, yLista = 3.25
 
-  s.addText('El escáner de hoy se queda aquí', {
+  s.addText('Lo que aporta un escáner convencional', {
     x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 19, bold: true, color: GRIS,
   })
@@ -137,12 +137,12 @@ function pie(s) {
       fontFace: 'Calibri', fontSize: 15, color: TINTA,
     })
   })
-  s.addText('Y así hasta diez. Es lo que ha registrado la centralita, no lo que está roto.', {
+  s.addText('Hasta diez códigos. Registran el síntoma, no la causa que lo provoca.', {
     x: xIzq, y: yLista + 1.62, w: colW, h: 0.8, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 15, color: GRIS, lineSpacing: 21,
   })
 
-  s.addText('Esta herramienta sigue desde ahí', {
+  s.addText('Lo que añade esta herramienta', {
     x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
@@ -181,11 +181,11 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('El flujo de trabajo, de principio a fin', {
+  s.addText('Flujo de trabajo', {
     x: 0.85, y: 0.42, w: 11.6, h: 0.65, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 30, bold: true, color: TINTA,
   })
-  s.addText('Desde que enchufas el adaptador hasta que el caso queda guardado.', {
+  s.addText('Desde la conexión del adaptador hasta el registro del caso resuelto.', {
     x: 0.85, y: 1.18, w: 11.6, h: 0.3, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 14, color: GRIS,
   })
@@ -230,11 +230,11 @@ function pie(s) {
 
   // ---- Columna izquierda: lo que pasa siempre ----------------------------
   const izq = [
-    ['Se enchufa el adaptador\ny se pulsa «Iniciar diagnóstico»', 'fin'],
+    ['Se conecta el adaptador\ny se inicia el diagnóstico', 'fin'],
     ['Se lee el bastidor y se identifica el vehículo', 'proceso'],
-    ['Se barre el bus: qué centralitas responden', 'proceso'],
+    ['Barrido del bus: centralitas que responden', 'proceso'],
     ['Se leen datos en vivo, averías y freeze frame', 'proceso'],
-    ['Se calcula la severidad y sale en pantalla', 'proceso'],
+    ['Se calcula la severidad y se muestra el resultado', 'proceso'],
   ]
   const y0 = 1.72
   izq.forEach(([t, tipo], k) => {
@@ -246,7 +246,7 @@ function pie(s) {
   // Rombo de decision
   const yRombo = y0 + izq.length * PITCH
   flechaV(cxI, yRombo - PITCH + CH, yRombo)
-  nodo(XI + 0.55, yRombo, CW - 1.1, 0.78, '¿El mecánico pregunta\nal agente?', 'decision')
+  nodo(XI + 0.55, yRombo, CW - 1.1, 0.78, '¿Se consulta\nal agente?', 'decision')
 
   // Rama NO
   flechaV(cxI, yRombo + 0.78, yRombo + 1.06)
@@ -269,10 +269,10 @@ function pie(s) {
   // ---- Columna derecha: solo si pregunta ---------------------------------
   const der = [
     ['Se buscan casos parecidos de otros diagnósticos', 'proceso'],
-    ['El agente pide lo que le falta', 'proceso'],
-    ['Responde: explicación, severidad y qué revisar', 'proceso'],
+    ['El agente solicita la información que necesita', 'proceso'],
+    ['Devuelve explicación, severidad y comprobaciones', 'proceso'],
     ['El caso se indexa en el catálogo', 'proceso'],
-    ['Queda disponible para el siguiente coche', 'fin'],
+    ['Disponible para diagnósticos posteriores', 'fin'],
   ]
   der.forEach(([t, tipo], k) => {
     const y = y0 + k * PITCH
@@ -307,11 +307,11 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Dos formas de diagnosticar: por reglas y con IA', {
+  s.addText('Diagnóstico determinista y diagnóstico cognitivo', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('El determinista está siempre. El cognitivo, solo si hay un modelo configurado.', {
+  s.addText('El determinista siempre está disponible; el cognitivo requiere un modelo configurado.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
@@ -379,7 +379,7 @@ function pie(s) {
     x: 0.85, y: 0.6, w: 11.6, h: 0.8, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('TypeScript de punta a punta, y cada pieza detrás de un puerto.', {
+  s.addText('TypeScript en todo el proyecto, y cada dependencia externa detrás de un puerto.', {
     x: 0.85, y: 1.5, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 16, color: GRIS,
   })
@@ -434,7 +434,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Arquitectura: Clean Architecture + Hexagonal', {
+  s.addText('Arquitectura: Clean Architecture y patrón hexagonal', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -521,11 +521,11 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Lectura del coche por OBD-II', {
+  s.addText('Adquisición de datos mediante OBD-II', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Un ejemplo: pedirle las revoluciones del motor.', {
+  s.addText('Ejemplo: lectura del régimen de giro del motor.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
@@ -610,11 +610,11 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Persistencia: una base relacional y una vectorial', {
+  s.addText('Persistencia: modelo relacional y modelo vectorial', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('En una se busca por clave. En la otra, por parecido.', {
+  s.addText('Una responde por clave exacta; la otra, por similitud semántica.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
@@ -673,11 +673,11 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('La base relacional: qué guarda', {
+  s.addText('Base de datos relacional', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('13 tablas. Todo lo que se puede pedir por una clave exacta.', {
+  s.addText('13 tablas: todo aquello que se consulta por una clave conocida.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
@@ -749,11 +749,11 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('La base vectorial: qué guarda y con qué confianza', {
+  s.addText('Base de datos vectorial e índice de confianza', {
     x: 0.85, y: 0.65, w: 11.6, h: 0.8, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Los datos del taller van en SQLite. Aquí solo va lo que el sistema aprende.', {
+  s.addText('Almacena el conocimiento que el sistema adquiere durante los diagnósticos.', {
     x: 0.85, y: 1.55, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 16, color: GRIS,
   })
@@ -775,7 +775,7 @@ function pie(s) {
       fontFace: 'Calibri', fontSize: 14, color: TINTA, paraSpaceAfter: 7, lineSpacing: 19 },
   )
 
-  s.addText('Un caso resuelto, tal cual se guarda', {
+  s.addText('Ejemplo de entrada indexada', {
     x: xI, y: 4.05, w: wI, h: 0.35, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 15, bold: true, color: TINTA,
   })
@@ -805,7 +805,7 @@ function pie(s) {
     x: xD, y: 2.25, w: wD, h: 0.35, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 18, bold: true, color: AZUL,
   })
-  s.addText('Se lo ponemos nosotros al guardar, según de dónde salga el dato. Es lo que pondera las búsquedas.', {
+  s.addText('Se asigna al indexar, según la procedencia del dato. Es lo que pondera las búsquedas.', {
     x: xD, y: 2.68, w: wD, h: 0.55, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 13, color: GRIS, lineSpacing: 18,
   })
@@ -865,11 +865,11 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('MCP: las 16 herramientas del agente', {
+  s.addText('Model Context Protocol: herramientas del agente', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('El modelo no toca el coche. Pide una herramienta, y el sistema decide si se ejecuta.', {
+  s.addText('El modelo no accede al vehículo: solicita herramientas y el sistema decide si se ejecutan.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
@@ -957,18 +957,18 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('El ciclo de razonamiento del agente', {
+  s.addText('Ciclo de razonamiento del agente', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Del botón de iniciar diagnóstico a la respuesta que lee el mecánico.', {
+  s.addText('Del inicio del diagnóstico hasta la respuesta que recibe el mecánico.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
 
   // --- Izquierda: el ciclo -------------------------------------------------
   const xI = 0.85, wI = 6.5
-  s.addText('El ciclo', {
+  s.addText('Ciclo de ejecución', {
     x: xI, y: 2.4, w: wI, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
@@ -994,7 +994,7 @@ function pie(s) {
 
   // --- Derecha: los cercos del prompt --------------------------------------
   const xD = 7.75, wD = 4.7
-  s.addText('El prompt lleva 11 bloques', {
+  s.addText('System prompt: 11 bloques', {
     x: xD, y: 2.4, w: wD, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
@@ -1043,11 +1043,11 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Los modelos: lenguaje y embeddings', {
+  s.addText('Modelos empleados: lenguaje y embeddings', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Uno razona y se puede cambiar. El otro convierte texto en vectores y va dentro.', {
+  s.addText('Uno razona y es intercambiable; el otro genera los vectores y se ejecuta en local.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
@@ -1113,11 +1113,11 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Resultados: la aplicación funcionando', {
+  s.addText('Resultados: la aplicación en funcionamiento', {
     x: 0.85, y: 0.55, w: 11.6, h: 0.75, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
   })
-  s.addText('Audi A3 2.0 TDI. Todo lo que se ve viene leído del bus, nada está escrito a mano.', {
+  s.addText('Audi A3 2.0 TDI. Todos los datos proceden del bus del vehículo.', {
     x: 0.85, y: 1.38, w: 11.6, h: 0.35, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
@@ -1164,18 +1164,18 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Calidad: TDD, integración continua y seguridad', {
+  s.addText('Calidad, integración continua y seguridad', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Un solo programador, así que el que avisa de las roturas es el CI.', {
+  s.addText('Un único desarrollador: la integración continua es la red de seguridad.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
 
   const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.45, yLista = 3.05
 
-  s.addText('Cómo se escribe', {
+  s.addText('Desarrollo', {
     x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
@@ -1190,7 +1190,7 @@ function pie(s) {
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  s.addText('Qué se comprueba en cada push', {
+  s.addText('Verificaciones en cada push', {
     x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
@@ -1235,14 +1235,14 @@ function pie(s) {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Lo que me llevo de haber construido esto con IA.', {
+  s.addText('Balance de haber desarrollado el proyecto con asistencia de IA.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
 
   const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.5, yLista = 3.1
 
-  s.addText('Lo que acelera', {
+  s.addText('Lo que aporta', {
     x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
   })
@@ -1256,7 +1256,7 @@ function pie(s) {
       fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 13, lineSpacing: 22 },
   )
 
-  s.addText('Lo que hay que poner', {
+  s.addText('Lo que exige', {
     x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
   })

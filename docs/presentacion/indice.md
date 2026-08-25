@@ -7,20 +7,20 @@
 | # | Slide | Bloque | Estado |
 |---|---|---|---|
 | 1 | Portada | | **validada** |
-| 2 | Una herramienta de diagnostico de averias de coche | Que es y que resuelve | pendiente |
-| 3 | El flujo de trabajo, de principio a fin | Como funciona | **validada** |
-| 4 | Dos formas de diagnosticar: por reglas y con IA | Como funciona | pendiente |
+| 2 | Diagnostico de averias de vehiculos asistido por IA | Que es y que resuelve | pendiente |
+| 3 | Flujo de trabajo | Como funciona | **validada** |
+| 4 | Diagnostico determinista y diagnostico cognitivo | Como funciona | pendiente |
 | 5 | Tecnologias utilizadas | Como esta construida | pendiente |
-| 6 | Arquitectura: Clean Architecture + Hexagonal | Como esta construida | **la reescribe el autor** |
-| 7 | Lectura del coche por OBD-II | Las piezas | pendiente |
-| 8 | Persistencia: una base relacional y una vectorial | Las piezas | pendiente |
-| 9 | La base relacional: que guarda | Las piezas | pendiente |
-| 10 | La base vectorial: que guarda y con que confianza | Las piezas | pendiente |
-| 11 | MCP: las 16 herramientas del agente | Las piezas | pendiente |
-| 12 | El ciclo de razonamiento del agente | Las piezas | pendiente |
-| 13 | Los modelos: lenguaje y embeddings | Las piezas | pendiente |
-| 14 | Resultados: la aplicacion funcionando | El resultado | pendiente |
-| 15 | Calidad: TDD, integracion continua y seguridad | El resultado | pendiente |
+| 6 | Arquitectura: Clean Architecture y patron hexagonal | Como esta construida | **la reescribe el autor** |
+| 7 | Adquisicion de datos mediante OBD-II | Las piezas | pendiente |
+| 8 | Persistencia: modelo relacional y modelo vectorial | Las piezas | pendiente |
+| 9 | Base de datos relacional | Las piezas | pendiente |
+| 10 | Base de datos vectorial e indice de confianza | Las piezas | pendiente |
+| 11 | Model Context Protocol: herramientas del agente | Las piezas | pendiente |
+| 12 | Ciclo de razonamiento del agente | Las piezas | pendiente |
+| 13 | Modelos empleados: lenguaje y embeddings | Las piezas | pendiente |
+| 14 | Resultados: la aplicacion en funcionamiento | El resultado | pendiente |
+| 15 | Calidad, integracion continua y seguridad | El resultado | pendiente |
 | 16 | Conclusiones | Cierre | pendiente |
 | 17 | Gracias por la atencion | Cierre | pendiente |
 
@@ -38,9 +38,9 @@
   "que hace" contaban lo mismo por partes y no cerraban la idea. Ahora es una sola que
   explica el conjunto: a la izquierda donde se queda el escaner de hoy, a la derecha lo
   que hace esta herramienta.
-- **Titulares reescritos** (2026-08-25): los titulos eran frases de conversacion
-  ("Lo que te da la maquina", "Como se sostiene esto") y no decian de que iba la slide.
-  Ahora son descriptivos.
+- **Titulares y subtitulos en registro formal** (2026-08-25): estaban escritos en tono
+  de conversacion ("Lo que te da la maquina", "Se enchufa al coche", "Que guarda").
+  Reescritos los 45 textos de titulo, subtitulo y encabezado de columna.
 - **Slide nueva de arranque**: "Una herramienta de diagnostico de averias de coche".
   Antes hacian falta tres slides para saber que era el proyecto.
 - **Reordenado por bloques** (2026-08-25): el deck tenia buenas slides sueltas pero sin
