@@ -8,7 +8,7 @@
 | 1 | Portada | 0:15 | **validada** |
 | 2 | Lo que te da la maquina (el problema) | 0:45 | **validada** |
 | 3 | Lo que hace la aplicacion (el objetivo) | 0:55 | **validada** |
-| 4 | El sistema de un vistazo (diagrama general) | 1:00 | pendiente |
+| 4 | El flujo de trabajo | 1:15 | pendiente |
 | 5 | Por que esta arquitectura y no otra | 1:20 | **la reescribe el autor** |
 | 6 | Como se lee el coche (OBD-II) | 1:10 | **validada** |
 | 7 | Dos bases de datos | 0:55 | pendiente |

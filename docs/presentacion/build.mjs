@@ -191,108 +191,84 @@ function pie(s) {
   )
 }
 
-// ======= EL SISTEMA DE UN VISTAZO =========================================
+// ======= EL FLUJO DE TRABAJO ==============================================
 {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('El sistema de un vistazo', {
-    x: 0.7, y: 0.4, w: 11.9, h: 0.65, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 29, bold: true, color: TINTA,
+  s.addText('El flujo de trabajo', {
+    x: 0.85, y: 0.5, w: 11.6, h: 0.7, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
   })
-  s.addText('Quién llama a quién, del conector del coche hasta el modelo.', {
-    x: 0.7, y: 1.12, w: 11.9, h: 0.3, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 14, color: GRIS,
+  s.addText('Qué pasa desde que enchufas el adaptador hasta que el caso queda guardado.', {
+    x: 0.85, y: 1.3, w: 11.6, h: 0.35, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
 
-  function caja(x, y, w, h, titulo, sub, estilo = 'normal') {
-    const nucleo = estilo === 'nucleo'
-    const fisico = estilo === 'fisico'
-    s.addShape(pres.ShapeType.roundRect, {
-      x, y, w, h, rectRadius: 0.05,
-      fill: { color: nucleo ? TINTA : BLANCO },
-      line: { color: nucleo ? TINTA : fisico ? AZUL : 'C9CCD8', width: fisico ? 1.75 : 1 },
+  const pasos = [
+    'Se enchufa el adaptador al coche y se pulsa «Iniciar diagnóstico»',
+    'Se pregunta el bastidor y se identifica el vehículo',
+    'Se barre el bus para ver qué centralitas responden',
+    'Se leen los datos en vivo, los códigos de avería y el freeze frame',
+    'Se calcula la severidad y todo sale en pantalla',
+    'Si el mecánico pregunta al agente, se buscan antes casos parecidos',
+    'El agente pide lo que le falta: el catálogo, más lecturas del coche o la web',
+    'Responde con la explicación, la severidad y qué conviene revisar',
+    'El caso se guarda, y queda disponible para el siguiente coche',
+  ]
+
+  const xNodo = 1.35, d = 0.34, y0 = 2.1, paso = 0.52
+
+  // El hilo del flujo
+  s.addShape(pres.ShapeType.line, {
+    x: xNodo, y: y0 + d / 2, w: 0, h: (pasos.length - 1) * paso,
+    line: { color: 'C9CCD8', width: 1.5 },
+  })
+
+  pasos.forEach((t, k) => {
+    const y = y0 + k * paso
+    s.addShape(pres.ShapeType.ellipse, {
+      x: xNodo - d / 2, y, w: d, h: d, fill: { color: AZUL },
     })
-    s.addText(titulo, {
-      x: x + 0.08, y: y + 0.08, w: w - 0.16, h: 0.26, margin: 0, align: 'center', valign: 'middle',
-      fontFace: 'Arial', fontSize: 10.5, bold: true, color: nucleo ? BLANCO : TINTA,
+    s.addText(String(k + 1), {
+      x: xNodo - d / 2, y, w: d, h: d, margin: 0, align: 'center', valign: 'middle',
+      fontFace: 'Arial', fontSize: 11, bold: true, color: BLANCO,
     })
-    s.addText(sub, {
-      x: x + 0.08, y: y + 0.34, w: w - 0.16, h: 0.4, margin: 0, align: 'center', valign: 'top',
-      fontFace: 'Calibri', fontSize: 8.5, color: nucleo ? GRIS_CL : GRIS, lineSpacing: 10.5,
-    })
-  }
-
-  function doble(x, y1, y2, color = AZUL) {
-    s.addShape(pres.ShapeType.line, {
-      x, y: y1, w: 0, h: y2 - y1,
-      line: { color, width: 1.25, beginArrowType: 'triangle', endArrowType: 'triangle' },
-    })
-  }
-  const W3 = 3.5, GAP = 0.7, X0 = 1.05
-  const cx = [X0 + W3 / 2, X0 + W3 + GAP + W3 / 2, X0 + 2 * (W3 + GAP) + W3 / 2]
-
-  caja(5.15, 1.55, 3.0, 0.66, 'El mecánico', 'consulta el coche\ny pregunta al agente')
-  doble(6.65, 2.21, 2.52)
-
-  caja(X0, 2.52, 3 * W3 + 2 * GAP, 0.78, 'El núcleo',
-       'casos de uso y reglas del dominio · decide qué se pide y valida lo que vuelve', 'nucleo')
-
-  const yAd = 3.62
-  cx.forEach((x) => doble(x, 3.30, yAd))
-  caja(X0,                  yAd, W3, 0.87, 'Lectura del coche', 'pide modos y PIDs\ny traduce lo que vuelve')
-  caja(X0 + W3 + GAP,       yAd, W3, 0.87, 'Bases de datos', 'la relacional\ny la vectorial')
-  caja(X0 + 2 * (W3 + GAP), yAd, W3, 0.87, 'Herramientas del agente', 'lo único que el modelo\npuede llegar a pedir')
-
-  ;[X0 + W3, X0 + 2 * W3 + GAP].forEach((x) => {
-    s.addShape(pres.ShapeType.line, {
-      x: x + 0.08, y: yAd + 0.44, w: GAP - 0.16, h: 0,
-      line: { color: '9AA0B4', width: 1, dashType: 'dash', beginArrowType: 'triangle' },
+    s.addText(t, {
+      x: xNodo + 0.42, y: y - 0.02, w: 10.5, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA,
     })
   })
 
-  // Nivel fisico: el dongle enchufado, y el coche
-  const yDon = 4.82
-  doble(cx[0], 4.49, yDon)
-  doble(cx[2], 4.49, yDon)
-  caja(X0,                  yDon, W3, 0.8, 'El adaptador', 'enchufado al conector\nde diagnóstico del coche', 'fisico')
-  caja(X0 + 2 * (W3 + GAP), yDon, W3, 0.8, 'El modelo', 'razona y va pidiendo\nlas herramientas que necesita')
-
-  const yCoche = 5.95
-  doble(cx[0], 5.62, yCoche, AZUL)
-  caja(X0, yCoche, W3, 0.78, 'El coche', 'el motor y el resto\nde centralitas', 'fisico')
-
-  s.addText('En la demo este tramo va emulado. De aquí para arriba, todo es idéntico.', {
-    x: X0 + W3 + GAP - 0.5, y: 5.05, w: W3 + 1.0, h: 0.6, margin: 0, align: 'center', valign: 'top',
-    fontFace: 'Calibri', fontSize: 9, italic: true, color: GRIS, lineSpacing: 11,
+  // Corte: hasta aqui no ha intervenido la IA
+  const yCorte = y0 + 4 * paso + d + 0.11
+  s.addShape(pres.ShapeType.line, {
+    x: 0.85, y: yCorte, w: 11.6, h: 0,
+    line: { color: 'D8DAE4', width: 1, dashType: 'dash' },
   })
-  s.addText('Las herramientas del agente vuelven a entrar por los mismos adaptadores.', {
-    x: X0 + W3 + GAP - 0.5, y: 5.95, w: W3 + 1.0, h: 0.5, margin: 0, align: 'center', valign: 'top',
-    fontFace: 'Calibri', fontSize: 9, italic: true, color: GRIS, lineSpacing: 11,
+  s.addText('hasta aquí, sin IA', {
+    x: 9.6, y: yCorte - 0.19, w: 2.85, h: 0.3, margin: 0, align: 'right',
+    fontFace: 'Calibri', fontSize: 11, italic: true, color: GRIS,
   })
 
   pie(s)
   s.addNotes(
-    'Esta es la foto entera, de abajo a arriba.\n\n' +
-    'Abajo del todo, el coche de verdad: su bus CAN y las centralitas. Encima, el punto ' +
-    'donde esto se conecta al mundo físico, que es el dongle ELM327 enchufado al conector ' +
-    'OBD-II del coche, ese que está debajo del volante. Se une al portátil por USB o por ' +
-    'WiFi. Los dos van en azul porque son las dos únicas piezas que no son código mío.\n\n' +
-    'De ahí para arriba ya es software. El transporte OBD abre el puerto serie o el socket, ' +
-    'negocia el protocolo del bus y traduce comandos. La persistencia guarda lo relacional ' +
-    'en SQLite y lo vectorial en LanceDB. Y el servidor MCP expone las dieciséis ' +
-    'herramientas al modelo, que está a la derecha.\n\n' +
-    'En el centro, en oscuro, el núcleo: los casos de uso y el dominio, con las fórmulas de ' +
-    'la norma y los catálogos. Ese bloque no sabe nada de lo que hay debajo. Y arriba el ' +
-    'mecánico, con la interfaz.\n\n' +
-    'Dos detalles. Las flechas son de ida y vuelta porque todo son peticiones y respuestas. ' +
-    'Y las discontinuas del centro son lo que hace que esto sea un sistema y no una ' +
-    'tubería: cuando el agente pide una herramienta, vuelve a entrar por los mismos ' +
-    'adaptadores. Lee el coche por el mismo transporte y escribe en el mismo catálogo. No ' +
-    'hay puerta trasera para la IA.\n\n' +
-    'Para la demo de hoy, el tramo físico se sustituye por tres emuladores ELM327 ' +
-    'escuchando en tres puertos TCP. Todo lo de arriba es idéntico.\n\n' +
-    '[~80 s · acumulado 3:00]',
+    'Este es el recorrido de trabajo, de principio a fin.\n\n' +
+    'Empieza donde empieza de verdad: se enchufa el adaptador al conector de diagnóstico ' +
+    'del coche y se pulsa iniciar. A partir de ahí va solo.\n\n' +
+    'Lo primero, preguntarle al coche el bastidor para saber qué vehículo es. Después un ' +
+    'barrido del bus, para ver qué centralitas responden. Luego se leen los datos en vivo, ' +
+    'los códigos de avería y el freeze frame. Y con eso se calcula la severidad y sale todo ' +
+    'en pantalla.\n\n' +
+    'Fijaos en la línea: hasta ese punto no ha intervenido la IA. Si no hay modelo ' +
+    'configurado, o si el taller no tiene internet, el mecánico ya tiene su diagnóstico.\n\n' +
+    'De ahí para abajo es opcional, y solo pasa si el mecánico pregunta al agente. Antes de ' +
+    'llamarlo se buscan casos parecidos de diagnósticos anteriores. El agente pide lo que le ' +
+    'falta: mirar el catálogo, leer más cosas del coche, o buscar en la web. Y responde con ' +
+    'la explicación, la severidad y qué conviene revisar.\n\n' +
+    'Y el último paso es el que hace que esto crezca: el caso se guarda, y queda disponible ' +
+    'para el siguiente coche que entre con síntomas parecidos.\n\n' +
+    '[~75 s · acumulado 2:55]',
   )
 }
 
