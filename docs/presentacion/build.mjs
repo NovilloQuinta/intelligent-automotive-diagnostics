@@ -611,7 +611,14 @@ function pie(s) {
     'por OBD es un hecho: 1,0. Comprobar un dato contra el coche sube la web a 0,7 y al ' +
     'mecánico a 0,9.\n\n' +
     'Ese índice no es decorativo: es lo que pondera las búsquedas. Cuando al agente le ' +
-    'llegan dos respuestas que se contradicen, gana la que más confianza tiene.\n\n[~70 s]',
+    'llegan dos respuestas que se contradicen, gana la que más confianza tiene.\n\n' +
+    '[Si preguntan por el escalado] Hay dos mecanismos distintos y conviene no mezclarlos. ' +
+    'Que el mecánico aporte o confirme un dato sube su confianza a 0,8, y validarlo contra ' +
+    'el coche lo lleva a 0,9: eso está implementado y funciona. Lo que dejé fuera a ' +
+    'propósito es subir la confianza de un caso cada vez que se reutiliza con acierto. La ' +
+    'función existe y está testeada, pero no la llamo desde ningún flujo, porque para eso ' +
+    'haría falta saber que el diagnóstico acertó de verdad, y nadie le dice al sistema si ' +
+    'el coche se arregló. Inventármelo habría degradado el catálogo.\n\n[~70 s]',
   )
 }
 
@@ -793,23 +800,23 @@ function pie(s) {
   )
 }
 
-// ======= CAMBIAR DE MODELO Y APRENDER DEL USO =============================
+// ======= LOS DOS MODELOS ==================================================
 {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Cambiar de modelo, y aprender del uso', {
+  s.addText('Los dos modelos', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Lo de fuera se sustituye. Lo que el sistema aprende se queda.', {
+  s.addText('Uno razona y se puede cambiar. El otro convierte texto en vectores y va dentro.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
 
   const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.45, yLista = 3.05
 
-  s.addText('Cambiar de proveedor', {
+  s.addText('El modelo de lenguaje', {
     x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
@@ -818,47 +825,48 @@ function pie(s) {
       { text: 'Una variable de entorno: LLM_PROVIDER = anthropic u openai', options: { bullet: true, breakLine: true } },
       { text: 'Los dos clientes implementan el mismo puerto, LlmClientPort', options: { bullet: true, breakLine: true } },
       { text: 'El adaptador de OpenAI sirve también para DeepSeek, Groq, Mistral o xAI', options: { bullet: true, breakLine: true } },
-      { text: 'Los embeddings ni eso: el modelo corre en la propia máquina', options: { bullet: true } },
+      { text: 'Sin proveedor configurado, el diagnóstico determinista sigue funcionando', options: { bullet: true } },
     ],
     { x: xIzq, y: yLista, w: colW, h: 3.1, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  s.addText('Aprender del uso', {
+  s.addText('El modelo de embeddings', {
     x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
+  s.addText('paraphrase-multilingual-MiniLM-L12-v2', {
+    x: xDer, y: yLista, w: colW, h: 0.3, margin: 0, valign: 'top',
+    fontFace: 'Courier New', fontSize: 12, bold: true, color: TINTA,
+  })
   s.addText(
     [
-      { text: 'El agente se topa con un PID o un DTC que no está en el catálogo', options: { bullet: true, breakLine: true } },
-      { text: 'Lo valida contra el coche cuando se puede',            options: { bullet: true, breakLine: true } },
-      { text: 'Lo indexa con la confianza de su fuente',              options: { bullet: true, breakLine: true } },
-      { text: 'Y en el siguiente coche vuelve como caso parecido',    options: { bullet: true, breakLine: true } },
-      { text: 'Lo que no está: subir la confianza cuando un caso acierta. Habría que saber que acertó, y el sistema no lo sabe', options: { bullet: true } },
+      { text: 'Corre en la propia máquina, con transformers.js', options: { bullet: true, breakLine: true } },
+      { text: 'Sin clave, sin red y sin coste por consulta',    options: { bullet: true, breakLine: true } },
+      { text: 'Convierte cada texto en 384 números, normalizados', options: { bullet: true, breakLine: true } },
+      { text: 'Es multilingüe: por eso «presión de aceite» encuentra «oil pressure»', options: { bullet: true } },
     ],
-    { x: xDer, y: yLista, w: colW, h: 3.1, margin: 0, valign: 'top',
+    { x: xDer, y: yLista + 0.45, w: colW, h: 2.8, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
   pie(s)
   s.addNotes(
-    'Dos cosas que van juntas: lo de fuera se sustituye, y lo que se aprende se queda.\n\n' +
-    'Cambiar de proveedor de modelo es una variable de entorno. Los dos clientes, el de ' +
-    'Anthropic y el de OpenAI, implementan el mismo puerto, así que la capa de aplicación ' +
-    'no se entera de cuál está detrás. Y el adaptador de OpenAI no vale solo para OpenAI: ' +
-    'sirve para cualquier proveedor compatible con su API, o sea DeepSeek, Groq, Mistral o ' +
-    'xAI, cambiando la URL base. Los embeddings no dependen ni de eso, porque el modelo ' +
-    'corre en la propia máquina: sin clave, sin latencia de red y sin coste por consulta.\n\n' +
-    'La otra mitad es el aprendizaje. El agente se topa con un PID o un DTC que no está en ' +
-    'el catálogo, lo valida contra el coche cuando se puede, y lo indexa con la confianza ' +
-    'que le corresponde según de dónde salga. En el siguiente coche parecido, eso vuelve ' +
-    'como caso similar.\n\n' +
-    'Y hay una pieza que quiero decir en voz alta porque está a medias a propósito. Tengo ' +
-    'implementada y testeada la función que sube la confianza de un dato cada vez que se ' +
-    'reutiliza con éxito, pero no la llamo desde ningún flujo. El motivo es que para ' +
-    'subirla haría falta saber que el diagnóstico acertó de verdad, y ese dato el sistema ' +
-    'no lo tiene: nadie le dice si el coche se arregló. Inventármelo habría degradado el ' +
-    'catálogo, así que preferí dejarlo fuera de alcance y documentarlo.\n\n[~65 s]',
+    'Aquí hay dos modelos, y no hacen lo mismo.\n\n' +
+    'El de lenguaje es el que razona, y es intercambiable: una variable de entorno decide ' +
+    'si va contra Anthropic o contra OpenAI. Los dos clientes implementan el mismo puerto, ' +
+    'así que la capa de aplicación no se entera de cuál hay detrás. Y el adaptador de ' +
+    'OpenAI no vale solo para OpenAI: sirve para cualquier proveedor compatible con su API ' +
+    '—DeepSeek, Groq, Mistral, xAI— cambiando la URL base. Si no hay ninguno configurado, ' +
+    'el diagnóstico determinista sigue funcionando.\n\n' +
+    'El de embeddings es distinto: no se cambia, va dentro. Es un modelo pequeño que corre ' +
+    'en la propia máquina con transformers.js. Coge un texto —la descripción de un PID, la ' +
+    'narrativa de un diagnóstico— y lo convierte en 384 números, normalizados, que es lo ' +
+    'que se guarda en la base vectorial. Buscar por parecido es comparar esos vectores.\n\n' +
+    'Que corra en local significa tres cosas: no hace falta clave, no hay latencia de red y ' +
+    'no se paga por consulta. Y como es multilingüe, español e inglés caen cerca en ese ' +
+    'espacio: por eso "presión de aceite" encuentra una ficha que pone "oil pressure", que ' +
+    'es justo lo que un buscador de texto no hace.\n\n[~65 s]',
   )
 }
 
