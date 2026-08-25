@@ -197,98 +197,99 @@ function pie(s) {
   s.background = { color: BLANCO }
 
   s.addText('El sistema de un vistazo', {
-    x: 0.7, y: 0.5, w: 11.9, h: 0.75, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
+    x: 0.7, y: 0.45, w: 11.9, h: 0.7, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 30, bold: true, color: TINTA,
   })
-  s.addText('Del conector del coche hasta la respuesta, y de vuelta al catálogo.', {
-    x: 0.7, y: 1.35, w: 11.9, h: 0.35, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 15, color: GRIS,
+  s.addText('Quién llama a quién. Todo lo de fuera entra por un puerto.', {
+    x: 0.7, y: 1.22, w: 11.9, h: 0.32, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 14, color: GRIS,
   })
 
-  const bw = 2.1, bh = 0.82, bgap = 0.35, x0 = 0.7
-
-  function banda(titulo, y, cajas) {
-    s.addText(titulo, {
-      x: x0, y: y - 0.34, w: 11.9, h: 0.28, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 11, bold: true, color: AZUL, charSpacing: 1.4,
+  /** Caja del diagrama. `nucleo` la pinta en oscuro. */
+  function caja(x, y, w, h, titulo, sub, nucleo = false) {
+    s.addShape(pres.ShapeType.roundRect, {
+      x, y, w, h, rectRadius: 0.05,
+      fill: { color: nucleo ? TINTA : BLANCO },
+      line: { color: nucleo ? TINTA : 'C9CCD8', width: 1 },
     })
-    cajas.forEach(([arriba, abajo], k) => {
-      const x = x0 + k * (bw + bgap)
-      s.addShape(pres.ShapeType.roundRect, {
-        x, y, w: bw, h: bh, rectRadius: 0.05,
-        fill: { color: BLANCO }, line: { color: 'C9CCD8', width: 1 },
-      })
-      s.addText(arriba, {
-        x: x + 0.08, y: y + 0.1, w: bw - 0.16, h: 0.28, margin: 0, align: 'center', valign: 'middle',
-        fontFace: 'Arial', fontSize: 10.5, bold: true, color: TINTA,
-      })
-      s.addText(abajo, {
-        x: x + 0.08, y: y + 0.38, w: bw - 0.16, h: 0.38, margin: 0, align: 'center', valign: 'top',
-        fontFace: 'Calibri', fontSize: 9, color: GRIS, lineSpacing: 11,
-      })
-      if (k < cajas.length - 1) {
-        s.addShape(pres.ShapeType.line, {
-          x: x + bw + 0.06, y: y + bh / 2, w: bgap - 0.12, h: 0,
-          line: { color: AZUL, width: 1.25, endArrowType: 'triangle' },
-        })
-      }
+    s.addText(titulo, {
+      x: x + 0.08, y: y + 0.1, w: w - 0.16, h: 0.28, margin: 0, align: 'center', valign: 'middle',
+      fontFace: 'Arial', fontSize: 11, bold: true, color: nucleo ? BLANCO : TINTA,
+    })
+    s.addText(sub, {
+      x: x + 0.08, y: y + 0.38, w: w - 0.16, h: 0.42, margin: 0, align: 'center', valign: 'top',
+      fontFace: 'Calibri', fontSize: 9, color: nucleo ? GRIS_CL : GRIS, lineSpacing: 11,
     })
   }
 
-  banda('1 · IDENTIFICAR EL COCHE', 2.15, [
-    ['El mecánico',        'React 19, sesión JWT'],
-    ['Elige vehículo',     'cable USB, WiFi\no emulador'],
-    ['Lee el VIN',         'modo 09, ISO 3779'],
-    ['Resuelve la marca',  'BBDD → catálogo →\nweb → mecánico'],
-    ['Barrido del bus',    'quién contesta,\nISO 15765-4'],
-  ])
+  /** Flecha de ida y vuelta entre dos niveles. */
+  function doble(x, y1, y2) {
+    s.addShape(pres.ShapeType.line, {
+      x, y: y1, w: 0, h: y2 - y1,
+      line: { color: AZUL, width: 1.25, beginArrowType: 'triangle', endArrowType: 'triangle' },
+    })
+  }
 
-  banda('2 · LEER LOS DATOS', 3.65, [
-    ['Telemetría',   'modo 01 + la fórmula\nde cada PID'],
-    ['Códigos DTC',  'modos 03, 07 y 0A'],
-    ['Freeze frame', 'modo 02'],
-    ['Determinista', 'severidad por regla,\nsin IA'],
-    ['A la pantalla', 'y a SQLite,\ncon la sesión'],
-  ])
+  const W3 = 3.5, GAP = 0.7, X0 = 1.05          // fila de adaptadores
+  const cx = [X0 + W3 / 2, X0 + W3 + GAP + W3 / 2, X0 + 2 * (W3 + GAP) + W3 / 2]
 
-  banda('3 · RAZONAR CON IA', 5.15, [
-    ['Casos parecidos', 'búsqueda vectorial\nen LanceDB'],
-    ['El agente',       '16 herramientas MCP\n+ el modelo'],
-    ['Busca lo que falta', 'catálogo, el coche\no la web'],
-    ['Informe',         'narrativa, severidad\ny recomendaciones'],
-    ['Se indexa',       'el caso vuelve\nal catálogo'],
-  ])
+  // Nivel 1 — el mecanico
+  caja(5.15, 1.72, 3.0, 0.72, 'El mecánico', 'React 19 · sesión JWT')
+  doble(6.65, 2.44, 2.78)
 
-  // El bucle
-  s.addShape(pres.ShapeType.line, {
-    x: x0 + bw / 2, y: 6.32, w: 4 * (bw + bgap), h: 0,
-    line: { color: 'C9CCD8', width: 1, dashType: 'dash', beginArrowType: 'triangle' },
+  // Nivel 2 — el nucleo
+  caja(X0, 2.78, 3 * W3 + 2 * GAP, 0.85, 'API: casos de uso + dominio',
+       'fórmulas SAE J1979 · catálogos · decodificación del VIN', true)
+
+  // Nivel 3 — los tres adaptadores
+  const yAd = 4.15
+  doble(cx[0], 3.63, yAd)
+  doble(cx[1], 3.63, yAd)
+  doble(cx[2], 3.63, yAd)
+  caja(X0,                    yAd, W3, 0.95, 'Transporte OBD', 'ELM327 por serie o TCP\nnegocia el protocolo')
+  caja(X0 + W3 + GAP,         yAd, W3, 0.95, 'Persistencia', 'SQLite · 13 tablas\nLanceDB · 4 índices')
+  caja(X0 + 2 * (W3 + GAP),   yAd, W3, 0.95, 'Servidor MCP', '16 herramientas\ndeclaradas con su esquema')
+
+  // El bucle: las tools del agente vuelven a entrar por los otros dos adaptadores
+  ;[X0 + W3, X0 + 2 * W3 + GAP].forEach((x) => {
+    s.addShape(pres.ShapeType.line, {
+      x: x + 0.08, y: yAd + 0.48, w: GAP - 0.16, h: 0,
+      line: { color: '9AA0B4', width: 1, dashType: 'dash', beginArrowType: 'triangle' },
+    })
   })
-  s.addText('lo aprendido alimenta el siguiente diagnóstico', {
-    x: x0, y: 6.38, w: 11.9, h: 0.28, margin: 0, align: 'center',
-    fontFace: 'Calibri', fontSize: 10, italic: true, color: GRIS,
+
+  // Nivel 4 — lo que hay al otro lado
+  const yEx = 5.72
+  doble(cx[0], 5.10, yEx)
+  doble(cx[2], 5.10, yEx)
+  caja(X0,                  yEx, W3, 0.9, 'El coche', 'bus CAN · ISO 15765-4\no uno de los 3 emuladores')
+  caja(X0 + 2 * (W3 + GAP), yEx, W3, 0.9, 'El modelo', 'Anthropic u OpenAI\ny búsqueda web con presupuesto')
+
+  s.addText('Las herramientas del agente vuelven a entrar por los mismos adaptadores: leen el coche y escriben en el catálogo.', {
+    x: X0 + W3 + GAP - 0.4, y: 6.75, w: W3 + 0.8, h: 0.6, margin: 0, align: 'center', valign: 'top',
+    fontFace: 'Calibri', fontSize: 9, italic: true, color: GRIS, lineSpacing: 11,
   })
 
   pie(s)
   s.addNotes(
-    'Esta es la foto entera, para que se entienda dónde encaja todo lo que viene después.\n\n' +
-    'La primera fase es identificar el coche. El mecánico entra con su sesión, elige el ' +
-    'vehículo —por cable, por WiFi o uno de los emuladores— y el sistema le pregunta al ' +
-    'coche el bastidor con el modo 09. De ahí resuelve la marca por una cascada: primero ' +
-    'mira la base de datos, luego el catálogo de fabricantes, luego la web, y si nada ' +
-    'funciona lo confirma el mecánico a mano y queda aprendido. Después hace un barrido del ' +
-    'bus para ver qué centralitas contestan.\n\n' +
-    'La segunda fase es leer los datos: la telemetría con el modo 01 aplicando la fórmula ' +
-    'de cada PID, los códigos de avería con los modos 03, 07 y 0A, y el freeze frame con el ' +
-    '02. Con eso el diagnóstico determinista calcula la severidad por regla, sin IA de por ' +
-    'medio, y sale a pantalla. Todo eso queda guardado en SQLite con la sesión.\n\n' +
-    'La tercera fase es la de IA, y solo entra si hay modelo configurado. Antes de llamarlo ' +
-    'se buscan casos parecidos en la base vectorial. El agente entra con esos casos y con ' +
-    'las dieciséis herramientas MCP, y va pidiendo lo que le falta: el catálogo, más ' +
-    'lecturas del coche, o la web si hace falta. Sale un informe con narrativa, severidad y ' +
-    'recomendaciones.\n\n' +
-    'Y esa flecha de vuelta es la tesis del proyecto: el caso se indexa, y lo aprendido ' +
-    'alimenta el siguiente diagnóstico.\n\n[~75 s · acumulado 2:55]',
+    'Esta es la foto entera. Lo importante no es la lista de piezas, es quién llama a ' +
+    'quién.\n\n' +
+    'Arriba el mecánico, con la interfaz en React y su sesión. Habla con la API, y las ' +
+    'flechas son de ida y vuelta porque son peticiones y respuestas.\n\n' +
+    'En el centro, en oscuro, está el núcleo: los casos de uso y el dominio. Ahí viven las ' +
+    'fórmulas de la SAE J1979, los catálogos y la decodificación del VIN. Ese bloque no ' +
+    'sabe nada de lo que hay debajo.\n\n' +
+    'Debajo, los tres adaptadores. El transporte OBD, que habla con el ELM327 por puerto ' +
+    'serie o por TCP y negocia el protocolo del bus. La persistencia, con SQLite para lo ' +
+    'relacional y LanceDB para lo vectorial. Y el servidor MCP, que expone las dieciséis ' +
+    'herramientas.\n\n' +
+    'Y abajo del todo, lo que hay al otro lado: el coche, con su bus CAN, o uno de los tres ' +
+    'emuladores; y el modelo, Anthropic u OpenAI, más la búsqueda web.\n\n' +
+    'Fijaos en las flechas discontinuas del centro, que son lo que hace que esto sea un ' +
+    'sistema y no una tubería: cuando el agente pide una herramienta, esa herramienta ' +
+    'vuelve a entrar por los mismos adaptadores. Lee el coche por el mismo transporte y ' +
+    'escribe en el mismo catálogo. No hay una puerta trasera para la IA.\n\n' +
+    '[~75 s · acumulado 2:55]',
   )
 }
 
