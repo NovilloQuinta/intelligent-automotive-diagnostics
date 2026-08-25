@@ -629,32 +629,44 @@ function pie(s) {
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
 
-  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.45, yLista = 3.05
-
-  s.addText('16 herramientas', {
-    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+  // --- Izquierda: las 16 tools, con su nombre real -------------------------
+  const xI = 0.85, wI = 6.5
+  s.addText('Las 16 herramientas', {
+    x: xI, y: 2.4, w: wI, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
+
   const grupos = [
-    ['7', 'de diagnóstico: leer el VIN, un PID, los DTCs, el freeze frame, las ECUs'],
-    ['8', 'de conocimiento: buscar parecidos e indexar lo aprendido'],
-    ['1', 'de búsqueda web, con presupuesto limitado por diagnóstico'],
+    ['Diagnóstico · 7', ['read_vin   read_pid   get_available_pids',
+                          'get_dtc_codes   get_freeze_frame',
+                          'get_vehicle_info   get_ecu_info']],
+    ['Conocimiento · 8', ['search_similar_pids   search_similar_dtcs',
+                          'search_similar_diagnoses   search_similar_ecus',
+                          'index_pid   index_dtc   index_diagnosis   index_ecu']],
+    ['Web · 1',          ['web_search']],
   ]
-  grupos.forEach(([n, t], k) => {
-    const y = yLista + k * 0.85
-    s.addText(n, {
-      x: xIzq, y, w: 0.6, h: 0.4, margin: 0, valign: 'top',
-      fontFace: 'Arial', fontSize: 20, bold: true, color: TINTA,
+  let y = 2.95
+  grupos.forEach(([titulo, lineas]) => {
+    s.addText(titulo, {
+      x: xI, y, w: wI, h: 0.3, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 13, bold: true, color: TINTA,
     })
-    s.addText(t, {
-      x: xIzq + 0.7, y, w: colW - 0.7, h: 0.8, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 15, color: TINTA, lineSpacing: 21,
+    y += 0.34
+    lineas.forEach((l) => {
+      s.addText(l, {
+        x: xI + 0.15, y, w: wI - 0.15, h: 0.28, margin: 0, valign: 'top',
+        fontFace: 'Courier New', fontSize: 11, color: GRIS,
+      })
+      y += 0.29
     })
+    y += 0.18
   })
 
-  s.addText('Por qué MCP y no llamadas a medida', {
-    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+  // --- Derecha: por que MCP -----------------------------------------------
+  const xD = 7.75, wD = 4.7
+  s.addText('Por qué MCP', {
+    x: xD, y: 2.4, w: wD, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
   s.addText(
     [
@@ -664,8 +676,8 @@ function pie(s) {
       { text: 'El servidor vive en infraestructura: el modelo nunca ve el dominio', options: { bullet: true, breakLine: true } },
       { text: 'Cambiar de modelo no toca las herramientas', options: { bullet: true } },
     ],
-    { x: xDer, y: yLista, w: colW, h: 3.1, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+    { x: xD, y: 2.95, w: wD, h: 3.5, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 14, color: TINTA, paraSpaceAfter: 10, lineSpacing: 20 },
   )
 
   pie(s)
@@ -673,27 +685,25 @@ function pie(s) {
     'El modelo no toca el coche directamente. Lo que hace es pedir herramientas, y el ' +
     'sistema decide si las ejecuta y con qué argumentos. Ese contrato es el MCP, el Model ' +
     'Context Protocol.\n\n' +
-    'Hay dieciséis herramientas. Siete son de diagnóstico: leer el bastidor, leer un PID, ' +
-    'pedir los códigos de avería, el freeze frame o la información de las centralitas. ' +
-    'Ocho son de conocimiento, y son las que hablan con la base vectorial: buscar casos ' +
-    'parecidos e indexar lo que se aprende. Y una es de búsqueda web, que lleva un ' +
-    'presupuesto limitado por diagnóstico para que el agente no se vaya a internet sin ' +
-    'control.\n\n' +
+    'A la izquierda están las dieciséis que he construido, con su nombre. Siete son de ' +
+    'diagnóstico: leer el bastidor, leer un PID, preguntar qué PIDs soporta el coche, los ' +
+    'códigos de avería, el freeze frame, la información del vehículo y la de las ' +
+    'centralitas. Ocho son de conocimiento, y van por parejas: cuatro para buscar parecidos ' +
+    'y cuatro para indexar lo aprendido, de PIDs, DTCs, diagnósticos y ECUs. Y una de ' +
+    'búsqueda web, con un presupuesto limitado por diagnóstico para que el agente no se ' +
+    'vaya a internet sin control.\n\n' +
     '¿Y por qué MCP? Primero, porque es el estándar que existe hoy para que un modelo pida ' +
-    'herramientas. No es un protocolo de propósito general: sirve exactamente para esto, y ' +
-    'por eso encaja.\n\n' +
+    'herramientas. No es un protocolo de propósito general: sirve exactamente para esto.\n\n' +
     'Y segundo, que para mí es lo importante: el modelo solo puede actuar a través de esas ' +
-    'dieciséis herramientas. No hay otra puerta. No ejecuta código, no consulta la base de ' +
-    'datos por su cuenta, no llama a ningún otro endpoint. Si quiere saber a cuántas ' +
-    'revoluciones está el motor, tiene que pedir la herramienta de leer un PID, y ahí es ' +
-    'donde yo decido si se ejecuta y con qué argumentos. Eso acota lo que el agente puede ' +
-    'hacer, que en un sistema que se conecta a un coche de verdad no es un detalle menor.\n\n' +
-    'Además, cada herramienta declara su esquema, así que los argumentos que manda el ' +
-    'modelo se validan antes de ejecutar nada. Y el servidor MCP vive en la capa de ' +
-    'infraestructura: es un adaptador más, el modelo nunca ve el dominio. Como es un ' +
-    'protocolo, ese mismo servidor serviría a cualquier otro cliente que lo hable.\n\n' +
-    'La consecuencia de todo esto es la de siempre: si mañana cambio de modelo, las ' +
-    'herramientas no se tocan.\n\n[~75 s]',
+    'dieciséis. No hay otra puerta. No ejecuta código, no consulta la base de datos por su ' +
+    'cuenta, no llama a ningún otro endpoint. Si quiere saber a cuántas revoluciones está ' +
+    'el motor, tiene que pedir la herramienta de leer un PID, y ahí decido yo si se ejecuta ' +
+    'y con qué argumentos. Eso acota lo que el agente puede hacer, y en un sistema que se ' +
+    'conecta a un coche de verdad no es un detalle menor.\n\n' +
+    'Además, cada herramienta declara su esquema, así que los argumentos se validan antes ' +
+    'de ejecutar nada. Y el servidor MCP vive en infraestructura: es un adaptador más, el ' +
+    'modelo nunca ve el dominio. Como es un protocolo, ese mismo servidor serviría a ' +
+    'cualquier otro cliente que lo hable.\n\n[~75 s]',
   )
 }
 
