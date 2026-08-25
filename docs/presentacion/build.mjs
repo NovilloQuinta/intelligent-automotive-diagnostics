@@ -109,46 +109,37 @@ function pie(s, n) {
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
 
-  // Izquierda: la salida del escáner, tal cual la ve el mecánico
-  const px = 0.85, py = 2.1, pw = 6.5, ph = 3.55
-  s.addShape(pres.ShapeType.roundRect, {
-    x: px, y: py, w: pw, h: ph, rectRadius: 0.06, fill: { color: TINTA },
-  })
-  s.addText('SALIDA DEL ESCÁNER', {
-    x: px + 0.45, y: py + 0.42, w: pw - 0.9, h: 0.28, margin: 0,
-    fontFace: 'Calibri', fontSize: 10, bold: true, color: AZUL_CL, charSpacing: 2,
-  })
+  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.2, yLista = 2.85
 
-  const codigos = [
-    ['P0301', 'Fallo de encendido en el cilindro 1'],
-    ['P0401', 'Flujo de EGR insuficiente'],
-    ['P2002', 'Filtro de partículas por debajo del umbral'],
-  ]
-  codigos.forEach(([cod, desc], i) => {
-    const y = py + 1.05 + i * 0.72
-    s.addText(cod, {
-      x: px + 0.45, y, w: 1.15, h: 0.4, margin: 0, valign: 'middle',
-      fontFace: 'Courier New', fontSize: 15, bold: true, color: BLANCO,
-    })
-    s.addText(desc, {
-      x: px + 1.75, y, w: pw - 2.2, h: 0.4, margin: 0, valign: 'middle',
-      fontFace: 'Calibri', fontSize: 14, color: GRIS_CL,
-    })
+  s.addText('Te da', {
+    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
   })
-  s.addText('…y así hasta diez.', {
-    x: px + 0.45, y: py + 3.0, w: pw - 0.9, h: 0.3, margin: 0,
-    fontFace: 'Calibri', fontSize: 12, italic: true, color: '6E7488',
-  })
+  s.addText(
+    [
+      { text: 'P0301   Fallo de encendido en el cilindro 1', options: { bullet: true, breakLine: true } },
+      { text: 'P0401   Válvula EGR obstruida',            options: { bullet: true, breakLine: true } },
+      { text: 'P2002   Filtro de partículas lleno', options: { bullet: true, breakLine: true } },
+      { text: 'Y así hasta diez',                              options: { bullet: true } },
+    ],
+    { x: xIzq, y: yLista, w: colW, h: 2.6, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 10, lineSpacing: 22 },
+  )
 
-  // Derecha: lo que no te dice
-  s.addText('¿Por qué?', {
-    x: 7.85, y: 2.55, w: 4.6, h: 0.9, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 46, bold: true, color: AZUL,
+  s.addText('No te da', {
+    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
   })
-  s.addText('La válvula se obstruye por algo.\nEl filtro se llena por algo.\n\nEso la máquina no te lo dice.', {
-    x: 7.85, y: 3.65, w: 4.6, h: 1.9, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: TINTA, lineSpacing: 26,
-  })
+  s.addText(
+    [
+      { text: 'Por qué se ha obstruido la válvula', options: { bullet: true, breakLine: true } },
+      { text: 'Por qué se ha llenado el filtro',     options: { bullet: true, breakLine: true } },
+      { text: 'Qué tiene que ver un código con otro', options: { bullet: true, breakLine: true } },
+      { text: 'Por dónde empezar a mirar',            options: { bullet: true } },
+    ],
+    { x: xDer, y: yLista, w: colW, h: 2.6, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 10, lineSpacing: 22 },
+  )
 
   pie(s, 2)
   s.addNotes(
@@ -156,8 +147,8 @@ function pie(s, n) {
     'Cada uno te dice una cosa: válvula EGR obstruida, filtro de partículas lleno.\n\n' +
     'Vale. Pero esa válvula se ha obstruido por alguna circunstancia, y ese filtro se ha ' +
     'llenado por alguna circunstancia. Y eso la máquina no te lo dice.\n\n' +
-    'El mecánico se queda con la lista delante y el trabajo de averiguar el porqué sigue ' +
-    'entero por hacer.\n\n[~45 s]',
+    'Te deja la lista delante, y el trabajo de averiguar el porqué sigue entero por hacer.\n\n' +
+    '[~45 s]',
   )
 }
 
