@@ -101,12 +101,62 @@ function pie(s) {
   )
 }
 
+// ======= QUÉ ES ESTE PROYECTO =============================================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Una herramienta de diagnóstico de averías de coche', {
+    x: 0.85, y: 0.7, w: 11.6, h: 0.9, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
+  })
+  s.addText('Se enchufa al coche, lee lo que dicen sus centralitas y le explica al mecánico qué le pasa.', {
+    x: 0.85, y: 1.72, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  const cosas = [
+    ['Lee el coche',      'Se conecta por el puerto de diagnóstico y le pregunta a las centralitas: qué coche es, cómo va y qué averías tiene'],
+    ['Lo interpreta',     'No devuelve una tabla de códigos: dice qué está pasando, si el coche está bien o está mal, y por dónde seguir mirando'],
+    ['Investiga la causa', 'Un agente de IA cruza los códigos con los datos y propone las causas posibles y los pasos para descartarlas'],
+    ['Y se lo queda',     'Cada caso resuelto se guarda, y aparece como referencia cuando entra otro coche con síntomas parecidos'],
+  ]
+  cosas.forEach(([que, detalle], k) => {
+    const y = 2.62 + k * 1.02
+    s.addText(que, {
+      x: 0.85, y, w: 2.9, h: 0.4, margin: 0, valign: 'top',
+      fontFace: 'Arial', fontSize: 18, bold: true, color: AZUL,
+    })
+    s.addText(detalle, {
+      x: 3.95, y: y - 0.02, w: 8.5, h: 0.85, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, lineSpacing: 21,
+    })
+  })
+
+  pie(s)
+  s.addNotes(
+    'Antes de nada, qué es esto.\n\n' +
+    'Es una herramienta de diagnóstico de averías de coche. Se enchufa al coche, lee lo que ' +
+    'dicen sus centralitas y le explica al mecánico qué le pasa.\n\n' +
+    'Hace cuatro cosas. Lee el coche: se conecta por el puerto de diagnóstico, ese que está ' +
+    'debajo del volante, y le pregunta a las centralitas qué coche es, cómo va y qué ' +
+    'averías tiene.\n\n' +
+    'Lo interpreta: no devuelve una tabla de códigos, dice qué está pasando, si el coche ' +
+    'está bien o está mal, y por dónde seguir mirando.\n\n' +
+    'Investiga la causa: un agente de IA cruza los códigos con los datos del coche y le ' +
+    'propone al mecánico las causas posibles y los pasos para ir descartándolas.\n\n' +
+    'Y se lo queda: cada caso resuelto se guarda, y aparece como referencia cuando entra ' +
+    'otro coche con síntomas parecidos. Eso es lo que hace que mejore con el uso.\n\n' +
+    '[~50 s · acumulado 1:05]',
+  )
+}
+
 // =========================== 2 — EL PROBLEMA ==============================
 {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Lo que te da la máquina', {
+  s.addText('El problema: el escáner da códigos, no causas', {
     x: 0.85, y: 0.75, w: 11.6, h: 0.9, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -159,7 +209,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Lo que hace la aplicación', {
+  s.addText('Qué hace con esos códigos', {
     x: 0.85, y: 0.75, w: 11.6, h: 0.9, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -196,7 +246,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('El flujo de trabajo', {
+  s.addText('El flujo de trabajo, de principio a fin', {
     x: 0.85, y: 0.42, w: 11.6, h: 0.65, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 30, bold: true, color: TINTA,
   })
@@ -322,7 +372,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Dos diagnósticos', {
+  s.addText('Dos formas de diagnosticar: por reglas y con IA', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -390,7 +440,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Con qué está hecho', {
+  s.addText('Tecnologías utilizadas', {
     x: 0.85, y: 0.6, w: 11.6, h: 0.8, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -449,7 +499,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Por qué esta arquitectura y no otra', {
+  s.addText('Arquitectura: Clean Architecture + Hexagonal', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -536,7 +586,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Cómo se lee el coche', {
+  s.addText('Lectura del coche por OBD-II', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -625,7 +675,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Dos bases de datos', {
+  s.addText('Persistencia: una base relacional y una vectorial', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -688,7 +738,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('SQLite: el catálogo y los datos del taller', {
+  s.addText('La base relacional: qué guarda', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -764,7 +814,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Qué se guarda en la base vectorial', {
+  s.addText('La base vectorial: qué guarda y con qué confianza', {
     x: 0.85, y: 0.65, w: 11.6, h: 0.8, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -880,7 +930,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('MCP: las herramientas del agente', {
+  s.addText('MCP: las 16 herramientas del agente', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -972,7 +1022,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Cómo razona el agente', {
+  s.addText('El ciclo de razonamiento del agente', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -1058,7 +1108,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Los dos modelos', {
+  s.addText('Los modelos: lenguaje y embeddings', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -1128,7 +1178,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('La aplicación funcionando', {
+  s.addText('Resultados: la aplicación funcionando', {
     x: 0.85, y: 0.55, w: 11.6, h: 0.75, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
   })
@@ -1179,7 +1229,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Cómo se sostiene esto', {
+  s.addText('Calidad: TDD, integración continua y seguridad', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -1345,4 +1395,4 @@ function pie(s) {
 }
 
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 18 slides')
+console.log('PPTX escrito: 19 slides')
