@@ -99,5 +99,67 @@ function pie(s, n) {
   )
 }
 
+// =========================== 2 — EL PROBLEMA ==============================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Lo que te da la máquina', {
+    x: 0.85, y: 0.75, w: 11.6, h: 0.9, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+
+  // Izquierda: la salida del escáner, tal cual la ve el mecánico
+  const px = 0.85, py = 2.1, pw = 6.5, ph = 3.55
+  s.addShape(pres.ShapeType.roundRect, {
+    x: px, y: py, w: pw, h: ph, rectRadius: 0.06, fill: { color: TINTA },
+  })
+  s.addText('SALIDA DEL ESCÁNER', {
+    x: px + 0.45, y: py + 0.42, w: pw - 0.9, h: 0.28, margin: 0,
+    fontFace: 'Calibri', fontSize: 10, bold: true, color: AZUL_CL, charSpacing: 2,
+  })
+
+  const codigos = [
+    ['P0301', 'Fallo de encendido en el cilindro 1'],
+    ['P0401', 'Flujo de EGR insuficiente'],
+    ['P2002', 'Filtro de partículas por debajo del umbral'],
+  ]
+  codigos.forEach(([cod, desc], i) => {
+    const y = py + 1.05 + i * 0.72
+    s.addText(cod, {
+      x: px + 0.45, y, w: 1.15, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Courier New', fontSize: 15, bold: true, color: BLANCO,
+    })
+    s.addText(desc, {
+      x: px + 1.75, y, w: pw - 2.2, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Calibri', fontSize: 14, color: GRIS_CL,
+    })
+  })
+  s.addText('…y así hasta diez.', {
+    x: px + 0.45, y: py + 3.0, w: pw - 0.9, h: 0.3, margin: 0,
+    fontFace: 'Calibri', fontSize: 12, italic: true, color: '6E7488',
+  })
+
+  // Derecha: lo que no te dice
+  s.addText('¿Por qué?', {
+    x: 7.85, y: 2.55, w: 4.6, h: 0.9, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 46, bold: true, color: AZUL,
+  })
+  s.addText('La válvula se obstruye por algo.\nEl filtro se llena por algo.\n\nEso la máquina no te lo dice.', {
+    x: 7.85, y: 3.65, w: 4.6, h: 1.9, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: TINTA, lineSpacing: 26,
+  })
+
+  pie(s, 2)
+  s.addNotes(
+    'Hoy llegas con una máquina de diagnosis, la conectas, y te da diez códigos de error. ' +
+    'Cada uno te dice una cosa: válvula EGR obstruida, filtro de partículas lleno.\n\n' +
+    'Vale. Pero esa válvula se ha obstruido por alguna circunstancia, y ese filtro se ha ' +
+    'llenado por alguna circunstancia. Y eso la máquina no te lo dice.\n\n' +
+    'El mecánico se queda con la lista delante y el trabajo de averiguar el porqué sigue ' +
+    'entero por hacer.\n\n[~45 s]',
+  )
+}
+
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 1 slide (portada)')
+console.log('PPTX escrito: 2 slides')
