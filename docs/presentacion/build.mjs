@@ -189,5 +189,65 @@ function pie(s, n) {
   )
 }
 
+// ============= 4 — POR QUÉ CLEAN ARCHITECTURE + HEXAGONAL ================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Por qué Clean Architecture + Hexagonal', {
+    x: 0.85, y: 0.75, w: 11.6, h: 0.9, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('Decidido en el ADR-001 del proyecto.', {
+    x: 0.85, y: 1.75, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.55, yLista = 3.2
+
+  s.addText('Lo que se buscaba', {
+    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'Poder testear sin levantar servidores',                   options: { bullet: true, breakLine: true } },
+      { text: 'Cambiar de proveedor de IA sin tocar la lógica del core',  options: { bullet: true, breakLine: true } },
+      { text: 'Cambiar el framework web desde un solo punto',            options: { bullet: true, breakLine: true } },
+      { text: 'Que fuera fácil de explicar en la defensa',               options: { bullet: true } },
+    ],
+    { x: xIzq, y: yLista, w: colW, h: 2.6, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 12, lineSpacing: 22 },
+  )
+
+  s.addText('Lo que cuesta', {
+    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'Más ficheros que un enfoque monolítico',                       options: { bullet: true, breakLine: true } },
+      { text: 'La inyección manual crece con cada adaptador nuevo',           options: { bullet: true } },
+    ],
+    { x: xDer, y: yLista, w: colW, h: 2.6, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 12, lineSpacing: 22 },
+  )
+
+  pie(s, 4)
+  s.addNotes(
+    'La arquitectura se eligió en el ADR-001 del proyecto, y ahí están escritas las ' +
+    'razones.\n\n' +
+    'El proyecto necesitaba cuatro cosas: poder testear sin levantar servidores, poder ' +
+    'cambiar de proveedor de IA sin tocar la lógica del core, poder cambiar el framework ' +
+    'web desde un solo punto, y que la arquitectura fuera fácil de explicar aquí, en la ' +
+    'defensa.\n\n' +
+    'Con esas cuatro condiciones se adoptó Clean Architecture con puertos y adaptadores, ' +
+    'y el MCP entra como un adaptador más de infraestructura.\n\n' +
+    'El ADR también deja escrito lo que cuesta, y lo digo porque es parte de la decisión: ' +
+    'hay más ficheros que en un monolito, y la inyección manual del composition root crece ' +
+    'cada vez que se añade un adaptador.\n\n[~80 s]',
+  )
+}
+
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 3 slides')
+console.log('PPTX escrito: 4 slides')

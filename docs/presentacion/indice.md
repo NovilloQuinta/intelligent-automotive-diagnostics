@@ -7,7 +7,7 @@
 |---|---|---|---|
 | 1 | Portada | 0:15 | **validada** |
 | 2 | El problema | 0:45 | **validada** |
-| 3 | El objetivo | 0:55 | pendiente |
+| 3 | El objetivo | 0:55 | **validada** |
 | 4 | Por que Clean Architecture + Hexagonal | 1:20 | pendiente |
 | 5 | Las tres capas: que hay en cada una | 1:10 | pendiente |
 | 6 | OBD-II: como se lee el coche de verdad | 1:10 | pendiente |
