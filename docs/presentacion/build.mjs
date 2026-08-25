@@ -415,7 +415,7 @@ function pie(s) {
   pie(s)
   s.addNotes(
     'El proyecto tiene dos bases de datos, y cada una guarda una cosa distinta.\n\n' +
-    'En SQLite va el dato que ya se conoce y que es seguro: los usuarios, que pueden ser ' +
+    'En SQLite va todo lo que se pide por una clave: los usuarios, que pueden ser ' +
     'particulares o talleres, los vehículos, las ECUs que se les han descubierto, las ' +
     'sesiones de diagnóstico, y los catálogos que vienen de la norma. Todo eso se consulta ' +
     'por una clave: dame el vehículo con este VIN, dame las sesiones de este usuario.\n\n' +
