@@ -276,5 +276,99 @@ function pie(s, n) {
   )
 }
 
+// =================== 5 — OBD-II: CÓMO SE LEE EL COCHE =====================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Cómo se lee el coche', {
+    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('Un ejemplo: pedirle las revoluciones del motor.', {
+    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  // Cadena: aplicacion -> ELM327 -> bus CAN -> centralita
+  const pasos = ['La aplicación', 'Adaptador\nELM327', 'Bus CAN\ndel coche', 'Centralita\ndel motor']
+  const bw = 2.4, bh = 1.15, bgap = 0.65, by = 2.55
+  pasos.forEach((t, i) => {
+    const x = 0.85 + i * (bw + bgap)
+    s.addShape(pres.ShapeType.roundRect, {
+      x, y: by, w: bw, h: bh, rectRadius: 0.06,
+      fill: { color: BLANCO }, line: { color: 'C9CCD8', width: 1 },
+    })
+    s.addText(t, {
+      x, y: by, w: bw, h: bh, margin: 0, align: 'center', valign: 'middle',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, lineSpacing: 20,
+    })
+    if (i < pasos.length - 1) {
+      s.addShape(pres.ShapeType.line, {
+        x: x + bw + 0.12, y: by + bh / 2, w: bgap - 0.24, h: 0,
+        line: { color: AZUL, width: 1.5, endArrowType: 'triangle' },
+      })
+    }
+  })
+
+  // Lo que viaja por el cable
+  s.addText('Va', {
+    x: 0.85, y: 4.35, w: 1.1, h: 0.33, margin: 0, valign: 'middle',
+    fontFace: 'Calibri', fontSize: 14, bold: true, color: GRIS,
+  })
+  s.addText('01 0C', {
+    x: 2.0, y: 4.35, w: 3.0, h: 0.33, margin: 0, valign: 'middle',
+    fontFace: 'Courier New', fontSize: 16, bold: true, color: TINTA,
+  })
+  s.addText('modo 01, PID 0C — revoluciones', {
+    x: 4.6, y: 4.35, w: 7.5, h: 0.33, margin: 0, valign: 'middle',
+    fontFace: 'Calibri', fontSize: 14, color: GRIS,
+  })
+
+  s.addText('Vuelve', {
+    x: 0.85, y: 4.85, w: 1.1, h: 0.33, margin: 0, valign: 'middle',
+    fontFace: 'Calibri', fontSize: 14, bold: true, color: GRIS,
+  })
+  s.addText('41 0C 0B B8', {
+    x: 2.0, y: 4.85, w: 3.0, h: 0.33, margin: 0, valign: 'middle',
+    fontFace: 'Courier New', fontSize: 16, bold: true, color: TINTA,
+  })
+  s.addText('los dos bytes de datos son A = 0B y B = B8', {
+    x: 4.6, y: 4.85, w: 7.5, h: 0.33, margin: 0, valign: 'middle',
+    fontFace: 'Calibri', fontSize: 14, color: GRIS,
+  })
+
+  // La formula del dominio
+  s.addText(
+    [
+      { text: '(A × 256 + B) / 4   =   (11 × 256 + 184) / 4   =   ', options: { color: TINTA } },
+      { text: '750 rpm',                                             options: { color: AZUL } },
+    ],
+    { x: 0.85, y: 5.65, w: 11.6, h: 0.45, margin: 0, valign: 'middle',
+      fontFace: 'Arial', fontSize: 19, bold: true },
+  )
+  s.addText('La fórmula la fija la SAE J1979 y vive en el dominio.', {
+    x: 0.85, y: 6.2, w: 11.6, h: 0.35, margin: 0, valign: 'middle',
+    fontFace: 'Calibri', fontSize: 14, color: GRIS,
+  })
+
+  pie(s, 5)
+  s.addNotes(
+    'Esto es todo lo que hay que entender del OBD-II para seguir el resto de la charla.\n\n' +
+    'La aplicación quiere saber a cuántas revoluciones está el motor. Manda dos bytes: 01 ' +
+    '0C. El 01 es el modo, que en la norma significa "dame un dato en vivo", y el 0C es el ' +
+    'PID concreto, las revoluciones.\n\n' +
+    'Eso sale por el adaptador ELM327, que es el cachivache que se enchufa al conector del ' +
+    'coche, entra en el bus CAN, y llega a la centralita del motor.\n\n' +
+    'La centralita contesta 41 0C 0B B8. El 41 es el 01 más cuarenta, que es como la norma ' +
+    'marca que es una respuesta. El 0C confirma qué PID contesta. Y los dos últimos bytes ' +
+    'son el dato en crudo.\n\n' +
+    'Ese dato no son revoluciones todavía. Hay que aplicarle la fórmula del PID: A por 256 ' +
+    'más B, dividido entre 4. Con 0B y B8, eso da 750 revoluciones.\n\n' +
+    'Esa fórmula la fija la SAE J1979, y por eso está en el dominio y no en el código que ' +
+    'habla con el cable.\n\n[~70 s]',
+  )
+}
+
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 4 slides')
+console.log('PPTX escrito: 5 slides')
