@@ -194,58 +194,68 @@ function pie(s, n) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Por qué Clean Architecture + Hexagonal', {
+  s.addText('Por qué esta arquitectura', {
     x: 0.85, y: 0.75, w: 11.6, h: 0.9, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Decidido en el ADR-001 del proyecto.', {
+  s.addText('La herramienta va a seguir cambiando. La pregunta es qué cuesta cada cambio.', {
     x: 0.85, y: 1.75, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
 
   const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.55, yLista = 3.2
 
-  s.addText('Lo que se buscaba', {
+  s.addText('Con todo junto', {
     x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+    fontFace: 'Arial', fontSize: 20, bold: true, color: GRIS,
   })
   s.addText(
     [
-      { text: 'Poder testear sin levantar servidores',                   options: { bullet: true, breakLine: true } },
-      { text: 'Cambiar de proveedor de IA sin tocar la lógica del core',  options: { bullet: true, breakLine: true } },
-      { text: 'Cambiar el framework web desde un solo punto',            options: { bullet: true, breakLine: true } },
-      { text: 'Que fuera fácil de explicar en la defensa',               options: { bullet: true } },
+      { text: 'Pasar de SQLite a PostgreSQL toca media aplicación', options: { bullet: true, breakLine: true } },
+      { text: 'Cambiar de proveedor de IA, lo mismo',               options: { bullet: true, breakLine: true } },
+      { text: 'Cambiar el framework web, lo mismo',                 options: { bullet: true, breakLine: true } },
+      { text: 'Para testear hay que levantar servidor y base de datos', options: { bullet: true } },
     ],
-    { x: xIzq, y: yLista, w: colW, h: 2.6, margin: 0, valign: 'top',
+    { x: xIzq, y: yLista, w: colW, h: 2.8, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 12, lineSpacing: 22 },
   )
 
-  s.addText('Lo que cuesta', {
+  s.addText('Con puertos y adaptadores', {
     x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
   })
   s.addText(
     [
-      { text: 'Más ficheros que un enfoque monolítico',                       options: { bullet: true, breakLine: true } },
-      { text: 'La inyección manual crece con cada adaptador nuevo',           options: { bullet: true } },
+      { text: 'Pasar de SQLite a PostgreSQL toca un adaptador', options: { bullet: true, breakLine: true } },
+      { text: 'Cambiar de proveedor de IA toca otro',           options: { bullet: true, breakLine: true } },
+      { text: 'El framework web se cambia desde un solo punto', options: { bullet: true, breakLine: true } },
+      { text: 'Los tests corren contra el puerto, sin levantar nada', options: { bullet: true } },
     ],
-    { x: xDer, y: yLista, w: colW, h: 2.6, margin: 0, valign: 'top',
+    { x: xDer, y: yLista, w: colW, h: 2.8, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 12, lineSpacing: 22 },
   )
 
+  s.addText('El dominio y los casos de uso no se enteran de ninguno de esos cambios.', {
+    x: 0.85, y: 6.2, w: 11.6, h: 0.4, margin: 0,
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
+  })
+
   pie(s, 4)
   s.addNotes(
-    'La arquitectura se eligió en el ADR-001 del proyecto, y ahí están escritas las ' +
-    'razones.\n\n' +
-    'El proyecto necesitaba cuatro cosas: poder testear sin levantar servidores, poder ' +
-    'cambiar de proveedor de IA sin tocar la lógica del core, poder cambiar el framework ' +
-    'web desde un solo punto, y que la arquitectura fuera fácil de explicar aquí, en la ' +
-    'defensa.\n\n' +
-    'Con esas cuatro condiciones se adoptó Clean Architecture con puertos y adaptadores, ' +
-    'y el MCP entra como un adaptador más de infraestructura.\n\n' +
-    'El ADR también deja escrito lo que cuesta, y lo digo porque es parte de la decisión: ' +
-    'hay más ficheros que en un monolito, y la inyección manual del composition root crece ' +
-    'cada vez que se añade un adaptador.\n\n[~80 s]',
+    '¿Por qué Clean Architecture y hexagonal? Porque esto es una herramienta que va a ' +
+    'seguir evolucionando, y lo que decide si una arquitectura es mejor o peor aquí es ' +
+    'qué te cuesta cada cambio.\n\n' +
+    'Ahora mismo funciona con SQLite, porque era lo más rápido para desarrollar el ' +
+    'proyecto. Pero en un futuro tendrá que usar PostgreSQL. Si tuviera la lógica mezclada ' +
+    'con el acceso a datos, ese cambio me obligaría a tocar media aplicación. Como está ' +
+    'detrás de un puerto, se cambia el adaptador y ya está.\n\n' +
+    'Y lo mismo con el resto: cambiar de proveedor de LLM, cambiar el framework web, o ' +
+    'cambiar la forma de acceder al coche. El dominio y los casos de uso no se enteran.\n\n' +
+    'La otra razón es que se testea sin levantar nada, porque los tests hablan con los ' +
+    'puertos y no con la base de datos real.\n\n' +
+    'Está todo escrito en el ADR-001, con sus contras: hay más ficheros que en un ' +
+    'monolito, y la inyección manual del composition root crece con cada adaptador nuevo.\n\n' +
+    '[~80 s]',
   )
 }
 
