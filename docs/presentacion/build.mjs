@@ -197,77 +197,122 @@ function pie(s) {
   s.background = { color: BLANCO }
 
   s.addText('El flujo de trabajo', {
-    x: 0.85, y: 0.5, w: 11.6, h: 0.7, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
+    x: 0.85, y: 0.42, w: 11.6, h: 0.65, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 30, bold: true, color: TINTA,
   })
-  s.addText('Qué pasa desde que enchufas el adaptador hasta que el caso queda guardado.', {
-    x: 0.85, y: 1.3, w: 11.6, h: 0.35, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 15, color: GRIS,
+  s.addText('Desde que enchufas el adaptador hasta que el caso queda guardado.', {
+    x: 0.85, y: 1.18, w: 11.6, h: 0.3, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 14, color: GRIS,
   })
 
-  const pasos = [
-    'Se enchufa el adaptador al coche y se pulsa «Iniciar diagnóstico»',
-    'Se pregunta el bastidor y se identifica el vehículo',
-    'Se barre el bus para ver qué centralitas responden',
-    'Se leen los datos en vivo, los códigos de avería y el freeze frame',
-    'Se calcula la severidad y todo sale en pantalla',
-    'Si el mecánico pregunta al agente, se buscan antes casos parecidos',
-    'El agente pide lo que le falta: el catálogo, más lecturas del coche o la web',
-    'Responde con la explicación, la severidad y qué conviene revisar',
-    'El caso se guarda, y queda disponible para el siguiente coche',
+  const XI = 0.95, XD = 7.75, CW = 4.6, CH = 0.5, PITCH = 0.66
+  const cxI = XI + CW / 2, cxD = XD + CW / 2
+
+  function nodo(x, y, w, h, texto, tipo = 'proceso') {
+    const forma =
+      tipo === 'decision' ? pres.ShapeType.diamond
+      : tipo === 'fin'    ? pres.ShapeType.roundRect
+      : pres.ShapeType.rect
+    s.addShape(forma, {
+      x, y, w, h, rectRadius: 0.25,
+      fill: { color: tipo === 'fin' ? TINTA : BLANCO },
+      line: { color: tipo === 'fin' ? TINTA : tipo === 'decision' ? AZUL : 'C9CCD8', width: 1 },
+    })
+    s.addText(texto, {
+      x: x + 0.12, y, w: w - 0.24, h, margin: 0, align: 'center', valign: 'middle',
+      fontFace: 'Calibri', fontSize: tipo === 'decision' ? 11 : 12,
+      bold: tipo === 'fin', color: tipo === 'fin' ? BLANCO : TINTA, lineSpacing: 14,
+    })
+  }
+
+  function flechaV(x, y1, y2) {
+    s.addShape(pres.ShapeType.line, {
+      x, y: y1, w: 0, h: y2 - y1,
+      line: { color: AZUL, width: 1.25, endArrowType: 'triangle' },
+    })
+  }
+  function segH(x1, x2, y, punta = false) {
+    s.addShape(pres.ShapeType.line, {
+      x: x1, y, w: x2 - x1, h: 0,
+      line: { color: AZUL, width: 1.25, ...(punta ? { endArrowType: 'triangle' } : {}) },
+    })
+  }
+  function segV(x, y1, y2) {
+    s.addShape(pres.ShapeType.line, {
+      x, y: y1, w: 0, h: y2 - y1, line: { color: AZUL, width: 1.25 },
+    })
+  }
+
+  // ---- Columna izquierda: lo que pasa siempre ----------------------------
+  const izq = [
+    ['Se enchufa el adaptador\ny se pulsa «Iniciar diagnóstico»', 'fin'],
+    ['Se lee el bastidor y se identifica el vehículo', 'proceso'],
+    ['Se barre el bus: qué centralitas responden', 'proceso'],
+    ['Se leen datos en vivo, averías y freeze frame', 'proceso'],
+    ['Se calcula la severidad y sale en pantalla', 'proceso'],
   ]
-
-  const xNodo = 1.35, d = 0.34, y0 = 2.1, paso = 0.52
-
-  // El hilo del flujo
-  s.addShape(pres.ShapeType.line, {
-    x: xNodo, y: y0 + d / 2, w: 0, h: (pasos.length - 1) * paso,
-    line: { color: 'C9CCD8', width: 1.5 },
+  const y0 = 1.72
+  izq.forEach(([t, tipo], k) => {
+    const y = y0 + k * PITCH
+    nodo(XI, y, CW, CH, t, tipo)
+    if (k > 0) flechaV(cxI, y - PITCH + CH, y)
   })
 
-  pasos.forEach((t, k) => {
-    const y = y0 + k * paso
-    s.addShape(pres.ShapeType.ellipse, {
-      x: xNodo - d / 2, y, w: d, h: d, fill: { color: AZUL },
-    })
-    s.addText(String(k + 1), {
-      x: xNodo - d / 2, y, w: d, h: d, margin: 0, align: 'center', valign: 'middle',
-      fontFace: 'Arial', fontSize: 11, bold: true, color: BLANCO,
-    })
-    s.addText(t, {
-      x: xNodo + 0.42, y: y - 0.02, w: 10.5, h: 0.4, margin: 0, valign: 'middle',
-      fontFace: 'Calibri', fontSize: 15, color: TINTA,
-    })
-  })
+  // Rombo de decision
+  const yRombo = y0 + izq.length * PITCH
+  flechaV(cxI, yRombo - PITCH + CH, yRombo)
+  nodo(XI + 0.55, yRombo, CW - 1.1, 0.78, '¿El mecánico pregunta\nal agente?', 'decision')
 
-  // Corte: hasta aqui no ha intervenido la IA
-  const yCorte = y0 + 4 * paso + d + 0.11
-  s.addShape(pres.ShapeType.line, {
-    x: 0.85, y: yCorte, w: 11.6, h: 0,
-    line: { color: 'D8DAE4', width: 1, dashType: 'dash' },
-  })
-  s.addText('hasta aquí, sin IA', {
-    x: 9.6, y: yCorte - 0.19, w: 2.85, h: 0.3, margin: 0, align: 'right',
+  // Rama NO
+  flechaV(cxI, yRombo + 0.78, yRombo + 1.06)
+  nodo(XI, yRombo + 1.06, CW, CH, 'La sesión queda guardada', 'fin')
+  s.addText('no', {
+    x: cxI + 0.1, y: yRombo + 0.79, w: 0.5, h: 0.25, margin: 0,
     fontFace: 'Calibri', fontSize: 11, italic: true, color: GRIS,
+  })
+
+  // ---- Rama SI: codo hasta la columna derecha ----------------------------
+  const yCodo = yRombo + 0.39
+  segH(XI + CW - 0.55, 6.7, yCodo)
+  segV(6.7, y0 + CH / 2, yCodo)
+  segH(6.7, XD, y0 + CH / 2, true)
+  s.addText('sí', {
+    x: XI + CW - 0.4, y: yCodo - 0.28, w: 0.5, h: 0.25, margin: 0,
+    fontFace: 'Calibri', fontSize: 11, italic: true, color: GRIS,
+  })
+
+  // ---- Columna derecha: solo si pregunta ---------------------------------
+  const der = [
+    ['Se buscan casos parecidos de otros diagnósticos', 'proceso'],
+    ['El agente pide lo que le falta', 'proceso'],
+    ['Responde: explicación, severidad y qué revisar', 'proceso'],
+    ['El caso se indexa en el catálogo', 'proceso'],
+    ['Queda disponible para el siguiente coche', 'fin'],
+  ]
+  der.forEach(([t, tipo], k) => {
+    const y = y0 + k * PITCH
+    nodo(XD, y, CW, CH, t, tipo)
+    if (k > 0) flechaV(cxD, y - PITCH + CH, y)
   })
 
   pie(s)
   s.addNotes(
-    'Este es el recorrido de trabajo, de principio a fin.\n\n' +
-    'Empieza donde empieza de verdad: se enchufa el adaptador al conector de diagnóstico ' +
-    'del coche y se pulsa iniciar. A partir de ahí va solo.\n\n' +
-    'Lo primero, preguntarle al coche el bastidor para saber qué vehículo es. Después un ' +
-    'barrido del bus, para ver qué centralitas responden. Luego se leen los datos en vivo, ' +
-    'los códigos de avería y el freeze frame. Y con eso se calcula la severidad y sale todo ' +
-    'en pantalla.\n\n' +
-    'Fijaos en la línea: hasta ese punto no ha intervenido la IA. Si no hay modelo ' +
-    'configurado, o si el taller no tiene internet, el mecánico ya tiene su diagnóstico.\n\n' +
-    'De ahí para abajo es opcional, y solo pasa si el mecánico pregunta al agente. Antes de ' +
-    'llamarlo se buscan casos parecidos de diagnósticos anteriores. El agente pide lo que le ' +
-    'falta: mirar el catálogo, leer más cosas del coche, o buscar en la web. Y responde con ' +
-    'la explicación, la severidad y qué conviene revisar.\n\n' +
-    'Y el último paso es el que hace que esto crezca: el caso se guarda, y queda disponible ' +
-    'para el siguiente coche que entre con síntomas parecidos.\n\n' +
+    'Este es el flujo de trabajo completo.\n\n' +
+    'Arranca arriba a la izquierda, donde arranca de verdad: se enchufa el adaptador al ' +
+    'conector del coche y se pulsa iniciar. A partir de ahí va solo. Se lee el bastidor y ' +
+    'se identifica el vehículo, se barre el bus para ver qué centralitas responden, se leen ' +
+    'los datos en vivo, las averías y el freeze frame, y se calcula la severidad. Todo eso ' +
+    'sale en pantalla.\n\n' +
+    'Y llega la decisión: ¿el mecánico pregunta al agente o no?\n\n' +
+    'Si no pregunta, se acaba ahí y la sesión queda guardada. Eso es importante: sin IA de ' +
+    'por medio, el mecánico ya tiene un diagnóstico. Si no hay modelo configurado o el ' +
+    'taller no tiene internet, la herramienta sigue sirviendo.\n\n' +
+    'Si pregunta, se pasa a la columna de la derecha. Antes de llamar al modelo se buscan ' +
+    'casos parecidos de diagnósticos anteriores. El agente va pidiendo lo que le falta: el ' +
+    'catálogo, más lecturas del coche o una búsqueda web. Responde con la explicación, la ' +
+    'severidad y qué conviene revisar. Y el caso se indexa.\n\n' +
+    'Ese último paso es el que hace que el sistema mejore: queda disponible para el ' +
+    'siguiente coche que entre con síntomas parecidos.\n\n' +
     '[~75 s · acumulado 2:55]',
   )
 }
