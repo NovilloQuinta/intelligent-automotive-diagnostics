@@ -200,7 +200,7 @@ function pie(s) {
     x: 0.7, y: 0.4, w: 11.9, h: 0.65, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 29, bold: true, color: TINTA,
   })
-  s.addText('Del conector físico del coche hasta el modelo. Todo entra por un puerto.', {
+  s.addText('Quién llama a quién, del conector del coche hasta el modelo.', {
     x: 0.7, y: 1.12, w: 11.9, h: 0.3, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 14, color: GRIS,
   })
@@ -229,21 +229,20 @@ function pie(s) {
       line: { color, width: 1.25, beginArrowType: 'triangle', endArrowType: 'triangle' },
     })
   }
-
   const W3 = 3.5, GAP = 0.7, X0 = 1.05
   const cx = [X0 + W3 / 2, X0 + W3 + GAP + W3 / 2, X0 + 2 * (W3 + GAP) + W3 / 2]
 
-  caja(5.15, 1.55, 3.0, 0.66, 'El mecánico', 'React 19 · sesión JWT')
+  caja(5.15, 1.55, 3.0, 0.66, 'El mecánico', 'consulta el coche\ny pregunta al agente')
   doble(6.65, 2.21, 2.52)
 
-  caja(X0, 2.52, 3 * W3 + 2 * GAP, 0.78, 'API: casos de uso + dominio',
-       'fórmulas SAE J1979 · catálogos · decodificación del VIN', 'nucleo')
+  caja(X0, 2.52, 3 * W3 + 2 * GAP, 0.78, 'El núcleo',
+       'casos de uso y reglas del dominio · decide qué se pide y valida lo que vuelve', 'nucleo')
 
   const yAd = 3.62
   cx.forEach((x) => doble(x, 3.30, yAd))
-  caja(X0,                  yAd, W3, 0.87, 'Transporte OBD', 'abre el puerto serie o el socket\ny negocia el protocolo')
-  caja(X0 + W3 + GAP,       yAd, W3, 0.87, 'Persistencia', 'SQLite · 13 tablas\nLanceDB · 4 índices')
-  caja(X0 + 2 * (W3 + GAP), yAd, W3, 0.87, 'Servidor MCP', '16 herramientas\ndeclaradas con su esquema')
+  caja(X0,                  yAd, W3, 0.87, 'Lectura del coche', 'pide modos y PIDs\ny traduce lo que vuelve')
+  caja(X0 + W3 + GAP,       yAd, W3, 0.87, 'Bases de datos', 'la relacional\ny la vectorial')
+  caja(X0 + 2 * (W3 + GAP), yAd, W3, 0.87, 'Herramientas del agente', 'lo único que el modelo\npuede llegar a pedir')
 
   ;[X0 + W3, X0 + 2 * W3 + GAP].forEach((x) => {
     s.addShape(pres.ShapeType.line, {
@@ -256,14 +255,14 @@ function pie(s) {
   const yDon = 4.82
   doble(cx[0], 4.49, yDon)
   doble(cx[2], 4.49, yDon)
-  caja(X0,                  yDon, W3, 0.8, 'Dongle ELM327', 'enchufado al conector OBD-II\ndel coche · USB o WiFi', 'fisico')
-  caja(X0 + 2 * (W3 + GAP), yDon, W3, 0.8, 'El modelo', 'Anthropic u OpenAI\ny búsqueda web con presupuesto')
+  caja(X0,                  yDon, W3, 0.8, 'El adaptador', 'enchufado al conector\nde diagnóstico del coche', 'fisico')
+  caja(X0 + 2 * (W3 + GAP), yDon, W3, 0.8, 'El modelo', 'razona y va pidiendo\nlas herramientas que necesita')
 
   const yCoche = 5.95
   doble(cx[0], 5.62, yCoche, AZUL)
-  caja(X0, yCoche, W3, 0.78, 'El coche', 'bus CAN · ISO 15765-4\ncentralita del motor y las demás', 'fisico')
+  caja(X0, yCoche, W3, 0.78, 'El coche', 'el motor y el resto\nde centralitas', 'fisico')
 
-  s.addText('En la demo, este tramo se sustituye por tres emuladores ELM327 escuchando en tres puertos TCP.', {
+  s.addText('En la demo este tramo va emulado. De aquí para arriba, todo es idéntico.', {
     x: X0 + W3 + GAP - 0.5, y: 5.05, w: W3 + 1.0, h: 0.6, margin: 0, align: 'center', valign: 'top',
     fontFace: 'Calibri', fontSize: 9, italic: true, color: GRIS, lineSpacing: 11,
   })
