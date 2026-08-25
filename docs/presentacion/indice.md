@@ -14,7 +14,7 @@
 | 7 | SQLite: el catalogo y los datos del taller | 1:00 | pendiente |
 | 8 | Que se guarda en la base vectorial y por que | 1:10 | **validada** |
 | 9 | MCP: las herramientas del agente | 1:15 | **validada** |
-| 10 | El system prompt y el ciclo de tool-calling | 1:20 | pendiente |
+| 10 | Como razona el agente: el ciclo y el system prompt | 1:20 | pendiente |
 | 11 | Proveedor intercambiable y auto-aprendizaje | 1:00 | pendiente |
 | 12 | Los dos diagnosticos: determinista y cognitivo | 1:05 | pendiente |
 | 13 | Demo | 2:00 | pendiente |

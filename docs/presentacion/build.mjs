@@ -707,6 +707,92 @@ function pie(s) {
   )
 }
 
+// ============= CÓMO RAZONA EL AGENTE ======================================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Cómo razona el agente', {
+    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('Del botón de iniciar diagnóstico a la respuesta que lee el mecánico.', {
+    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  // --- Izquierda: el ciclo -------------------------------------------------
+  const xI = 0.85, wI = 6.5
+  s.addText('El ciclo', {
+    x: xI, y: 2.4, w: wI, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
+  })
+  const pasos = [
+    'Al iniciar el diagnóstico se leen los PIDs generales, los DTCs y el freeze frame',
+    'Antes de llamar al modelo se buscan casos parecidos en la vectorial, y entran en el prompt',
+    'El modelo pide herramientas: mira el catálogo, lee más PIDs, busca lo que no conoce',
+    'Máximo 10 vueltas de ese ciclo, y 60 segundos de límite',
+    'Devuelve la explicación para el mecánico y un bloque JSON con severidad, confianza y recomendaciones',
+    'El caso resuelto se indexa con confianza 0,5, y la conversación sigue desde ahí',
+  ]
+  pasos.forEach((t, k) => {
+    const y = 2.9 + k * 0.62
+    s.addText(String(k + 1), {
+      x: xI, y, w: 0.4, h: 0.55, margin: 0, valign: 'top',
+      fontFace: 'Arial', fontSize: 15, bold: true, color: AZUL,
+    })
+    s.addText(t, {
+      x: xI + 0.45, y, w: wI - 0.45, h: 0.6, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 14, color: TINTA, lineSpacing: 19,
+    })
+  })
+
+  // --- Derecha: los cercos del prompt --------------------------------------
+  const xD = 7.75, wD = 4.7
+  s.addText('El prompt lleva 11 bloques', {
+    x: xD, y: 2.4, w: wD, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'Cómo explorar el coche y en qué orden',              options: { bullet: true, breakLine: true } },
+      { text: 'Consultar el catálogo antes de inventarse nada',      options: { bullet: true, breakLine: true } },
+      { text: 'Cómo aprender un PID, un DTC o una ECU nuevos',       options: { bullet: true, breakLine: true } },
+      { text: 'Qué queda fuera de su ámbito y no debe contestar',    options: { bullet: true, breakLine: true } },
+      { text: 'Que lo que llega de la web y del catálogo no es de fiar', options: { bullet: true, breakLine: true } },
+      { text: 'Cómo hablarle a un mecánico, y cómo rematar en JSON', options: { bullet: true } },
+    ],
+    { x: xD, y: 2.9, w: wD, h: 3.6, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 14, color: TINTA, paraSpaceAfter: 10, lineSpacing: 20 },
+  )
+
+  pie(s)
+  s.addNotes(
+    'Este es el recorrido completo, desde que el mecánico le da al botón.\n\n' +
+    'Lo primero que pasa no lo hace la IA: el flujo determinista lee los PIDs generales del ' +
+    'modo 01, los códigos de avería y el freeze frame. Eso está ahí sí o sí.\n\n' +
+    'Cuando el mecánico entra al chat, antes de llamar al modelo el sistema hace una ' +
+    'búsqueda en la base vectorial de casos parecidos a este, y los mete en el prompt. Van ' +
+    'etiquetados como "muy similar", "similar" o "relacionado", nunca con el número de ' +
+    'distancia, porque cuando le pasaba el número el modelo lo repetía en la respuesta y ' +
+    'eso es ruido para el mecánico. Y van envueltos en una marca de contenido no fiable, ' +
+    'porque ese catálogo lo alimentan otros usuarios.\n\n' +
+    'A partir de ahí empieza el ciclo. El modelo pide herramientas, el sistema las ejecuta y ' +
+    'le devuelve el resultado, y el modelo decide qué pedir después. Ese bucle tiene dos ' +
+    'topes: diez vueltas como máximo y sesenta segundos.\n\n' +
+    'Cuando termina, devuelve dos cosas: la explicación en lenguaje normal para el ' +
+    'mecánico, y un bloque JSON con la severidad, la confianza y las recomendaciones, que ' +
+    'es lo que la aplicación pinta en pantalla. Si no hay explicación, se lanza un error a ' +
+    'propósito y no se guarda nada: un caso vacío en el catálogo volvería luego como "caso ' +
+    'similar" y contaminaría los diagnósticos siguientes.\n\n' +
+    'Y por último el caso se indexa con confianza 0,5, que es la de diagnóstico anterior.\n\n' +
+    'El system prompt tiene once bloques. No es solo decirle "eres un mecánico": hay ' +
+    'bloques de exploración, de consultar el catálogo antes de inventar, de aprendizaje ' +
+    'para PIDs, DTCs y ECUs, de ámbito, de no revelar sus propias tripas, de contenido no ' +
+    'fiable y del formato de salida.\n\n[~80 s]',
+  )
+}
+
 // ============ LOS DOS DIAGNÓSTICOS (cierra el bloque de IA) ============== ============================
 {
   const s = pres.addSlide()
@@ -776,4 +862,4 @@ function pie(s) {
 }
 
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 10 slides')
+console.log('PPTX escrito: 11 slides')
