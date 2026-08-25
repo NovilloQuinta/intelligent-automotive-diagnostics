@@ -191,6 +191,93 @@ function pie(s) {
   )
 }
 
+// ======= EL SISTEMA DE UN VISTAZO =========================================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('El sistema de un vistazo', {
+    x: 0.85, y: 0.6, w: 11.6, h: 0.8, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('Del conector del coche hasta la respuesta, y de vuelta al catálogo.', {
+    x: 0.85, y: 1.5, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 16, color: GRIS,
+  })
+
+  const bw = 2.55, bh = 1.0, bgap = 0.44, x0 = 0.85
+
+  function banda(titulo, y, cajas) {
+    s.addText(titulo, {
+      x: x0, y: y - 0.42, w: 11.6, h: 0.32, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 12, bold: true, color: AZUL, charSpacing: 1.5,
+    })
+    cajas.forEach(([arriba, abajo], i) => {
+      const x = x0 + i * (bw + bgap)
+      s.addShape(pres.ShapeType.roundRect, {
+        x, y, w: bw, h: bh, rectRadius: 0.06,
+        fill: { color: BLANCO }, line: { color: 'C9CCD8', width: 1 },
+      })
+      s.addText(arriba, {
+        x: x + 0.12, y: y + 0.14, w: bw - 0.24, h: 0.32, margin: 0, align: 'center', valign: 'middle',
+        fontFace: 'Arial', fontSize: 12, bold: true, color: TINTA,
+      })
+      s.addText(abajo, {
+        x: x + 0.12, y: y + 0.46, w: bw - 0.24, h: 0.42, margin: 0, align: 'center', valign: 'top',
+        fontFace: 'Calibri', fontSize: 11, color: GRIS, lineSpacing: 14,
+      })
+      if (i < cajas.length - 1) {
+        s.addShape(pres.ShapeType.line, {
+          x: x + bw + 0.08, y: y + bh / 2, w: bgap - 0.16, h: 0,
+          line: { color: AZUL, width: 1.5, endArrowType: 'triangle' },
+        })
+      }
+    })
+  }
+
+  banda('1 · LEER EL COCHE', 2.55, [
+    ['El coche',            'o uno de los tres\nemuladores ELM327'],
+    ['Adaptador ELM327',    'por cable USB,\nWiFi o TCP'],
+    ['Transporte OBD',      'negocia el protocolo\ny pide modos y PIDs'],
+    ['Dominio',             'aplica la fórmula\nde cada PID'],
+  ])
+
+  banda('2 · RAZONAR SOBRE LO LEÍDO', 4.75, [
+    ['Casos parecidos',     'búsqueda vectorial\nen LanceDB'],
+    ['Agente',              '16 tools MCP\n+ el modelo'],
+    ['Informe',             'narrativa, severidad\ny recomendaciones'],
+    ['Se indexa',           'el caso vuelve\nal catálogo'],
+  ])
+
+  // El bucle: del ultimo paso de vuelta al primero de la banda 2
+  s.addShape(pres.ShapeType.line, {
+    x: x0 + bw / 2, y: 6.15, w: 3 * (bw + bgap), h: 0,
+    line: { color: 'C9CCD8', width: 1, dashType: 'dash', beginArrowType: 'triangle' },
+  })
+  s.addText('lo aprendido alimenta el siguiente diagnóstico', {
+    x: x0, y: 6.2, w: 11.6, h: 0.3, margin: 0, align: 'center',
+    fontFace: 'Calibri', fontSize: 11, italic: true, color: GRIS,
+  })
+
+  pie(s)
+  s.addNotes(
+    'Esta es la foto entera, para que se entienda dónde encaja cada cosa de lo que viene ' +
+    'después.\n\n' +
+    'Arriba, leer el coche. A la izquierda el vehículo, que puede ser uno de verdad o uno ' +
+    'de los tres emuladores que uso para la demo. Se conecta un adaptador ELM327, por cable ' +
+    'USB, por WiFi o por TCP. La API tiene un transporte que negocia el protocolo del bus y ' +
+    'va pidiendo modos y PIDs. Y lo que vuelve son bytes en crudo, así que el dominio ' +
+    'aplica la fórmula de cada PID para convertirlos en magnitudes físicas.\n\n' +
+    'Abajo, razonar sobre lo leído. Antes de llamar al modelo se buscan casos parecidos en ' +
+    'la base vectorial. El agente entra con esos casos, con las dieciséis herramientas MCP y ' +
+    'con el modelo detrás, y va pidiendo lo que necesita. Sale un informe con narrativa, ' +
+    'severidad y recomendaciones. Y ese caso se indexa.\n\n' +
+    'Esa flecha de vuelta es la clave del proyecto: lo que se aprende en un diagnóstico ' +
+    'alimenta el siguiente. Cuantos más coches pasen, más casos reales hay con los que ' +
+    'comparar.\n\n[~60 s]',
+  )
+}
+
 // ============= 4 — POR QUÉ ESTA ARQUITECTURA Y NO OTRA ===================
 {
   const s = pres.addSlide()
@@ -989,6 +1076,65 @@ function pie(s) {
   )
 }
 
+// ======= CON QUÉ ESTÁ HECHO ===============================================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Con qué está hecho', {
+    x: 0.85, y: 0.6, w: 11.6, h: 0.8, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('TypeScript de punta a punta, y cada pieza detrás de un puerto.', {
+    x: 0.85, y: 1.5, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 16, color: GRIS,
+  })
+
+  const filas = [
+    ['Lenguaje y runtime', 'TypeScript 5.7 estricto sobre Node 22'],
+    ['API', 'Express 5 · Zod · Helmet 8 · JWT · pino'],
+    ['Persistencia', 'SQLite con Drizzle ORM'],
+    ['Búsqueda vectorial', 'LanceDB · transformers.js en local'],
+    ['Agente', 'MCP SDK · SDK de Anthropic · SDK de OpenAI'],
+    ['Acceso al coche', 'ELM327 por serie o TCP · emulador Python'],
+    ['Interfaz', 'React 19 · Vite · TanStack Router y Query · Tailwind'],
+    ['Pruebas', 'Vitest · supertest · Playwright'],
+    ['Entrega', 'GitHub Actions · Docker · Caddy'],
+  ]
+  const yTop = 2.35, rowH = 0.5
+  filas.forEach(([que, con], i) => {
+    const y = yTop + i * rowH
+    s.addText(que, {
+      x: 0.85, y, w: 3.3, h: 0.42, margin: 0, valign: 'middle',
+      fontFace: 'Arial', fontSize: 14, bold: true, color: AZUL,
+    })
+    s.addText(con, {
+      x: 4.3, y, w: 8.15, h: 0.42, margin: 0, valign: 'middle',
+      fontFace: 'Calibri', fontSize: 14, color: TINTA,
+    })
+  })
+
+  pie(s)
+  s.addNotes(
+    'Con qué está hecho, por piezas.\n\n' +
+    'Todo es TypeScript en modo estricto, sobre Node 22, tanto el backend como el ' +
+    'frontend.\n\n' +
+    'La API es Express 5, con Zod para validar todo lo que entra, Helmet para las cabeceras ' +
+    'de seguridad, JWT para la autenticación y pino para el log estructurado. La ' +
+    'persistencia relacional es SQLite con Drizzle, que es un ORM cuyos esquemas son ' +
+    'TypeScript, no un fichero aparte. La búsqueda vectorial es LanceDB, con el modelo de ' +
+    'embeddings corriendo en local vía transformers.js.\n\n' +
+    'El agente usa el SDK oficial de MCP, y por debajo el de Anthropic o el de OpenAI según ' +
+    'lo que esté configurado. El acceso al coche es un ELM327, por puerto serie o por TCP, ' +
+    'y para la demo un emulador escrito en Python.\n\n' +
+    'La interfaz es React 19 con Vite y TanStack, y las pruebas son Vitest para unidad, ' +
+    'supertest para los endpoints y Playwright para el extremo a extremo. Y la entrega va ' +
+    'con GitHub Actions, Docker y Caddy delante.\n\n' +
+    'Lo importante no es la lista: es que todo lo que aparece de la tercera fila para abajo ' +
+    'está detrás de un puerto, así que se puede sustituir sin tocar la lógica.\n\n[~55 s]',
+  )
+}
+
 // ======= CÓMO SE SOSTIENE ESTO ============================================
 {
   const s = pres.addSlide()
@@ -1160,4 +1306,4 @@ function pie(s) {
 }
 
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 16 slides')
+console.log('PPTX escrito: 18 slides')
