@@ -370,81 +370,72 @@ function pie(s, n) {
   )
 }
 
-// ==================== 6 — DOS BASES DE DATOS ==============================
+// ==================== 6 — POR QUÉ DOS BASES DE DATOS ======================
 {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Dos bases de datos', {
+  s.addText('Por qué dos bases de datos', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Porque hay dos preguntas distintas que hacerle a los datos.', {
+  s.addText('Y por qué no una sola.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
 
-  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.45, ySub = 2.92, yLista = 3.5
+  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.4, yLista = 3.0
 
-  s.addText('SQLite', {
+  s.addText('SQLite, para los datos del taller', {
     x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
-  })
-  s.addText('«¿Qué es esto exactamente?»', {
-    x: xIzq, y: ySub, w: colW, h: 0.35, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 15, italic: true, color: GRIS,
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
   s.addText(
     [
-      { text: 'Usuarios, vehículos, ECUs y sesiones', options: { bullet: true, breakLine: true } },
-      { text: '13 tablas con sus claves y relaciones', options: { bullet: true, breakLine: true } },
-      { text: 'El informe de cada sesión, congelado',  options: { bullet: true, breakLine: true } },
-      { text: 'Se responde con una clave: este VIN, este usuario', options: { bullet: true } },
+      { text: 'Los datos son relacionales: un vehículo tiene ECUs, sesiones y lecturas', options: { bullet: true, breakLine: true } },
+      { text: 'Es un fichero en disco: no hay servidor que levantar', options: { bullet: true, breakLine: true } },
+      { text: 'MongoDB no vale: esto tiene relaciones, no son documentos sueltos', options: { bullet: true, breakLine: true } },
+      { text: 'PostgreSQL no compensa: un servicio, una red y un backup más que mantener', options: { bullet: true } },
     ],
-    { x: xIzq, y: yLista, w: colW, h: 2.4, margin: 0, valign: 'top',
+    { x: xIzq, y: yLista, w: colW, h: 2.9, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  s.addText('LanceDB', {
+  s.addText('LanceDB, para lo que aprende', {
     x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
-  })
-  s.addText('«¿Qué se parece a esto?»', {
-    x: xDer, y: ySub, w: colW, h: 0.35, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 15, italic: true, color: GRIS,
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
   s.addText(
     [
-      { text: 'PIDs, DTCs y diagnósticos ya resueltos', options: { bullet: true, breakLine: true } },
-      { text: 'El texto se convierte en vectores de 384 dimensiones', options: { bullet: true, breakLine: true } },
-      { text: 'Busca por significado, no por palabra exacta', options: { bullet: true, breakLine: true } },
-      { text: 'No hay clave que valga: no sabes qué buscas hasta verlo', options: { bullet: true } },
+      { text: 'Hay que buscar por parecido, y para eso no hay clave ni consulta SQL', options: { bullet: true, breakLine: true } },
+      { text: 'El buscador de texto de SQLite no llega: «presión de aceite» no encuentra «oil pressure»', options: { bullet: true, breakLine: true } },
+      { text: 'Va embebida igual que SQLite: un directorio en disco', options: { bullet: true, breakLine: true } },
+      { text: 'Los embeddings se calculan en local: sin API key y sin coste por consulta', options: { bullet: true } },
     ],
-    { x: xDer, y: yLista, w: colW, h: 2.4, margin: 0, valign: 'top',
+    { x: xDer, y: yLista, w: colW, h: 2.9, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
-
-  s.addText('Las dos van embebidas, sin servidor que mantener. PostgreSQL se descartó por eso: un servicio más sin resolver ningún problema a esta escala.', {
-    x: 0.85, y: 6.15, w: 11.6, h: 0.45, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 14, color: GRIS, lineSpacing: 19,
-  })
 
   pie(s, 6)
   s.addNotes(
-    'Hay dos bases de datos, y no es por capricho: son dos preguntas distintas.\n\n' +
-    'A SQLite le pregunto cosas exactas. Qué usuario es este, qué vehículo tiene este VIN, ' +
-    'qué ECUs se le descubrieron, qué sesiones de diagnóstico tiene y cuál fue el informe ' +
-    'de cada una. Son trece tablas con sus claves y sus relaciones, y siempre sé por qué ' +
-    'clave preguntar.\n\n' +
-    'A LanceDB le pregunto por parecido. Ahí están los PIDs, los DTCs y los diagnósticos ya ' +
-    'resueltos, convertidos en vectores de 384 dimensiones. Cuando llega un coche nuevo no ' +
-    'tengo una clave por la que buscar: lo que quiero es "enséñame casos que se parezcan a ' +
-    'este", y eso una consulta SQL no lo resuelve.\n\n' +
-    'Las dos son embebidas, sin servidor. En el ADR-002 está escrito por qué se descartó ' +
-    'PostgreSQL: a esta escala habría añadido un servicio, una red y un backup que ' +
-    'gestionar sin resolver ningún problema que yo tuviera. Y como los repositorios están ' +
-    'detrás de puertos, migrar el día de mañana es cambiar el driver, no la aplicación.\n\n' +
-    '[~60 s]',
+    'Hay dos bases de datos porque hay dos cosas que hacer con los datos, y una sola no ' +
+    'las cubre.\n\n' +
+    'En SQLite van los datos del taller: usuarios, vehículos, las ECUs que se le han ' +
+    'descubierto a cada uno, las sesiones de diagnóstico y el informe de cada una. Eso es ' +
+    'relacional de manual, un vehículo tiene ECUs, que tienen sesiones, que tienen ' +
+    'lecturas. Por eso se descartó MongoDB, porque no son documentos sueltos. Y se ' +
+    'descartó PostgreSQL porque a esta escala solo añadía un servicio, una red y un backup ' +
+    'que gestionar, sin resolver ningún problema que yo tuviera.\n\n' +
+    'En LanceDB va lo que el sistema aprende: PIDs, DTCs y diagnósticos ya resueltos. Y ahí ' +
+    'la pregunta no es "dame el registro con esta clave", sino "enséñame casos que se ' +
+    'parezcan a este". Eso con SQL no se hace.\n\n' +
+    'Y ojo, tampoco basta con el buscador de texto de SQLite, que también existe: busca ' +
+    'palabras, no significado. Si el mecánico escribe "presión de aceite", el buscador de ' +
+    'texto no encuentra una ficha que ponga "oil pressure", y la búsqueda vectorial sí, ' +
+    'porque compara el sentido.\n\n' +
+    'Las dos son embebidas, un fichero y un directorio en disco. Y los embeddings se ' +
+    'calculan con un modelo que corre en la propia máquina, así que no hay API key ni coste ' +
+    'por consulta.\n\n[~60 s]',
   )
 }
 
