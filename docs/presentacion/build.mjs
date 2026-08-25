@@ -658,10 +658,11 @@ function pie(s) {
   })
   s.addText(
     [
-      { text: 'Es un protocolo: el mismo servidor sirve a cualquier cliente que lo hable', options: { bullet: true, breakLine: true } },
+      { text: 'Es el estándar con el que un modelo pide herramientas, y solo sirve para eso', options: { bullet: true, breakLine: true } },
+      { text: 'El modelo solo actúa por ahí: no hay otra puerta al sistema', options: { bullet: true, breakLine: true } },
       { text: 'Cada herramienta declara su esquema, y los argumentos se validan antes de ejecutarla', options: { bullet: true, breakLine: true } },
       { text: 'El servidor vive en infraestructura: el modelo nunca ve el dominio', options: { bullet: true, breakLine: true } },
-      { text: 'Si mañana cambio de modelo, las herramientas no se tocan', options: { bullet: true } },
+      { text: 'Cambiar de modelo no toca las herramientas', options: { bullet: true } },
     ],
     { x: xDer, y: yLista, w: colW, h: 3.1, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
@@ -678,14 +679,21 @@ function pie(s) {
     'parecidos e indexar lo que se aprende. Y una es de búsqueda web, que lleva un ' +
     'presupuesto limitado por diagnóstico para que el agente no se vaya a internet sin ' +
     'control.\n\n' +
-    '¿Por qué MCP y no montarme yo las llamadas a medida? Por tres razones. Primero, es un ' +
-    'protocolo: el mismo servidor sirve a cualquier cliente que lo hable, no solo al mío. ' +
-    'Segundo, cada herramienta declara su esquema, así que los argumentos que manda el ' +
-    'modelo se validan antes de ejecutar nada. Y tercero, el servidor MCP vive en la capa ' +
-    'de infraestructura: es un adaptador más. El modelo nunca ve el dominio, ve ' +
-    'herramientas.\n\n' +
-    'La consecuencia es la de siempre: si mañana cambio de modelo, las herramientas no se ' +
-    'tocan.\n\n[~70 s]',
+    '¿Y por qué MCP? Primero, porque es el estándar que existe hoy para que un modelo pida ' +
+    'herramientas. No es un protocolo de propósito general: sirve exactamente para esto, y ' +
+    'por eso encaja.\n\n' +
+    'Y segundo, que para mí es lo importante: el modelo solo puede actuar a través de esas ' +
+    'dieciséis herramientas. No hay otra puerta. No ejecuta código, no consulta la base de ' +
+    'datos por su cuenta, no llama a ningún otro endpoint. Si quiere saber a cuántas ' +
+    'revoluciones está el motor, tiene que pedir la herramienta de leer un PID, y ahí es ' +
+    'donde yo decido si se ejecuta y con qué argumentos. Eso acota lo que el agente puede ' +
+    'hacer, que en un sistema que se conecta a un coche de verdad no es un detalle menor.\n\n' +
+    'Además, cada herramienta declara su esquema, así que los argumentos que manda el ' +
+    'modelo se validan antes de ejecutar nada. Y el servidor MCP vive en la capa de ' +
+    'infraestructura: es un adaptador más, el modelo nunca ve el dominio. Como es un ' +
+    'protocolo, ese mismo servidor serviría a cualquier otro cliente que lo hable.\n\n' +
+    'La consecuencia de todo esto es la de siempre: si mañana cambio de modelo, las ' +
+    'herramientas no se tocan.\n\n[~75 s]',
   )
 }
 
