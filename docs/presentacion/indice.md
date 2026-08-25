@@ -11,7 +11,7 @@
 | 4 | Por que esta arquitectura y no otra (incluye el ejemplo de las tres capas) | 1:20 | **la reescribe el autor** |
 | 5 | OBD-II: como se lee el coche de verdad | 1:10 | **validada** |
 | 6 | Dos bases de datos: vista general | 0:55 | pendiente |
-| 7 | SQLite: el dato que ya se conoce | 1:00 | pendiente |
+| 7 | SQLite: el catalogo y los datos del taller | 1:00 | pendiente |
 | 8 | Que se guarda en la base vectorial y por que | 1:10 | **validada** |
 | 9 | Los dos diagnosticos: determinista y cognitivo | 1:05 | pendiente |
 | 10 | MCP: las herramientas que se le dan al LLM | 1:10 | pendiente |

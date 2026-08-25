@@ -379,7 +379,7 @@ function pie(s, n) {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Una para el dato que ya se conoce. Otra para lo que el sistema descubre.', {
+  s.addText('En una se busca por clave. En la otra, por parecido.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
@@ -393,8 +393,8 @@ function pie(s, n) {
   s.addText(
     [
       { text: 'Usuarios, talleres, vehículos, ECUs y sesiones', options: { bullet: true, breakLine: true } },
-      { text: 'Los catálogos que vienen de la norma',           options: { bullet: true, breakLine: true } },
-      { text: 'Se consulta por clave: este VIN, este usuario',  options: { bullet: true } },
+      { text: 'Los catálogos de PID, DTC y ECU: los de la norma y los que se descubren', options: { bullet: true, breakLine: true } },
+      { text: 'Se consulta por clave: este VIN, este PID',      options: { bullet: true } },
     ],
     { x: xIzq, y: yLista, w: colW, h: 1.9, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 12, lineSpacing: 22 },
@@ -406,8 +406,8 @@ function pie(s, n) {
   })
   s.addText(
     [
-      { text: 'PIDs y DTCs propietarios que se van descubriendo', options: { bullet: true, breakLine: true } },
-      { text: 'Los diagnósticos ya resueltos',                    options: { bullet: true, breakLine: true } },
+      { text: 'Ese mismo conocimiento, indexado por significado', options: { bullet: true, breakLine: true } },
+      { text: 'Y los diagnósticos ya resueltos, que aquí no están', options: { bullet: true, breakLine: true } },
       { text: 'Se consulta por parecido, no por clave',           options: { bullet: true } },
     ],
     { x: xDer, y: yLista, w: colW, h: 1.9, margin: 0, valign: 'top',
@@ -430,9 +430,10 @@ function pie(s, n) {
     'particulares o talleres, los vehículos, las ECUs que se les han descubierto, las ' +
     'sesiones de diagnóstico, y los catálogos que vienen de la norma. Todo eso se consulta ' +
     'por una clave: dame el vehículo con este VIN, dame las sesiones de este usuario.\n\n' +
-    'En la vectorial va lo que el sistema descubre: PIDs y DTCs propietarios que no están ' +
-    'en la norma, y los diagnósticos ya resueltos. Ahí no hay clave por la que preguntar, ' +
-    'porque lo que quiero es "enséñame algo parecido a esto".\n\n' +
+    'En la vectorial va ese mismo conocimiento pero indexado por significado, más los ' +
+    'diagnósticos ya resueltos, que solo están ahí. La diferencia no es qué se guarda, es ' +
+    'cómo se busca: en SQLite pregunto por una clave, y en la vectorial pido "enséñame algo ' +
+    'parecido a esto".\n\n' +
     'Y no vale con una sola. SQLite tiene buscador de texto, pero busca palabras: si el ' +
     'mecánico escribe "presión de aceite", no encuentra una ficha que ponga "oil ' +
     'pressure". La búsqueda vectorial sí, porque compara significado.\n\n' +
@@ -440,12 +441,12 @@ function pie(s, n) {
   )
 }
 
-// ============ 7 — SQLITE: EL DATO QUE YA SE CONOCE ========================
+// ============ 7 — SQLITE: EL CATALOGO Y LOS DATOS DEL TALLER ========================
 {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('SQLite: el dato que ya se conoce', {
+  s.addText('SQLite: el catálogo y los datos del taller', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -492,7 +493,7 @@ function pie(s, n) {
       fontFace: 'Calibri', fontSize: 15, color: TINTA,
     })
   })
-  s.addText('De ahí arranca. Todo lo que el sistema aprenda después va a la vectorial.', {
+  s.addText('Y crece solo: un PID que se lee y no está en el catálogo se inserta aquí con confianza 0,3.', {
     x: xDer, y: yLista + 2.1, w: colW, h: 0.6, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 14, color: GRIS, lineSpacing: 19,
   })
@@ -514,8 +515,10 @@ function pie(s, n) {
     'HTTP, que es requisito de OWASP.\n\n' +
     'Al arrancar, la base se siembra: veinte PIDs de la norma SAE J1979, veintitrés códigos ' +
     'DTC estándar y veintisiete fabricantes por su código WMI, que es lo que permite sacar ' +
-    'la marca de un VIN. De ahí parte el sistema, y todo lo que aprenda después va a la ' +
-    'base vectorial.\n\n' +
+    'la marca de un VIN. Pero el catálogo no se queda ahí: cuando el agente lee un PID que ' +
+    'no conoce, se inserta solo en esta base con confianza 0,3 y una fórmula asumida, ' +
+    'marcado como auto-descubierto. Vale como pista, no como dato confirmado, hasta que se ' +
+    'valida contra el coche.\n\n' +
     'Es un fichero en disco, sin servidor. PostgreSQL se descartó porque a esta escala solo ' +
     'añadía un servicio, una red y un backup que mantener, sin resolver ningún problema ' +
     'que yo tuviera.\n\n[~60 s]',
