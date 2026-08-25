@@ -97,7 +97,7 @@ function pie(s) {
     'conecta al coche por el puerto OBD-II, lee sus datos reales y razona sobre ellos ' +
     'con un modelo de lenguaje.\n\n' +
     'Lo de la derecha no es una maqueta: es la aplicación funcionando, mostrando tres ' +
-    'averías que acaba de leer de la centralita.\n\n[~15 s]',
+    'averías que acaba de leer de la centralita.\n\n[~15 s · acumulado 0:15]',
   )
 }
 
@@ -150,7 +150,7 @@ function pie(s) {
     'Vale. Pero esa válvula se ha obstruido por alguna circunstancia, y ese filtro se ha ' +
     'llenado por alguna circunstancia. Y eso la máquina no te lo dice.\n\n' +
     'Te deja la lista delante, y el trabajo de averiguar el porqué sigue entero por hacer.\n\n' +
-    '[~45 s]',
+    '[~45 s · acumulado 1:00]',
   )
 }
 
@@ -187,7 +187,7 @@ function pie(s) {
     'Y hace una diagnosis: esto se produce, puede ser por esto o puede ser por lo otro. Le ' +
     'da al mecánico una serie de opciones.\n\n' +
     'Y además le dice qué pasos puede seguir para llegar a determinar de dónde viene el ' +
-    'problema. Eso es lo que hace la aplicación.\n\n[~55 s]',
+    'problema. Eso es lo que hace la aplicación.\n\n[~55 s · acumulado 1:55]',
   )
 }
 
@@ -274,7 +274,7 @@ function pie(s) {
     'severidad y recomendaciones. Y ese caso se indexa.\n\n' +
     'Esa flecha de vuelta es la clave del proyecto: lo que se aprende en un diagnóstico ' +
     'alimenta el siguiente. Cuantos más coches pasen, más casos reales hay con los que ' +
-    'comparar.\n\n[~60 s]',
+    'comparar.\n\n[~60 s · acumulado 2:55]',
   )
 }
 
@@ -361,7 +361,7 @@ function pie(s) {
     'falta pero no cómo. Y en infraestructura el cómo: Express, Drizzle sobre SQLite, ' +
     'LanceDB, el servidor MCP y el transporte del ELM327.\n\n' +
     'El dominio no sabe que existe SQLite, ni Express, ni ningún modelo de lenguaje.\n\n' +
-    '[~80 s]',
+    '[~80 s · acumulado 4:15]',
   )
 }
 
@@ -450,7 +450,7 @@ function pie(s) {
     'Ese dato no son revoluciones todavía. Hay que aplicarle la fórmula del PID: A por 256 ' +
     'más B, dividido entre 4. Con 0B y B8, eso da 750 revoluciones.\n\n' +
     'Esa fórmula la fija la SAE J1979, y por eso está en el dominio y no en el código que ' +
-    'habla con el cable.\n\n[~70 s]',
+    'habla con el cable.\n\n[~70 s · acumulado 5:25]',
   )
 }
 
@@ -513,7 +513,7 @@ function pie(s) {
     'Y no vale con una sola. SQLite tiene buscador de texto, pero busca palabras: si el ' +
     'mecánico escribe "presión de aceite", no encuentra una ficha que ponga "oil ' +
     'pressure". La búsqueda vectorial sí, porque compara significado.\n\n' +
-    'Las dos son embebidas: un fichero y un directorio en disco. Cero servidores.\n\n[~55 s]',
+    'Las dos son embebidas: un fichero y un directorio en disco. Cero servidores.\n\n[~55 s · acumulado 6:20]',
   )
 }
 
@@ -589,7 +589,7 @@ function pie(s) {
     'valida contra el coche.\n\n' +
     'Es un fichero en disco, sin servidor. PostgreSQL se descartó porque a esta escala solo ' +
     'añadía un servicio, una red y un backup que mantener, sin resolver ningún problema ' +
-    'que yo tuviera.\n\n[~60 s]',
+    'que yo tuviera.\n\n[~60 s · acumulado 7:20]',
   )
 }
 
@@ -705,7 +705,7 @@ function pie(s) {
     'propósito es subir la confianza de un caso cada vez que se reutiliza con acierto. La ' +
     'función existe y está testeada, pero no la llamo desde ningún flujo, porque para eso ' +
     'haría falta saber que el diagnóstico acertó de verdad, y nadie le dice al sistema si ' +
-    'el coche se arregló. Inventármelo habría degradado el catálogo.\n\n[~70 s]',
+    'el coche se arregló. Inventármelo habría degradado el catálogo.\n\n[~70 s · acumulado 8:30]',
   )
 }
 
@@ -797,7 +797,7 @@ function pie(s) {
     'Además, cada herramienta declara su esquema, así que los argumentos se validan antes ' +
     'de ejecutar nada. Y el servidor MCP vive en infraestructura: es un adaptador más, el ' +
     'modelo nunca ve el dominio. Como es un protocolo, ese mismo servidor serviría a ' +
-    'cualquier otro cliente que lo hable.\n\n[~75 s]',
+    'cualquier otro cliente que lo hable.\n\n[~75 s · acumulado 9:45]',
   )
 }
 
@@ -883,7 +883,7 @@ function pie(s) {
     'El system prompt tiene once bloques. No es solo decirle "eres un mecánico": hay ' +
     'bloques de exploración, de consultar el catálogo antes de inventar, de aprendizaje ' +
     'para PIDs, DTCs y ECUs, de ámbito, de no revelar sus propias tripas, de contenido no ' +
-    'fiable y del formato de salida.\n\n[~80 s]',
+    'fiable y del formato de salida.\n\n[~80 s · acumulado 11:05]',
   )
 }
 
@@ -953,7 +953,7 @@ function pie(s) {
     'Que corra en local significa tres cosas: no hace falta clave, no hay latencia de red y ' +
     'no se paga por consulta. Y como es multilingüe, español e inglés caen cerca en ese ' +
     'espacio: por eso "presión de aceite" encuentra una ficha que pone "oil pressure", que ' +
-    'es justo lo que un buscador de texto no hace.\n\n[~65 s]',
+    'es justo lo que un buscador de texto no hace.\n\n[~65 s · acumulado 12:10]',
   )
 }
 
@@ -1021,7 +1021,7 @@ function pie(s) {
     'con un límite de sesenta segundos. Y es el único que aprende: indexa los PIDs y DTCs ' +
     'nuevos y guarda el caso resuelto.\n\n' +
     'Por eso conviven. Si no hay modelo configurado, o si no hay internet en el taller, el ' +
-    'determinista sigue funcionando.\n\n[~65 s]',
+    'determinista sigue funcionando.\n\n[~65 s · acumulado 13:15]',
   )
 }
 
@@ -1072,7 +1072,7 @@ function pie(s) {
     'los servicios 03, 07 y 0A del estándar: almacenadas, pendientes y permanentes.\n\n' +
     'Y a la derecha el informe, que se congela con la sesión: si dentro de seis meses ' +
     'alguien abre ese diagnóstico, ve exactamente lo que se vio ese día.\n\n' +
-    '[~2 min contando la demo. Si hay vídeo del coche real, va aquí.]',
+    '[~2 min contando la demo. Si hay vídeo del coche real, va aquí. · acumulado 15:15]',
   )
 }
 
@@ -1131,7 +1131,7 @@ function pie(s) {
     'supertest para los endpoints y Playwright para el extremo a extremo. Y la entrega va ' +
     'con GitHub Actions, Docker y Caddy delante.\n\n' +
     'Lo importante no es la lista: es que todo lo que aparece de la tercera fila para abajo ' +
-    'está detrás de un puerto, así que se puede sustituir sin tocar la lógica.\n\n[~55 s]',
+    'está detrás de un puerto, así que se puede sustituir sin tocar la lógica.\n\n[~55 s · acumulado 16:10]',
   )
 }
 
@@ -1198,7 +1198,7 @@ function pie(s) {
     'tumba la build si aparece una vulnerabilidad crítica.\n\n' +
     'En seguridad, el documento cubre las diez categorías del OWASP API Top 10 de 2023, una ' +
     'a una, con lo que hace el código en cada caso. Incluidos los riesgos residuales, que ' +
-    'están escritos y asumidos, no escondidos.\n\n[~60 s]',
+    'están escritos y asumidos, no escondidos.\n\n[~60 s · acumulado 17:10]',
   )
 }
 
@@ -1261,7 +1261,7 @@ function pie(s) {
     'semanas sin exigir nada. Estaba verde, y no comprobaba lo que decía comprobar. Lo he ' +
     'documentado en la deuda conocida del proyecto.\n\n' +
     'Así que sí, acelera mucho. Pero no es todo tan bonito como parece: hay que dedicarle ' +
-    'tiempo a revisar.\n\n[~45 s]',
+    'tiempo a revisar.\n\n[~45 s · acumulado 17:55]',
   )
 }
 
