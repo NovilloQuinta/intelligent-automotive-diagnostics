@@ -9,7 +9,7 @@
 | 2 | El problema | 0:45 | **validada** |
 | 3 | El objetivo | 0:55 | **validada** |
 | 4 | Por que esta arquitectura y no otra (incluye el ejemplo de las tres capas) | 1:20 | **la reescribe el autor** |
-| 5 | OBD-II: como se lee el coche de verdad | 1:10 | pendiente |
+| 5 | OBD-II: como se lee el coche de verdad | 1:10 | **validada** |
 | 6 | Dos bases de datos, dos preguntas distintas | 1:00 | pendiente |
 | 7 | Que guardamos en la vectorial y por que | 1:10 | pendiente |
 | 8 | Los dos diagnosticos: determinista y cognitivo | 1:05 | pendiente |

@@ -370,5 +370,83 @@ function pie(s, n) {
   )
 }
 
+// ==================== 6 — DOS BASES DE DATOS ==============================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Dos bases de datos', {
+    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('Porque hay dos preguntas distintas que hacerle a los datos.', {
+    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.45, ySub = 2.92, yLista = 3.5
+
+  s.addText('SQLite', {
+    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+  })
+  s.addText('«¿Qué es esto exactamente?»', {
+    x: xIzq, y: ySub, w: colW, h: 0.35, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 15, italic: true, color: GRIS,
+  })
+  s.addText(
+    [
+      { text: 'Usuarios, vehículos, ECUs y sesiones', options: { bullet: true, breakLine: true } },
+      { text: '13 tablas con sus claves y relaciones', options: { bullet: true, breakLine: true } },
+      { text: 'El informe de cada sesión, congelado',  options: { bullet: true, breakLine: true } },
+      { text: 'Se responde con una clave: este VIN, este usuario', options: { bullet: true } },
+    ],
+    { x: xIzq, y: yLista, w: colW, h: 2.4, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+  )
+
+  s.addText('LanceDB', {
+    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+  })
+  s.addText('«¿Qué se parece a esto?»', {
+    x: xDer, y: ySub, w: colW, h: 0.35, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 15, italic: true, color: GRIS,
+  })
+  s.addText(
+    [
+      { text: 'PIDs, DTCs y diagnósticos ya resueltos', options: { bullet: true, breakLine: true } },
+      { text: 'El texto se convierte en vectores de 384 dimensiones', options: { bullet: true, breakLine: true } },
+      { text: 'Busca por significado, no por palabra exacta', options: { bullet: true, breakLine: true } },
+      { text: 'No hay clave que valga: no sabes qué buscas hasta verlo', options: { bullet: true } },
+    ],
+    { x: xDer, y: yLista, w: colW, h: 2.4, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+  )
+
+  s.addText('Las dos van embebidas, sin servidor que mantener. PostgreSQL se descartó por eso: un servicio más sin resolver ningún problema a esta escala.', {
+    x: 0.85, y: 6.15, w: 11.6, h: 0.45, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 14, color: GRIS, lineSpacing: 19,
+  })
+
+  pie(s, 6)
+  s.addNotes(
+    'Hay dos bases de datos, y no es por capricho: son dos preguntas distintas.\n\n' +
+    'A SQLite le pregunto cosas exactas. Qué usuario es este, qué vehículo tiene este VIN, ' +
+    'qué ECUs se le descubrieron, qué sesiones de diagnóstico tiene y cuál fue el informe ' +
+    'de cada una. Son trece tablas con sus claves y sus relaciones, y siempre sé por qué ' +
+    'clave preguntar.\n\n' +
+    'A LanceDB le pregunto por parecido. Ahí están los PIDs, los DTCs y los diagnósticos ya ' +
+    'resueltos, convertidos en vectores de 384 dimensiones. Cuando llega un coche nuevo no ' +
+    'tengo una clave por la que buscar: lo que quiero es "enséñame casos que se parezcan a ' +
+    'este", y eso una consulta SQL no lo resuelve.\n\n' +
+    'Las dos son embebidas, sin servidor. En el ADR-002 está escrito por qué se descartó ' +
+    'PostgreSQL: a esta escala habría añadido un servicio, una red y un backup que ' +
+    'gestionar sin resolver ningún problema que yo tuviera. Y como los repositorios están ' +
+    'detrás de puertos, migrar el día de mañana es cambiar el driver, no la aplicación.\n\n' +
+    '[~60 s]',
+  )
+}
+
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 5 slides')
+console.log('PPTX escrito: 6 slides')
