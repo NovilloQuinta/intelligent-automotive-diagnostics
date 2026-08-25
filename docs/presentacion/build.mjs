@@ -1056,5 +1056,68 @@ function pie(s) {
   )
 }
 
+// ======= CONCLUSIONES =====================================================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Conclusiones', {
+    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('Lo que me llevo de haber construido esto con IA.', {
+    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.5, yLista = 3.1
+
+  s.addText('Lo que acelera', {
+    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'Se pueden construir cosas complejas mucho más rápido', options: { bullet: true, breakLine: true } },
+      { text: 'Lo que antes eran meses o años, ahora son semanas',    options: { bullet: true, breakLine: true } },
+      { text: 'Y se aprende más por el camino: herramientas y frameworks que no habrías tocado', options: { bullet: true } },
+    ],
+    { x: xIzq, y: yLista, w: colW, h: 2.7, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 13, lineSpacing: 22 },
+  )
+
+  s.addText('Lo que hay que poner', {
+    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'Acelera, pero también se equivoca',                 options: { bullet: true, breakLine: true } },
+      { text: 'Hay que revisar lo que se sube, no vale con fiarse', options: { bullet: true, breakLine: true } },
+      { text: 'No es todo tan bonito como parece: hay que dedicarle tiempo', options: { bullet: true } },
+    ],
+    { x: xDer, y: yLista, w: colW, h: 2.7, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 13, lineSpacing: 22 },
+  )
+
+  pie(s)
+  s.addNotes(
+    'Para terminar, lo que me llevo de haber hecho esto.\n\n' +
+    'Lo primero, que con IA se pueden construir cosas complejas mucho más rápido. Un ' +
+    'proyecto como este, con su arquitectura, su capa de OBD, su base vectorial y su ' +
+    'agente, antes habría sido cuestión de meses o de años. Y no solo va más rápido: se ' +
+    'aprenden más cosas por el camino, porque te metes en herramientas y frameworks que de ' +
+    'otra forma ni habrías tocado.\n\n' +
+    'Pero hay una segunda parte, y la quiero decir igual de claro. La IA también se ' +
+    'equivoca, y hay que estar encima de lo que se sube. No vale con fiarse.\n\n' +
+    'Y no lo digo en abstracto: preparando esta misma presentación encontré que el umbral ' +
+    'de cobertura del núcleo apuntaba a un fichero que se había renombrado, así que llevaba ' +
+    'semanas sin exigir nada. Estaba verde, y no comprobaba lo que decía comprobar. Lo he ' +
+    'documentado en la deuda conocida del proyecto.\n\n' +
+    'Así que sí, acelera mucho. Pero no es todo tan bonito como parece: hay que dedicarle ' +
+    'tiempo a revisar.\n\n[~45 s]',
+  )
+}
+
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 14 slides')
+console.log('PPTX escrito: 15 slides')
