@@ -18,7 +18,7 @@
 | 11 | Los dos modelos: lenguaje y embeddings | 1:05 | pendiente |
 | 12 | Los dos diagnosticos: determinista y cognitivo | 1:05 | pendiente |
 | 13 | La aplicacion funcionando (capturas reales) | 2:00 | pendiente |
-| 14 | Calidad: TDD, tests, CI, seguridad | 0:55 | pendiente |
+| 14 | Como se sostiene esto: TDD, CI y seguridad | 1:00 | pendiente |
 | 15 | Conclusiones | 0:45 | pendiente |
 | B | Backup para preguntas del tribunal | — | pendiente |
 
