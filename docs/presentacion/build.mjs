@@ -370,7 +370,159 @@ function pie(s, n) {
   )
 }
 
-// ============ 6 — QUÉ SE GUARDA EN LA BASE VECTORIAL ======================
+// ==================== 6 — DOS BASES DE DATOS ==============================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Dos bases de datos', {
+    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('Una para el dato que ya se conoce. Otra para lo que el sistema descubre.', {
+    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.5, yLista = 3.1
+
+  s.addText('SQLite', {
+    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'Usuarios, talleres, vehículos, ECUs y sesiones', options: { bullet: true, breakLine: true } },
+      { text: 'Los catálogos que vienen de la norma',           options: { bullet: true, breakLine: true } },
+      { text: 'Se consulta por clave: este VIN, este usuario',  options: { bullet: true } },
+    ],
+    { x: xIzq, y: yLista, w: colW, h: 1.9, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 12, lineSpacing: 22 },
+  )
+
+  s.addText('LanceDB, vectorial', {
+    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'PIDs y DTCs propietarios que se van descubriendo', options: { bullet: true, breakLine: true } },
+      { text: 'Los diagnósticos ya resueltos',                    options: { bullet: true, breakLine: true } },
+      { text: 'Se consulta por parecido, no por clave',           options: { bullet: true } },
+    ],
+    { x: xDer, y: yLista, w: colW, h: 1.9, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 12, lineSpacing: 22 },
+  )
+
+  s.addText('No vale con una sola: el buscador de texto de SQLite busca palabras, no significado.', {
+    x: 0.85, y: 5.5, w: 11.6, h: 0.35, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 16, bold: true, color: TINTA,
+  })
+  s.addText('«Presión de aceite» no encuentra «oil pressure». Las dos van embebidas: un fichero y un directorio en disco, sin servidor que levantar.', {
+    x: 0.85, y: 5.95, w: 11.6, h: 0.6, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 15, color: GRIS, lineSpacing: 21,
+  })
+
+  pie(s, 6)
+  s.addNotes(
+    'El proyecto tiene dos bases de datos, y cada una guarda una cosa distinta.\n\n' +
+    'En SQLite va el dato que ya se conoce y que es seguro: los usuarios, que pueden ser ' +
+    'particulares o talleres, los vehículos, las ECUs que se les han descubierto, las ' +
+    'sesiones de diagnóstico, y los catálogos que vienen de la norma. Todo eso se consulta ' +
+    'por una clave: dame el vehículo con este VIN, dame las sesiones de este usuario.\n\n' +
+    'En la vectorial va lo que el sistema descubre: PIDs y DTCs propietarios que no están ' +
+    'en la norma, y los diagnósticos ya resueltos. Ahí no hay clave por la que preguntar, ' +
+    'porque lo que quiero es "enséñame algo parecido a esto".\n\n' +
+    'Y no vale con una sola. SQLite tiene buscador de texto, pero busca palabras: si el ' +
+    'mecánico escribe "presión de aceite", no encuentra una ficha que ponga "oil ' +
+    'pressure". La búsqueda vectorial sí, porque compara significado.\n\n' +
+    'Las dos son embebidas: un fichero y un directorio en disco. Cero servidores.\n\n[~55 s]',
+  )
+}
+
+// ============ 7 — SQLITE: EL DATO QUE YA SE CONOCE ========================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('SQLite: el dato que ya se conoce', {
+    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('13 tablas. Todo lo que se puede pedir por una clave exacta.', {
+    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.5, yLista = 3.1
+
+  s.addText('Qué guarda', {
+    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'Usuarios: particulares o talleres, con su rol', options: { bullet: true, breakLine: true } },
+      { text: 'Vehículos por VIN y las ECUs de cada uno',      options: { bullet: true, breakLine: true } },
+      { text: 'Sesiones de diagnóstico, con el informe congelado', options: { bullet: true, breakLine: true } },
+      { text: 'Lecturas de PID: el hexadecimal crudo y el valor ya convertido', options: { bullet: true, breakLine: true } },
+      { text: 'Logs y auditoría de cada petición',             options: { bullet: true } },
+    ],
+    { x: xIzq, y: yLista, w: colW, h: 3.0, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+  )
+
+  s.addText('Lo que viene sembrado al arrancar', {
+    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
+  })
+  const seed = [
+    ['20', 'PIDs de la norma SAE J1979'],
+    ['23', 'códigos DTC estándar'],
+    ['27', 'fabricantes, por su código WMI'],
+  ]
+  seed.forEach(([n, t], k) => {
+    const y = yLista + 0.05 + k * 0.62
+    s.addText(n, {
+      x: xDer, y, w: 0.75, h: 0.38, margin: 0, valign: 'middle',
+      fontFace: 'Arial', fontSize: 20, bold: true, color: TINTA,
+    })
+    s.addText(t, {
+      x: xDer + 0.85, y, w: colW - 0.85, h: 0.38, margin: 0, valign: 'middle',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA,
+    })
+  })
+  s.addText('De ahí arranca. Todo lo que el sistema aprenda después va a la vectorial.', {
+    x: xDer, y: yLista + 2.1, w: colW, h: 0.6, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 14, color: GRIS, lineSpacing: 19,
+  })
+
+  s.addText('Es un fichero en disco. PostgreSQL se descartó: a esta escala solo añadía un servicio, una red y un backup que mantener.', {
+    x: 0.85, y: 6.25, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 14, color: GRIS,
+  })
+
+  pie(s, 7)
+  s.addNotes(
+    'En SQLite hay trece tablas, y ahí está todo lo que se puede pedir por una clave ' +
+    'exacta.\n\n' +
+    'Los usuarios, que pueden ser particulares o talleres, con su rol. Los vehículos, ' +
+    'identificados por su VIN, y las ECUs que se le han descubierto a cada uno en el bus. ' +
+    'Las sesiones de diagnóstico, y de cada una el informe congelado, tal como salió ese ' +
+    'día. Las lecturas de PID, guardando tanto el hexadecimal crudo que devolvió la ' +
+    'centralita como el valor ya convertido. Y los logs y la auditoría de cada petición ' +
+    'HTTP, que es requisito de OWASP.\n\n' +
+    'Al arrancar, la base se siembra: veinte PIDs de la norma SAE J1979, veintitrés códigos ' +
+    'DTC estándar y veintisiete fabricantes por su código WMI, que es lo que permite sacar ' +
+    'la marca de un VIN. De ahí parte el sistema, y todo lo que aprenda después va a la ' +
+    'base vectorial.\n\n' +
+    'Es un fichero en disco, sin servidor. PostgreSQL se descartó porque a esta escala solo ' +
+    'añadía un servicio, una red y un backup que mantener, sin resolver ningún problema ' +
+    'que yo tuviera.\n\n[~60 s]',
+  )
+}
+
+// ============ 8 — QUÉ SE GUARDA EN LA BASE VECTORIAL ======================
 {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
@@ -462,7 +614,7 @@ function pie(s, n) {
     fontFace: 'Calibri', fontSize: 13, color: GRIS,
   })
 
-  pie(s, 6)
+  pie(s, 8)
   s.addNotes(
     'En la base vectorial no van los datos del taller: esos están en SQLite. Aquí va solo ' +
     'lo que el sistema aprende. Hay PIDs propietarios, que cada fabricante se inventa fuera ' +
@@ -485,4 +637,4 @@ function pie(s, n) {
 }
 
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 6 slides')
+console.log('PPTX escrito: 8 slides')
