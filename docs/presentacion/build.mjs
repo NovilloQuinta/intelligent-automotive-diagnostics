@@ -313,7 +313,134 @@ function pie(s) {
     'severidad y qué conviene revisar. Y el caso se indexa.\n\n' +
     'Ese último paso es el que hace que el sistema mejore: queda disponible para el ' +
     'siguiente coche que entre con síntomas parecidos.\n\n' +
-    '[~75 s · acumulado 2:55]',
+    '[~75 s · acumulado 3:10]',
+  )
+}
+
+// ============ LOS DOS DIAGNÓSTICOS (cierra el bloque de IA) ============== ============================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Dos diagnósticos', {
+    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('El determinista está siempre. El cognitivo, solo si hay un modelo configurado.', {
+    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.45, yLista = 3.05
+
+  s.addText('Determinista', {
+    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'Lee cuatro PIDs fijos: revoluciones, refrigerante, velocidad y admisión', options: { bullet: true, breakLine: true } },
+      { text: 'Más los DTCs y el freeze frame',                       options: { bullet: true, breakLine: true } },
+      { text: 'La criticidad sale de una regla: sin DTCs es baja, con freeze frame es crítica', options: { bullet: true, breakLine: true } },
+      { text: 'Solo necesita el coche, y responde al momento',        options: { bullet: true, breakLine: true } },
+      { text: 'No aprende nada',                                      options: { bullet: true } },
+    ],
+    { x: xIzq, y: yLista, w: colW, h: 3.1, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+  )
+
+  s.addText('Cognitivo', {
+    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'El agente decide qué PIDs le hace falta leer',        options: { bullet: true, breakLine: true } },
+      { text: 'Razona sobre lo que va encontrando, llamando a herramientas', options: { bullet: true, breakLine: true } },
+      { text: 'Necesita el coche, la API del modelo y los índices vectoriales', options: { bullet: true, breakLine: true } },
+      { text: 'Hasta 60 segundos de límite',                          options: { bullet: true, breakLine: true } },
+      { text: 'Y aprende: indexa PIDs, DTCs y el caso resuelto',      options: { bullet: true } },
+    ],
+    { x: xDer, y: yLista, w: colW, h: 3.1, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+  )
+
+  pie(s)
+  s.addNotes(
+    'El sistema hace dos diagnósticos distintos, y conviven.\n\n' +
+    'El determinista es el de toda la vida. Lee cuatro PIDs fijos —revoluciones, ' +
+    'temperatura de refrigerante, velocidad y temperatura de admisión—, los códigos de ' +
+    'avería y el freeze frame. Y la criticidad no me la invento: sale de una regla en el ' +
+    'dominio, computeSeverity. Si no hay códigos es baja; si hay freeze frame es crítica, ' +
+    'porque significa que la centralita congeló el momento del fallo; y si hay códigos sin ' +
+    'freeze frame es alta. Solo necesita el coche conectado, responde al momento, y no ' +
+    'aprende nada.\n\n' +
+    'El cognitivo es el otro. Ahí no hay una lista fija de PIDs: el agente decide qué le ' +
+    'hace falta leer y va llamando a las herramientas según lo que encuentra. A cambio ' +
+    'necesita tres cosas: el coche, la API del modelo y los índices vectoriales. Tarda más, ' +
+    'con un límite de sesenta segundos. Y es el único que aprende: indexa los PIDs y DTCs ' +
+    'nuevos y guarda el caso resuelto.\n\n' +
+    'Por eso conviven. Si no hay modelo configurado, o si no hay internet en el taller, el ' +
+    'determinista sigue funcionando.\n\n[~65 s · acumulado 4:15]',
+  )
+}
+
+// ======= CON QUÉ ESTÁ HECHO ===============================================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Con qué está hecho', {
+    x: 0.85, y: 0.6, w: 11.6, h: 0.8, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('TypeScript de punta a punta, y cada pieza detrás de un puerto.', {
+    x: 0.85, y: 1.5, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 16, color: GRIS,
+  })
+
+  const filas = [
+    ['Lenguaje y runtime', 'TypeScript 5.7 estricto sobre Node 22'],
+    ['API', 'Express 5 · Zod · Helmet 8 · JWT · pino'],
+    ['Persistencia', 'SQLite con Drizzle ORM'],
+    ['Búsqueda vectorial', 'LanceDB · transformers.js en local'],
+    ['Agente', 'MCP SDK · SDK de Anthropic · SDK de OpenAI'],
+    ['Acceso al coche', 'ELM327 por serie o TCP · emulador Python'],
+    ['Interfaz', 'React 19 · Vite · TanStack Router y Query · Tailwind'],
+    ['Pruebas', 'Vitest · supertest · Playwright'],
+    ['Entrega', 'GitHub Actions · Docker · Caddy'],
+  ]
+  const yTop = 2.35, rowH = 0.5
+  filas.forEach(([que, con], i) => {
+    const y = yTop + i * rowH
+    s.addText(que, {
+      x: 0.85, y, w: 3.3, h: 0.42, margin: 0, valign: 'middle',
+      fontFace: 'Arial', fontSize: 14, bold: true, color: AZUL,
+    })
+    s.addText(con, {
+      x: 4.3, y, w: 8.15, h: 0.42, margin: 0, valign: 'middle',
+      fontFace: 'Calibri', fontSize: 14, color: TINTA,
+    })
+  })
+
+  pie(s)
+  s.addNotes(
+    'Con qué está hecho, por piezas.\n\n' +
+    'Todo es TypeScript en modo estricto, sobre Node 22, tanto el backend como el ' +
+    'frontend.\n\n' +
+    'La API es Express 5, con Zod para validar todo lo que entra, Helmet para las cabeceras ' +
+    'de seguridad, JWT para la autenticación y pino para el log estructurado. La ' +
+    'persistencia relacional es SQLite con Drizzle, que es un ORM cuyos esquemas son ' +
+    'TypeScript, no un fichero aparte. La búsqueda vectorial es LanceDB, con el modelo de ' +
+    'embeddings corriendo en local vía transformers.js.\n\n' +
+    'El agente usa el SDK oficial de MCP, y por debajo el de Anthropic o el de OpenAI según ' +
+    'lo que esté configurado. El acceso al coche es un ELM327, por puerto serie o por TCP, ' +
+    'y para la demo un emulador escrito en Python.\n\n' +
+    'La interfaz es React 19 con Vite y TanStack, y las pruebas son Vitest para unidad, ' +
+    'supertest para los endpoints y Playwright para el extremo a extremo. Y la entrega va ' +
+    'con GitHub Actions, Docker y Caddy delante.\n\n' +
+    'Lo importante no es la lista: es que todo lo que aparece de la tercera fila para abajo ' +
+    'está detrás de un puerto, así que se puede sustituir sin tocar la lógica.\n\n[~55 s · acumulado 5:10]',
   )
 }
 
@@ -400,7 +527,7 @@ function pie(s) {
     'falta pero no cómo. Y en infraestructura el cómo: Express, Drizzle sobre SQLite, ' +
     'LanceDB, el servidor MCP y el transporte del ELM327.\n\n' +
     'El dominio no sabe que existe SQLite, ni Express, ni ningún modelo de lenguaje.\n\n' +
-    '[~80 s · acumulado 4:15]',
+    '[~80 s · acumulado 6:30]',
   )
 }
 
@@ -489,7 +616,7 @@ function pie(s) {
     'Ese dato no son revoluciones todavía. Hay que aplicarle la fórmula del PID: A por 256 ' +
     'más B, dividido entre 4. Con 0B y B8, eso da 750 revoluciones.\n\n' +
     'Esa fórmula la fija la SAE J1979, y por eso está en el dominio y no en el código que ' +
-    'habla con el cable.\n\n[~70 s · acumulado 5:25]',
+    'habla con el cable.\n\n[~70 s · acumulado 7:40]',
   )
 }
 
@@ -552,7 +679,7 @@ function pie(s) {
     'Y no vale con una sola. SQLite tiene buscador de texto, pero busca palabras: si el ' +
     'mecánico escribe "presión de aceite", no encuentra una ficha que ponga "oil ' +
     'pressure". La búsqueda vectorial sí, porque compara significado.\n\n' +
-    'Las dos son embebidas: un fichero y un directorio en disco. Cero servidores.\n\n[~55 s · acumulado 6:20]',
+    'Las dos son embebidas: un fichero y un directorio en disco. Cero servidores.\n\n[~55 s · acumulado 8:35]',
   )
 }
 
@@ -628,7 +755,7 @@ function pie(s) {
     'valida contra el coche.\n\n' +
     'Es un fichero en disco, sin servidor. PostgreSQL se descartó porque a esta escala solo ' +
     'añadía un servicio, una red y un backup que mantener, sin resolver ningún problema ' +
-    'que yo tuviera.\n\n[~60 s · acumulado 7:20]',
+    'que yo tuviera.\n\n[~60 s · acumulado 9:35]',
   )
 }
 
@@ -744,7 +871,7 @@ function pie(s) {
     'propósito es subir la confianza de un caso cada vez que se reutiliza con acierto. La ' +
     'función existe y está testeada, pero no la llamo desde ningún flujo, porque para eso ' +
     'haría falta saber que el diagnóstico acertó de verdad, y nadie le dice al sistema si ' +
-    'el coche se arregló. Inventármelo habría degradado el catálogo.\n\n[~70 s · acumulado 8:30]',
+    'el coche se arregló. Inventármelo habría degradado el catálogo.\n\n[~70 s · acumulado 10:45]',
   )
 }
 
@@ -836,7 +963,7 @@ function pie(s) {
     'Además, cada herramienta declara su esquema, así que los argumentos se validan antes ' +
     'de ejecutar nada. Y el servidor MCP vive en infraestructura: es un adaptador más, el ' +
     'modelo nunca ve el dominio. Como es un protocolo, ese mismo servidor serviría a ' +
-    'cualquier otro cliente que lo hable.\n\n[~75 s · acumulado 9:45]',
+    'cualquier otro cliente que lo hable.\n\n[~75 s · acumulado 12:00]',
   )
 }
 
@@ -922,7 +1049,7 @@ function pie(s) {
     'El system prompt tiene once bloques. No es solo decirle "eres un mecánico": hay ' +
     'bloques de exploración, de consultar el catálogo antes de inventar, de aprendizaje ' +
     'para PIDs, DTCs y ECUs, de ámbito, de no revelar sus propias tripas, de contenido no ' +
-    'fiable y del formato de salida.\n\n[~80 s · acumulado 11:05]',
+    'fiable y del formato de salida.\n\n[~80 s · acumulado 13:20]',
   )
 }
 
@@ -992,75 +1119,7 @@ function pie(s) {
     'Que corra en local significa tres cosas: no hace falta clave, no hay latencia de red y ' +
     'no se paga por consulta. Y como es multilingüe, español e inglés caen cerca en ese ' +
     'espacio: por eso "presión de aceite" encuentra una ficha que pone "oil pressure", que ' +
-    'es justo lo que un buscador de texto no hace.\n\n[~65 s · acumulado 12:10]',
-  )
-}
-
-// ============ LOS DOS DIAGNÓSTICOS (cierra el bloque de IA) ============== ============================
-{
-  const s = pres.addSlide()
-  s.background = { color: BLANCO }
-
-  s.addText('Dos diagnósticos', {
-    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
-  })
-  s.addText('El determinista está siempre. El cognitivo, solo si hay un modelo configurado.', {
-    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
-  })
-
-  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.45, yLista = 3.05
-
-  s.addText('Determinista', {
-    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
-  })
-  s.addText(
-    [
-      { text: 'Lee cuatro PIDs fijos: revoluciones, refrigerante, velocidad y admisión', options: { bullet: true, breakLine: true } },
-      { text: 'Más los DTCs y el freeze frame',                       options: { bullet: true, breakLine: true } },
-      { text: 'La criticidad sale de una regla: sin DTCs es baja, con freeze frame es crítica', options: { bullet: true, breakLine: true } },
-      { text: 'Solo necesita el coche, y responde al momento',        options: { bullet: true, breakLine: true } },
-      { text: 'No aprende nada',                                      options: { bullet: true } },
-    ],
-    { x: xIzq, y: yLista, w: colW, h: 3.1, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
-  )
-
-  s.addText('Cognitivo', {
-    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
-  })
-  s.addText(
-    [
-      { text: 'El agente decide qué PIDs le hace falta leer',        options: { bullet: true, breakLine: true } },
-      { text: 'Razona sobre lo que va encontrando, llamando a herramientas', options: { bullet: true, breakLine: true } },
-      { text: 'Necesita el coche, la API del modelo y los índices vectoriales', options: { bullet: true, breakLine: true } },
-      { text: 'Hasta 60 segundos de límite',                          options: { bullet: true, breakLine: true } },
-      { text: 'Y aprende: indexa PIDs, DTCs y el caso resuelto',      options: { bullet: true } },
-    ],
-    { x: xDer, y: yLista, w: colW, h: 3.1, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
-  )
-
-  pie(s)
-  s.addNotes(
-    'El sistema hace dos diagnósticos distintos, y conviven.\n\n' +
-    'El determinista es el de toda la vida. Lee cuatro PIDs fijos —revoluciones, ' +
-    'temperatura de refrigerante, velocidad y temperatura de admisión—, los códigos de ' +
-    'avería y el freeze frame. Y la criticidad no me la invento: sale de una regla en el ' +
-    'dominio, computeSeverity. Si no hay códigos es baja; si hay freeze frame es crítica, ' +
-    'porque significa que la centralita congeló el momento del fallo; y si hay códigos sin ' +
-    'freeze frame es alta. Solo necesita el coche conectado, responde al momento, y no ' +
-    'aprende nada.\n\n' +
-    'El cognitivo es el otro. Ahí no hay una lista fija de PIDs: el agente decide qué le ' +
-    'hace falta leer y va llamando a las herramientas según lo que encuentra. A cambio ' +
-    'necesita tres cosas: el coche, la API del modelo y los índices vectoriales. Tarda más, ' +
-    'con un límite de sesenta segundos. Y es el único que aprende: indexa los PIDs y DTCs ' +
-    'nuevos y guarda el caso resuelto.\n\n' +
-    'Por eso conviven. Si no hay modelo configurado, o si no hay internet en el taller, el ' +
-    'determinista sigue funcionando.\n\n[~65 s · acumulado 13:15]',
+    'es justo lo que un buscador de texto no hace.\n\n[~65 s · acumulado 14:25]',
   )
 }
 
@@ -1111,66 +1170,7 @@ function pie(s) {
     'los servicios 03, 07 y 0A del estándar: almacenadas, pendientes y permanentes.\n\n' +
     'Y a la derecha el informe, que se congela con la sesión: si dentro de seis meses ' +
     'alguien abre ese diagnóstico, ve exactamente lo que se vio ese día.\n\n' +
-    '[~2 min contando la demo. Si hay vídeo del coche real, va aquí. · acumulado 15:15]',
-  )
-}
-
-// ======= CON QUÉ ESTÁ HECHO ===============================================
-{
-  const s = pres.addSlide()
-  s.background = { color: BLANCO }
-
-  s.addText('Con qué está hecho', {
-    x: 0.85, y: 0.6, w: 11.6, h: 0.8, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
-  })
-  s.addText('TypeScript de punta a punta, y cada pieza detrás de un puerto.', {
-    x: 0.85, y: 1.5, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 16, color: GRIS,
-  })
-
-  const filas = [
-    ['Lenguaje y runtime', 'TypeScript 5.7 estricto sobre Node 22'],
-    ['API', 'Express 5 · Zod · Helmet 8 · JWT · pino'],
-    ['Persistencia', 'SQLite con Drizzle ORM'],
-    ['Búsqueda vectorial', 'LanceDB · transformers.js en local'],
-    ['Agente', 'MCP SDK · SDK de Anthropic · SDK de OpenAI'],
-    ['Acceso al coche', 'ELM327 por serie o TCP · emulador Python'],
-    ['Interfaz', 'React 19 · Vite · TanStack Router y Query · Tailwind'],
-    ['Pruebas', 'Vitest · supertest · Playwright'],
-    ['Entrega', 'GitHub Actions · Docker · Caddy'],
-  ]
-  const yTop = 2.35, rowH = 0.5
-  filas.forEach(([que, con], i) => {
-    const y = yTop + i * rowH
-    s.addText(que, {
-      x: 0.85, y, w: 3.3, h: 0.42, margin: 0, valign: 'middle',
-      fontFace: 'Arial', fontSize: 14, bold: true, color: AZUL,
-    })
-    s.addText(con, {
-      x: 4.3, y, w: 8.15, h: 0.42, margin: 0, valign: 'middle',
-      fontFace: 'Calibri', fontSize: 14, color: TINTA,
-    })
-  })
-
-  pie(s)
-  s.addNotes(
-    'Con qué está hecho, por piezas.\n\n' +
-    'Todo es TypeScript en modo estricto, sobre Node 22, tanto el backend como el ' +
-    'frontend.\n\n' +
-    'La API es Express 5, con Zod para validar todo lo que entra, Helmet para las cabeceras ' +
-    'de seguridad, JWT para la autenticación y pino para el log estructurado. La ' +
-    'persistencia relacional es SQLite con Drizzle, que es un ORM cuyos esquemas son ' +
-    'TypeScript, no un fichero aparte. La búsqueda vectorial es LanceDB, con el modelo de ' +
-    'embeddings corriendo en local vía transformers.js.\n\n' +
-    'El agente usa el SDK oficial de MCP, y por debajo el de Anthropic o el de OpenAI según ' +
-    'lo que esté configurado. El acceso al coche es un ELM327, por puerto serie o por TCP, ' +
-    'y para la demo un emulador escrito en Python.\n\n' +
-    'La interfaz es React 19 con Vite y TanStack, y las pruebas son Vitest para unidad, ' +
-    'supertest para los endpoints y Playwright para el extremo a extremo. Y la entrega va ' +
-    'con GitHub Actions, Docker y Caddy delante.\n\n' +
-    'Lo importante no es la lista: es que todo lo que aparece de la tercera fila para abajo ' +
-    'está detrás de un puerto, así que se puede sustituir sin tocar la lógica.\n\n[~55 s · acumulado 16:10]',
+    '[~2 min contando la demo. Si hay vídeo del coche real, va aquí. · acumulado 16:25]',
   )
 }
 
@@ -1237,7 +1237,7 @@ function pie(s) {
     'tumba la build si aparece una vulnerabilidad crítica.\n\n' +
     'En seguridad, el documento cubre las diez categorías del OWASP API Top 10 de 2023, una ' +
     'a una, con lo que hace el código en cada caso. Incluidos los riesgos residuales, que ' +
-    'están escritos y asumidos, no escondidos.\n\n[~60 s · acumulado 17:10]',
+    'están escritos y asumidos, no escondidos.\n\n[~60 s · acumulado 17:25]',
   )
 }
 
@@ -1300,7 +1300,7 @@ function pie(s) {
     'semanas sin exigir nada. Estaba verde, y no comprobaba lo que decía comprobar. Lo he ' +
     'documentado en la deuda conocida del proyecto.\n\n' +
     'Así que sí, acelera mucho. Pero no es todo tan bonito como parece: hay que dedicarle ' +
-    'tiempo a revisar.\n\n[~45 s · acumulado 17:55]',
+    'tiempo a revisar.\n\n[~45 s · acumulado 18:10]',
   )
 }
 
