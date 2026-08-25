@@ -197,99 +197,103 @@ function pie(s) {
   s.background = { color: BLANCO }
 
   s.addText('El sistema de un vistazo', {
-    x: 0.7, y: 0.45, w: 11.9, h: 0.7, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 30, bold: true, color: TINTA,
+    x: 0.7, y: 0.4, w: 11.9, h: 0.65, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 29, bold: true, color: TINTA,
   })
-  s.addText('Quién llama a quién. Todo lo de fuera entra por un puerto.', {
-    x: 0.7, y: 1.22, w: 11.9, h: 0.32, margin: 0, valign: 'top',
+  s.addText('Del conector físico del coche hasta el modelo. Todo entra por un puerto.', {
+    x: 0.7, y: 1.12, w: 11.9, h: 0.3, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 14, color: GRIS,
   })
 
-  /** Caja del diagrama. `nucleo` la pinta en oscuro. */
-  function caja(x, y, w, h, titulo, sub, nucleo = false) {
+  function caja(x, y, w, h, titulo, sub, estilo = 'normal') {
+    const nucleo = estilo === 'nucleo'
+    const fisico = estilo === 'fisico'
     s.addShape(pres.ShapeType.roundRect, {
       x, y, w, h, rectRadius: 0.05,
       fill: { color: nucleo ? TINTA : BLANCO },
-      line: { color: nucleo ? TINTA : 'C9CCD8', width: 1 },
+      line: { color: nucleo ? TINTA : fisico ? AZUL : 'C9CCD8', width: fisico ? 1.75 : 1 },
     })
     s.addText(titulo, {
-      x: x + 0.08, y: y + 0.1, w: w - 0.16, h: 0.28, margin: 0, align: 'center', valign: 'middle',
-      fontFace: 'Arial', fontSize: 11, bold: true, color: nucleo ? BLANCO : TINTA,
+      x: x + 0.08, y: y + 0.08, w: w - 0.16, h: 0.26, margin: 0, align: 'center', valign: 'middle',
+      fontFace: 'Arial', fontSize: 10.5, bold: true, color: nucleo ? BLANCO : TINTA,
     })
     s.addText(sub, {
-      x: x + 0.08, y: y + 0.38, w: w - 0.16, h: 0.42, margin: 0, align: 'center', valign: 'top',
-      fontFace: 'Calibri', fontSize: 9, color: nucleo ? GRIS_CL : GRIS, lineSpacing: 11,
+      x: x + 0.08, y: y + 0.34, w: w - 0.16, h: 0.4, margin: 0, align: 'center', valign: 'top',
+      fontFace: 'Calibri', fontSize: 8.5, color: nucleo ? GRIS_CL : GRIS, lineSpacing: 10.5,
     })
   }
 
-  /** Flecha de ida y vuelta entre dos niveles. */
-  function doble(x, y1, y2) {
+  function doble(x, y1, y2, color = AZUL) {
     s.addShape(pres.ShapeType.line, {
       x, y: y1, w: 0, h: y2 - y1,
-      line: { color: AZUL, width: 1.25, beginArrowType: 'triangle', endArrowType: 'triangle' },
+      line: { color, width: 1.25, beginArrowType: 'triangle', endArrowType: 'triangle' },
     })
   }
 
-  const W3 = 3.5, GAP = 0.7, X0 = 1.05          // fila de adaptadores
+  const W3 = 3.5, GAP = 0.7, X0 = 1.05
   const cx = [X0 + W3 / 2, X0 + W3 + GAP + W3 / 2, X0 + 2 * (W3 + GAP) + W3 / 2]
 
-  // Nivel 1 — el mecanico
-  caja(5.15, 1.72, 3.0, 0.72, 'El mecánico', 'React 19 · sesión JWT')
-  doble(6.65, 2.44, 2.78)
+  caja(5.15, 1.55, 3.0, 0.66, 'El mecánico', 'React 19 · sesión JWT')
+  doble(6.65, 2.21, 2.52)
 
-  // Nivel 2 — el nucleo
-  caja(X0, 2.78, 3 * W3 + 2 * GAP, 0.85, 'API: casos de uso + dominio',
-       'fórmulas SAE J1979 · catálogos · decodificación del VIN', true)
+  caja(X0, 2.52, 3 * W3 + 2 * GAP, 0.78, 'API: casos de uso + dominio',
+       'fórmulas SAE J1979 · catálogos · decodificación del VIN', 'nucleo')
 
-  // Nivel 3 — los tres adaptadores
-  const yAd = 4.15
-  doble(cx[0], 3.63, yAd)
-  doble(cx[1], 3.63, yAd)
-  doble(cx[2], 3.63, yAd)
-  caja(X0,                    yAd, W3, 0.95, 'Transporte OBD', 'ELM327 por serie o TCP\nnegocia el protocolo')
-  caja(X0 + W3 + GAP,         yAd, W3, 0.95, 'Persistencia', 'SQLite · 13 tablas\nLanceDB · 4 índices')
-  caja(X0 + 2 * (W3 + GAP),   yAd, W3, 0.95, 'Servidor MCP', '16 herramientas\ndeclaradas con su esquema')
+  const yAd = 3.62
+  cx.forEach((x) => doble(x, 3.30, yAd))
+  caja(X0,                  yAd, W3, 0.87, 'Transporte OBD', 'abre el puerto serie o el socket\ny negocia el protocolo')
+  caja(X0 + W3 + GAP,       yAd, W3, 0.87, 'Persistencia', 'SQLite · 13 tablas\nLanceDB · 4 índices')
+  caja(X0 + 2 * (W3 + GAP), yAd, W3, 0.87, 'Servidor MCP', '16 herramientas\ndeclaradas con su esquema')
 
-  // El bucle: las tools del agente vuelven a entrar por los otros dos adaptadores
   ;[X0 + W3, X0 + 2 * W3 + GAP].forEach((x) => {
     s.addShape(pres.ShapeType.line, {
-      x: x + 0.08, y: yAd + 0.48, w: GAP - 0.16, h: 0,
+      x: x + 0.08, y: yAd + 0.44, w: GAP - 0.16, h: 0,
       line: { color: '9AA0B4', width: 1, dashType: 'dash', beginArrowType: 'triangle' },
     })
   })
 
-  // Nivel 4 — lo que hay al otro lado
-  const yEx = 5.72
-  doble(cx[0], 5.10, yEx)
-  doble(cx[2], 5.10, yEx)
-  caja(X0,                  yEx, W3, 0.9, 'El coche', 'bus CAN · ISO 15765-4\no uno de los 3 emuladores')
-  caja(X0 + 2 * (W3 + GAP), yEx, W3, 0.9, 'El modelo', 'Anthropic u OpenAI\ny búsqueda web con presupuesto')
+  // Nivel fisico: el dongle enchufado, y el coche
+  const yDon = 4.82
+  doble(cx[0], 4.49, yDon)
+  doble(cx[2], 4.49, yDon)
+  caja(X0,                  yDon, W3, 0.8, 'Dongle ELM327', 'enchufado al conector OBD-II\ndel coche · USB o WiFi', 'fisico')
+  caja(X0 + 2 * (W3 + GAP), yDon, W3, 0.8, 'El modelo', 'Anthropic u OpenAI\ny búsqueda web con presupuesto')
 
-  s.addText('Las herramientas del agente vuelven a entrar por los mismos adaptadores: leen el coche y escriben en el catálogo.', {
-    x: X0 + W3 + GAP - 0.4, y: 6.75, w: W3 + 0.8, h: 0.6, margin: 0, align: 'center', valign: 'top',
+  const yCoche = 5.95
+  doble(cx[0], 5.62, yCoche, AZUL)
+  caja(X0, yCoche, W3, 0.78, 'El coche', 'bus CAN · ISO 15765-4\ncentralita del motor y las demás', 'fisico')
+
+  s.addText('En la demo, este tramo se sustituye por tres emuladores ELM327 escuchando en tres puertos TCP.', {
+    x: X0 + W3 + GAP - 0.5, y: 5.05, w: W3 + 1.0, h: 0.6, margin: 0, align: 'center', valign: 'top',
+    fontFace: 'Calibri', fontSize: 9, italic: true, color: GRIS, lineSpacing: 11,
+  })
+  s.addText('Las herramientas del agente vuelven a entrar por los mismos adaptadores.', {
+    x: X0 + W3 + GAP - 0.5, y: 5.95, w: W3 + 1.0, h: 0.5, margin: 0, align: 'center', valign: 'top',
     fontFace: 'Calibri', fontSize: 9, italic: true, color: GRIS, lineSpacing: 11,
   })
 
   pie(s)
   s.addNotes(
-    'Esta es la foto entera. Lo importante no es la lista de piezas, es quién llama a ' +
-    'quién.\n\n' +
-    'Arriba el mecánico, con la interfaz en React y su sesión. Habla con la API, y las ' +
-    'flechas son de ida y vuelta porque son peticiones y respuestas.\n\n' +
-    'En el centro, en oscuro, está el núcleo: los casos de uso y el dominio. Ahí viven las ' +
-    'fórmulas de la SAE J1979, los catálogos y la decodificación del VIN. Ese bloque no ' +
-    'sabe nada de lo que hay debajo.\n\n' +
-    'Debajo, los tres adaptadores. El transporte OBD, que habla con el ELM327 por puerto ' +
-    'serie o por TCP y negocia el protocolo del bus. La persistencia, con SQLite para lo ' +
-    'relacional y LanceDB para lo vectorial. Y el servidor MCP, que expone las dieciséis ' +
-    'herramientas.\n\n' +
-    'Y abajo del todo, lo que hay al otro lado: el coche, con su bus CAN, o uno de los tres ' +
-    'emuladores; y el modelo, Anthropic u OpenAI, más la búsqueda web.\n\n' +
-    'Fijaos en las flechas discontinuas del centro, que son lo que hace que esto sea un ' +
-    'sistema y no una tubería: cuando el agente pide una herramienta, esa herramienta ' +
-    'vuelve a entrar por los mismos adaptadores. Lee el coche por el mismo transporte y ' +
-    'escribe en el mismo catálogo. No hay una puerta trasera para la IA.\n\n' +
-    '[~75 s · acumulado 2:55]',
+    'Esta es la foto entera, de abajo a arriba.\n\n' +
+    'Abajo del todo, el coche de verdad: su bus CAN y las centralitas. Encima, el punto ' +
+    'donde esto se conecta al mundo físico, que es el dongle ELM327 enchufado al conector ' +
+    'OBD-II del coche, ese que está debajo del volante. Se une al portátil por USB o por ' +
+    'WiFi. Los dos van en azul porque son las dos únicas piezas que no son código mío.\n\n' +
+    'De ahí para arriba ya es software. El transporte OBD abre el puerto serie o el socket, ' +
+    'negocia el protocolo del bus y traduce comandos. La persistencia guarda lo relacional ' +
+    'en SQLite y lo vectorial en LanceDB. Y el servidor MCP expone las dieciséis ' +
+    'herramientas al modelo, que está a la derecha.\n\n' +
+    'En el centro, en oscuro, el núcleo: los casos de uso y el dominio, con las fórmulas de ' +
+    'la norma y los catálogos. Ese bloque no sabe nada de lo que hay debajo. Y arriba el ' +
+    'mecánico, con la interfaz.\n\n' +
+    'Dos detalles. Las flechas son de ida y vuelta porque todo son peticiones y respuestas. ' +
+    'Y las discontinuas del centro son lo que hace que esto sea un sistema y no una ' +
+    'tubería: cuando el agente pide una herramienta, vuelve a entrar por los mismos ' +
+    'adaptadores. Lee el coche por el mismo transporte y escribe en el mismo catálogo. No ' +
+    'hay puerta trasera para la IA.\n\n' +
+    'Para la demo de hoy, el tramo físico se sustituye por tres emuladores ELM327 ' +
+    'escuchando en tres puertos TCP. Todo lo de arriba es idéntico.\n\n' +
+    '[~80 s · acumulado 3:00]',
   )
 }
 
