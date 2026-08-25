@@ -189,73 +189,67 @@ function pie(s, n) {
   )
 }
 
-// ============= 4 — POR QUÉ CLEAN ARCHITECTURE + HEXAGONAL ================
+// ============= 4 — POR QUÉ ESTA ARQUITECTURA Y NO OTRA ===================
 {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Por qué esta arquitectura', {
+  s.addText('Por qué esta arquitectura y no otra', {
     x: 0.85, y: 0.75, w: 11.6, h: 0.9, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('La herramienta va a seguir cambiando. La pregunta es qué cuesta cada cambio.', {
+  s.addText('Aquí el dominio son normas. Y las normas no las cambia nadie.', {
     x: 0.85, y: 1.75, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
 
   const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.55, yLista = 3.2
 
-  s.addText('Con todo junto', {
+  s.addText('Por qué Clean + Hexagonal', {
     x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 20, bold: true, color: GRIS,
-  })
-  s.addText(
-    [
-      { text: 'Pasar de SQLite a PostgreSQL toca media aplicación', options: { bullet: true, breakLine: true } },
-      { text: 'Cambiar de proveedor de IA, lo mismo',               options: { bullet: true, breakLine: true } },
-      { text: 'Cambiar el framework web, lo mismo',                 options: { bullet: true, breakLine: true } },
-      { text: 'Para testear hay que levantar servidor y base de datos', options: { bullet: true } },
-    ],
-    { x: xIzq, y: yLista, w: colW, h: 2.8, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 12, lineSpacing: 22 },
-  )
-
-  s.addText('Con puertos y adaptadores', {
-    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
   })
   s.addText(
     [
-      { text: 'Pasar de SQLite a PostgreSQL toca un adaptador', options: { bullet: true, breakLine: true } },
-      { text: 'Cambiar de proveedor de IA toca otro',           options: { bullet: true, breakLine: true } },
-      { text: 'El framework web se cambia desde un solo punto', options: { bullet: true, breakLine: true } },
-      { text: 'Los tests corren contra el puerto, sin levantar nada', options: { bullet: true } },
+      { text: 'SAE J1979, ISO 15031, ISO 15765-4, ISO 3779', options: { bullet: true, breakLine: true } },
+      { text: 'Las fórmulas de conversión de cada PID',      options: { bullet: true, breakLine: true } },
+      { text: 'La decodificación del VIN',                   options: { bullet: true, breakLine: true } },
+      { text: 'Todo eso vive en el dominio, sin mezclarse con la base de datos ni con el LLM', options: { bullet: true } },
     ],
-    { x: xDer, y: yLista, w: colW, h: 2.8, margin: 0, valign: 'top',
+    { x: xIzq, y: yLista, w: colW, h: 2.9, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 12, lineSpacing: 22 },
   )
 
-  s.addText('El dominio y los casos de uso no se enteran de ninguno de esos cambios.', {
-    x: 0.85, y: 6.2, w: 11.6, h: 0.4, margin: 0,
-    fontFace: 'Calibri', fontSize: 15, color: GRIS,
+  s.addText('Por qué no orientada a eventos', {
+    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 20, bold: true, color: GRIS,
   })
+  s.addText(
+    [
+      { text: 'No hay varios servicios que desacoplar: es un proceso', options: { bullet: true, breakLine: true } },
+      { text: 'El mecánico pregunta y espera respuesta: el flujo es síncrono', options: { bullet: true, breakLine: true } },
+      { text: 'Añadiría broker, colas y consistencia eventual sin ganar nada', options: { bullet: true, breakLine: true } },
+      { text: 'Un solo programador: más piezas es más sitio donde romper', options: { bullet: true } },
+    ],
+    { x: xDer, y: yLista, w: colW, h: 2.9, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 12, lineSpacing: 22 },
+  )
 
   pie(s, 4)
   s.addNotes(
-    '¿Por qué Clean Architecture y hexagonal? Porque esto es una herramienta que va a ' +
-    'seguir evolucionando, y lo que decide si una arquitectura es mejor o peor aquí es ' +
-    'qué te cuesta cada cambio.\n\n' +
-    'Ahora mismo funciona con SQLite, porque era lo más rápido para desarrollar el ' +
-    'proyecto. Pero en un futuro tendrá que usar PostgreSQL. Si tuviera la lógica mezclada ' +
-    'con el acceso a datos, ese cambio me obligaría a tocar media aplicación. Como está ' +
-    'detrás de un puerto, se cambia el adaptador y ya está.\n\n' +
-    'Y lo mismo con el resto: cambiar de proveedor de LLM, cambiar el framework web, o ' +
-    'cambiar la forma de acceder al coche. El dominio y los casos de uso no se enteran.\n\n' +
-    'La otra razón es que se testea sin levantar nada, porque los tests hablan con los ' +
-    'puertos y no con la base de datos real.\n\n' +
-    'Está todo escrito en el ADR-001, con sus contras: hay más ficheros que en un ' +
-    'monolito, y la inyección manual del composition root crece con cada adaptador nuevo.\n\n' +
-    '[~80 s]',
+    '¿Por qué Clean Architecture y no otra cosa? Porque en este proyecto el dominio no es ' +
+    'algo que me haya inventado yo: son normas. SAE J1979, ISO 15031, ISO 15765-4 para el ' +
+    'bus CAN, ISO 3779 para el VIN. Las fórmulas que convierten cada PID en una magnitud ' +
+    'física, y la decodificación del bastidor. Eso no lo cambia nadie, y no puede estar ' +
+    'mezclado con el acceso a datos ni con el modelo de lenguaje.\n\n' +
+    'Con Clean Architecture eso vive en el dominio, aislado, y lo que sí cambia —la base de ' +
+    'datos, el LLM, el transporte OBD, el framework web— vive fuera, en adaptadores.\n\n' +
+    '¿Y por qué no una arquitectura orientada a eventos? Porque aquí no hay varios ' +
+    'servicios que desacoplar: es un solo proceso. Y el flujo es síncrono: el mecánico ' +
+    'pregunta y se queda esperando la respuesta. Meter un broker y colas me traería ' +
+    'consistencia eventual y mucha más superficie de depuración, sin ganar nada a cambio.\n\n' +
+    'Y hay una razón práctica: soy un solo programador. Cuantas más piezas móviles, más ' +
+    'sitio donde romper.\n\n[~80 s]',
   )
 }
 
