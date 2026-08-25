@@ -376,34 +376,64 @@ function pie(s, n) {
   s.background = { color: BLANCO }
 
   s.addText('Qué se guarda en la base vectorial', {
-    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    x: 0.85, y: 0.65, w: 11.6, h: 0.8, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
   s.addText('Los datos del taller van en SQLite. Aquí solo va lo que el sistema aprende.', {
-    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+    x: 0.85, y: 1.55, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 16, color: GRIS,
   })
 
-  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.4, yLista = 3.0
+  // --- Izquierda: colecciones + ejemplo real -------------------------------
+  const xI = 0.85, wI = 7.1
 
-  s.addText('Tres colecciones', {
-    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
+  s.addText('Colecciones', {
+    x: xI, y: 2.25, w: wI, h: 0.35, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 18, bold: true, color: AZUL,
   })
   s.addText(
     [
       { text: 'PIDs propietarios que no están en la norma, con su fórmula', options: { bullet: true, breakLine: true } },
       { text: 'DTCs específicos de un fabricante',                          options: { bullet: true, breakLine: true } },
-      { text: 'Casos resueltos: síntomas, PIDs implicados y solución',      options: { bullet: true, breakLine: true } },
-      { text: 'Cada entrada es un texto vectorizado, más fabricante y modelo para filtrar', options: { bullet: true } },
+      { text: 'Casos resueltos: síntomas, PIDs implicados y solución',      options: { bullet: true } },
     ],
-    { x: xIzq, y: yLista, w: colW, h: 2.9, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+    { x: xI, y: 2.72, w: wI, h: 1.15, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 14, color: TINTA, paraSpaceAfter: 7, lineSpacing: 19 },
   )
 
-  s.addText('Cada dato lleva de dónde salió', {
-    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
+  s.addText('Un caso resuelto, tal cual se guarda', {
+    x: xI, y: 4.05, w: wI, h: 0.35, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 15, bold: true, color: TINTA,
+  })
+  const campos = [
+    ['embeddedText', '"Audi A3 2.0 TDI con P0401 y P2002: EGR obstruida'],
+    ['',             ' por carbonilla de un motor que consume aceite"'],
+    ['symptoms',     'ralentí inestable · pérdida de potencia'],
+    ['pidsInvolved', '010C · 0105 · 22F40C'],
+    ['confidence',   '0,5   ·   manufacturer Audi · model A3'],
+  ]
+  campos.forEach(([k, v], n) => {
+    const y = 4.45 + n * 0.33
+    if (k) s.addText(k, {
+      x: xI, y, w: 1.75, h: 0.3, margin: 0, valign: 'middle',
+      fontFace: 'Courier New', fontSize: 12, bold: true, color: AZUL,
+    })
+    s.addText(v, {
+      x: xI + 1.85, y, w: wI - 1.85, h: 0.3, margin: 0, valign: 'middle',
+      fontFace: 'Courier New', fontSize: 12, color: TINTA,
+    })
+  })
+
+  // --- Derecha: indice de confianza ---------------------------------------
+  const xD = 8.35, wD = 4.1
+
+  s.addText('Índice de confianza', {
+    x: xD, y: 2.25, w: wD, h: 0.35, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 18, bold: true, color: AZUL,
+  })
+  s.addText('Se lo ponemos nosotros al guardar, según de dónde salga el dato.', {
+    x: xD, y: 2.68, w: wD, h: 0.55, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 13, color: GRIS, lineSpacing: 18,
   })
   const escala = [
     ['0,3', 'lo encontró el agente en internet'],
@@ -412,46 +442,45 @@ function pie(s, n) {
     ['1,0', 'se ha leído del coche por OBD'],
   ]
   escala.forEach(([n, t], k) => {
-    const y = yLista + 0.05 + k * 0.52
+    const y = 3.4 + k * 0.62
     s.addText(n, {
-      x: xDer, y, w: 0.75, h: 0.38, margin: 0, valign: 'middle',
-      fontFace: 'Arial', fontSize: 18, bold: true, color: TINTA,
+      x: xD, y, w: 0.7, h: 0.34, margin: 0, valign: 'top',
+      fontFace: 'Arial', fontSize: 17, bold: true, color: TINTA,
     })
     s.addText(t, {
-      x: xDer + 0.85, y, w: colW - 0.85, h: 0.38, margin: 0, valign: 'middle',
-      fontFace: 'Calibri', fontSize: 15, color: TINTA,
+      x: xD + 0.75, y, w: wD - 0.75, h: 0.55, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 13, color: TINTA, lineSpacing: 17,
     })
   })
   s.addText('Validar contra el coche sube la web a 0,7 y al mecánico a 0,9.', {
-    x: xDer, y: yLista + 2.3, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 14, color: GRIS,
+    x: xD, y: 5.95, w: wD, h: 0.5, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 13, color: GRIS, lineSpacing: 17,
   })
 
-  s.addText('Así el agente sabe de qué fiarse: lo que dijo un mecánico pesa más que lo que encontró en una web.', {
-    x: 0.85, y: 6.15, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 15, color: GRIS,
+  s.addText('Ese índice pondera las búsquedas: gana la respuesta con más confianza.', {
+    x: 0.85, y: 6.32, w: 7.1, h: 0.32, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 13, color: GRIS,
   })
 
   pie(s, 6)
   s.addNotes(
     'En la base vectorial no van los datos del taller: esos están en SQLite. Aquí va solo ' +
-    'lo que el sistema aprende, y son tres colecciones.\n\n' +
-    'La primera son PIDs propietarios. Cada fabricante se inventa los suyos fuera de la ' +
-    'norma, y es imposible traerlos todos precargados: cuando el agente descubre uno, lo ' +
-    'guarda con su fórmula. La segunda son DTCs específicos de un fabricante, los que no ' +
-    'están en el estándar. Y la tercera son casos resueltos: los síntomas, los PIDs que ' +
-    'estaban implicados y cómo acabó.\n\n' +
-    'Cada entrada es un texto que se convierte en vector, y lleva pegados el fabricante y ' +
-    'el modelo para poder filtrar. Si estoy con un Audi, no quiero que me salgan casos de ' +
-    'una Kawasaki.\n\n' +
-    'Y lo importante: cada dato lleva de dónde salió, porque no todas las fuentes valen ' +
-    'igual. Si lo encontró el agente buscando en internet, entra con 0,3. Si viene de un ' +
-    'diagnóstico anterior, con 0,5. Si lo aportó el mecánico a mano, con 0,8, porque una ' +
-    'persona que está delante del coche sabe más que una web. Y si se ha leído del propio ' +
-    'coche por OBD, es un hecho: 1,0.\n\n' +
-    'Además, validar contra el coche sube lo de la web a 0,7 y lo del mecánico a 0,9.\n\n' +
-    'Para eso sirve todo esto: para que el agente sepa de qué fiarse cuando le llegan dos ' +
-    'respuestas que se contradicen.\n\n[~70 s]',
+    'lo que el sistema aprende. Hay PIDs propietarios, que cada fabricante se inventa fuera ' +
+    'de la norma y es imposible traer precargados; DTCs específicos de una marca; y casos ' +
+    'resueltos.\n\n' +
+    'A la izquierda tenéis un caso resuelto tal cual se guarda. El campo embeddedText es el ' +
+    'texto que se convierte en vector, y es lo que luego permite encontrarlo por parecido. ' +
+    'Los síntomas y los PIDs implicados van aparte, y el fabricante y el modelo también, ' +
+    'para poder filtrar: si estoy con un Audi no quiero que me salgan casos de una ' +
+    'Kawasaki.\n\n' +
+    'Y luego está el índice de confianza, que se lo ponemos nosotros al guardar según de ' +
+    'dónde venga el dato. Si lo encontró el agente en internet entra con 0,3. Si viene de ' +
+    'un diagnóstico anterior, 0,5. Si lo aportó el mecánico a mano, 0,8, porque una persona ' +
+    'delante del coche sabe más que una web cualquiera. Y si se ha leído del propio coche ' +
+    'por OBD es un hecho: 1,0. Comprobar un dato contra el coche sube la web a 0,7 y al ' +
+    'mecánico a 0,9.\n\n' +
+    'Ese índice no es decorativo: es lo que pondera las búsquedas. Cuando al agente le ' +
+    'llegan dos respuestas que se contradicen, gana la que más confianza tiene.\n\n[~70 s]',
   )
 }
 

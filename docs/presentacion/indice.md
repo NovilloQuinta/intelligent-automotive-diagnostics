@@ -10,7 +10,7 @@
 | 3 | El objetivo | 0:55 | **validada** |
 | 4 | Por que esta arquitectura y no otra (incluye el ejemplo de las tres capas) | 1:20 | **la reescribe el autor** |
 | 5 | OBD-II: como se lee el coche de verdad | 1:10 | **validada** |
-| 6 | Que se guarda en la base vectorial y por que | 1:10 | pendiente |
+| 6 | Que se guarda en la base vectorial y por que | 1:10 | **validada** |
 | 7 | Los dos diagnosticos: determinista y cognitivo | 1:05 | pendiente |
 | 8 | MCP: las herramientas que se le dan al LLM | 1:10 | pendiente |
 | 9 | El system prompt y el ciclo de tool-calling | 1:20 | pendiente |
