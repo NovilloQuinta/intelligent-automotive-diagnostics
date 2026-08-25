@@ -370,72 +370,88 @@ function pie(s, n) {
   )
 }
 
-// ==================== 6 — POR QUÉ DOS BASES DE DATOS ======================
+// ============ 6 — QUÉ SE GUARDA EN LA BASE VECTORIAL ======================
 {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Por qué dos bases de datos', {
+  s.addText('Qué se guarda en la base vectorial', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Y por qué no una sola.', {
+  s.addText('Los datos del taller van en SQLite. Aquí solo va lo que el sistema aprende.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
 
   const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.4, yLista = 3.0
 
-  s.addText('SQLite, para los datos del taller', {
+  s.addText('Tres colecciones', {
     x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
   s.addText(
     [
-      { text: 'Los datos son relacionales: un vehículo tiene ECUs, sesiones y lecturas', options: { bullet: true, breakLine: true } },
-      { text: 'Es un fichero en disco: no hay servidor que levantar', options: { bullet: true, breakLine: true } },
-      { text: 'MongoDB no vale: esto tiene relaciones, no son documentos sueltos', options: { bullet: true, breakLine: true } },
-      { text: 'PostgreSQL no compensa: un servicio, una red y un backup más que mantener', options: { bullet: true } },
+      { text: 'PIDs propietarios que no están en la norma, con su fórmula', options: { bullet: true, breakLine: true } },
+      { text: 'DTCs específicos de un fabricante',                          options: { bullet: true, breakLine: true } },
+      { text: 'Casos resueltos: síntomas, PIDs implicados y solución',      options: { bullet: true, breakLine: true } },
+      { text: 'Cada entrada es un texto vectorizado, más fabricante y modelo para filtrar', options: { bullet: true } },
     ],
     { x: xIzq, y: yLista, w: colW, h: 2.9, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  s.addText('LanceDB, para lo que aprende', {
+  s.addText('Cada dato lleva de dónde salió', {
     x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
-  s.addText(
-    [
-      { text: 'Hay que buscar por parecido, y para eso no hay clave ni consulta SQL', options: { bullet: true, breakLine: true } },
-      { text: 'El buscador de texto de SQLite no llega: «presión de aceite» no encuentra «oil pressure»', options: { bullet: true, breakLine: true } },
-      { text: 'Va embebida igual que SQLite: un directorio en disco', options: { bullet: true, breakLine: true } },
-      { text: 'Los embeddings se calculan en local: sin API key y sin coste por consulta', options: { bullet: true } },
-    ],
-    { x: xDer, y: yLista, w: colW, h: 2.9, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
-  )
+  const escala = [
+    ['0,3', 'lo encontró el agente en internet'],
+    ['0,5', 'viene de un diagnóstico anterior'],
+    ['0,8', 'lo aportó el mecánico a mano'],
+    ['1,0', 'se ha leído del coche por OBD'],
+  ]
+  escala.forEach(([n, t], k) => {
+    const y = yLista + 0.05 + k * 0.52
+    s.addText(n, {
+      x: xDer, y, w: 0.75, h: 0.38, margin: 0, valign: 'middle',
+      fontFace: 'Arial', fontSize: 18, bold: true, color: TINTA,
+    })
+    s.addText(t, {
+      x: xDer + 0.85, y, w: colW - 0.85, h: 0.38, margin: 0, valign: 'middle',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA,
+    })
+  })
+  s.addText('Validar contra el coche sube la web a 0,7 y al mecánico a 0,9.', {
+    x: xDer, y: yLista + 2.3, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 14, color: GRIS,
+  })
+
+  s.addText('Así el agente sabe de qué fiarse: lo que dijo un mecánico pesa más que lo que encontró en una web.', {
+    x: 0.85, y: 6.15, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
+  })
 
   pie(s, 6)
   s.addNotes(
-    'Hay dos bases de datos porque hay dos cosas que hacer con los datos, y una sola no ' +
-    'las cubre.\n\n' +
-    'En SQLite van los datos del taller: usuarios, vehículos, las ECUs que se le han ' +
-    'descubierto a cada uno, las sesiones de diagnóstico y el informe de cada una. Eso es ' +
-    'relacional de manual, un vehículo tiene ECUs, que tienen sesiones, que tienen ' +
-    'lecturas. Por eso se descartó MongoDB, porque no son documentos sueltos. Y se ' +
-    'descartó PostgreSQL porque a esta escala solo añadía un servicio, una red y un backup ' +
-    'que gestionar, sin resolver ningún problema que yo tuviera.\n\n' +
-    'En LanceDB va lo que el sistema aprende: PIDs, DTCs y diagnósticos ya resueltos. Y ahí ' +
-    'la pregunta no es "dame el registro con esta clave", sino "enséñame casos que se ' +
-    'parezcan a este". Eso con SQL no se hace.\n\n' +
-    'Y ojo, tampoco basta con el buscador de texto de SQLite, que también existe: busca ' +
-    'palabras, no significado. Si el mecánico escribe "presión de aceite", el buscador de ' +
-    'texto no encuentra una ficha que ponga "oil pressure", y la búsqueda vectorial sí, ' +
-    'porque compara el sentido.\n\n' +
-    'Las dos son embebidas, un fichero y un directorio en disco. Y los embeddings se ' +
-    'calculan con un modelo que corre en la propia máquina, así que no hay API key ni coste ' +
-    'por consulta.\n\n[~60 s]',
+    'En la base vectorial no van los datos del taller: esos están en SQLite. Aquí va solo ' +
+    'lo que el sistema aprende, y son tres colecciones.\n\n' +
+    'La primera son PIDs propietarios. Cada fabricante se inventa los suyos fuera de la ' +
+    'norma, y es imposible traerlos todos precargados: cuando el agente descubre uno, lo ' +
+    'guarda con su fórmula. La segunda son DTCs específicos de un fabricante, los que no ' +
+    'están en el estándar. Y la tercera son casos resueltos: los síntomas, los PIDs que ' +
+    'estaban implicados y cómo acabó.\n\n' +
+    'Cada entrada es un texto que se convierte en vector, y lleva pegados el fabricante y ' +
+    'el modelo para poder filtrar. Si estoy con un Audi, no quiero que me salgan casos de ' +
+    'una Kawasaki.\n\n' +
+    'Y lo importante: cada dato lleva de dónde salió, porque no todas las fuentes valen ' +
+    'igual. Si lo encontró el agente buscando en internet, entra con 0,3. Si viene de un ' +
+    'diagnóstico anterior, con 0,5. Si lo aportó el mecánico a mano, con 0,8, porque una ' +
+    'persona que está delante del coche sabe más que una web. Y si se ha leído del propio ' +
+    'coche por OBD, es un hecho: 1,0.\n\n' +
+    'Además, validar contra el coche sube lo de la web a 0,7 y lo del mecánico a 0,9.\n\n' +
+    'Para eso sirve todo esto: para que el agente sepa de qué fiarse cuando le llegan dos ' +
+    'respuestas que se contradicen.\n\n[~70 s]',
   )
 }
 
