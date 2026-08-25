@@ -197,84 +197,98 @@ function pie(s) {
   s.background = { color: BLANCO }
 
   s.addText('El sistema de un vistazo', {
-    x: 0.85, y: 0.6, w: 11.6, h: 0.8, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+    x: 0.7, y: 0.5, w: 11.9, h: 0.75, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
   })
   s.addText('Del conector del coche hasta la respuesta, y de vuelta al catálogo.', {
-    x: 0.85, y: 1.5, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 16, color: GRIS,
+    x: 0.7, y: 1.35, w: 11.9, h: 0.35, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
 
-  const bw = 2.55, bh = 1.0, bgap = 0.44, x0 = 0.85
+  const bw = 2.1, bh = 0.82, bgap = 0.35, x0 = 0.7
 
   function banda(titulo, y, cajas) {
     s.addText(titulo, {
-      x: x0, y: y - 0.42, w: 11.6, h: 0.32, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 12, bold: true, color: AZUL, charSpacing: 1.5,
+      x: x0, y: y - 0.34, w: 11.9, h: 0.28, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 11, bold: true, color: AZUL, charSpacing: 1.4,
     })
-    cajas.forEach(([arriba, abajo], i) => {
-      const x = x0 + i * (bw + bgap)
+    cajas.forEach(([arriba, abajo], k) => {
+      const x = x0 + k * (bw + bgap)
       s.addShape(pres.ShapeType.roundRect, {
-        x, y, w: bw, h: bh, rectRadius: 0.06,
+        x, y, w: bw, h: bh, rectRadius: 0.05,
         fill: { color: BLANCO }, line: { color: 'C9CCD8', width: 1 },
       })
       s.addText(arriba, {
-        x: x + 0.12, y: y + 0.14, w: bw - 0.24, h: 0.32, margin: 0, align: 'center', valign: 'middle',
-        fontFace: 'Arial', fontSize: 12, bold: true, color: TINTA,
+        x: x + 0.08, y: y + 0.1, w: bw - 0.16, h: 0.28, margin: 0, align: 'center', valign: 'middle',
+        fontFace: 'Arial', fontSize: 10.5, bold: true, color: TINTA,
       })
       s.addText(abajo, {
-        x: x + 0.12, y: y + 0.46, w: bw - 0.24, h: 0.42, margin: 0, align: 'center', valign: 'top',
-        fontFace: 'Calibri', fontSize: 11, color: GRIS, lineSpacing: 14,
+        x: x + 0.08, y: y + 0.38, w: bw - 0.16, h: 0.38, margin: 0, align: 'center', valign: 'top',
+        fontFace: 'Calibri', fontSize: 9, color: GRIS, lineSpacing: 11,
       })
-      if (i < cajas.length - 1) {
+      if (k < cajas.length - 1) {
         s.addShape(pres.ShapeType.line, {
-          x: x + bw + 0.08, y: y + bh / 2, w: bgap - 0.16, h: 0,
-          line: { color: AZUL, width: 1.5, endArrowType: 'triangle' },
+          x: x + bw + 0.06, y: y + bh / 2, w: bgap - 0.12, h: 0,
+          line: { color: AZUL, width: 1.25, endArrowType: 'triangle' },
         })
       }
     })
   }
 
-  banda('1 · LEER EL COCHE', 2.55, [
-    ['El coche',            'o uno de los tres\nemuladores ELM327'],
-    ['Adaptador ELM327',    'por cable USB,\nWiFi o TCP'],
-    ['Transporte OBD',      'negocia el protocolo\ny pide modos y PIDs'],
-    ['Dominio',             'aplica la fórmula\nde cada PID'],
+  banda('1 · IDENTIFICAR EL COCHE', 2.15, [
+    ['El mecánico',        'React 19, sesión JWT'],
+    ['Elige vehículo',     'cable USB, WiFi\no emulador'],
+    ['Lee el VIN',         'modo 09, ISO 3779'],
+    ['Resuelve la marca',  'BBDD → catálogo →\nweb → mecánico'],
+    ['Barrido del bus',    'quién contesta,\nISO 15765-4'],
   ])
 
-  banda('2 · RAZONAR SOBRE LO LEÍDO', 4.75, [
-    ['Casos parecidos',     'búsqueda vectorial\nen LanceDB'],
-    ['Agente',              '16 tools MCP\n+ el modelo'],
-    ['Informe',             'narrativa, severidad\ny recomendaciones'],
-    ['Se indexa',           'el caso vuelve\nal catálogo'],
+  banda('2 · LEER LOS DATOS', 3.65, [
+    ['Telemetría',   'modo 01 + la fórmula\nde cada PID'],
+    ['Códigos DTC',  'modos 03, 07 y 0A'],
+    ['Freeze frame', 'modo 02'],
+    ['Determinista', 'severidad por regla,\nsin IA'],
+    ['A la pantalla', 'y a SQLite,\ncon la sesión'],
   ])
 
-  // El bucle: del ultimo paso de vuelta al primero de la banda 2
+  banda('3 · RAZONAR CON IA', 5.15, [
+    ['Casos parecidos', 'búsqueda vectorial\nen LanceDB'],
+    ['El agente',       '16 herramientas MCP\n+ el modelo'],
+    ['Busca lo que falta', 'catálogo, el coche\no la web'],
+    ['Informe',         'narrativa, severidad\ny recomendaciones'],
+    ['Se indexa',       'el caso vuelve\nal catálogo'],
+  ])
+
+  // El bucle
   s.addShape(pres.ShapeType.line, {
-    x: x0 + bw / 2, y: 6.15, w: 3 * (bw + bgap), h: 0,
+    x: x0 + bw / 2, y: 6.32, w: 4 * (bw + bgap), h: 0,
     line: { color: 'C9CCD8', width: 1, dashType: 'dash', beginArrowType: 'triangle' },
   })
   s.addText('lo aprendido alimenta el siguiente diagnóstico', {
-    x: x0, y: 6.2, w: 11.6, h: 0.3, margin: 0, align: 'center',
-    fontFace: 'Calibri', fontSize: 11, italic: true, color: GRIS,
+    x: x0, y: 6.38, w: 11.9, h: 0.28, margin: 0, align: 'center',
+    fontFace: 'Calibri', fontSize: 10, italic: true, color: GRIS,
   })
 
   pie(s)
   s.addNotes(
-    'Esta es la foto entera, para que se entienda dónde encaja cada cosa de lo que viene ' +
-    'después.\n\n' +
-    'Arriba, leer el coche. A la izquierda el vehículo, que puede ser uno de verdad o uno ' +
-    'de los tres emuladores que uso para la demo. Se conecta un adaptador ELM327, por cable ' +
-    'USB, por WiFi o por TCP. La API tiene un transporte que negocia el protocolo del bus y ' +
-    'va pidiendo modos y PIDs. Y lo que vuelve son bytes en crudo, así que el dominio ' +
-    'aplica la fórmula de cada PID para convertirlos en magnitudes físicas.\n\n' +
-    'Abajo, razonar sobre lo leído. Antes de llamar al modelo se buscan casos parecidos en ' +
-    'la base vectorial. El agente entra con esos casos, con las dieciséis herramientas MCP y ' +
-    'con el modelo detrás, y va pidiendo lo que necesita. Sale un informe con narrativa, ' +
-    'severidad y recomendaciones. Y ese caso se indexa.\n\n' +
-    'Esa flecha de vuelta es la clave del proyecto: lo que se aprende en un diagnóstico ' +
-    'alimenta el siguiente. Cuantos más coches pasen, más casos reales hay con los que ' +
-    'comparar.\n\n[~60 s · acumulado 2:55]',
+    'Esta es la foto entera, para que se entienda dónde encaja todo lo que viene después.\n\n' +
+    'La primera fase es identificar el coche. El mecánico entra con su sesión, elige el ' +
+    'vehículo —por cable, por WiFi o uno de los emuladores— y el sistema le pregunta al ' +
+    'coche el bastidor con el modo 09. De ahí resuelve la marca por una cascada: primero ' +
+    'mira la base de datos, luego el catálogo de fabricantes, luego la web, y si nada ' +
+    'funciona lo confirma el mecánico a mano y queda aprendido. Después hace un barrido del ' +
+    'bus para ver qué centralitas contestan.\n\n' +
+    'La segunda fase es leer los datos: la telemetría con el modo 01 aplicando la fórmula ' +
+    'de cada PID, los códigos de avería con los modos 03, 07 y 0A, y el freeze frame con el ' +
+    '02. Con eso el diagnóstico determinista calcula la severidad por regla, sin IA de por ' +
+    'medio, y sale a pantalla. Todo eso queda guardado en SQLite con la sesión.\n\n' +
+    'La tercera fase es la de IA, y solo entra si hay modelo configurado. Antes de llamarlo ' +
+    'se buscan casos parecidos en la base vectorial. El agente entra con esos casos y con ' +
+    'las dieciséis herramientas MCP, y va pidiendo lo que le falta: el catálogo, más ' +
+    'lecturas del coche, o la web si hace falta. Sale un informe con narrativa, severidad y ' +
+    'recomendaciones.\n\n' +
+    'Y esa flecha de vuelta es la tesis del proyecto: el caso se indexa, y lo aprendido ' +
+    'alimenta el siguiente diagnóstico.\n\n[~75 s · acumulado 2:55]',
   )
 }
 
