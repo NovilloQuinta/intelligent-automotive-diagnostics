@@ -4,9 +4,45 @@
 > de editar aqui**: este fichero se ha desincronizado dos veces por actualizarlo
 > de memoria.
 >
-> Estado general: 2131 tests en verde (1527 core-api + 604 ui), 0 errores de lint, 76 avisos (69 + 7).
-> Remedido el 2026-08-19 tras sacar la orquestacion del diagnostico a casos de uso.
-> Nada de lo que sigue es bloqueante.
+> Estado general: 2171 tests en verde (1554 core-api + 617 ui, mas 2 skipped), 0 errores
+> de lint, 78 avisos (71 + 7). Remedido el 2026-08-25 corriendo `pnpm test:all` y `pnpm lint`
+> en las dos apps. Nada de lo que sigue es bloqueante salvo donde se diga.
+
+## El umbral de cobertura del Core apunta a un fichero que ya no existe
+
+Detectado el 2026-08-25 preparando la defensa. **Es el unico hallazgo de hoy que rompe
+una garantia, no solo la documentacion.**
+
+`apps/core-api/vitest.config.ts:58` exige 100% a esta ruta:
+
+```
+'src/application/use-cases/processVehicleDiagnosis.ts'
+```
+
+El fichero se llama hoy `ProcessVehicleDiagnosisUseCase.ts`: se renombro en el refactor a
+PascalCase (`5546536`). Vitest no resuelve la clave, asi que **el 100% del Core no se esta
+exigiendo desde ese commit**. Los umbrales generales (80/60/90/80 `perFile`) si siguen
+vivos, o sea que la regresion real esta acotada, pero la estrategia de tres niveles que
+describe el skill `coverage-strategy` hoy solo cumple dos.
+
+Arreglo: cambiar la clave por la ruta nueva y correr `pnpm test:coverage` para comprobar
+si ese fichero sigue al 100% o se ha caido mientras el umbral estaba muerto. Si se ha
+caido, hay que decidir si se recupera o si se baja la promesa.
+
+## Documentacion que no cuadra con el codigo (auditado el 2026-08-25)
+
+Encontrado al preparar las diapositivas, contrastando cada dato contra el codigo. Ninguno
+rompe nada: es documentacion que se quedo atras.
+
+| Donde | Dice | El codigo hace |
+|---|---|---|
+| `.env.example:54,57` | `LLM_BASE_URL` y `LLM_MODEL` tienen valor por defecto | `composition/llm.ts:36` los exige con `requireConfig`: **la API no arranca sin ellos** con `LLM_PROVIDER=openai` |
+| `docs/tfm/04` §4.5 | El system prompt tiene 7 bloques | `cognitiveDiagnosisPrompt.ts` exporta **11**: se anadieron `ECU_LEARNING`, `SCOPE`, `CAPABILITY` e `INTERNALS` |
+| ADR-007 §3 | 3 tablas en LanceDB | `vectorTableConfigs.ts` declara **4**: falta `ecus_index` en el ADR |
+| `docs/tfm/04` §4.11 | La criticidad sale de "reglas de umbrales" | `DiagnosisResult.computeSeverity`: 0 DTCs -> baja, con freeze frame -> critica, con DTCs sin freeze frame -> alta |
+
+El primero es el que mas molesta en la practica: quien clone el repo y siga el
+`.env.example` se encuentra la API muerta al arrancar con un error de configuracion.
 
 ## Bateria del agente: construida, sin ejecutar
 
