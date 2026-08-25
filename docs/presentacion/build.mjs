@@ -43,9 +43,11 @@ function cabecera(s, kicker, titulo) {
   })
 }
 
-function pie(s, n) {
+let numeroSlide = 1  // la portada no lleva pie
+function pie(s) {
+  numeroSlide += 1
   logoBig(s, 0.85, 6.85, 0.24)
-  s.addText(String(n), {
+  s.addText(String(numeroSlide), {
     x: 12.1, y: 6.85, w: 0.35, h: 0.24, margin: 0, align: 'right',
     fontFace: 'Calibri', fontSize: 10, color: GRIS,
   })
@@ -141,7 +143,7 @@ function pie(s, n) {
       fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 10, lineSpacing: 22 },
   )
 
-  pie(s, 2)
+  pie(s)
   s.addNotes(
     'Hoy llegas con una máquina de diagnosis, la conectas, y te da diez códigos de error. ' +
     'Cada uno te dice una cosa: válvula EGR obstruida, filtro de partículas lleno.\n\n' +
@@ -176,7 +178,7 @@ function pie(s, n) {
       fontFace: 'Calibri', fontSize: 20, color: TINTA, paraSpaceAfter: 22, lineSpacing: 28 },
   )
 
-  pie(s, 3)
+  pie(s)
   s.addNotes(
     '¿Cuál es la gracia que tiene esta aplicación con la IA? Que con esos dos códigos y ' +
     'esos datos, el agente dice: vale, tengo el P0401, que es la válvula EGR obstruida, y ' +
@@ -255,7 +257,7 @@ function pie(s, n) {
     })
   })
 
-  pie(s, 4)
+  pie(s)
   s.addNotes(
     '¿Por qué Clean Architecture y no otra cosa? Porque en este proyecto el dominio no es ' +
     'algo que me haya inventado yo: son normas. SAE J1979, ISO 15031, ISO 15765-4 para el ' +
@@ -347,7 +349,7 @@ function pie(s, n) {
     { x: 0.85, y: 5.65, w: 11.6, h: 0.45, margin: 0, valign: 'middle',
       fontFace: 'Arial', fontSize: 19, bold: true },
   )
-  pie(s, 5)
+  pie(s)
   s.addNotes(
     'Esto es todo lo que hay que entender del OBD-II para seguir el resto de la charla.\n\n' +
     'La aplicación quiere saber a cuántas revoluciones está el motor. Manda dos bytes: 01 ' +
@@ -410,7 +412,7 @@ function pie(s, n) {
       fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 12, lineSpacing: 22 },
   )
 
-  pie(s, 6)
+  pie(s)
   s.addNotes(
     'El proyecto tiene dos bases de datos, y cada una guarda una cosa distinta.\n\n' +
     'En SQLite va el dato que ya se conoce y que es seguro: los usuarios, que pueden ser ' +
@@ -482,7 +484,7 @@ function pie(s, n) {
     })
   })
 
-  pie(s, 7)
+  pie(s)
   s.addNotes(
     'En SQLite hay trece tablas, y ahí está todo lo que se puede pedir por una clave ' +
     'exacta.\n\n' +
@@ -591,7 +593,7 @@ function pie(s, n) {
     fontFace: 'Calibri', fontSize: 13, color: GRIS, lineSpacing: 17,
   })
 
-  pie(s, 8)
+  pie(s)
   s.addNotes(
     'En la base vectorial no van los datos del taller: esos están en SQLite. Aquí va solo ' +
     'lo que el sistema aprende. Hay PIDs propietarios, que cada fabricante se inventa fuera ' +
@@ -613,7 +615,81 @@ function pie(s, n) {
   )
 }
 
-// ==================== 9 — LOS DOS DIAGNÓSTICOS ============================
+// ================= MCP: LAS HERRAMIENTAS DEL AGENTE =======================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('MCP: las herramientas del agente', {
+    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('El modelo no toca el coche. Pide una herramienta, y el sistema decide si se ejecuta.', {
+    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.45, yLista = 3.05
+
+  s.addText('16 herramientas', {
+    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+  })
+  const grupos = [
+    ['7', 'de diagnóstico: leer el VIN, un PID, los DTCs, el freeze frame, las ECUs'],
+    ['8', 'de conocimiento: buscar parecidos e indexar lo aprendido'],
+    ['1', 'de búsqueda web, con presupuesto limitado por diagnóstico'],
+  ]
+  grupos.forEach(([n, t], k) => {
+    const y = yLista + k * 0.85
+    s.addText(n, {
+      x: xIzq, y, w: 0.6, h: 0.4, margin: 0, valign: 'top',
+      fontFace: 'Arial', fontSize: 20, bold: true, color: TINTA,
+    })
+    s.addText(t, {
+      x: xIzq + 0.7, y, w: colW - 0.7, h: 0.8, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, lineSpacing: 21,
+    })
+  })
+
+  s.addText('Por qué MCP y no llamadas a medida', {
+    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'Es un protocolo: el mismo servidor sirve a cualquier cliente que lo hable', options: { bullet: true, breakLine: true } },
+      { text: 'Cada herramienta declara su esquema, y los argumentos se validan antes de ejecutarla', options: { bullet: true, breakLine: true } },
+      { text: 'El servidor vive en infraestructura: el modelo nunca ve el dominio', options: { bullet: true, breakLine: true } },
+      { text: 'Si mañana cambio de modelo, las herramientas no se tocan', options: { bullet: true } },
+    ],
+    { x: xDer, y: yLista, w: colW, h: 3.1, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+  )
+
+  pie(s)
+  s.addNotes(
+    'El modelo no toca el coche directamente. Lo que hace es pedir herramientas, y el ' +
+    'sistema decide si las ejecuta y con qué argumentos. Ese contrato es el MCP, el Model ' +
+    'Context Protocol.\n\n' +
+    'Hay dieciséis herramientas. Siete son de diagnóstico: leer el bastidor, leer un PID, ' +
+    'pedir los códigos de avería, el freeze frame o la información de las centralitas. ' +
+    'Ocho son de conocimiento, y son las que hablan con la base vectorial: buscar casos ' +
+    'parecidos e indexar lo que se aprende. Y una es de búsqueda web, que lleva un ' +
+    'presupuesto limitado por diagnóstico para que el agente no se vaya a internet sin ' +
+    'control.\n\n' +
+    '¿Por qué MCP y no montarme yo las llamadas a medida? Por tres razones. Primero, es un ' +
+    'protocolo: el mismo servidor sirve a cualquier cliente que lo hable, no solo al mío. ' +
+    'Segundo, cada herramienta declara su esquema, así que los argumentos que manda el ' +
+    'modelo se validan antes de ejecutar nada. Y tercero, el servidor MCP vive en la capa ' +
+    'de infraestructura: es un adaptador más. El modelo nunca ve el dominio, ve ' +
+    'herramientas.\n\n' +
+    'La consecuencia es la de siempre: si mañana cambio de modelo, las herramientas no se ' +
+    'tocan.\n\n[~70 s]',
+  )
+}
+
+// ============ LOS DOS DIAGNÓSTICOS (cierra el bloque de IA) ============== ============================
 {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
@@ -661,7 +737,7 @@ function pie(s, n) {
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  pie(s, 9)
+  pie(s)
   s.addNotes(
     'El sistema hace dos diagnósticos distintos, y conviven.\n\n' +
     'El determinista es el de toda la vida. Lee cuatro PIDs fijos —revoluciones, ' +
@@ -682,4 +758,4 @@ function pie(s, n) {
 }
 
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 9 slides')
+console.log('PPTX escrito: 10 slides')
