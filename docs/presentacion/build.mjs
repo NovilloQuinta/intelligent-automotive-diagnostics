@@ -110,134 +110,69 @@ function pie(s) {
     x: 0.85, y: 0.7, w: 11.6, h: 0.9, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
   })
-  s.addText('Se enchufa al coche, lee lo que dicen sus centralitas y le explica al mecánico qué le pasa.', {
-    x: 0.85, y: 1.72, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+  s.addText('Se enchufa al coche, lee sus centralitas y le dice al mecánico qué le pasa y por dónde mirar.', {
+    x: 0.85, y: 1.7, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
 
-  const cosas = [
-    ['Lee el coche',      'Se conecta por el puerto de diagnóstico y le pregunta a las centralitas: qué coche es, cómo va y qué averías tiene'],
-    ['Lo interpreta',     'No devuelve una tabla de códigos: dice qué está pasando, si el coche está bien o está mal, y por dónde seguir mirando'],
-    ['Investiga la causa', 'Un agente de IA cruza los códigos con los datos y propone las causas posibles y los pasos para descartarlas'],
-    ['Y se lo queda',     'Cada caso resuelto se guarda, y aparece como referencia cuando entra otro coche con síntomas parecidos'],
-  ]
-  cosas.forEach(([que, detalle], k) => {
-    const y = 2.62 + k * 1.02
-    s.addText(que, {
-      x: 0.85, y, w: 2.9, h: 0.4, margin: 0, valign: 'top',
-      fontFace: 'Arial', fontSize: 18, bold: true, color: AZUL,
-    })
-    s.addText(detalle, {
-      x: 3.95, y: y - 0.02, w: 8.5, h: 0.85, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 15, color: TINTA, lineSpacing: 21,
-    })
-  })
+  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.55, yLista = 3.25
 
-  pie(s)
-  s.addNotes(
-    'Antes de nada, qué es esto.\n\n' +
-    'Es una herramienta de diagnóstico de averías de coche. Se enchufa al coche, lee lo que ' +
-    'dicen sus centralitas y le explica al mecánico qué le pasa.\n\n' +
-    'Hace cuatro cosas. Lee el coche: se conecta por el puerto de diagnóstico, ese que está ' +
-    'debajo del volante, y le pregunta a las centralitas qué coche es, cómo va y qué ' +
-    'averías tiene.\n\n' +
-    'Lo interpreta: no devuelve una tabla de códigos, dice qué está pasando, si el coche ' +
-    'está bien o está mal, y por dónde seguir mirando.\n\n' +
-    'Investiga la causa: un agente de IA cruza los códigos con los datos del coche y le ' +
-    'propone al mecánico las causas posibles y los pasos para ir descartándolas.\n\n' +
-    'Y se lo queda: cada caso resuelto se guarda, y aparece como referencia cuando entra ' +
-    'otro coche con síntomas parecidos. Eso es lo que hace que mejore con el uso.\n\n' +
-    '[~50 s · acumulado 1:05]',
-  )
-}
-
-// =========================== 2 — EL PROBLEMA ==============================
-{
-  const s = pres.addSlide()
-  s.background = { color: BLANCO }
-
-  s.addText('El problema: el escáner da códigos, no causas', {
-    x: 0.85, y: 0.75, w: 11.6, h: 0.9, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
-  })
-
-  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.2, yLista = 2.85
-
-  s.addText('Te da', {
+  s.addText('El escáner de hoy se queda aquí', {
     x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+    fontFace: 'Arial', fontSize: 19, bold: true, color: GRIS,
   })
-  s.addText(
-    [
-      { text: 'P0301   Fallo de encendido en el cilindro 1', options: { bullet: true, breakLine: true } },
-      { text: 'P0401   Válvula EGR obstruida',            options: { bullet: true, breakLine: true } },
-      { text: 'P2002   Filtro de partículas lleno', options: { bullet: true, breakLine: true } },
-      { text: 'Y así hasta diez',                              options: { bullet: true } },
-    ],
-    { x: xIzq, y: yLista, w: colW, h: 2.6, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 10, lineSpacing: 22 },
-  )
+  const codigos = [
+    ['P0301', 'fallo de encendido en el cilindro 1'],
+    ['P0401', 'válvula EGR obstruida'],
+    ['P2002', 'filtro de partículas lleno'],
+  ]
+  codigos.forEach(([c, d], k) => {
+    const y = yLista + k * 0.5
+    s.addText(c, {
+      x: xIzq, y, w: 1.1, h: 0.36, margin: 0, valign: 'middle',
+      fontFace: 'Courier New', fontSize: 14, bold: true, color: TINTA,
+    })
+    s.addText(d, {
+      x: xIzq + 1.2, y, w: colW - 1.2, h: 0.36, margin: 0, valign: 'middle',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA,
+    })
+  })
+  s.addText('Y así hasta diez. Es lo que ha registrado la centralita, no lo que está roto.', {
+    x: xIzq, y: yLista + 1.62, w: colW, h: 0.8, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 15, color: GRIS, lineSpacing: 21,
+  })
 
-  s.addText('No te da', {
+  s.addText('Esta herramienta sigue desde ahí', {
     x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
-  s.addText(
-    [
-      { text: 'Por qué se ha obstruido la válvula', options: { bullet: true, breakLine: true } },
-      { text: 'Por qué se ha llenado el filtro',     options: { bullet: true, breakLine: true } },
-      { text: 'Qué tiene que ver un código con otro', options: { bullet: true, breakLine: true } },
-      { text: 'Por dónde empezar a mirar',            options: { bullet: true } },
-    ],
-    { x: xDer, y: yLista, w: colW, h: 2.6, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 10, lineSpacing: 22 },
-  )
-
-  pie(s)
-  s.addNotes(
-    'Hoy llegas con una máquina de diagnosis, la conectas, y te da diez códigos de error. ' +
-    'Cada uno te dice una cosa: válvula EGR obstruida, filtro de partículas lleno.\n\n' +
-    'Vale. Pero esa válvula se ha obstruido por alguna circunstancia, y ese filtro se ha ' +
-    'llenado por alguna circunstancia. Y eso la máquina no te lo dice.\n\n' +
-    'Te deja la lista delante, y el trabajo de averiguar el porqué sigue entero por hacer.\n\n' +
-    '[~45 s · acumulado 1:00]',
-  )
-}
-
-// =========================== 3 — EL OBJETIVO ==============================
-{
-  const s = pres.addSlide()
-  s.background = { color: BLANCO }
-
-  s.addText('Qué hace con esos códigos', {
-    x: 0.85, y: 0.75, w: 11.6, h: 0.9, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
-  })
-  s.addText('Con esos mismos códigos y los datos del coche.', {
-    x: 0.85, y: 1.75, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
-  })
-
   s.addText(
     [
       { text: 'Investiga por qué puede estar pasando eso',            options: { bullet: true, breakLine: true } },
-      { text: 'Le da al mecánico una serie de opciones, no una sola causa', options: { bullet: true, breakLine: true } },
-      { text: 'Y los pasos a seguir para determinar de dónde viene el problema', options: { bullet: true } },
+      { text: 'Propone las causas posibles, no una sola',             options: { bullet: true, breakLine: true } },
+      { text: 'Y los pasos a seguir para ir descartándolas',          options: { bullet: true, breakLine: true } },
+      { text: 'Guarda el caso resuelto: sirve para el siguiente coche', options: { bullet: true } },
     ],
-    { x: 0.85, y: 2.85, w: 11.0, h: 2.6, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 20, color: TINTA, paraSpaceAfter: 22, lineSpacing: 28 },
+    { x: xDer, y: yLista - 0.06, w: colW, h: 2.6, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 14, lineSpacing: 22 },
   )
 
   pie(s)
   s.addNotes(
-    '¿Cuál es la gracia que tiene esta aplicación con la IA? Que con esos dos códigos y ' +
-    'esos datos, el agente dice: vale, tengo el P0401, que es la válvula EGR obstruida, y ' +
-    'el P2002, que es el filtro de partículas lleno. Voy a mirar a ver por qué puede ser ' +
-    'esto.\n\n' +
-    'Y hace una diagnosis: esto se produce, puede ser por esto o puede ser por lo otro. Le ' +
-    'da al mecánico una serie de opciones.\n\n' +
-    'Y además le dice qué pasos puede seguir para llegar a determinar de dónde viene el ' +
-    'problema. Eso es lo que hace la aplicación.\n\n[~55 s · acumulado 1:55]',
+    'Esto es una herramienta de diagnóstico de averías de coche. Se enchufa al coche, lee ' +
+    'sus centralitas y le dice al mecánico qué le pasa y por dónde mirar.\n\n' +
+    'A la izquierda está lo que tienes hoy. Conectas una máquina de diagnosis y te salen ' +
+    'códigos: P0301, fallo de encendido en el cilindro uno; P0401, válvula EGR obstruida; ' +
+    'P2002, filtro de partículas lleno. Y así hasta diez. Eso es lo que ha registrado la ' +
+    'centralita, pero no te dice qué está roto ni por dónde empezar a mirar. Esa válvula se ' +
+    'ha obstruido por alguna circunstancia, y esa circunstancia es la avería de verdad.\n\n' +
+    'A la derecha, lo que hace esta. Con esos mismos códigos y con los datos del coche, ' +
+    'investiga por qué puede estar pasando. Le propone al mecánico las causas posibles, no ' +
+    'una sola, y los pasos a seguir para ir descartándolas.\n\n' +
+    'Y lo último es lo que la hace distinta: el caso resuelto se guarda, y cuando entre otro ' +
+    'coche con síntomas parecidos, ese caso aparece como referencia. La herramienta mejora ' +
+    'con el uso.\n\n' +
+    '[~60 s · acumulado 1:15]',
   )
 }
 

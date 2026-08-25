@@ -1,32 +1,30 @@
 # Indice de la defensa — cerrado
 
-> 19 slides, ~19 min, en bloques: el problema, que resuelve, como funciona,
+> 17 slides, ~17 min, en bloques: el problema, que resuelve, como funciona,
 > como esta construida, las piezas, el resultado y el cierre. **Se trabaja punto por punto**: el autor cuenta que va en el punto,
 > se maqueta, se valida, y solo entonces se pasa al siguiente. Nada de adelantar slides.
 
 | # | Slide | Bloque | Estado |
 |---|---|---|---|
 | 1 | Portada | | **validada** |
-| 2 | Una herramienta de diagnostico de averias de coche | Que es | **nueva** |
-| 3 | El problema: el escaner da codigos, no causas | El problema | pendiente |
-| 4 | Que hace con esos codigos | Que resuelve | pendiente |
-| 5 | El flujo de trabajo, de principio a fin | Como funciona | **validada** |
-| 6 | Dos formas de diagnosticar: por reglas y con IA | Como funciona | pendiente |
-| 7 | Tecnologias utilizadas | Como esta construida | pendiente |
-| 8 | Arquitectura: Clean Architecture + Hexagonal | Como esta construida | **la reescribe el autor** |
-| 9 | Lectura del coche por OBD-II | Las piezas | pendiente |
-| 10 | Persistencia: una base relacional y una vectorial | Las piezas | pendiente |
-| 11 | La base relacional: que guarda | Las piezas | pendiente |
-| 12 | La base vectorial: que guarda y con que confianza | Las piezas | pendiente |
-| 13 | MCP: las 16 herramientas del agente | Las piezas | pendiente |
-| 14 | El ciclo de razonamiento del agente | Las piezas | pendiente |
-| 15 | Los modelos: lenguaje y embeddings | Las piezas | pendiente |
-| 16 | Resultados: la aplicacion funcionando | El resultado | pendiente |
-| 17 | Calidad: TDD, integracion continua y seguridad | El resultado | pendiente |
-| 18 | Conclusiones | Cierre | pendiente |
-| 19 | Gracias por la atencion | Cierre | pendiente |
+| 2 | Una herramienta de diagnostico de averias de coche | Que es y que resuelve | pendiente |
+| 3 | El flujo de trabajo, de principio a fin | Como funciona | **validada** |
+| 4 | Dos formas de diagnosticar: por reglas y con IA | Como funciona | pendiente |
+| 5 | Tecnologias utilizadas | Como esta construida | pendiente |
+| 6 | Arquitectura: Clean Architecture + Hexagonal | Como esta construida | **la reescribe el autor** |
+| 7 | Lectura del coche por OBD-II | Las piezas | pendiente |
+| 8 | Persistencia: una base relacional y una vectorial | Las piezas | pendiente |
+| 9 | La base relacional: que guarda | Las piezas | pendiente |
+| 10 | La base vectorial: que guarda y con que confianza | Las piezas | pendiente |
+| 11 | MCP: las 16 herramientas del agente | Las piezas | pendiente |
+| 12 | El ciclo de razonamiento del agente | Las piezas | pendiente |
+| 13 | Los modelos: lenguaje y embeddings | Las piezas | pendiente |
+| 14 | Resultados: la aplicacion funcionando | El resultado | pendiente |
+| 15 | Calidad: TDD, integracion continua y seguridad | El resultado | pendiente |
+| 16 | Conclusiones | Cierre | pendiente |
+| 17 | Gracias por la atencion | Cierre | pendiente |
 
-**Suma: ~19 min.**
+**Suma: ~17 min.**
 
 ## Cambios acordados sobre la primera propuesta
 
@@ -36,6 +34,10 @@
 - La slide de los dos diagnosticos se mueve **detras** del bloque de IA: hablaba de
   "el agente", "herramientas" e "indices vectoriales" antes de haberlos explicado.
 - El numero de pagina lo calcula `build.mjs` solo, para que reordenar no lo descuadre.
+- **Las tres primeras slides se funden en una** (2026-08-25): "que es", "el problema" y
+  "que hace" contaban lo mismo por partes y no cerraban la idea. Ahora es una sola que
+  explica el conjunto: a la izquierda donde se queda el escaner de hoy, a la derecha lo
+  que hace esta herramienta.
 - **Titulares reescritos** (2026-08-25): los titulos eran frases de conversacion
   ("Lo que te da la maquina", "Como se sostiene esto") y no decian de que iba la slide.
   Ahora son descriptivos.
