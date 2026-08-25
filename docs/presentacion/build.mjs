@@ -347,11 +347,6 @@ function pie(s, n) {
     { x: 0.85, y: 5.65, w: 11.6, h: 0.45, margin: 0, valign: 'middle',
       fontFace: 'Arial', fontSize: 19, bold: true },
   )
-  s.addText('La fórmula la fija la SAE J1979 y vive en el dominio.', {
-    x: 0.85, y: 6.2, w: 11.6, h: 0.35, margin: 0, valign: 'middle',
-    fontFace: 'Calibri', fontSize: 14, color: GRIS,
-  })
-
   pie(s, 5)
   s.addNotes(
     'Esto es todo lo que hay que entender del OBD-II para seguir el resto de la charla.\n\n' +
@@ -408,20 +403,12 @@ function pie(s, n) {
     [
       { text: 'Ese mismo conocimiento, indexado por significado', options: { bullet: true, breakLine: true } },
       { text: 'Y los diagnósticos ya resueltos, que aquí no están', options: { bullet: true, breakLine: true } },
-      { text: 'Se consulta por parecido, no por clave',           options: { bullet: true } },
+      { text: 'Se consulta por parecido, no por clave',           options: { bullet: true, breakLine: true } },
+      { text: 'El buscador de texto de SQLite no llega: «presión de aceite» no encuentra «oil pressure»', options: { bullet: true } },
     ],
     { x: xDer, y: yLista, w: colW, h: 1.9, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 12, lineSpacing: 22 },
   )
-
-  s.addText('No vale con una sola: el buscador de texto de SQLite busca palabras, no significado.', {
-    x: 0.85, y: 5.5, w: 11.6, h: 0.35, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 16, bold: true, color: TINTA,
-  })
-  s.addText('«Presión de aceite» no encuentra «oil pressure». Las dos van embebidas: un fichero y un directorio en disco, sin servidor que levantar.', {
-    x: 0.85, y: 5.95, w: 11.6, h: 0.6, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 15, color: GRIS, lineSpacing: 21,
-  })
 
   pie(s, 6)
   s.addNotes(
@@ -467,7 +454,8 @@ function pie(s, n) {
       { text: 'Vehículos por VIN y las ECUs de cada uno',      options: { bullet: true, breakLine: true } },
       { text: 'Sesiones de diagnóstico, con el informe congelado', options: { bullet: true, breakLine: true } },
       { text: 'Lecturas de PID: el hexadecimal crudo y el valor ya convertido', options: { bullet: true, breakLine: true } },
-      { text: 'Logs y auditoría de cada petición',             options: { bullet: true } },
+      { text: 'Logs y auditoría de cada petición',             options: { bullet: true, breakLine: true } },
+      { text: 'Y crece solo: un PID leído que no esté en el catálogo se inserta con confianza 0,3', options: { bullet: true } },
     ],
     { x: xIzq, y: yLista, w: colW, h: 3.0, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
@@ -492,15 +480,6 @@ function pie(s, n) {
       x: xDer + 0.85, y, w: colW - 0.85, h: 0.38, margin: 0, valign: 'middle',
       fontFace: 'Calibri', fontSize: 15, color: TINTA,
     })
-  })
-  s.addText('Y crece solo: un PID que se lee y no está en el catálogo se inserta aquí con confianza 0,3.', {
-    x: xDer, y: yLista + 2.1, w: colW, h: 0.6, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 14, color: GRIS, lineSpacing: 19,
-  })
-
-  s.addText('Es un fichero en disco. PostgreSQL se descartó: a esta escala solo añadía un servicio, una red y un backup que mantener.', {
-    x: 0.85, y: 6.25, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 14, color: GRIS,
   })
 
   pie(s, 7)
@@ -586,7 +565,7 @@ function pie(s, n) {
     x: xD, y: 2.25, w: wD, h: 0.35, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 18, bold: true, color: AZUL,
   })
-  s.addText('Se lo ponemos nosotros al guardar, según de dónde salga el dato.', {
+  s.addText('Se lo ponemos nosotros al guardar, según de dónde salga el dato. Es lo que pondera las búsquedas.', {
     x: xD, y: 2.68, w: wD, h: 0.55, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 13, color: GRIS, lineSpacing: 18,
   })
@@ -610,11 +589,6 @@ function pie(s, n) {
   s.addText('Validar contra el coche sube la web a 0,7 y al mecánico a 0,9.', {
     x: xD, y: 5.95, w: wD, h: 0.5, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 13, color: GRIS, lineSpacing: 17,
-  })
-
-  s.addText('Ese índice pondera las búsquedas: gana la respuesta con más confianza.', {
-    x: 0.85, y: 6.32, w: 7.1, h: 0.32, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 13, color: GRIS,
   })
 
   pie(s, 8)
