@@ -1,6 +1,6 @@
 # Indice de la defensa — cerrado
 
-> 16 slides, ~17 min. **Se pasa del tiempo: hay que recortar.** **Se trabaja punto por punto**: el autor cuenta que va en el punto,
+> 16 slides, ~16 min. **Se trabaja punto por punto**: el autor cuenta que va en el punto,
 > se maqueta, se valida, y solo entonces se pasa al siguiente. Nada de adelantar slides.
 
 | # | Slide | Min | Estado |
@@ -20,6 +20,7 @@
 | 13 | La aplicacion funcionando (capturas reales) | 2:00 | pendiente |
 | 14 | Como se sostiene esto: TDD, CI y seguridad | 1:00 | pendiente |
 | 15 | Conclusiones | 0:45 | pendiente |
+| 16 | Gracias por la atencion | 0:10 | pendiente |
 | B | Backup para preguntas del tribunal | — | pendiente |
 
 ## Cambios acordados sobre la primera propuesta

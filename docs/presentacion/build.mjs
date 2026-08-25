@@ -1119,5 +1119,45 @@ function pie(s) {
   )
 }
 
+// ======= CIERRE ===========================================================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  // Mismo panel que la portada: el deck abre y cierra igual
+  s.addShape(pres.ShapeType.rect, { x: 7.35, y: -0.1, w: 6.3, h: H + 0.2, fill: { color: TINTA } })
+
+  logoBig(s, 0.85, 0.75)
+
+  s.addText('Gracias por la atención', {
+    x: 0.85, y: 2.9, w: 6.1, h: 1.0, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 40, bold: true, color: TINTA,
+  })
+
+  s.addText('Jesús Ángel Novillo Lucas-Vaquero', {
+    x: 0.85, y: 5.85, w: 6.0, h: 0.35, margin: 0,
+    fontFace: 'Arial', fontSize: 15, bold: true, color: TINTA,
+  })
+  s.addText('Máster en Desarrollo con IA  ·  BIG school', {
+    x: 0.85, y: 6.22, w: 6.2, h: 0.35, margin: 0,
+    fontFace: 'Calibri', fontSize: 12, color: GRIS,
+  })
+
+  s.addText('EL INFORME DE LA SESIÓN', {
+    x: 7.78, y: 2.35, w: 5.1, h: 0.3, margin: 0,
+    fontFace: 'Calibri', fontSize: 10, bold: true, color: BLANCO, charSpacing: 2,
+  })
+  s.addImage({
+    path: SHOT('demo/08-informe.png'),                 // 3200 x 1200
+    x: 7.78, y: 2.95, w: 5.09, h: 1.91,
+    shadow: { type: 'outer', color: '000000', opacity: 0.5, blur: 20, offset: 5, angle: 135 },
+  })
+
+  s.addNotes(
+    'Y hasta aquí. Muchas gracias por la atención.\n\n' +
+    '[Quedarse callado y esperar las preguntas. El backup está detrás.]',
+  )
+}
+
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 15 slides')
+console.log('PPTX escrito: 16 slides')
