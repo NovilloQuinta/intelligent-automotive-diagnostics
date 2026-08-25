@@ -938,5 +938,56 @@ function pie(s) {
   )
 }
 
+// ======= LA APLICACIÓN FUNCIONANDO ========================================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('La aplicación funcionando', {
+    x: 0.85, y: 0.55, w: 11.6, h: 0.75, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
+  })
+  s.addText('Audi A3 2.0 TDI. Todo lo que se ve viene leído del bus, nada está escrito a mano.', {
+    x: 0.85, y: 1.38, w: 11.6, h: 0.35, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
+  })
+
+  const pantallas = [
+    ['demo/01-identificacion-vin.png', 'Lee el VIN del bus y saca marca, modelo y motor'],
+    ['demo/02-datos-vivo.png',         'Telemetría en vivo y los PIDs que soporta'],
+    ['demo/03-codigos-dtc.png',        'Las averías: modos 03, 07 y 0A'],
+    ['demo/08-informe.png',            'El informe que se congela con la sesión'],
+  ]
+  const iw = 5.0, ih = 1.875, gapX = 1.6
+  pantallas.forEach(([fichero, texto], k) => {
+    const x = 0.85 + (k % 2) * (iw + gapX)
+    const yCap = 2.05 + Math.floor(k / 2) * 2.35
+    s.addText(texto, {
+      x, y: yCap, w: iw, h: 0.28, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 12, color: TINTA,
+    })
+    s.addImage({
+      path: SHOT(fichero), x, y: yCap + 0.33, w: iw, h: ih,
+      shadow: { type: 'outer', color: '000000', opacity: 0.28, blur: 12, offset: 3, angle: 90 },
+    })
+  })
+
+  pie(s)
+  s.addNotes(
+    'Esto es la aplicación corriendo contra un Audi A3 2.0 TDI. Y quiero subrayar una ' +
+    'cosa: nada de lo que se ve está escrito a mano. Todo sale del bus del coche.\n\n' +
+    'Arriba a la izquierda, la identificación. El sistema no sabe qué coche es: lo ' +
+    'pregunta con el modo 09, saca el bastidor, decodifica el WMI y resuelve Audi, ' +
+    'fabricado en Alemania. De ahí salen marca, modelo, año y motor.\n\n' +
+    'Al lado, la telemetría en vivo, y debajo los PIDs que este vehículo declara soportar, ' +
+    'que no son una lista fija: se leen del bitmask del PID 00.\n\n' +
+    'Abajo a la izquierda, las averías. Tres códigos confirmados, y las tres pestañas son ' +
+    'los servicios 03, 07 y 0A del estándar: almacenadas, pendientes y permanentes.\n\n' +
+    'Y a la derecha el informe, que se congela con la sesión: si dentro de seis meses ' +
+    'alguien abre ese diagnóstico, ve exactamente lo que se vio ese día.\n\n' +
+    '[~2 min contando la demo. Si hay vídeo del coche real, va aquí.]',
+  )
+}
+
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 12 slides')
+console.log('PPTX escrito: 13 slides')
