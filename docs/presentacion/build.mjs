@@ -613,5 +613,73 @@ function pie(s, n) {
   )
 }
 
+// ==================== 9 — LOS DOS DIAGNÓSTICOS ============================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Dos diagnósticos', {
+    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('El determinista está siempre. El cognitivo, solo si hay un modelo configurado.', {
+    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.45, yLista = 3.05
+
+  s.addText('Determinista', {
+    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'Lee cuatro PIDs fijos: revoluciones, refrigerante, velocidad y admisión', options: { bullet: true, breakLine: true } },
+      { text: 'Más los DTCs y el freeze frame',                       options: { bullet: true, breakLine: true } },
+      { text: 'La criticidad sale de una regla: sin DTCs es baja, con freeze frame es crítica', options: { bullet: true, breakLine: true } },
+      { text: 'Solo necesita el coche, y responde al momento',        options: { bullet: true, breakLine: true } },
+      { text: 'No aprende nada',                                      options: { bullet: true } },
+    ],
+    { x: xIzq, y: yLista, w: colW, h: 3.1, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+  )
+
+  s.addText('Cognitivo', {
+    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'El agente decide qué PIDs le hace falta leer',        options: { bullet: true, breakLine: true } },
+      { text: 'Razona sobre lo que va encontrando, llamando a herramientas', options: { bullet: true, breakLine: true } },
+      { text: 'Necesita el coche, la API del modelo y los índices vectoriales', options: { bullet: true, breakLine: true } },
+      { text: 'Hasta 60 segundos de límite',                          options: { bullet: true, breakLine: true } },
+      { text: 'Y aprende: indexa PIDs, DTCs y el caso resuelto',      options: { bullet: true } },
+    ],
+    { x: xDer, y: yLista, w: colW, h: 3.1, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+  )
+
+  pie(s, 9)
+  s.addNotes(
+    'El sistema hace dos diagnósticos distintos, y conviven.\n\n' +
+    'El determinista es el de toda la vida. Lee cuatro PIDs fijos —revoluciones, ' +
+    'temperatura de refrigerante, velocidad y temperatura de admisión—, los códigos de ' +
+    'avería y el freeze frame. Y la criticidad no me la invento: sale de una regla en el ' +
+    'dominio, computeSeverity. Si no hay códigos es baja; si hay freeze frame es crítica, ' +
+    'porque significa que la centralita congeló el momento del fallo; y si hay códigos sin ' +
+    'freeze frame es alta. Solo necesita el coche conectado, responde al momento, y no ' +
+    'aprende nada.\n\n' +
+    'El cognitivo es el otro. Ahí no hay una lista fija de PIDs: el agente decide qué le ' +
+    'hace falta leer y va llamando a las herramientas según lo que encuentra. A cambio ' +
+    'necesita tres cosas: el coche, la API del modelo y los índices vectoriales. Tarda más, ' +
+    'con un límite de sesenta segundos. Y es el único que aprende: indexa los PIDs y DTCs ' +
+    'nuevos y guarda el caso resuelto.\n\n' +
+    'Por eso conviven. Si no hay modelo configurado, o si no hay internet en el taller, el ' +
+    'determinista sigue funcionando.\n\n[~65 s]',
+  )
+}
+
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 8 slides')
+console.log('PPTX escrito: 9 slides')
