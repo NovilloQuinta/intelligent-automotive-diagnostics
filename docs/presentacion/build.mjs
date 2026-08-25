@@ -253,5 +253,75 @@ function pie(s, n) {
   )
 }
 
+// =========================== 5 — LAS TRES CAPAS ===========================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Las tres capas', {
+    x: 0.85, y: 0.75, w: 11.6, h: 0.9, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('Las flechas van hacia dentro: dominio  ←  aplicación  ←  infraestructura.', {
+    x: 0.85, y: 1.75, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  const capas = [
+    { t: 'Dominio', s: 'No importa nada de fuera',
+      p: ['Vin, DtcCode, PidCode, Formula',
+          'Catálogos de PID, DTC y direcciones de ECU',
+          'Las normas SAE J1979 e ISO'] },
+    { t: 'Aplicación', s: 'Solo conoce el dominio',
+      p: ['IdentifyVehicle, GetLiveData, GetEcuInfo',
+          'ProcessVehicleDiagnosis, ExecuteCognitiveDiagnosis',
+          'Los puertos: ObdRepository, LlmClientPort…'] },
+    { t: 'Infraestructura', s: 'Implementa los puertos',
+      p: ['Express, Drizzle + SQLite, LanceDB',
+          'Servidor MCP, clientes de Anthropic y OpenAI',
+          'Transporte ELM327 y simulador'] },
+  ]
+
+  const colW = 3.6, gap = 0.4, x0 = 0.85
+  capas.forEach((c, i) => {
+    const x = x0 + i * (colW + gap)
+    s.addText(c.t, {
+      x, y: 2.6, w: colW, h: 0.4, margin: 0, valign: 'top',
+      fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+    })
+    s.addText(c.s, {
+      x, y: 3.05, w: colW, h: 0.32, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 13, italic: true, color: GRIS,
+    })
+    s.addText(
+      c.p.map((t, k) => ({ text: t, options: { bullet: true, breakLine: k < c.p.length - 1 } })),
+      { x, y: 3.55, w: colW, h: 2.5, margin: 0, valign: 'top',
+        fontFace: 'Calibri', fontSize: 14, color: TINTA, paraSpaceAfter: 12, lineSpacing: 20 },
+    )
+  })
+
+  s.addText('El dominio no sabe que existe SQLite, ni Express, ni ningún LLM.', {
+    x: 0.85, y: 6.2, w: 11.6, h: 0.4, margin: 0,
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
+  })
+
+  pie(s, 5)
+  s.addNotes(
+    'Tres capas, y las dependencias van siempre hacia dentro.\n\n' +
+    'En el dominio están los value objects y los catálogos: el VIN, el código DTC, el ' +
+    'código de PID, las fórmulas, y las tablas de referencia. Es lo que dicen las normas. ' +
+    'Esta capa no importa absolutamente nada de las otras dos.\n\n' +
+    'En aplicación están los casos de uso —identificar el vehículo, leer telemetría, ' +
+    'barrer las ECUs, ejecutar el diagnóstico determinista y el cognitivo— y los puertos, ' +
+    'que son interfaces. Aquí se dice QUÉ hace falta, no CÓMO se consigue. Esta capa solo ' +
+    'conoce el dominio.\n\n' +
+    'Y en infraestructura está el cómo: Express, Drizzle sobre SQLite, LanceDB para los ' +
+    'vectores, el servidor MCP, los clientes de Anthropic y OpenAI, y el transporte del ' +
+    'ELM327 con su simulador. Todo eso implementa los puertos de la capa de aplicación.\n\n' +
+    'La consecuencia práctica es la de la slide anterior: el dominio no sabe que existe ' +
+    'SQLite, ni Express, ni ningún modelo de lenguaje.\n\n[~70 s]',
+  )
+}
+
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 4 slides')
+console.log('PPTX escrito: 5 slides')
