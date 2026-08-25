@@ -793,6 +793,75 @@ function pie(s) {
   )
 }
 
+// ======= CAMBIAR DE MODELO Y APRENDER DEL USO =============================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Cambiar de modelo, y aprender del uso', {
+    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('Lo de fuera se sustituye. Lo que el sistema aprende se queda.', {
+    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.45, yLista = 3.05
+
+  s.addText('Cambiar de proveedor', {
+    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'Una variable de entorno: LLM_PROVIDER = anthropic u openai', options: { bullet: true, breakLine: true } },
+      { text: 'Los dos clientes implementan el mismo puerto, LlmClientPort', options: { bullet: true, breakLine: true } },
+      { text: 'El adaptador de OpenAI sirve también para DeepSeek, Groq, Mistral o xAI', options: { bullet: true, breakLine: true } },
+      { text: 'Los embeddings ni eso: el modelo corre en la propia máquina', options: { bullet: true } },
+    ],
+    { x: xIzq, y: yLista, w: colW, h: 3.1, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+  )
+
+  s.addText('Aprender del uso', {
+    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'El agente se topa con un PID o un DTC que no está en el catálogo', options: { bullet: true, breakLine: true } },
+      { text: 'Lo valida contra el coche cuando se puede',            options: { bullet: true, breakLine: true } },
+      { text: 'Lo indexa con la confianza de su fuente',              options: { bullet: true, breakLine: true } },
+      { text: 'Y en el siguiente coche vuelve como caso parecido',    options: { bullet: true, breakLine: true } },
+      { text: 'Lo que no está: subir la confianza cuando un caso acierta. Habría que saber que acertó, y el sistema no lo sabe', options: { bullet: true } },
+    ],
+    { x: xDer, y: yLista, w: colW, h: 3.1, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+  )
+
+  pie(s)
+  s.addNotes(
+    'Dos cosas que van juntas: lo de fuera se sustituye, y lo que se aprende se queda.\n\n' +
+    'Cambiar de proveedor de modelo es una variable de entorno. Los dos clientes, el de ' +
+    'Anthropic y el de OpenAI, implementan el mismo puerto, así que la capa de aplicación ' +
+    'no se entera de cuál está detrás. Y el adaptador de OpenAI no vale solo para OpenAI: ' +
+    'sirve para cualquier proveedor compatible con su API, o sea DeepSeek, Groq, Mistral o ' +
+    'xAI, cambiando la URL base. Los embeddings no dependen ni de eso, porque el modelo ' +
+    'corre en la propia máquina: sin clave, sin latencia de red y sin coste por consulta.\n\n' +
+    'La otra mitad es el aprendizaje. El agente se topa con un PID o un DTC que no está en ' +
+    'el catálogo, lo valida contra el coche cuando se puede, y lo indexa con la confianza ' +
+    'que le corresponde según de dónde salga. En el siguiente coche parecido, eso vuelve ' +
+    'como caso similar.\n\n' +
+    'Y hay una pieza que quiero decir en voz alta porque está a medias a propósito. Tengo ' +
+    'implementada y testeada la función que sube la confianza de un dato cada vez que se ' +
+    'reutiliza con éxito, pero no la llamo desde ningún flujo. El motivo es que para ' +
+    'subirla haría falta saber que el diagnóstico acertó de verdad, y ese dato el sistema ' +
+    'no lo tiene: nadie le dice si el coche se arregló. Inventármelo habría degradado el ' +
+    'catálogo, así que preferí dejarlo fuera de alcance y documentarlo.\n\n[~65 s]',
+  )
+}
+
 // ============ LOS DOS DIAGNÓSTICOS (cierra el bloque de IA) ============== ============================
 {
   const s = pres.addSlide()
@@ -862,4 +931,4 @@ function pie(s) {
 }
 
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 11 slides')
+console.log('PPTX escrito: 12 slides')
