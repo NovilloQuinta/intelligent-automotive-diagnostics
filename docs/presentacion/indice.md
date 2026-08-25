@@ -6,7 +6,7 @@
 | # | Slide | Min | Estado |
 |---|---|---|---|
 | 1 | Portada | 0:15 | **validada** |
-| 2 | El problema | 0:45 | pendiente |
+| 2 | El problema | 0:45 | **validada** |
 | 3 | El objetivo | 0:55 | pendiente |
 | 4 | Por que Clean Architecture + Hexagonal | 1:20 | pendiente |
 | 5 | Las tres capas: que hay en cada una | 1:10 | pendiente |

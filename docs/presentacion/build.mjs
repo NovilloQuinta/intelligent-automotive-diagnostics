@@ -152,5 +152,42 @@ function pie(s, n) {
   )
 }
 
+// =========================== 3 — EL OBJETIVO ==============================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Lo que hace la aplicación', {
+    x: 0.85, y: 0.75, w: 11.6, h: 0.9, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('Con esos mismos códigos y los datos del coche.', {
+    x: 0.85, y: 1.75, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  s.addText(
+    [
+      { text: 'Investiga por qué puede estar pasando eso',            options: { bullet: true, breakLine: true } },
+      { text: 'Le da al mecánico una serie de opciones, no una sola causa', options: { bullet: true, breakLine: true } },
+      { text: 'Y los pasos a seguir para determinar de dónde viene el problema', options: { bullet: true } },
+    ],
+    { x: 0.85, y: 2.85, w: 11.0, h: 2.6, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 20, color: TINTA, paraSpaceAfter: 22, lineSpacing: 28 },
+  )
+
+  pie(s, 3)
+  s.addNotes(
+    '¿Cuál es la gracia que tiene esta aplicación con la IA? Que con esos dos códigos y ' +
+    'esos datos, el agente dice: vale, tengo el P0401, que es la válvula EGR obstruida, y ' +
+    'el P2002, que es el filtro de partículas lleno. Voy a mirar a ver por qué puede ser ' +
+    'esto.\n\n' +
+    'Y hace una diagnosis: esto se produce, puede ser por esto o puede ser por lo otro. Le ' +
+    'da al mecánico una serie de opciones.\n\n' +
+    'Y además le dice qué pasos puede seguir para llegar a determinar de dónde viene el ' +
+    'problema. Eso es lo que hace la aplicación.\n\n[~55 s]',
+  )
+}
+
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 2 slides')
+console.log('PPTX escrito: 3 slides')
