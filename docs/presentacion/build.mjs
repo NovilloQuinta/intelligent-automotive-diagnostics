@@ -37,8 +37,8 @@ function cabecera(s, kicker, titulo) {
     fontFace: 'Calibri', fontSize: 11, bold: true, color: AZUL, charSpacing: 2.5,
   })
   s.addText(titulo, {
-    x: 0.85, y: 0.98, w: 11.6, h: 0.72, margin: 0,
-    fontFace: 'Arial', fontSize: 36, bold: true, color: TINTA,
+    x: 0.85, y: 0.96, w: 11.6, h: 1.15, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
 }
 
@@ -111,15 +111,15 @@ function pie(s, n) {
 {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
-  cabecera(s, 'EL PROBLEMA', 'El código no es el diagnóstico')
+  cabecera(s, 'EL PROBLEMA', 'Lo que ve hoy un mecánico')
 
   const pasos = [
-    { n: '1', t: 'EL ESCÁNER DEVUELVE UN CÓDIGO',
-      b: 'P0401, P2002. Eso es lo que la centralita ha registrado: el síntoma. No es la avería que hay que reparar.' },
-    { n: '2', t: 'INTERPRETARLO ES OFICIO',
-      b: '¿Válvula EGR obstruida? ¿O un consumo de aceite que ha ido saturando el filtro de partículas? El código no lo dice. Lo dice la experiencia del mecánico.' },
-    { n: '3', t: 'Y ESA EXPERIENCIA NO SE GUARDA',
-      b: 'Cuando acierta, el hallazgo se queda en su cabeza. Seis meses después entra otro coche con los mismos códigos y se empieza de cero.' },
+    { n: '1', t: 'Conecta el escáner y salen códigos',
+      b: 'P0401, P2002. Le dicen qué ha registrado la centralita, pero no qué está roto ni por dónde empezar a mirar.' },
+    { n: '2', t: 'El resto lo pone él',
+      b: 'Con esos códigos tiene que decidir si es la válvula EGR, si el coche consume aceite y ha saturado el filtro, o si hay que mirar otra cosa. Eso depende de su experiencia.' },
+    { n: '3', t: 'Y lo que averigua no queda en ningún sitio',
+      b: 'Si acierta, lo sabe él. El siguiente coche con esos mismos códigos igual entra en otro taller, y allí se empieza otra vez desde el código.' },
   ]
 
   const cw = 3.7, gap = 0.35, x0 = (W - (cw * 3 + gap * 2)) / 2, cy = 2.25, ch = 3.15
@@ -137,7 +137,7 @@ function pie(s, n) {
     })
     s.addText(p.t, {
       x: x + 0.32, y: cy + 0.95, w: cw - 0.64, h: 0.62, margin: 0, valign: 'top',
-      fontFace: 'Arial', fontSize: 12, bold: true, color: TINTA, charSpacing: 0.5,
+      fontFace: 'Arial', fontSize: 13, bold: true, color: TINTA,
     })
     s.addText(p.b, {
       x: x + 0.32, y: cy + 1.62, w: cw - 0.64, h: 1.35, margin: 0, valign: 'top',
@@ -147,8 +147,8 @@ function pie(s, n) {
 
   s.addText(
     [
-      { text: 'El problema no es leer el coche. Es el salto del síntoma a la causa — y que ese salto ', options: { color: TINTA } },
-      { text: 'no se acumula.', options: { color: AZUL, bold: true } },
+      { text: 'El código es igual para todos. Lo que cambia es ', options: { color: TINTA } },
+      { text: 'lo que cada mecánico sabe hacer con él.',        options: { color: AZUL } },
     ],
     { x: 0.85, y: 5.95, w: 11.6, h: 0.5, margin: 0,
       fontFace: 'Arial', fontSize: 17, bold: true },
@@ -157,21 +157,89 @@ function pie(s, n) {
   pie(s, 2)
 
   s.addNotes(
-    'Un mecánico conecta el escáner y obtiene un código: P0401, P2002. Eso es el ' +
-    'síntoma que la centralita ha registrado. No es la avería.\n\n' +
-    'Del código a la causa hay un salto, y ese salto lo da la experiencia. Los mismos ' +
-    'dos códigos pueden ser una EGR sucia, o pueden ser un motor que consume aceite y ' +
-    'ha ido saturando el filtro de partículas. Son reparaciones distintas y facturas ' +
-    'muy distintas.\n\n' +
-    'Y aquí está lo que a mí me parece el problema de verdad: cuando el mecánico ' +
-    'acierta, ese conocimiento no queda en ningún sitio. Se queda en su cabeza. Seis ' +
-    'meses después entra otro coche con los mismos códigos y se vuelve a empezar de ' +
-    'cero.\n\n' +
-    'El diagnóstico no es un problema de lectura de datos. Es un problema de ' +
-    'interpretación, y de memoria.\n\n' +
-    '[~45 s. Apoyarse en el tercer bloque: es el que abre la slide siguiente.]',
+    'Cuando un mecánico conecta el escáner a un coche, lo que le sale son códigos. ' +
+    'Por ejemplo P0401 y P2002. Eso le dice lo que ha registrado la centralita, pero no ' +
+    'le dice qué está roto.\n\n' +
+    'A partir de ahí el trabajo lo pone él. Esos dos códigos pueden ser una válvula EGR ' +
+    'sucia, o pueden ser un motor que consume aceite y ha ido saturando el filtro de ' +
+    'partículas. Son dos reparaciones distintas, y decidir cuál es depende de la ' +
+    'experiencia que tenga.\n\n' +
+    'Y luego está lo otro: cuando da con el fallo, eso no queda registrado en ninguna ' +
+    'parte. Se queda en su cabeza. El siguiente coche con esos mismos códigos igual entra ' +
+    'en otro taller, y allí se empieza otra vez desde el código.\n\n' +
+    '[~45 s]',
+  )
+}
+
+// =========================== 3 — EL OBJETIVO ==============================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+  cabecera(s, 'EL OBJETIVO', 'Que el mecánico vea más del coche')
+
+  s.addText('Ayudarle a investigar un fallo: qué le pasa al vehículo, si está bien o está mal, y por dónde seguir mirando.', {
+    x: 0.85, y: 2.15, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 16, color: GRIS,
+  })
+
+  const cw = 5.55, gap = 0.5, x0 = (W - (cw * 2 + gap)) / 2, cy = 2.95, ch = 2.95
+
+  // Tarjeta clara: lo que hace desde el primer coche
+  s.addShape(pres.ShapeType.roundRect, {
+    x: x0, y: cy, w: cw, h: ch, rectRadius: 0.08, fill: { color: TARJETA },
+  })
+  s.addText('DESDE EL PRIMER COCHE', {
+    x: x0 + 0.4, y: cy + 0.4, w: cw - 0.8, h: 0.3, margin: 0,
+    fontFace: 'Calibri', fontSize: 11, bold: true, color: AZUL, charSpacing: 2,
+  })
+  s.addText('Le ayuda a investigar el fallo', {
+    x: x0 + 0.4, y: cy + 0.8, w: cw - 0.8, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 19, bold: true, color: TINTA,
+  })
+  s.addText(
+    'La herramienta lee el coche, cruza lo que encuentra y le dice qué está pasando y por ' +
+    'dónde seguir mirando: si el coche está bien, si está mal, y qué conviene revisar. ' +
+    'No le devuelve una tabla de códigos, le devuelve una lectura del vehículo.',
+    { x: x0 + 0.4, y: cy + 1.4, w: cw - 0.8, h: 1.4, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 13, color: GRIS, lineSpacing: 19 },
+  )
+
+  // Tarjeta oscura: lo que gana con el uso
+  const x1 = x0 + cw + gap
+  s.addShape(pres.ShapeType.roundRect, {
+    x: x1, y: cy, w: cw, h: ch, rectRadius: 0.08, fill: { color: TINTA },
+  })
+  s.addText('SEGÚN SE VAN CONECTANDO TALLERES', {
+    x: x1 + 0.4, y: cy + 0.4, w: cw - 0.8, h: 0.3, margin: 0,
+    fontFace: 'Calibri', fontSize: 11, bold: true, color: '8A93FF', charSpacing: 2,
+  })
+  s.addText('Y va mejorando con el uso', {
+    x: x1 + 0.4, y: cy + 0.8, w: cw - 0.8, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 19, bold: true, color: BLANCO,
+  })
+  s.addText(
+    'Cada diagnóstico que se cierra se guarda en una base de datos vectorial. Cuantos más ' +
+    'talleres conectados, más coches registrados y más averías resueltas, más casos reales ' +
+    'tiene para comparar. Es una mejora lenta, pero se acumula.',
+    { x: x1 + 0.4, y: cy + 1.4, w: cw - 0.8, h: 1.4, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 13, color: 'B8BCCC', lineSpacing: 19 },
+  )
+
+  pie(s, 3)
+
+  s.addNotes(
+    'El objetivo de la aplicación es ayudar al mecánico a diagnosticar. A investigar un ' +
+    'fallo: qué le pasa al coche, si está bien o está mal, y por dónde seguir mirando.\n\n' +
+    'Dicho de otra forma: mejorar la visión que tiene del vehículo cuando conecta la ' +
+    'herramienta. Eso ya lo hace desde el primer coche.\n\n' +
+    'Y luego está lo que aporta con el tiempo. Esto está pensado para que se conecten más ' +
+    'talleres, se registren más coches, más averías y más diagnósticos. Como todo eso se ' +
+    'guarda en una base vectorial, cuando llega un coche nuevo el sistema puede comparar ' +
+    'con casos que ya se resolvieron antes y dar una valoración más real. No pasa de un ' +
+    'día para otro: lo va haciendo poco a poco.\n\n' +
+    '[~55 s. Es la promesa de la charla: decirla despacio.]',
   )
 }
 
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 2 slides')
+console.log('PPTX escrito: 3 slides')
