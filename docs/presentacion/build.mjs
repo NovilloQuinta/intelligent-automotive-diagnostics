@@ -195,45 +195,65 @@ function pie(s, n) {
   s.background = { color: BLANCO }
 
   s.addText('Por qué esta arquitectura y no otra', {
-    x: 0.85, y: 0.75, w: 11.6, h: 0.9, margin: 0, valign: 'top',
+    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
   s.addText('Aquí el dominio son normas. Y las normas no las cambia nadie.', {
-    x: 0.85, y: 1.75, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
 
-  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.55, yLista = 3.2
+  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.35, yLista = 2.95
 
   s.addText('Por qué Clean + Hexagonal', {
     x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
   s.addText(
     [
-      { text: 'SAE J1979, ISO 15031, ISO 15765-4, ISO 3779', options: { bullet: true, breakLine: true } },
-      { text: 'Las fórmulas de conversión de cada PID',      options: { bullet: true, breakLine: true } },
-      { text: 'La decodificación del VIN',                   options: { bullet: true, breakLine: true } },
-      { text: 'Todo eso vive en el dominio, sin mezclarse con la base de datos ni con el LLM', options: { bullet: true } },
+      { text: 'El dominio son normas: SAE J1979, ISO 15031, ISO 3779', options: { bullet: true, breakLine: true } },
+      { text: 'Las fórmulas de cada PID y la decodificación del VIN',  options: { bullet: true, breakLine: true } },
+      { text: 'Nada de eso se mezcla con la base de datos ni con el LLM', options: { bullet: true } },
     ],
-    { x: xIzq, y: yLista, w: colW, h: 2.9, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 12, lineSpacing: 22 },
+    { x: xIzq, y: yLista, w: colW, h: 2.0, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 10, lineSpacing: 21 },
   )
 
   s.addText('Por qué no orientada a eventos', {
     x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 20, bold: true, color: GRIS,
+    fontFace: 'Arial', fontSize: 19, bold: true, color: GRIS,
   })
   s.addText(
     [
-      { text: 'No hay varios servicios que desacoplar: es un proceso', options: { bullet: true, breakLine: true } },
-      { text: 'El mecánico pregunta y espera respuesta: el flujo es síncrono', options: { bullet: true, breakLine: true } },
-      { text: 'Añadiría broker, colas y consistencia eventual sin ganar nada', options: { bullet: true, breakLine: true } },
+      { text: 'Es un proceso: no hay servicios que desacoplar',        options: { bullet: true, breakLine: true } },
+      { text: 'El mecánico pregunta y espera: el flujo es síncrono',   options: { bullet: true, breakLine: true } },
       { text: 'Un solo programador: más piezas es más sitio donde romper', options: { bullet: true } },
     ],
-    { x: xDer, y: yLista, w: colW, h: 2.9, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 12, lineSpacing: 22 },
+    { x: xDer, y: yLista, w: colW, h: 2.0, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 10, lineSpacing: 21 },
   )
+
+  // Ejemplo: donde vive cada cosa en este proyecto
+  s.addText('En este proyecto', {
+    x: 0.85, y: 5.15, w: 11.6, h: 0.32, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 15, bold: true, color: TINTA,
+  })
+  const capas = [
+    ['Dominio', 'Vin, DtcCode, PidCode, Formula, catálogos de PID y DTC'],
+    ['Aplicación', 'IdentifyVehicle, ExecuteCognitiveDiagnosis, ObdRepository, LlmClientPort'],
+    ['Infraestructura', 'Express, Drizzle + SQLite, LanceDB, servidor MCP, transporte ELM327'],
+  ]
+  capas.forEach(([nombre, contenido], k) => {
+    const y = 5.6 + k * 0.4
+    s.addText(nombre, {
+      x: 0.85, y, w: 1.9, h: 0.34, margin: 0, valign: 'middle',
+      fontFace: 'Calibri', fontSize: 14, bold: true, color: AZUL,
+    })
+    s.addText(contenido, {
+      x: 2.8, y, w: 9.6, h: 0.34, margin: 0, valign: 'middle',
+      fontFace: 'Calibri', fontSize: 14, color: GRIS,
+    })
+  })
 
   pie(s, 4)
   s.addNotes(
@@ -242,86 +262,19 @@ function pie(s, n) {
     'bus CAN, ISO 3779 para el VIN. Las fórmulas que convierten cada PID en una magnitud ' +
     'física, y la decodificación del bastidor. Eso no lo cambia nadie, y no puede estar ' +
     'mezclado con el acceso a datos ni con el modelo de lenguaje.\n\n' +
-    'Con Clean Architecture eso vive en el dominio, aislado, y lo que sí cambia —la base de ' +
-    'datos, el LLM, el transporte OBD, el framework web— vive fuera, en adaptadores.\n\n' +
-    '¿Y por qué no una arquitectura orientada a eventos? Porque aquí no hay varios ' +
-    'servicios que desacoplar: es un solo proceso. Y el flujo es síncrono: el mecánico ' +
-    'pregunta y se queda esperando la respuesta. Meter un broker y colas me traería ' +
-    'consistencia eventual y mucha más superficie de depuración, sin ganar nada a cambio.\n\n' +
-    'Y hay una razón práctica: soy un solo programador. Cuantas más piezas móviles, más ' +
-    'sitio donde romper.\n\n[~80 s]',
-  )
-}
-
-// =========================== 5 — LAS TRES CAPAS ===========================
-{
-  const s = pres.addSlide()
-  s.background = { color: BLANCO }
-
-  s.addText('Las tres capas', {
-    x: 0.85, y: 0.75, w: 11.6, h: 0.9, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
-  })
-  s.addText('Las flechas van hacia dentro: dominio  ←  aplicación  ←  infraestructura.', {
-    x: 0.85, y: 1.75, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
-  })
-
-  const capas = [
-    { t: 'Dominio', s: 'No importa nada de fuera',
-      p: ['Vin, DtcCode, PidCode, Formula',
-          'Catálogos de PID, DTC y direcciones de ECU',
-          'Las normas SAE J1979 e ISO'] },
-    { t: 'Aplicación', s: 'Solo conoce el dominio',
-      p: ['IdentifyVehicle, GetLiveData, GetEcuInfo',
-          'ProcessVehicleDiagnosis, ExecuteCognitiveDiagnosis',
-          'Los puertos: ObdRepository, LlmClientPort…'] },
-    { t: 'Infraestructura', s: 'Implementa los puertos',
-      p: ['Express, Drizzle + SQLite, LanceDB',
-          'Servidor MCP, clientes de Anthropic y OpenAI',
-          'Transporte ELM327 y simulador'] },
-  ]
-
-  const colW = 3.6, gap = 0.4, x0 = 0.85
-  capas.forEach((c, i) => {
-    const x = x0 + i * (colW + gap)
-    s.addText(c.t, {
-      x, y: 2.6, w: colW, h: 0.4, margin: 0, valign: 'top',
-      fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
-    })
-    s.addText(c.s, {
-      x, y: 3.05, w: colW, h: 0.32, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 13, italic: true, color: GRIS,
-    })
-    s.addText(
-      c.p.map((t, k) => ({ text: t, options: { bullet: true, breakLine: k < c.p.length - 1 } })),
-      { x, y: 3.55, w: colW, h: 2.5, margin: 0, valign: 'top',
-        fontFace: 'Calibri', fontSize: 14, color: TINTA, paraSpaceAfter: 12, lineSpacing: 20 },
-    )
-  })
-
-  s.addText('El dominio no sabe que existe SQLite, ni Express, ni ningún LLM.', {
-    x: 0.85, y: 6.2, w: 11.6, h: 0.4, margin: 0,
-    fontFace: 'Calibri', fontSize: 15, color: GRIS,
-  })
-
-  pie(s, 5)
-  s.addNotes(
-    'Tres capas, y las dependencias van siempre hacia dentro.\n\n' +
-    'En el dominio están los value objects y los catálogos: el VIN, el código DTC, el ' +
-    'código de PID, las fórmulas, y las tablas de referencia. Es lo que dicen las normas. ' +
-    'Esta capa no importa absolutamente nada de las otras dos.\n\n' +
-    'En aplicación están los casos de uso —identificar el vehículo, leer telemetría, ' +
-    'barrer las ECUs, ejecutar el diagnóstico determinista y el cognitivo— y los puertos, ' +
-    'que son interfaces. Aquí se dice QUÉ hace falta, no CÓMO se consigue. Esta capa solo ' +
-    'conoce el dominio.\n\n' +
-    'Y en infraestructura está el cómo: Express, Drizzle sobre SQLite, LanceDB para los ' +
-    'vectores, el servidor MCP, los clientes de Anthropic y OpenAI, y el transporte del ' +
-    'ELM327 con su simulador. Todo eso implementa los puertos de la capa de aplicación.\n\n' +
-    'La consecuencia práctica es la de la slide anterior: el dominio no sabe que existe ' +
-    'SQLite, ni Express, ni ningún modelo de lenguaje.\n\n[~70 s]',
+    '¿Y por qué no orientada a eventos? Porque aquí no hay varios servicios que desacoplar: ' +
+    'es un solo proceso. El flujo es síncrono, el mecánico pregunta y se queda esperando. ' +
+    'Un broker y colas me traerían consistencia eventual y mucha más superficie de ' +
+    'depuración sin ganar nada. Y soy un solo programador: cuantas más piezas móviles, más ' +
+    'sitio donde romper.\n\n' +
+    'Abajo está el ejemplo concreto de este proyecto. En el dominio, los value objects y ' +
+    'los catálogos. En aplicación, los casos de uso y los puertos, que dicen qué hace ' +
+    'falta pero no cómo. Y en infraestructura el cómo: Express, Drizzle sobre SQLite, ' +
+    'LanceDB, el servidor MCP y el transporte del ELM327.\n\n' +
+    'El dominio no sabe que existe SQLite, ni Express, ni ningún modelo de lenguaje.\n\n' +
+    '[~80 s]',
   )
 }
 
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 5 slides')
+console.log('PPTX escrito: 4 slides')
