@@ -36,8 +36,8 @@ Sin ese ultimo paso las pantallas de DTC y ECUs salen vacias.
 
 ## Paleta
 
-Marca BIG school, estimada de una foto del logotipo. **Pendiente de sustituir por los
-valores oficiales** cuando aparezca el fichero del logo.
+Marca BIG school. Los hex se estimaron de una foto del logotipo, corrigiendo el balance
+de blancos. **Validados por el autor**: no hace falta el fichero oficial.
 
 | Uso | Hex |
 |---|---|
@@ -45,4 +45,5 @@ valores oficiales** cuando aparezca el fichero del logo.
 | Tinta (texto y paneles oscuros) | `#1A1C2E` |
 | Texto secundario | `#5A5F73` |
 
-El logotipo del deck esta **reconstruido con formas y texto**, no es el fichero oficial.
+El logotipo del deck esta **reconstruido con formas y texto** (rectangulo azul + Arial),
+no es el fichero oficial. El autor lo ha dado por bueno, asi que no hay que sustituirlo.
