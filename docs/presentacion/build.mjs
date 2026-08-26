@@ -1247,7 +1247,7 @@ function pie(s) {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Las diez categorías, con su nombre oficial y la medida que se aplicó en el código.', {
+  s.addText('El backend es una API REST, así que la lista que aplica es la de APIs.', {
     x: 0.85, y: 1.62, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
@@ -1282,9 +1282,12 @@ function pie(s) {
 
   pie(s)
   s.addNotes(
-    'Esta es la tabla de seguridad. No la voy a leer entera, pero quiero que se vea que las ' +
-    'diez categorías están cubiertas con una medida concreta y no con una declaración de ' +
-    'intenciones.\n\n' +
+    'Esta es la tabla de seguridad. Uso el API Security Top 10 y no el Top 10 de ' +
+    'aplicaciones web porque lo que este proyecto expone es una API REST: sus tres primeros ' +
+    'riesgos son fallos de autorización a nivel de objeto, de propiedad y de función, que en ' +
+    'la lista web ni siquiera aparecen como categorías propias.\n\n' +
+    'No la voy a leer entera, pero quiero que se vea que las diez categorías están cubiertas ' +
+    'con una medida concreta y no con una declaración de intenciones.\n\n' +
     'Destaco cuatro. La primera: cuando pides una sesión de diagnóstico que no es tuya, la ' +
     'API responde 404 y no 403, para no confirmar siquiera que existe.\n\n' +
     'La cuarta: los límites de peticiones no son uno global, van por familia. El diagnóstico ' +
