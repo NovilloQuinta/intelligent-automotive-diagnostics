@@ -452,7 +452,7 @@ function pie(s) {
     'La forma de conectarse al coche se decidió al final',
     'El diagnóstico cognitivo se añadió sin tocar el determinista',
     'Dos proveedores de modelo con el mismo código de diagnóstico',
-    'Alta testabilidad, que es lo que exigen las normas',
+    'Alta testabilidad: SAE J1979, ISO 15031 e ISO 3779 hay que probarlas con test',
   ]
   ventajas.forEach((titulo, k) => {
     const y = 2.68 + k * 0.58
