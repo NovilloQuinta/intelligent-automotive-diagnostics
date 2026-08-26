@@ -132,6 +132,10 @@ describe('Admin integration', () => {
       userType: 'individual',
       role: 'admin',
     })
+    // El panel exige segundo factor activo: sin esto, `requireAdmin` responde 403
+    // y estos tests medirian el guard nuevo en vez de lo que quieren medir.
+    await userRepo.setTwoFactorEnabled(adminUser.id, true)
+
     normalToken = authService.generateTokens(normalUser.id).accessToken
     adminToken = authService.generateTokens(adminUser.id).accessToken
 

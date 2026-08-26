@@ -4,6 +4,8 @@ import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRe
 import { SqliteRefreshTokenStore } from '@/infrastructure/persistence/sqlite/refreshTokenStore.js'
 import { SqlitePasswordResetTokenRepository } from '@/infrastructure/persistence/sqlite/passwordResetTokenRepository.js'
 import { SqliteLogRepository } from '@/infrastructure/persistence/sqlite/logRepository.js'
+import { SqliteTwoFactorChallengeRepository } from '@/infrastructure/persistence/sqlite/twoFactorChallengeRepository.js'
+import { SqliteTwoFactorRecoveryCodeRepository } from '@/infrastructure/persistence/sqlite/twoFactorRecoveryCodeRepository.js'
 import type { AppConfig } from '@/infrastructure/configuration/index.js'
 
 /** Composicion de la capa de persistencia: una conexion SQLite y sus repositorios. */
@@ -16,6 +18,8 @@ export interface PersistenceRepositories {
   readonly tokenStore: SqliteRefreshTokenStore
   readonly passwordResetTokenRepo: SqlitePasswordResetTokenRepository
   readonly logRepo: SqliteLogRepository
+  readonly twoFactorChallengeRepo: SqliteTwoFactorChallengeRepository
+  readonly twoFactorRecoveryCodeRepo: SqliteTwoFactorRecoveryCodeRepository
 }
 
 /** Crea los repositorios SQLite y devuelve la conexion compartida. */
@@ -28,5 +32,7 @@ export function createPersistenceRepositories(config: AppConfig): PersistenceRep
     tokenStore: new SqliteRefreshTokenStore(db),
     passwordResetTokenRepo: new SqlitePasswordResetTokenRepository(db),
     logRepo: new SqliteLogRepository(db),
+    twoFactorChallengeRepo: new SqliteTwoFactorChallengeRepository(db),
+    twoFactorRecoveryCodeRepo: new SqliteTwoFactorRecoveryCodeRepository(db),
   }
 }

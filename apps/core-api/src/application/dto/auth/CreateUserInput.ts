@@ -10,7 +10,16 @@ import type { User } from '@/domain/entities/User.js'
  */
 export type CreateUserInput = Omit<
   User,
-  'id' | 'createdAt' | 'isWorkshop' | 'isAdmin' | 'failedLoginAttempts' | 'lockedUntil' | 'role'
+  | 'id'
+  | 'createdAt'
+  | 'isWorkshop'
+  | 'isAdmin'
+  | 'failedLoginAttempts'
+  | 'lockedUntil'
+  | 'role'
+  // El segundo factor nunca se elige al crear la cuenta: se da de alta despues,
+  // desde el perfil, y en dos pasos.
+  | 'twoFactorEnabled'
 > & {
   role?: 'user' | 'admin'
 }

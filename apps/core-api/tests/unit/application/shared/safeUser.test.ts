@@ -73,9 +73,7 @@ describe('toSafeUser — ningun secreto se cuela en la proyeccion publica', () =
   })
 
   it('no expone ninguna clave cuyo nombre huela a secreto', () => {
-    const leaked = Object.keys(toSafeUser(user)).filter((key) =>
-      /secret|token|password/i.test(key),
-    )
+    const leaked = Object.keys(toSafeUser(user)).filter((key) => /secret|token|password/i.test(key))
 
     expect(leaked).toEqual([])
   })

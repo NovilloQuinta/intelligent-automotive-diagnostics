@@ -12,11 +12,16 @@ import { createAuthMiddleware } from '@/infrastructure/http/middleware/auth.midd
 import { createAuthRoutes } from '@/infrastructure/http/routes/auth.routes.js'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
 import { createProfileRoutes } from '@/infrastructure/http/routes/profile.routes.js'
+import {
+  createTwoFactorAuthRoutes,
+  createTwoFactorProfileRoutes,
+} from '@/infrastructure/http/routes/twoFactor.routes.js'
 import { createAdminRoutes } from '@/infrastructure/http/routes/admin.routes.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 import type { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 import type { ProfileController } from '@/infrastructure/http/controllers/ProfileController.js'
+import type { TwoFactorController } from '@/infrastructure/http/controllers/TwoFactorController.js'
 import type { AdminController } from '@/infrastructure/http/controllers/AdminController.js'
 import type { RequestHandler } from 'express'
 
@@ -40,6 +45,8 @@ export interface ServerDependencies {
   readonly authController: AuthController
   readonly diagnosisController: DiagnosisController
   readonly profileController?: ProfileController
+  /** `undefined` en tests que no ejercitan el segundo factor. */
+  readonly twoFactorController?: TwoFactorController
   /** `undefined` en tests que no ejercitan `/api/admin` (evita cablear el stack completo). */
   readonly adminController?: AdminController
   /** Construido en `composition.ts` con `createRequireAdmin(userRepo)`. */
@@ -192,6 +199,18 @@ function mountAuthRoutes(
   })
 
   app.use('/api/auth', createRateLimiter({ namespace: 'auth', windowMinutes: 15, maxRequests: 20 }))
+
+  if (deps.twoFactorController) {
+    // Seis digitos son un millon de combinaciones: sin freno propio, el segundo
+    // paso seria el eslabon barato de la cadena.
+    const verifyLimiter = createRateLimiter({
+      namespace: 'auth:2fa-verify',
+      windowMinutes: 1,
+      maxRequests: 5,
+    })
+    app.use('/api/auth/2fa', createTwoFactorAuthRoutes(deps.twoFactorController, verifyLimiter))
+  }
+
   app.use(
     '/api/auth',
     createAuthRoutes(
@@ -300,6 +319,20 @@ export function createServer(deps: ServerDependencies): express.Application {
       maxRequests: 5,
     })
     app.use('/api/profile', createProfileRoutes(deps.profileController, changePasswordLimiter))
+  }
+
+  if (deps.twoFactorController) {
+    // Desactivar el segundo factor merece el mismo freno que cambiar la contrasena:
+    // las dos cosas se hacen con contrasena y las dos son irreversibles de facto.
+    const disableLimiter = createRateLimiter({
+      namespace: 'profile:2fa-disable',
+      windowMinutes: 15,
+      maxRequests: 5,
+    })
+    app.use(
+      '/api/profile/2fa',
+      createTwoFactorProfileRoutes(deps.twoFactorController, disableLimiter),
+    )
   }
 
   mountAdminRoutes(app, deps)

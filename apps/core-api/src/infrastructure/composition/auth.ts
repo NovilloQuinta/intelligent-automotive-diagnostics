@@ -1,6 +1,7 @@
 import { createAuthService } from '@/infrastructure/services/authService.js'
 import { RegisterUserUseCase } from '@/application/use-cases/RegisterUserUseCase.js'
 import { LoginUserUseCase } from '@/application/use-cases/LoginUserUseCase.js'
+import type { TwoFactorLoginSupport } from '@/application/use-cases/LoginUserUseCase.js'
 import { RefreshTokenUseCase } from '@/application/use-cases/RefreshTokenUseCase.js'
 import { GetCurrentUserUseCase } from '@/application/use-cases/GetCurrentUserUseCase.js'
 import { LogoutUserUseCase } from '@/application/use-cases/LogoutUserUseCase.js'
@@ -39,6 +40,7 @@ export function createAuthStack(
   repos: Pick<PersistenceRepositories, 'userRepo' | 'tokenStore' | 'passwordResetTokenRepo'>,
   emailSender: EmailSenderPort,
   logger: LoggerPort,
+  twoFactorLogin?: TwoFactorLoginSupport,
 ): AuthStack {
   const authService = createAuthService({
     accessTokenSecret: config.ACCESS_TOKEN_SECRET,
@@ -63,6 +65,7 @@ export function createAuthStack(
       repos.tokenStore,
       refreshTokenTtlMs,
       logger,
+      twoFactorLogin,
     ),
     refreshUseCase: new RefreshTokenUseCase(authService, logger),
     getCurrentUserUseCase: new GetCurrentUserUseCase(repos.userRepo),

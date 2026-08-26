@@ -4,10 +4,15 @@ import type { Router, RequestHandler } from 'express'
 import { openApiSpec } from '@/infrastructure/http/openapi/buildOpenApiDocument.js'
 import { createAuthRoutes } from '@/infrastructure/http/routes/auth.routes.js'
 import { createProfileRoutes } from '@/infrastructure/http/routes/profile.routes.js'
+import {
+  createTwoFactorAuthRoutes,
+  createTwoFactorProfileRoutes,
+} from '@/infrastructure/http/routes/twoFactor.routes.js'
 import { createAdminRoutes } from '@/infrastructure/http/routes/admin.routes.js'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
 import type { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 import type { ProfileController } from '@/infrastructure/http/controllers/ProfileController.js'
+import type { TwoFactorController } from '@/infrastructure/http/controllers/TwoFactorController.js'
 import type { AdminController } from '@/infrastructure/http/controllers/AdminController.js'
 import type { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 
@@ -55,6 +60,10 @@ function collectRoutes(router: Router, prefix: string): string[] {
  *
  * Los prefijos replican los puntos de montaje de `server.ts`. `requireAuth` se pasa
  * porque `GET /api/auth/me` solo se registra cuando existe.
+ *
+ * **Limite conocido de esta comprobacion**: la lista de routers se mantiene a mano.
+ * Un router nuevo que no se anada aqui queda fuera del contraste y sus rutas pueden
+ * servirse sin documentar sin que nada falle. Al crear un router, anadirlo aqui.
  */
 function actualRoutes(): string[] {
   const noop: RequestHandler = () => {}
@@ -66,6 +75,14 @@ function actualRoutes(): string[] {
     ...collectRoutes(
       createProfileRoutes(stubController<ProfileController>(), noop),
       '/api/profile',
+    ),
+    ...collectRoutes(
+      createTwoFactorAuthRoutes(stubController<TwoFactorController>(), noop),
+      '/api/auth/2fa',
+    ),
+    ...collectRoutes(
+      createTwoFactorProfileRoutes(stubController<TwoFactorController>(), noop),
+      '/api/profile/2fa',
     ),
     ...collectRoutes(createAdminRoutes(stubController<AdminController>()), '/api/admin'),
     ...collectRoutes(createDiagnosisRoutes(stubController<DiagnosisController>()), '/api'),

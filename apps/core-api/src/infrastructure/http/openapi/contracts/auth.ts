@@ -107,3 +107,45 @@ export const messageAckSchema = z
       .describe('Texto generico, identico exista o no la cuenta, para no filtrar usuarios'),
   })
   .describe('Acuse de `POST /api/auth/forgot-password`')
+
+/**
+ * Respuesta de `POST /api/auth/login` cuando la cuenta tiene segundo factor.
+ *
+ * No lleva tokens **a proposito**: hasta canjear el reto no hay sesion. El campo
+ * `twoFactorRequired` es el discriminante que la SPA usa para decidir si navega al
+ * escritorio o pide el codigo.
+ */
+export const twoFactorChallengeSchema = z
+  .object({
+    twoFactorRequired: z.literal(true).describe('Siempre `true` en esta variante'),
+    challengeToken: z
+      .string()
+      .describe('Vale opaco de un solo uso que se presenta en `POST /api/auth/2fa/verify`'),
+    expiresAt: z.string().describe('Caducidad del reto en ISO-8601'),
+  })
+  .describe('Primer factor superado: falta el codigo del segundo')
+
+/** Datos que devuelve `POST /api/profile/2fa/setup` para registrar la app autenticadora. */
+export const twoFactorSetupSchema = z
+  .object({
+    otpauthUri: z.string().describe('URI `otpauth://` que codifica el QR'),
+    qrDataUri: z.string().describe('El QR ya renderizado, embebible en un `<img src>`'),
+    secret: z
+      .string()
+      .describe('Secreto en Base32, para quien no pueda escanear el QR y lo teclee'),
+  })
+  .describe('Alta preparada: el segundo factor **aun no esta activo**')
+
+/**
+ * Codigos de recuperacion que devuelve `POST /api/profile/2fa/activate`.
+ *
+ * Es la unica respuesta del sistema que los contiene en claro: a partir de aqui solo
+ * quedan sus hashes.
+ */
+export const twoFactorRecoveryCodesSchema = z
+  .object({
+    recoveryCodes: z
+      .array(z.string())
+      .describe('Diez codigos de un solo uso. No vuelven a mostrarse nunca'),
+  })
+  .describe('Segundo factor activado, con sus codigos de recuperacion')
