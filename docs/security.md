@@ -9,12 +9,12 @@ API REST (Express 5) + SPA (React 19 / TanStack Start). Autenticación JWT + bcr
 | Threat | Mitigation |
 |--------|-----------|
 | **A01 Broken Access Control** | JWT Bearer auth middleware, refresh token rotation, account lockout (5 fails → 15 min), `userType` stored for future RBAC |
-| **A02 Cryptographic Failures** | bcrypt 12 rounds, JWT with `jti` UUID, separate secrets for access/refresh, production secret assertion at boot |
+| **A02 Cryptographic Failures** | bcrypt 12 rounds, JWT with `jti` UUID, separate secrets for access/refresh, production secret assertion at boot. El secreto TOTP se guarda cifrado con AES-256-GCM (IV aleatorio por cifrado y tag de autenticacion), con la clave fuera de la base. Los retos de segundo factor y los codigos de recuperacion se guardan hasheados con SHA-256, no en claro |
 | **A03 Injection** | Drizzle ORM (parameterized queries), Zod validation on all inputs, JSON body limit 10 KB |
 | **A04 Insecure Design** | Clean Architecture, Zod DTOs in application layer, rate limiting on auth endpoints |
 | **A05 Security Misconfiguration** | Helmet 8 (CSP `default-src 'none'`, HSTS 1yr, `X-Frame-Options: DENY`), CORS allowlist, `trust proxy` |
 | **A06 Vulnerable Components** | `pnpm audit` in CI, up-to-date dependencies |
-| **A07 Auth Failures** | bcrypt + JWT, password complexity (uppercase+number+special), account lockout, 5 req/min login rate limit |
+| **A07 Auth Failures** | bcrypt + JWT, password complexity (uppercase+number+special), account lockout, 5 req/min login rate limit, **segundo factor TOTP** con codigos de recuperacion de un solo uso y obligatorio para administradores. Un codigo incorrecto cuenta para el mismo bloqueo que una contrasena incorrecta |
 | **A08 Data Integrity** | Zod validation on all DTOs, `pnpm-lock.yaml` for reproducible installs |
 | **A09 Logging & Monitoring** | Pino structured logs + SQLite persistence, audit log with IP/UA/duration/userId, security event logging (login success/fail, refresh, register, logout, lockout) |
 | **A10 SSRF** | LLM URLs from env config only, 30s HTTP timeout on external calls |
@@ -26,9 +26,9 @@ Las diez categorías, con la mitigación real y el fichero donde vive. Donde no 
 | Threat | Mitigation |
 |--------|-----------|
 | **API1 Broken Object Level Auth** | JWT `sub` → `userId`, y las consultas por recurso filtran por propietario: `getDiagnosisSession(id, userId)` devuelve 404 —no 403— si la sesión es de otro usuario, para no filtrar su existencia. El listado de historial va siempre acotado por `userId` |
-| **API2 Broken Authentication** | bcrypt 12 rondas, JWT con `jti` UUID y secretos separados para access/refresh; rotación de refresh tokens con `revoked_at`; bloqueo de cuenta (5 fallos → 15 min, respuesta 423 con `Retry-After`) que no se prolonga al insistir; tokens de reseteo hasheados SHA-256, de un solo uso y con TTL; `assertProductionSecrets` aborta el arranque si los secretos siguen con valor plantilla |
+| **API2 Broken Authentication** | bcrypt 12 rondas, JWT con `jti` UUID y secretos separados para access/refresh; rotación de refresh tokens con `revoked_at`; bloqueo de cuenta (5 fallos → 15 min, respuesta 423 con `Retry-After`) que no se prolonga al insistir; tokens de reseteo hasheados SHA-256, de un solo uso y con TTL; `assertProductionSecrets` aborta el arranque si los secretos siguen con valor plantilla. **Segundo factor TOTP**: el login con 2FA activa devuelve un reto opaco de un solo uso y 5 min de vida —hasheado en base, revocable— en lugar de tokens, y solo `POST /api/auth/2fa/verify` los emite. Obligatorio para administradores |
 | **API3 Broken Object Property Level Auth** | Los schemas Zod actúan como allowlist de propiedades en la capa de aplicación: lo que no está declarado no entra. Las respuestas se proyectan campo a campo en el controller, así que un campo nuevo en BD no se filtra solo |
-| **API4 Unrestricted Resource Consumption** | Rate limits por familia: login 5/min, refresh 10/min, auth 20/15min, diagnóstico 20/min, cognitivo 5/min, admin 30/min, global 100/15min. Límite de body 10 KB por defecto y 1 MB en el endpoint cognitivo. Presupuesto de búsqueda web: `MAX_WEB_SEARCHES_PER_SESSION = 3`. Timeout de 30 s en llamadas externas. Los contadores se guardan en SQLite, con un namespace por limitador, de modo que reiniciar el proceso no devuelve la cuota y agotar una familia no agota las demás. `RATE_LIMIT_ENABLED` decide si se aplican; sin declarar, solo en producción |
+| **API4 Unrestricted Resource Consumption** | Rate limits por familia: login 5/min, refresh 10/min, auth 20/15min, diagnóstico 20/min, cognitivo 5/min, admin 30/min, global 100/15min. Límite de body 10 KB por defecto y 1 MB en el endpoint cognitivo. Presupuesto de búsqueda web: `MAX_WEB_SEARCHES_PER_SESSION = 3`. Timeout de 30 s en llamadas externas. Los contadores se guardan en SQLite, con un namespace por limitador, de modo que reiniciar el proceso no devuelve la cuota y agotar una familia no agota las demás. `RATE_LIMIT_ENABLED` decide si se aplican; sin declarar, solo en producción. `POST /api/auth/2fa/verify` lleva el suyo (5/min): seis dígitos son 10⁶ combinaciones |
 | **API5 Broken Function Level Auth** | Todo `/api/*` detrás del middleware de autenticación; las rutas de administración van además detrás de `requireAdmin` (`admin.middleware.ts`), montado antes que el router de admin, de modo que un usuario con rol `user` no alcanza ningún handler |
 | **API6 Unrestricted Access to Sensitive Business Flows** | Los flujos caros son los que llaman al LLM y a la red: el diagnóstico cognitivo lleva el límite más estricto (5/min) y la búsqueda web un presupuesto por sesión. El borrado de DTC (`Service 04`), único flujo destructivo, tiene su propio limiter y se desactiva por completo con `OBD_READ_ONLY=true` |
 | **API7 Server Side Request Forgery** | El usuario no controla ninguna URL de salida: las del LLM salen de configuración por entorno y la búsqueda web va contra un proveedor fijo (SerpAPI, `SERPAPI_BASE_URL` constante en `serpApiClient.ts`) con la consulta como parámetro, nunca como destino. Timeout de 30 s |
@@ -74,15 +74,21 @@ existe para medir esto último; los casos de seguridad se exigen 3/3.
    asignado**: pasar el refresco a cookie `httpOnly` + `Secure` + `SameSite` y anadir
    proteccion CSRF explicita.
 
-2. **Ausencia de segundo factor** — una contrasena filtrada o pescada entra sin friccion, y
-   `/api/admin` (todos los usuarios, los logs y la auditoria) queda detras de esa unica
-   contrasena. **Pendiente, con trabajo asignado**: TOTP (RFC 6238) con alta por QR,
-   verificacion en el login, codigos de recuperacion de un solo uso hasheados, y obligatorio
-   para administradores.
+2. **Ausencia de segundo factor** — **CERRADO** el 2026-08-26 con TOTP (RFC 6238): alta por
+   QR en el perfil, verificacion en el login como segundo paso, diez codigos de recuperacion
+   de un solo uso guardados hasheados, y desactivacion que exige contrasena **y** codigo.
+   Opcional para el usuario corriente y **obligatorio para administradores**: sin el, el panel
+   responde 403. Lo que queda del riesgo es que la 2FA es opcional para el resto, asi que una
+   cuenta que no la active sigue dependiendo de un solo factor — decision del producto, no un
+   descuido.
 
 3. **La base SQLite no esta cifrada en reposo** — quien obtenga el fichero `.db` lee el
    historico de diagnosticos, los emails y los datos de perfil. Los hashes de contrasena son
-   bcrypt, asi que no sirven para entrar.
+   bcrypt, asi que no sirven para entrar. El **secreto TOTP** si seria una llave —quien lo lea
+   genera codigos validos indefinidamente—, y por eso va cifrado a nivel de columna con
+   AES-256-GCM y clave en `TOTP_ENCRYPTION_KEY`, que no vive en la base: un volcado del `.db`
+   ya no basta para anular el segundo factor. Eso **no** es cifrado en reposo, y no cubre a
+   quien ejecute codigo en el servidor, porque el proceso necesita la clave para funcionar.
    **DECISION ABIERTA**, no asumida. Dos caminos reales, ninguno atado a un cambio de motor:
    cifrado de disco en el VPS (fuera del codigo; protege ante robo del disco, no ante acceso
    al contenedor) o SQLCipher (cifra el fichero entero, transparente para Drizzle, toca

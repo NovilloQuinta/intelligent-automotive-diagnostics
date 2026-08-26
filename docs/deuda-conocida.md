@@ -4,10 +4,10 @@
 > de editar aqui**: este fichero se ha desincronizado dos veces por actualizarlo
 > de memoria.
 >
-> Estado general: 2204 tests en verde (1587 core-api + 617 ui), 0 errores de lint, 77 avisos (70 + 7).
-> Remedido el 2026-08-26 al persistir los contadores de rate limiting. Las cifras anteriores
-> (2131 tests, 76 avisos) se habian quedado atras: `develop` traia ya 1554 + 617 tests y
-> 71 + 7 avisos antes de este cambio.
+> Estado general: 2360 tests en verde (1717 core-api + 643 ui), 0 errores de lint, 77 avisos (70 + 7).
+> Remedido el 2026-08-26 al cerrar el segundo factor TOTP. Antes de las dos tareas de
+> seguridad de ese dia, `develop` estaba en 1554 + 617 tests y 71 + 7 avisos; las cifras que
+> figuraban aqui (2131 tests, 76 avisos) ya se habian quedado atras por su cuenta.
 > Nada de lo que sigue es bloqueante.
 
 ## Bateria del agente: construida, sin ejecutar
@@ -255,6 +255,34 @@ lecturas devuelven `NO DATA`.
 
 La causa del `live-data` en null **sigue sin identificar**. Si reaparece, esta pista ya esta
 gastada y hay que mirar en otro sitio.
+
+## El esquema de `users` esta escrito a mano en seis ficheros de test
+
+Detectado el 2026-08-26 al anadir dos columnas para el segundo factor: hubo que tocar
+**seis** ficheros de test que declaran su propio `CREATE TABLE users` en SQL crudo
+(`admin.integration`, `auth.integration`, `userRepository` —tres tablas—, `vehicleRepository`,
+`refreshTokenStore`, `passwordResetTokenRepository`).
+
+Esas copias derivan de `schema.ts` sin que nada lo compruebe: si una se queda atras, su test
+falla con un error de SQL que no dice nada del origen real. El patron viene de antes y no lo
+introdujo este cambio, pero cada columna nueva lo hace mas caro.
+
+La salida barata es lo que ya hacen `db.test.ts` y los tests del segundo factor: `resetDb()` +
+`getDb()`, que aplica las migraciones reales sobre una base en memoria. Ademas de no duplicar
+nada, ejercita la migracion generada, que es justo lo que en produccion puede fallar.
+
+## `openapiSync.test.ts` no ve los routers que no se le declaran
+
+El test recorre los routers de Express y falla si sirven una ruta sin documentar. Pero la
+lista de routers **se mantiene a mano** dentro del propio test.
+
+Al anadir `twoFactor.routes.ts` en el cambio del segundo factor, el test siguio en verde con
+cuatro rutas sin documentar. Solo salto al anadir el router nuevo a esa lista. La garantia,
+entonces, no es "toda ruta servida esta documentada", sino "toda ruta de los routers que
+alguien se acordo de declarar".
+
+Cerrarlo pide que la lista salga de un sitio unico —el propio `createServer`, o un registro
+explicito de routers— en vez de repetirse en el test.
 
 ## Coverage: cuatro ficheros de composicion incumplen el umbral
 
