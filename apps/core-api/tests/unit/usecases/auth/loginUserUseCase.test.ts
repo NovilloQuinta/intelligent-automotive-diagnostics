@@ -3,6 +3,7 @@ import {
   LoginUserUseCase,
   InvalidCredentialsError,
   AccountLockedError,
+  TwoFactorNotConfiguredError,
 } from '@/application/use-cases/LoginUserUseCase.js'
 import type { UserRepository } from '@/application/ports/UserRepository.js'
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
@@ -163,5 +164,133 @@ describe('LoginUserUseCase', () => {
     })
 
     expect(result.accessToken).toBe('access-abc')
+  })
+})
+
+describe('LoginUserUseCase — segundo factor', () => {
+  const USER_2FA = { ...USER, twoFactorEnabled: true } as User
+
+  function createUseCaseWith2fa(overrides: Parameters<typeof createMocks>[0] = {}) {
+    const mocks = createMocks({
+      ...overrides,
+      userRepo: { findByEmail: vi.fn().mockResolvedValue(USER_2FA), ...overrides.userRepo },
+    })
+    const challengeRepo = {
+      save: vi.fn().mockResolvedValue(undefined),
+      findByTokenHash: vi.fn().mockResolvedValue(null),
+      markUsed: vi.fn().mockResolvedValue(undefined),
+      invalidateAllForUser: vi.fn().mockResolvedValue(undefined),
+    }
+    const useCase = new LoginUserUseCase(
+      mocks.userRepo,
+      mocks.authService,
+      mocks.tokenStore,
+      604800000,
+      undefined,
+      { challengeRepo, challengeTtlMs: 5 * 60 * 1000 },
+    )
+    return { useCase, mocks, challengeRepo }
+  }
+
+  const credentials = { email: 'juan@mail.com', password: 'Password1!' }
+
+  it('no entrega tokens si el usuario tiene el segundo factor activo', async () => {
+    const { useCase } = createUseCaseWith2fa()
+
+    const result = await useCase.execute(credentials)
+
+    expect(result.twoFactorRequired).toBe(true)
+    expect(result).not.toHaveProperty('accessToken')
+    expect(result).not.toHaveProperty('refreshToken')
+  })
+
+  it('devuelve un reto con su caducidad', async () => {
+    const { useCase } = createUseCaseWith2fa()
+
+    const result = await useCase.execute(credentials)
+
+    expect(result).toMatchObject({
+      twoFactorRequired: true,
+      challengeToken: expect.any(String),
+      expiresAt: expect.any(String),
+    })
+  })
+
+  it('guarda el reto hasheado, nunca en claro', async () => {
+    const { useCase, challengeRepo } = createUseCaseWith2fa()
+
+    const result = await useCase.execute(credentials)
+
+    const [, savedHash] = challengeRepo.save.mock.calls[0] as [number, string, string]
+    expect(savedHash).not.toBe((result as { challengeToken: string }).challengeToken)
+    expect(savedHash).toMatch(/^[a-f0-9]{64}$/)
+  })
+
+  it('emite un reto distinto en cada login', async () => {
+    const { useCase } = createUseCaseWith2fa()
+
+    const primero = await useCase.execute(credentials)
+    const segundo = await useCase.execute(credentials)
+
+    expect((primero as { challengeToken: string }).challengeToken).not.toBe(
+      (segundo as { challengeToken: string }).challengeToken,
+    )
+  })
+
+  it('invalida los retos anteriores del usuario al emitir uno nuevo', async () => {
+    const { useCase, challengeRepo } = createUseCaseWith2fa()
+
+    await useCase.execute(credentials)
+
+    expect(challengeRepo.invalidateAllForUser).toHaveBeenCalledWith(USER_2FA.id)
+  })
+
+  it('no emite reto si la contrasena es incorrecta', async () => {
+    const { useCase, challengeRepo } = createUseCaseWith2fa({
+      authService: { comparePassword: vi.fn().mockResolvedValue(false) },
+    })
+
+    await expect(useCase.execute(credentials)).rejects.toThrow(InvalidCredentialsError)
+    expect(challengeRepo.save).not.toHaveBeenCalled()
+  })
+
+  it('el usuario sin segundo factor sigue recibiendo tokens', async () => {
+    const mocks = createMocks()
+    const useCase = new LoginUserUseCase(
+      mocks.userRepo,
+      mocks.authService,
+      mocks.tokenStore,
+      604800000,
+      undefined,
+      {
+        challengeRepo: {
+          save: vi.fn(),
+          findByTokenHash: vi.fn(),
+          markUsed: vi.fn(),
+          invalidateAllForUser: vi.fn(),
+        },
+        challengeTtlMs: 300000,
+      },
+    )
+
+    const result = await useCase.execute(credentials)
+
+    expect(result).toMatchObject({ twoFactorRequired: false, accessToken: 'access-abc' })
+  })
+
+  it('falla cerrado: sin repositorio de retos, un usuario con 2FA no entra', async () => {
+    // Si el cableado se rompe, la alternativa seria emitir tokens saltandose el
+    // segundo factor. Mejor un error visible que una puerta abierta en silencio.
+    const mocks = createMocks({
+      userRepo: { findByEmail: vi.fn().mockResolvedValue(USER_2FA) },
+    })
+    const useCase = new LoginUserUseCase(
+      mocks.userRepo,
+      mocks.authService,
+      mocks.tokenStore,
+      604800000,
+    )
+
+    await expect(useCase.execute(credentials)).rejects.toThrow(TwoFactorNotConfiguredError)
   })
 })
