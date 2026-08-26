@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:e2e:ci": "playwright test tests/e2e/auth.spec.ts tests/e2e/logout.spec.ts tests/e2e/twoFactor.spec.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

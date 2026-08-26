@@ -57,3 +57,56 @@ jobs:
       - name: Audit
         run: pnpm audit --audit-level=critical
         working-directory: .
+
+  # Recorridos de punta a punta con navegador real. Van en un job aparte y no en
+  # la matriz de arriba porque necesitan las DOS apps levantadas a la vez, y esa
+  # matriz corre una por trabajo con `working-directory` fijo.
+  #
+  # Este job existe porque un bug de login paso los 643 tests unitarios de la UI,
+  # `pnpm verify` y el CI entero: el mock del test describia una respuesta que el
+  # servidor no manda. Solo lo vio un navegador de verdad.
+  #
+  # NO cubre `dashboard.spec.ts` (6 casos): necesita los tres emuladores ELM327,
+  # que hay que construir desde `docker/elm327/Dockerfile` y publicar en
+  # 35000-35002. Esos seis siguen corriendo solo en local con el stack de Docker
+  # levantado (`pnpm test:e2e`). Anotado en `docs/deuda-conocida.md`.
+  e2e:
+    name: e2e
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # Solo Chromium: es el unico proyecto declarado en playwright.config.ts, y
+      # bajar los tres navegadores triplicaria el tiempo sin cubrir nada mas.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/ui
+
+      # `playwright.config.ts` levanta core-api y Vite por su cuenta (webServer).
+      - name: Run e2e
+        run: pnpm test:e2e:ci
+        working-directory: apps/ui
+
+      # Sin esto, un fallo en CI deja solo el texto del error: el informe lleva la
+      # captura del momento exacto, que es lo que hace falta para diagnosticarlo.
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: apps/ui/playwright-report/
+          retention-days: 7
