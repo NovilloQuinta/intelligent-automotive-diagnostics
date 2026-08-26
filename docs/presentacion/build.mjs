@@ -1238,6 +1238,73 @@ function pie(s) {
   )
 }
 
+// ======= OWASP API TOP 10 =================================================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('OWASP API Top 10 2023', {
+    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('Las diez categorías, con la medida que se aplicó en el código.', {
+    x: 0.85, y: 1.62, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  const owasp = [
+    ['API1', 'Autorización de objeto', 'Las consultas filtran por propietario: la sesión de otro usuario devuelve 404, no 403'],
+    ['API2', 'Autenticación', 'bcrypt de 12 rondas, rotación de refresh tokens y bloqueo de cuenta a los 5 fallos'],
+    ['API3', 'Propiedades del objeto', 'Los esquemas Zod son la allowlist de campos: lo no declarado no entra'],
+    ['API4', 'Consumo de recursos', 'Límites por familia: login 5/min, diagnóstico 20/min, cognitivo 5/min; body de 10 KB'],
+    ['API5', 'Autorización de función', 'Todo /api tras el middleware de sesión; administración tras requireAdmin'],
+    ['API6', 'Flujos de negocio sensibles', 'El borrado de códigos de avería lleva límite propio y se apaga con OBD_READ_ONLY'],
+    ['API7', 'SSRF', 'El usuario no controla ninguna URL de salida: proveedor fijo y timeout de 30 s'],
+    ['API8', 'Configuración', 'Helmet 8 con CSP default-src none, HSTS de un año y allowlist de CORS'],
+    ['API9', 'Inventario de la API', 'Especificación OpenAPI versionada y servida por la propia API'],
+    ['API10', 'Consumo de APIs externas', 'Lo recuperado llega al modelo marcado como no fiable, nunca como instrucción'],
+  ]
+  owasp.forEach(([codigo, nombre, medida], k) => {
+    const y = 2.28 + k * 0.44
+    s.addText(codigo, {
+      x: 0.85, y, w: 0.75, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Arial', fontSize: 12, bold: true, color: AZUL,
+    })
+    s.addText(nombre, {
+      x: 1.62, y, w: 3.1, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Arial', fontSize: 12, bold: true, color: TINTA,
+    })
+    s.addText(medida, {
+      x: 4.8, y, w: 7.65, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Calibri', fontSize: 13, color: GRIS,
+    })
+  })
+
+  pie(s)
+  s.addNotes(
+    'Esta es la tabla de seguridad. No la voy a leer entera, pero quiero que se vea que las ' +
+    'diez categorías están cubiertas con una medida concreta y no con una declaración de ' +
+    'intenciones.\n\n' +
+    'Destaco cuatro. La primera: cuando pides una sesión de diagnóstico que no es tuya, la ' +
+    'API responde 404 y no 403, para no confirmar siquiera que existe.\n\n' +
+    'La cuarta: los límites de peticiones no son uno global, van por familia. El diagnóstico ' +
+    'cognitivo, que es el que cuesta dinero porque llama al modelo, tiene el más estricto, ' +
+    'cinco por minuto.\n\n' +
+    'La sexta es la que más me importa por lo que hay al otro lado: el borrado de códigos de ' +
+    'avería es el único flujo destructivo sobre el coche, así que tiene su propio límite y ' +
+    'se puede apagar entero con una variable de entorno. Y además el adaptador valida el ' +
+    'modo OBD contra una lista blanca antes de tocar el socket, con un test de invariante ' +
+    'que falla si alguien añade un método que emita un servicio de control.\n\n' +
+    'Y la décima: todo lo que viene de fuera —la búsqueda web y los casos previos de otros ' +
+    'talleres— llega al modelo etiquetado como material no fiable, y el system prompt le ' +
+    'dice que eso es referencia y nunca una orden.\n\n' +
+    'Los riesgos residuales están escritos y asumidos, no escondidos: los tokens en ' +
+    'localStorage, la ausencia de MFA, la base sin cifrar en disco y los límites de ' +
+    'peticiones en memoria.\n\n' +
+    '[~60 s · acumulado 17:45]',
+  )
+}
+
 // ======= INTEGRACIÓN Y DESPLIEGUE CONTINUOS ===============================
 {
   const s = pres.addSlide()
@@ -1332,7 +1399,7 @@ function pie(s) {
     'yo toque nada.\n\n' +
     'La consecuencia práctica es que integrar en main es publicar. La aplicación está ' +
     'desplegada y accesible, no es una demo que solo corre en mi portátil.\n\n' +
-    '[~55 s · acumulado 17:40]',
+    '[~55 s · acumulado 18:40]',
   )
 }
 
@@ -1395,7 +1462,7 @@ function pie(s) {
     'semanas sin exigir nada. Estaba verde, y no comprobaba lo que decía comprobar. Lo he ' +
     'documentado en la deuda conocida del proyecto.\n\n' +
     'Así que sí, acelera mucho. Pero no es todo tan bonito como parece: hay que dedicarle ' +
-    'tiempo a revisar.\n\n[~45 s · acumulado 18:25]',
+    'tiempo a revisar.\n\n[~45 s · acumulado 19:25]',
   )
 }
 

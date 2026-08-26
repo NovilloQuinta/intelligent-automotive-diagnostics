@@ -1,6 +1,6 @@
 # Indice de la defensa — cerrado
 
-> 18 slides, ~18:25, en bloques: el problema, que resuelve, como funciona,
+> 19 slides, ~19:25, en bloques: el problema, que resuelve, como funciona,
 > como esta construida, las piezas, el resultado y el cierre. **Se trabaja punto por punto**: el autor cuenta que va en el punto,
 > se maqueta, se valida, y solo entonces se pasa al siguiente. Nada de adelantar slides.
 
@@ -21,11 +21,12 @@
 | 13 | Modelos empleados: lenguaje y embeddings | Las piezas | pendiente |
 | 14 | Resultados: la aplicacion en funcionamiento | El resultado | pendiente |
 | 15 | Calidad del codigo y seguridad | El resultado | pendiente |
-| 16 | Integracion y despliegue continuos | El resultado | **nueva** |
-| 17 | Conclusiones | Cierre | pendiente |
-| 18 | Gracias por la atencion | Cierre | pendiente |
+| 16 | OWASP API Top 10 2023 | El resultado | **nueva** |
+| 17 | Integracion y despliegue continuos | El resultado | validada |
+| 18 | Conclusiones | Cierre | pendiente |
+| 19 | Gracias por la atencion | Cierre | pendiente |
 
-**Suma: ~18:25.**
+**Suma: ~19:25.**
 
 ## Cambios acordados sobre la primera propuesta
 
@@ -38,6 +39,9 @@
 - **Slide de CI/CD** (2026-08-25): el despliegue automatico no aparecia en ningun sitio.
   La de calidad se queda con TDD, pruebas y seguridad, y el pipeline entero pasa a slide
   propia: integracion -> verificacion -> construccion -> publicacion -> produccion.
+- **Slide de OWASP** (2026-08-26): la de calidad solo decia que las diez categorias
+  estaban documentadas. Ahora hay una slide propia con las diez y la medida concreta
+  que se aplico en cada una, sacadas de `docs/security.md`.
 - **Slide 6 rehecha** (2026-08-26): justificaba la arquitectura con argumentos de
   manual (testabilidad, desacoplamiento) que valen para cualquier proyecto y no
   decian nada de este. Ahora enumera cinco ventajas concretas ya cobradas, sacadas
