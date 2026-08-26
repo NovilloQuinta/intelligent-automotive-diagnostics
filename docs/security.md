@@ -59,7 +59,19 @@ existe para medir esto último; los casos de seguridad se exigen 3/3.
 - React 19 auto-escapes XSS vectors
 - Tokens in `localStorage` (conscious decision: Bearer header + CORS no-credentials = CSRF-resistant; trade-off: XSS-exposable)
 - `react-hook-form` + `zodResolver` for client-side validation
-- CSP: `default-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com data:`
+- CSP servida por el nginx del contenedor de UI (`apps/ui/nginx/security-headers.conf`), que es
+  quien sirve el `dist/`:
+  `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'`.
+  `script-src` va sin `'unsafe-inline'`: el build de Vite no emite scripts en linea. El
+  `'unsafe-inline'` de `style-src` lo exigen los componentes de Radix, que posicionan popovers
+  con `style=""`. Las dos fuentes de Google las pide `src/routes/__root.tsx`.
+  Verificada en CI por el job `nginx headers`, que arranca la imagen y comprueba las cabeceras
+  en `/` y en `/assets/` — nginx corta la herencia de `add_header` en los `location` que
+  declaran el suyo, y esa es la forma silenciosa de perderla.
+  Hasta el 2026-08-26 esta linea describia una CSP que **no se servia en ningun sitio**: vivia en
+  `apps/ui/src/server.ts`, un entry de TanStack Start que el Dockerfile ni copiaba (el build es
+  SPA estatica). Ademas le faltaba `https://fonts.googleapis.com`, asi que de haberse desplegado
+  habria bloqueado la tipografia. El fichero muerto se ha borrado.
 
 ## Residual Risks
 

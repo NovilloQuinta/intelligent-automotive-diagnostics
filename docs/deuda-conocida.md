@@ -4,8 +4,9 @@
 > de editar aqui**: este fichero se ha desincronizado dos veces por actualizarlo
 > de memoria.
 >
-> Estado general: 2360 tests en verde (1717 core-api + 643 ui), 0 errores de lint, 77 avisos (70 + 7).
-> Remedido el 2026-08-26 al cerrar el segundo factor TOTP. Antes de las dos tareas de
+> Estado general: 2372 tests en verde (1717 core-api + 655 ui), 0 errores de lint, 77 avisos (70 + 7).
+> Remedido el 2026-08-26 al servir la CSP desde el nginx del contenedor de UI: +14 tests de
+> configuracion de nginx, -2 de un `src/server.ts` que no se desplegaba y se ha borrado. Antes de las dos tareas de
 > seguridad de ese dia, `develop` estaba en 1554 + 617 tests y 71 + 7 avisos; las cifras que
 > figuraban aqui (2131 tests, 76 avisos) ya se habian quedado atras por su cuenta.
 > Nada de lo que sigue es bloqueante.

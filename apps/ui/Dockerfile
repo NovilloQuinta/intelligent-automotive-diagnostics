@@ -18,6 +18,7 @@ RUN pnpm --filter ui build
 FROM nginx:alpine AS runner
 
 COPY apps/ui/nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY apps/ui/nginx/security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY --from=builder /app/apps/ui/dist /usr/share/nginx/html
 
 EXPOSE 80
