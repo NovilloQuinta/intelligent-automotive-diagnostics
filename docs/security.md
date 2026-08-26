@@ -116,12 +116,23 @@ existe para medir esto último; los casos de seguridad se exigen 3/3.
    — **no** un cambio de motor de base de datos: PostgreSQL esta descartado conscientemente
    (ver ADR-002, "Revision de Fase 4: por que no hay PostgreSQL").
 
-5. **Los puertos de los contenedores estan publicados en el host** — `docker-compose.prod.yml`
-   publica `4000` (API) y `35000`-`35002` (emuladores ELM327). Son alcanzables por IP,
-   saltandose Caddy y con ello su TLS, su HSTS y el resto de cabeceras de seguridad; los
-   emuladores ademas no piden autenticacion. Lo cerraria publicarlos en `127.0.0.1` en vez
-   de en `0.0.0.0`, o un cortafuegos en el VPS. **Solo documentado**: tocar el despliegue
-   exige verificarlo contra el VPS.
+5. **Cerrado el 2026-08-26** — los puertos de los contenedores ya no se publican en todas las
+   interfaces. `docker-compose.prod.yml` publicaba `4000` (API) y `35000`-`35002` (emuladores
+   ELM327) sin IP delante, que en Docker significa `0.0.0.0`: alcanzables por IP del VPS
+   saltandose Caddy, y por tanto sin su TLS ni sus cabeceras. Docker publica esos puertos con
+   reglas DNAT que se recorren **antes** que INPUT, asi que un `ufw deny` no los habria tapado.
+   Lo grave no eran los emuladores —no guardan datos— sino la API: con `trust proxy = 1`
+   (`server.ts:292`), correcto detras de Caddy, una peticion directa al `4000` trae un
+   `X-Forwarded-For` puesto por el atacante, y `req.ip` pasa a ser lo que el diga. Eso salta el
+   rate limit por IP (rotando la cabecera, fuerza bruta sin limite contra `/api/auth/login`) y
+   permite escribir IPs falsas en el log de auditoria. El bloqueo de cuenta, que es por usuario,
+   si seguia mordiendo.
+   Ahora la API y la UI se publican en `127.0.0.1`, que es donde Caddy las busca (corre en
+   systemd en el mismo host), y los emuladores **no se publican en absoluto**: la API los alcanza
+   por el DNS interno de compose (`ELM327_AUDI_HOST=elm327-audi`), que nunca necesito el
+   `ports:`. Desde fuera del VPS solo queda el 443.
+   **Pendiente de verificar contra el VPS**: comprobar tras el despliegue que `nc -vz IP 35000` y
+   `curl -sI http://IP:4000/health` ya no responden, y que la web sigue sirviendose.
    (Esta entrada decia antes "No HSTS in practice — docker-compose exposes plain HTTP", que
    ya no es cierto: el `Caddyfile` sirve `diag.jcodinglabs.com` con TLS de Let's Encrypt y
    emite `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`.)
