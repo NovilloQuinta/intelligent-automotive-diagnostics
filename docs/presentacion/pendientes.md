@@ -109,6 +109,9 @@ Contexto que ya esta verificado, no lo vuelvas a investigar desde cero:
   hoy no hay CSRF.
 - No existe entidad de taller: `userType` es un campo de User ('individual' | 'workshop').
   Cada taller es una cuenta, asi que filtrar por userId equivale hoy a filtrar por taller.
+  Lee la revision de Fase 4 de ADR-002 antes de proponer nada: el modelo multi-taller
+  original (`workspaces`, `activity_logs`, ...) se sustituyo a proposito por uno centrado
+  en el vehiculo y en catalogos que aprenden. No lo resucites sin justificarlo.
 
 TAREA 1 — Limites de peticiones que sobrevivan al reinicio (hazla primero)
 Hoy los contadores viven en memoria: se resetean al reiniciar y, con mas de una instancia,
@@ -145,8 +148,10 @@ aislamiento nuevo entre clientes distintos. NO lo implementes: escribe la propue
 OpenSpec con el modelo de datos, como migra lo existente y en que puntos del codigo
 cambia el filtrado. Que el autor la revise antes de tocar nada.
 
-FUERA DE ALCANCE por ahora: cifrado de la base de datos en reposo. Va ligado a la
-migracion a PostgreSQL y no tiene sentido resolverlo suelto sobre SQLite.
+FUERA DE ALCANCE: cifrado de la base de datos en reposo. Ojo, no lo justifiques con una
+migracion a PostgreSQL: ADR-002 la descarto a conciencia y no existen ni el driver `pg` ni
+DATABASE_URL. Si algun dia hace falta, la via es SQLCipher o cifrado de disco en el VPS, y
+eso es una decision de despliegue, no de codigo.
 
 Al cerrar cada tarea:
 - Actualiza `docs/security.md`: quita el riesgo residual correspondiente o reescribelo
