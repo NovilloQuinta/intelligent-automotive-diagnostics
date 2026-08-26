@@ -44,8 +44,8 @@
   del codigo: de los 23 puertos definidos, tres tienen hoy mas de un adaptador en
   produccion (`ObdRepository`, `Elm327TransportPort`, `LlmClientPort`). Cierra con
   el ejemplo dibujado: un caso de uso, un puerto, dos adaptadores. Se anade tambien el
-  motivo de la eleccion: el dominio son normas (SAE J1979, ISO 15031, ISO 3779) y
-  demostrar que se cumplen exige poder verificarlas aisladas.
+  motivo de la eleccion: el dominio son normas (SAE J1979, ISO 15031, ISO 3779), hay que
+  probarlas con test y por eso hacia falta alta testabilidad.
 - **Las tres primeras slides se funden en una** (2026-08-25): "que es", "el problema" y
   "que hace" contaban lo mismo por partes y no cerraban la idea. Ahora es una sola que
   explica el conjunto: a la izquierda donde se queda el escaner de hoy, a la derecha lo
