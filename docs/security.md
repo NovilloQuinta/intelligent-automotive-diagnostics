@@ -63,16 +63,50 @@ existe para medir esto último; los casos de seguridad se exigen 3/3.
 
 ## Residual Risks
 
-1. **Tokens in localStorage** — XSS → token theft. Mitigation: React's automatic escaping, no `dangerouslySetInnerHTML` on user data.
-2. **No MFA** — out of TFM scope; documented for future work.
-3. **SQLite at-rest encryption** — not implemented; acceptable for TFM scope.
-4. **Rate limit counters tied to one SQLite file** — el contador ya **no** se pierde al
-   reiniciar: vive en `rate_limit_counters` (SQLite via Drizzle), con un namespace por
-   limitador. Lo que queda: dos replicas sobre **volumenes distintos** siguen contando
-   cada una por su lado, asi que el limite efectivo se multiplica por el numero de
-   ficheros, no de instancias. Varias replicas sobre el mismo volumen si comparten
-   contador. Se cierra del todo con la migracion a PostgreSQL.
-5. **No HSTS in practice** — effective only under HTTPS; docker-compose exposes plain HTTP.
+> Cada entrada dice **que pasa si se explota** y **que lo cerraria**. Lo que este decidido
+> lleva quien y cuando; lo que no, queda marcado como abierto. Revisados uno a uno el
+> 2026-08-26: dos de las etiquetas que habia ("out of TFM scope", "acceptable for TFM
+> scope") no las habia decidido nadie, y una entrada describia un riesgo que ya no existe.
+
+1. **Tokens en localStorage** — un XSS puede leer el token de acceso y el de refresco y
+   suplantar al usuario hasta que caduquen. Mitigacion actual: React escapa por defecto y no
+   se usa `dangerouslySetInnerHTML` sobre datos de usuario. **Pendiente, con trabajo
+   asignado**: pasar el refresco a cookie `httpOnly` + `Secure` + `SameSite` y anadir
+   proteccion CSRF explicita.
+
+2. **Ausencia de segundo factor** — una contrasena filtrada o pescada entra sin friccion, y
+   `/api/admin` (todos los usuarios, los logs y la auditoria) queda detras de esa unica
+   contrasena. **Pendiente, con trabajo asignado**: TOTP (RFC 6238) con alta por QR,
+   verificacion en el login, codigos de recuperacion de un solo uso hasheados, y obligatorio
+   para administradores.
+
+3. **La base SQLite no esta cifrada en reposo** — quien obtenga el fichero `.db` lee el
+   historico de diagnosticos, los emails y los datos de perfil. Los hashes de contrasena son
+   bcrypt, asi que no sirven para entrar.
+   **DECISION ABIERTA**, no asumida. Dos caminos reales, ninguno atado a un cambio de motor:
+   cifrado de disco en el VPS (fuera del codigo; protege ante robo del disco, no ante acceso
+   al contenedor) o SQLCipher (cifra el fichero entero, transparente para Drizzle, toca
+   `getDb`, el `Dockerfile` y el despliegue). Pendiente medir el coste de SQLCipher en este
+   repositorio y decidir con cifras.
+
+4. **El contador de rate limiting es por fichero SQLite** — el contador ya **no** se pierde
+   al reiniciar: vive en `rate_limit_counters` (SQLite via Drizzle), con un namespace por
+   limitador. Lo que queda: varias replicas sobre **volumenes distintos** cuentan cada una
+   por su lado, asi que el limite efectivo se multiplica por el numero de ficheros. Varias
+   replicas sobre el mismo volumen si comparten contador, y hoy el despliegue es de una sola
+   instancia. Lo cerraria un almacen compartido (otra base o Redis) el dia que se escale
+   — **no** un cambio de motor de base de datos: PostgreSQL esta descartado conscientemente
+   (ver ADR-002, "Revision de Fase 4: por que no hay PostgreSQL").
+
+5. **Los puertos de los contenedores estan publicados en el host** — `docker-compose.prod.yml`
+   publica `4000` (API) y `35000`-`35002` (emuladores ELM327). Son alcanzables por IP,
+   saltandose Caddy y con ello su TLS, su HSTS y el resto de cabeceras de seguridad; los
+   emuladores ademas no piden autenticacion. Lo cerraria publicarlos en `127.0.0.1` en vez
+   de en `0.0.0.0`, o un cortafuegos en el VPS. **Solo documentado**: tocar el despliegue
+   exige verificarlo contra el VPS.
+   (Esta entrada decia antes "No HSTS in practice — docker-compose exposes plain HTTP", que
+   ya no es cierto: el `Caddyfile` sirve `diag.jcodinglabs.com` con TLS de Let's Encrypt y
+   emite `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`.)
 
 ## Security Contacts
 
