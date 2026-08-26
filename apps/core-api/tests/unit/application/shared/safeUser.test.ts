@@ -51,3 +51,36 @@ describe('stripPasswordHash', () => {
     expect(stripped).toEqual({ id: 1, username: 'juan' })
   })
 })
+
+describe('toSafeUser — ningun secreto se cuela en la proyeccion publica', () => {
+  /**
+   * `toSafeUser` incluye por exclusion: `{ passwordHash, ...resto }`. Cualquier campo
+   * que se anada a `User` se publica solo por existir, sin que nadie escriba una linea
+   * para exponerlo. Este test es lo que convierte ese descuido en un fallo de la suite.
+   */
+  const user = new User({
+    id: 1,
+    username: 'taller',
+    email: new Email('taller@example.com'),
+    passwordHash: 'hash-bcrypt',
+    userType: 'workshop',
+    createdAt: '2026-08-26T10:00:00.000Z',
+    twoFactorEnabled: true,
+  })
+
+  it('no expone el hash de contrasena', () => {
+    expect(toSafeUser(user)).not.toHaveProperty('passwordHash')
+  })
+
+  it('no expone ninguna clave cuyo nombre huela a secreto', () => {
+    const leaked = Object.keys(toSafeUser(user)).filter((key) =>
+      /secret|token|password/i.test(key),
+    )
+
+    expect(leaked).toEqual([])
+  })
+
+  it('si expone si el segundo factor esta activo, que la UI necesita', () => {
+    expect(toSafeUser(user).twoFactorEnabled).toBe(true)
+  })
+})

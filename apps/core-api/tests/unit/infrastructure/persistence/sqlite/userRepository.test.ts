@@ -43,7 +43,9 @@ describe('SqliteUserRepository', () => {
         address TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         failed_login_attempts INTEGER NOT NULL DEFAULT 0,
-        locked_until TEXT
+        locked_until TEXT,
+        two_factor_secret TEXT,
+        two_factor_enabled INTEGER NOT NULL DEFAULT 0
       );
 
       CREATE TABLE IF NOT EXISTS refresh_tokens (
@@ -281,7 +283,9 @@ describe('SqliteUserRepository — list/stats', () => {
         address TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         failed_login_attempts INTEGER NOT NULL DEFAULT 0,
-        locked_until TEXT
+        locked_until TEXT,
+        two_factor_secret TEXT,
+        two_factor_enabled INTEGER NOT NULL DEFAULT 0
       );
     `)
 
@@ -363,7 +367,9 @@ describe('SqliteUserRepository — caducidad del bloqueo', () => {
         address TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         failed_login_attempts INTEGER NOT NULL DEFAULT 0,
-        locked_until TEXT
+        locked_until TEXT,
+        two_factor_secret TEXT,
+        two_factor_enabled INTEGER NOT NULL DEFAULT 0
       );
     `)
     repo = new SqliteUserRepository(drizzle(sqlite))

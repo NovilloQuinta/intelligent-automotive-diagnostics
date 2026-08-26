@@ -127,7 +127,64 @@ export const users = sqliteTable('users', {
   createdAt: text('created_at').notNull().default("datetime('now')"),
   failedLoginAttempts: integer('failed_login_attempts').notNull().default(0),
   lockedUntil: text('locked_until'),
+  /**
+   * Secreto TOTP **cifrado** (AES-256-GCM). Nunca en claro: no es un hash como
+   * `password_hash` —que es inutil para entrar—, sino la llave que genera los
+   * codigos. La clave de descifrado vive en el entorno, no aqui.
+   */
+  twoFactorSecret: text('two_factor_secret'),
+  /**
+   * Separado del secreto a proposito: el alta guarda el secreto con el flag aun
+   * a 0 y solo lo enciende cuando el usuario demuestra que su app genera codigos
+   * validos. Sin esa separacion, un QR mal escaneado deja la cuenta inaccesible.
+   */
+  twoFactorEnabled: integer('two_factor_enabled', { mode: 'boolean' }).notNull().default(false),
 })
+
+/**
+ * Retos de segundo factor: el paso intermedio entre "la contrasena es correcta" y
+ * "aqui tienes los tokens".
+ *
+ * Es un token opaco hasheado, no un JWT, por dos motivos. Uno de correccion:
+ * `verifyAccessToken` valida el payload con un schema Zod que descarta las claves
+ * que no declara, asi que un JWT de reto firmado con el secreto de acceso pasaria
+ * por access token y el segundo factor no existiria. Otro operativo: esto se puede
+ * revocar, y un JWT de cinco minutos vive cinco minutos pase lo que pase.
+ */
+export const twoFactorChallenges = sqliteTable('two_factor_challenges', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: text('expires_at').notNull(),
+  createdAt: text('created_at').notNull().default("datetime('now')"),
+  usedAt: text('used_at'),
+})
+
+/**
+ * Codigos de recuperacion del segundo factor: un solo uso, guardados hasheados.
+ *
+ * SHA-256 y no bcrypt porque son valores aleatorios de alta entropia, no
+ * contrasenas elegidas por personas: no hay diccionario que estirar, y meter el
+ * coste de bcrypt en el camino del login no compra nada.
+ */
+export const twoFactorRecoveryCodes = sqliteTable(
+  'two_factor_recovery_codes',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id),
+    codeHash: text('code_hash').notNull(),
+    createdAt: text('created_at').notNull().default("datetime('now')"),
+    usedAt: text('used_at'),
+  },
+  (table) => ({
+    userCodeUnq: unique('two_factor_recovery_user_code').on(table.userId, table.codeHash),
+    userIdx: index('idx_two_factor_recovery_user').on(table.userId),
+  }),
+)
 
 /** Refresh tokens para renovar access tokens sin reautenticacion. */
 export const refreshTokens = sqliteTable('refresh_tokens', {

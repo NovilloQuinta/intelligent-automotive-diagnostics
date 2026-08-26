@@ -29,6 +29,22 @@ export interface UserRepository {
   /** Actualiza el hash de contraseña de un usuario. */
   updatePassword(userId: number, passwordHash: string): Promise<void>
 
+  /**
+   * Devuelve el secreto TOTP **cifrado**, o `null` si el usuario no dio de alta el
+   * segundo factor.
+   *
+   * Va por un metodo propio y no como campo de {@link User} para que no pueda
+   * colarse en las proyecciones publicas: `toSafeUser` incluye por defecto todo lo
+   * que la entidad tenga.
+   */
+  findTwoFactorSecret(userId: number): Promise<string | null>
+
+  /** Guarda el secreto TOTP cifrado, o lo borra con `null`. No activa el segundo factor. */
+  saveTwoFactorSecret(userId: number, encryptedSecret: string | null): Promise<void>
+
+  /** Enciende o apaga el segundo factor. */
+  setTwoFactorEnabled(userId: number, enabled: boolean): Promise<void>
+
   /** Actualiza parcialmente los datos de perfil de un usuario (nunca el email). */
   updateProfile(
     userId: number,

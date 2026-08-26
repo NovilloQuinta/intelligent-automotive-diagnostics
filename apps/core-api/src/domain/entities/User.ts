@@ -22,6 +22,16 @@ export class User {
   readonly createdAt: string
   readonly failedLoginAttempts: number
   readonly lockedUntil: string | null
+  /**
+   * Si el segundo factor esta activo.
+   *
+   * El **secreto** TOTP no vive aqui a proposito: `toSafeUser` construye la
+   * proyeccion publica por exclusion (`{ passwordHash, ...resto }`), asi que
+   * cualquier campo nuevo de esta entidad se publicaria solo por estar. Un
+   * secreto ahi acabaria en `GET /api/auth/me` sin que nadie escribiera una
+   * linea para exponerlo. Se lee por `UserRepository.findTwoFactorSecret`.
+   */
+  readonly twoFactorEnabled: boolean
 
   constructor(params: {
     id: number
@@ -36,6 +46,7 @@ export class User {
     createdAt: string
     failedLoginAttempts?: number
     lockedUntil?: string | null
+    twoFactorEnabled?: boolean
   }) {
     if (!params.username.trim() || params.username.trim().length < 3)
       throw new UserError('username must be at least 3 characters')
@@ -52,6 +63,7 @@ export class User {
     this.createdAt = params.createdAt
     this.failedLoginAttempts = params.failedLoginAttempts ?? 0
     this.lockedUntil = params.lockedUntil ?? null
+    this.twoFactorEnabled = params.twoFactorEnabled ?? false
   }
 
   /** Indica si el usuario es un taller. */

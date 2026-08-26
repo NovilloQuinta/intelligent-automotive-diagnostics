@@ -78,7 +78,9 @@ describe('Auth integration', () => {
         address TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         failed_login_attempts INTEGER NOT NULL DEFAULT 0,
-        locked_until TEXT
+        locked_until TEXT,
+        two_factor_secret TEXT,
+        two_factor_enabled INTEGER NOT NULL DEFAULT 0
       );
       CREATE TABLE IF NOT EXISTS refresh_tokens (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
