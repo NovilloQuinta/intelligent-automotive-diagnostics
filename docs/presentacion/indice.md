@@ -40,12 +40,12 @@
   propia: integracion -> verificacion -> construccion -> publicacion -> produccion.
 - **Slide 6 rehecha** (2026-08-26): justificaba la arquitectura con argumentos de
   manual (testabilidad, desacoplamiento) que valen para cualquier proyecto y no
-  decian nada de este. Ahora enumera cuatro ventajas concretas ya cobradas, sacadas
+  decian nada de este. Ahora enumera cinco ventajas concretas ya cobradas, sacadas
   del codigo: de los 23 puertos definidos, tres tienen hoy mas de un adaptador en
   produccion (`ObdRepository`, `Elm327TransportPort`, `LlmClientPort`). Cierra con
-  el ejemplo dibujado: un caso de uso, un puerto, dos adaptadores. Se anade tambien el
-  motivo de la eleccion: el dominio son normas (SAE J1979, ISO 15031, ISO 3779), hay que
-  probarlas con test y por eso hacia falta alta testabilidad.
+  el ejemplo dibujado: un caso de uso, un puerto, dos adaptadores. El punto 5 es la
+  testabilidad: las normativas ISO hay que probarlas con test, de ahi 2171 pruebas que
+  corren sin coche, sin servidor y sin modelo.
 - **Las tres primeras slides se funden en una** (2026-08-25): "que es", "el problema" y
   "que hace" contaban lo mismo por partes y no cerraban la idea. Ahora es una sola que
   explica el conjunto: a la izquierda donde se queda el escaner de hoy, a la derecha lo

@@ -442,12 +442,8 @@ function pie(s) {
     x: 0.85, y: 1.62, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
-  s.addText('El dominio son normas —SAE J1979, ISO 15031, ISO 3779— y hay que probarlas: hacía falta alta testabilidad.', {
-    x: 0.85, y: 1.98, w: 11.6, h: 0.36, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 15, color: GRIS,
-  })
   s.addText('Qué ha aportado en este proyecto', {
-    x: 0.85, y: 2.4, w: 11.6, h: 0.3, margin: 0, valign: 'top',
+    x: 0.85, y: 2.15, w: 11.6, h: 0.3, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 15, bold: true, color: AZUL,
   })
 
@@ -468,9 +464,13 @@ function pie(s) {
       'Dos proveedores de modelo con el mismo código de diagnóstico',
       'En las pruebas el modelo se sustituye por un doble: el flujo se verifica sin llamar a uno real.',
     ],
+    [
+      'Alta testabilidad, que es lo que exigen las normas',
+      'Las normativas ISO hay que probarlas con test: 2171 pruebas sin coche, sin servidor y sin modelo.',
+    ],
   ]
   ventajas.forEach(([titulo, detalle], k) => {
-    const y = 2.8 + k * 0.70
+    const y = 2.55 + k * 0.68
     s.addText(String(k + 1).padStart(2, '0'), {
       x: 0.85, y, w: 0.5, h: 0.32, margin: 0, valign: 'top',
       fontFace: 'Arial', fontSize: 16, bold: true, color: AZUL,
@@ -480,14 +480,14 @@ function pie(s) {
       fontFace: 'Arial', fontSize: 17, bold: true, color: TINTA,
     })
     s.addText(detalle, {
-      x: 1.45, y: y + 0.33, w: 11.0, h: 0.32, margin: 0, valign: 'top',
+      x: 1.45, y: y + 0.32, w: 11.0, h: 0.32, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 14, color: GRIS,
     })
   })
 
   // Ejemplo: un puerto, dos adaptadores
   s.addText('Un ejemplo', {
-    x: 0.85, y: 5.66, w: 11.6, h: 0.3, margin: 0, valign: 'top',
+    x: 0.85, y: 5.98, w: 11.6, h: 0.3, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 15, bold: true, color: TINTA,
   })
 
@@ -502,13 +502,11 @@ function pie(s) {
       fontFace: 'Calibri', fontSize: 16, bold: true, color: AZUL_CL,
     })
 
-  nodo('Caso de uso de diagnóstico', 0.85, 6.08, 2.9, TINTA)
-  flecha(3.75, 6.08)
-  nodo('Puerto de lectura del vehículo', 4.4, 6.08, 3.1, TINTA)
-  flecha(7.5, 5.86)
-  flecha(7.5, 6.30)
-  nodo('Lector ELM327 conectado al coche', 8.15, 5.86, 4.2, GRIS)
-  nodo('Emulador en el portátil', 8.15, 6.30, 4.2, GRIS)
+  nodo('Caso de uso de diagnóstico', 0.85, 6.34, 2.9, TINTA)
+  flecha(3.75, 6.34)
+  nodo('Puerto de lectura del vehículo', 4.4, 6.34, 3.1, TINTA)
+  flecha(7.5, 6.34)
+  nodo('Lector ELM327 conectado al coche o emulador', 8.15, 6.34, 4.4, GRIS)
 
   pie(s)
   s.addNotes(
@@ -531,9 +529,13 @@ function pie(s) {
     'Lo tercero. Cuando ya tenía funcionando el diagnóstico determinista, el que aplica las ' +
     'normas, añadí el cognitivo. El servidor MCP entró como un adaptador de infraestructura ' +
     'más, y los casos de uso que ya funcionaban se quedaron exactamente igual.\n\n' +
-    'Y lo cuarto, hay dos clientes de modelo de lenguaje, y el código de diagnóstico es el ' +
+    'Lo cuarto, hay dos clientes de modelo de lenguaje, y el código de diagnóstico es el ' +
     'mismo para los dos. En las pruebas el modelo se sustituye por un doble, así que el ' +
     'flujo cognitivo se verifica entero sin llamar a un modelo real.\n\n' +
+    'Y lo quinto, que es lo que ata todo lo anterior: la testabilidad. Las normativas ISO ' +
+    'hay que probarlas con test, y en el dominio no dependen de nada, así que se prueban ' +
+    'solas. Dos mil ciento setenta y una pruebas que corren sin coche, sin servidor y sin ' +
+    'modelo.\n\n' +
     'Abajo está el ejemplo de arriba dibujado: un caso de uso, un puerto, y dos adaptadores ' +
     'detrás.\n\n' +
     'La contrapartida está reconocida en el ADR: son más ficheros que un monolito, y el ' +
