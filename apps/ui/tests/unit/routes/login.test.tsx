@@ -5,6 +5,7 @@ const mockAuthState = {
   status: 'anonymous' as string,
   user: null as unknown,
   login: vi.fn(),
+  verifyTwoFactor: vi.fn(),
   register: vi.fn(),
   logout: vi.fn(),
 }
@@ -214,5 +215,111 @@ describe('AuthPage', () => {
     expect(regPassword.type).toBe('password')
     fireEvent.click(screen.getByLabelText('Mostrar contraseña'))
     expect(regPassword.type).toBe('text')
+  })
+})
+
+describe('AuthPage — segundo factor', () => {
+  beforeEach(() => {
+    mockAuthState.status = 'anonymous'
+    mockAuthState.user = null
+    vi.clearAllMocks()
+  })
+
+  /**
+   * Rellena credenciales y envia el primer paso.
+   *
+   * Por id y no por etiqueta: las dos pestañas se renderizan a la vez, asi que
+   * `/contraseña/i` encuentra tambien el campo del formulario de registro.
+   */
+  async function submitCredentials() {
+    fireEvent.change(document.querySelector('#login-email') as HTMLInputElement, {
+      target: { value: 'taller@example.com' },
+    })
+    fireEvent.change(document.querySelector('#login-password') as HTMLInputElement, {
+      target: { value: 'Diagnostico2026!' },
+    })
+    fireEvent.click(screen.getAllByRole('button', { name: /iniciar sesión/i })[0])
+  }
+
+  it('pide el codigo cuando el login devuelve un reto', async () => {
+    mockAuthState.login.mockResolvedValue({
+      kind: 'twoFactorRequired',
+      challengeToken: 'reto-abc',
+      expiresAt: '2026-08-26T12:05:00.000Z',
+    })
+    render(<Route.options.component />)
+
+    await submitCredentials()
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/código/i)).toBeInTheDocument()
+    })
+  })
+
+  it('canjea el reto con el codigo que se teclea', async () => {
+    mockAuthState.login.mockResolvedValue({
+      kind: 'twoFactorRequired',
+      challengeToken: 'reto-abc',
+      expiresAt: '2026-08-26T12:05:00.000Z',
+    })
+    mockAuthState.verifyTwoFactor.mockResolvedValue(undefined)
+    render(<Route.options.component />)
+    await submitCredentials()
+    await waitFor(() => expect(screen.getByLabelText(/código/i)).toBeInTheDocument())
+
+    fireEvent.change(screen.getByLabelText(/código/i), { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: /verificar/i }))
+
+    await waitFor(() => {
+      expect(mockAuthState.verifyTwoFactor).toHaveBeenCalledWith('reto-abc', '123456')
+    })
+  })
+
+  it('muestra el error si el codigo es incorrecto y deja reintentar', async () => {
+    mockAuthState.login.mockResolvedValue({
+      kind: 'twoFactorRequired',
+      challengeToken: 'reto-abc',
+      expiresAt: '2026-08-26T12:05:00.000Z',
+    })
+    mockAuthState.verifyTwoFactor.mockRejectedValue(new Error('El código no es válido'))
+    render(<Route.options.component />)
+    await submitCredentials()
+    await waitFor(() => expect(screen.getByLabelText(/código/i)).toBeInTheDocument())
+
+    fireEvent.change(screen.getByLabelText(/código/i), { target: { value: '000000' } })
+    fireEvent.click(screen.getByRole('button', { name: /verificar/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('El código no es válido')).toBeInTheDocument()
+    })
+    // El reto sigue vivo: el campo sigue ahi para reintentar sin repetir el login.
+    expect(screen.getByLabelText(/código/i)).toBeInTheDocument()
+  })
+
+  it('el boton de volver descarta el reto y devuelve al formulario', async () => {
+    mockAuthState.login.mockResolvedValue({
+      kind: 'twoFactorRequired',
+      challengeToken: 'reto-abc',
+      expiresAt: '2026-08-26T12:05:00.000Z',
+    })
+    render(<Route.options.component />)
+    await submitCredentials()
+    await waitFor(() => expect(screen.getByLabelText(/código/i)).toBeInTheDocument())
+
+    fireEvent.click(screen.getByRole('button', { name: /volver/i }))
+
+    await waitFor(() => {
+      expect(screen.queryByLabelText(/código/i)).not.toBeInTheDocument()
+    })
+  })
+
+  it('el login sin segundo factor no pide codigo', async () => {
+    mockAuthState.login.mockResolvedValue({ kind: 'tokens' })
+    render(<Route.options.component />)
+
+    await submitCredentials()
+
+    await waitFor(() => expect(mockAuthState.login).toHaveBeenCalled())
+    expect(screen.queryByLabelText(/código/i)).not.toBeInTheDocument()
   })
 })

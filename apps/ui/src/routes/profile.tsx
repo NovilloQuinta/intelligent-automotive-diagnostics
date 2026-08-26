@@ -104,9 +104,10 @@ function ProfileContent({
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="data">
-              <TabsList className="mb-6 grid w-full grid-cols-2">
+              <TabsList className="mb-6 grid w-full grid-cols-3">
                 <TabsTrigger value="data">Datos</TabsTrigger>
                 <TabsTrigger value="password">Contraseña</TabsTrigger>
+                <TabsTrigger value="security">Seguridad</TabsTrigger>
               </TabsList>
 
               <TabsContent value="data">
@@ -115,6 +116,10 @@ function ProfileContent({
 
               <TabsContent value="password">
                 <ChangePasswordForm onLogout={onLogout} />
+              </TabsContent>
+
+              <TabsContent value="security">
+                <TwoFactorSection user={user} onRefreshUser={onRefreshUser} />
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -282,5 +287,190 @@ function ChangePasswordForm({ onLogout }: { onLogout: () => Promise<void> }) {
         {isSubmitting ? 'Cambiando…' : 'Cambiar contraseña'}
       </Button>
     </form>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Two-factor section
+// ---------------------------------------------------------------------------
+
+/** Paso del alta del segundo factor que se esta mostrando. */
+type TwoFactorStep =
+  | { name: 'idle' }
+  | { name: 'scanning'; qrDataUri: string; secret: string }
+  | { name: 'activated'; recoveryCodes: string[] }
+
+/**
+ * Alta, consulta y baja del segundo factor.
+ *
+ * El alta va en dos pasos (`scanning` -> `activated`) porque el backend tampoco
+ * enciende nada hasta recibir un codigo valido: si se activara al generar el
+ * secreto, un QR mal escaneado dejaria al usuario fuera de su propia cuenta.
+ */
+function TwoFactorSection({
+  user,
+  onRefreshUser,
+}: {
+  user: AuthUser
+  onRefreshUser: () => Promise<void>
+}) {
+  const [step, setStep] = useState<TwoFactorStep>({ name: 'idle' })
+  const [code, setCode] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  /** Ejecuta una accion mostrando su error en la propia seccion. */
+  async function run(action: () => Promise<void>) {
+    setBusy(true)
+    setError(null)
+    try {
+      await action()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Ha ocurrido un problema')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const startSetup = () =>
+    run(async () => {
+      const setup = await api.setupTwoFactor()
+      setStep({ name: 'scanning', qrDataUri: setup.qrDataUri, secret: setup.secret })
+    })
+
+  const confirmSetup = () =>
+    run(async () => {
+      const { recoveryCodes } = await api.activateTwoFactor(code)
+      setCode('')
+      // Se descarta el QR del estado: el secreto viaja en claro al navegador por
+      // necesidad, pero no tiene por que quedarse ahi despues.
+      setStep({ name: 'activated', recoveryCodes })
+      await onRefreshUser()
+    })
+
+  const disable = () =>
+    run(async () => {
+      await api.disableTwoFactor({ password, code })
+      setPassword('')
+      setCode('')
+      setStep({ name: 'idle' })
+      toast.success('Segundo factor desactivado')
+      await onRefreshUser()
+    })
+
+  if (step.name === 'activated') {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-sm">
+          Guarda estos códigos de recuperación en un sitio seguro:{' '}
+          <strong>no volverán a mostrarse</strong>. Cada uno sirve una sola vez, y son tu única
+          forma de entrar si pierdes el móvil.
+        </div>
+        <ul className="grid grid-cols-2 gap-2 font-mono text-sm">
+          {step.recoveryCodes.map((recoveryCode) => (
+            <li key={recoveryCode} className="rounded border border-white/10 px-2 py-1 text-center">
+              {recoveryCode}
+            </li>
+          ))}
+        </ul>
+        <Button variant="outline" className="w-full" onClick={() => setStep({ name: 'idle' })}>
+          Ya los he guardado
+        </Button>
+      </div>
+    )
+  }
+
+  if (step.name === 'scanning') {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Escanea el código con tu aplicación de autenticación y confirma con el código que te
+          muestre.
+        </p>
+        <img
+          src={step.qrDataUri}
+          alt="Código QR del segundo factor"
+          className="mx-auto h-48 w-48"
+        />
+        <p className="text-center text-xs text-muted-foreground">
+          ¿No puedes escanear? Introduce esta clave a mano:
+          <br />
+          <span className="font-mono text-sm text-foreground">{step.secret}</span>
+        </p>
+        <div className="space-y-2">
+          <Label htmlFor="profile-2fa-code">Código de verificación</Label>
+          <Input
+            id="profile-2fa-code"
+            autoComplete="one-time-code"
+            inputMode="numeric"
+            placeholder="123456"
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+          />
+        </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <Button className="w-full" onClick={confirmSetup} disabled={busy || code.trim() === ''}>
+          {busy ? 'Confirmando…' : 'Confirmar'}
+        </Button>
+        <Button variant="ghost" className="w-full" onClick={() => setStep({ name: 'idle' })}>
+          Cancelar
+        </Button>
+      </div>
+    )
+  }
+
+  if (user.twoFactorEnabled) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm">
+          El segundo factor está <strong>activo</strong>. Para desactivarlo hacen falta tu
+          contraseña y un código vigente: con la sesión iniciada no basta, porque es justo lo que el
+          segundo factor protege.
+        </p>
+        <div className="space-y-2">
+          <Label htmlFor="profile-2fa-password">Contraseña</Label>
+          <PasswordInput
+            id="profile-2fa-password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="profile-2fa-disable-code">Código de verificación</Label>
+          <Input
+            id="profile-2fa-disable-code"
+            autoComplete="one-time-code"
+            inputMode="numeric"
+            placeholder="123456"
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+          />
+        </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
+        <Button
+          variant="destructive"
+          className="w-full"
+          onClick={disable}
+          disabled={busy || password === '' || code.trim() === ''}
+        >
+          {busy ? 'Desactivando…' : 'Desactivar'}
+        </Button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        Añade un segundo factor para que tu contraseña no sea lo único que protege la cuenta.
+        Necesitarás una aplicación de autenticación en el móvil.
+      </p>
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      <Button className="w-full" onClick={startSetup} disabled={busy}>
+        {busy ? 'Preparando…' : 'Activar'}
+      </Button>
+    </div>
   )
 }

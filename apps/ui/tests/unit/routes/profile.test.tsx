@@ -46,6 +46,7 @@ const mockAuthState = {
   register: vi.fn(),
   logout: vi.fn(),
   refreshUser: vi.fn(),
+  verifyTwoFactor: vi.fn(),
 }
 
 vi.mock('../../../src/lib/auth-context', () => ({
@@ -53,13 +54,28 @@ vi.mock('../../../src/lib/auth-context', () => ({
   AuthProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-const { mockUpdateProfile, mockChangePassword } = vi.hoisted(() => ({
+const {
+  mockUpdateProfile,
+  mockChangePassword,
+  mockSetupTwoFactor,
+  mockActivateTwoFactor,
+  mockDisableTwoFactor,
+} = vi.hoisted(() => ({
   mockUpdateProfile: vi.fn(),
   mockChangePassword: vi.fn(),
+  mockSetupTwoFactor: vi.fn(),
+  mockActivateTwoFactor: vi.fn(),
+  mockDisableTwoFactor: vi.fn(),
 }))
 
 vi.mock('../../../src/lib/api', () => ({
-  api: { updateProfile: mockUpdateProfile, changePassword: mockChangePassword },
+  api: {
+    updateProfile: mockUpdateProfile,
+    changePassword: mockChangePassword,
+    setupTwoFactor: mockSetupTwoFactor,
+    activateTwoFactor: mockActivateTwoFactor,
+    disableTwoFactor: mockDisableTwoFactor,
+  },
 }))
 
 vi.mock('sonner', () => ({
@@ -187,6 +203,131 @@ describe('ProfilePage', () => {
     })
     await waitFor(() => {
       expect(mockAuthState.logout).toHaveBeenCalledTimes(1)
+    })
+  })
+})
+
+describe('ProfilePage — pestaña Seguridad', () => {
+  const SETUP = {
+    otpauthUri: 'otpauth://totp/IAD:j@b.com?secret=ABC',
+    qrDataUri: 'data:image/png;base64,AAA',
+    secret: 'JBSWY3DPEHPK3PXP',
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockAuthState.status = 'authed'
+    mockAuthState.user = { ...INDIVIDUAL_USER, twoFactorEnabled: false }
+  })
+
+  /** Abre la pestaña Seguridad. Radix cambia de pestaña con `mouseDown`, no con `click`. */
+  function openSecurityTab() {
+    render(<ProfilePage />)
+    fireEvent.mouseDown(screen.getByText('Seguridad'))
+  }
+
+  it('ofrece activar el segundo factor cuando no lo tiene', async () => {
+    openSecurityTab()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /activar/i })).toBeInTheDocument()
+    })
+  })
+
+  it('al activar, pide el QR y lo muestra', async () => {
+    mockSetupTwoFactor.mockResolvedValue(SETUP)
+    openSecurityTab()
+
+    fireEvent.click(await screen.findByRole('button', { name: /activar/i }))
+
+    await waitFor(() => {
+      expect(screen.getByAltText(/qr/i)).toHaveAttribute('src', SETUP.qrDataUri)
+    })
+  })
+
+  it('muestra el secreto en texto para quien no pueda escanear', async () => {
+    mockSetupTwoFactor.mockResolvedValue(SETUP)
+    openSecurityTab()
+
+    fireEvent.click(await screen.findByRole('button', { name: /activar/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(SETUP.secret)).toBeInTheDocument()
+    })
+  })
+
+  it('confirma con el codigo y enseña los codigos de recuperacion', async () => {
+    mockSetupTwoFactor.mockResolvedValue(SETUP)
+    mockActivateTwoFactor.mockResolvedValue({ recoveryCodes: ['AB2C-XY7Z', 'QR3M-KT9P'] })
+    openSecurityTab()
+    fireEvent.click(await screen.findByRole('button', { name: /activar/i }))
+    const input = await screen.findByLabelText(/código/i)
+
+    fireEvent.change(input, { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: /confirmar/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('AB2C-XY7Z')).toBeInTheDocument()
+      expect(screen.getByText('QR3M-KT9P')).toBeInTheDocument()
+    })
+  })
+
+  it('avisa de que los codigos no se vuelven a mostrar', async () => {
+    mockSetupTwoFactor.mockResolvedValue(SETUP)
+    mockActivateTwoFactor.mockResolvedValue({ recoveryCodes: ['AB2C-XY7Z'] })
+    openSecurityTab()
+    fireEvent.click(await screen.findByRole('button', { name: /activar/i }))
+    fireEvent.change(await screen.findByLabelText(/código/i), { target: { value: '123456' } })
+    fireEvent.click(screen.getByRole('button', { name: /confirmar/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/no volverán a mostrarse/i)).toBeInTheDocument()
+    })
+  })
+
+  it('con el segundo factor activo ofrece desactivarlo', async () => {
+    mockAuthState.user = { ...INDIVIDUAL_USER, twoFactorEnabled: true }
+    openSecurityTab()
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /desactivar/i })).toBeInTheDocument()
+    })
+  })
+
+  it('desactivar exige contrasena y codigo', async () => {
+    mockAuthState.user = { ...INDIVIDUAL_USER, twoFactorEnabled: true }
+    mockDisableTwoFactor.mockResolvedValue(undefined)
+    openSecurityTab()
+
+    // Por id: la pestaña de contraseña sigue montada (oculta) y su campo tambien
+    // casa con /contraseña/i.
+    await waitFor(() => expect(document.querySelector('#profile-2fa-password')).not.toBeNull())
+    fireEvent.change(document.querySelector('#profile-2fa-password') as HTMLInputElement, {
+      target: { value: 'Diagnostico2026!' },
+    })
+    fireEvent.change(document.querySelector('#profile-2fa-disable-code') as HTMLInputElement, {
+      target: { value: '123456' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /desactivar/i }))
+
+    await waitFor(() => {
+      expect(mockDisableTwoFactor).toHaveBeenCalledWith({
+        password: 'Diagnostico2026!',
+        code: '123456',
+      })
+    })
+  })
+
+  it('muestra el error si la activacion falla', async () => {
+    mockSetupTwoFactor.mockResolvedValue(SETUP)
+    mockActivateTwoFactor.mockRejectedValue(new Error('El código no es válido'))
+    openSecurityTab()
+    fireEvent.click(await screen.findByRole('button', { name: /activar/i }))
+    fireEvent.change(await screen.findByLabelText(/código/i), { target: { value: '000000' } })
+    fireEvent.click(screen.getByRole('button', { name: /confirmar/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText('El código no es válido')).toBeInTheDocument()
     })
   })
 })

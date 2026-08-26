@@ -66,6 +66,12 @@ function AuthPage() {
   const auth = useAuth()
   const [tab, setTab] = useState<'login' | 'register'>('login')
   const [serverError, setServerError] = useState<string | null>(null)
+  /**
+   * Reto pendiente del segundo factor. Mientras exista, la tarjeta muestra el
+   * paso del codigo en vez de las pestañas: el usuario ya dio su contrasena y
+   * volver a enseñarsela solo invita a repetirla.
+   */
+  const [challengeToken, setChallengeToken] = useState<string | null>(null)
 
   if (auth.status === 'loading') {
     return (
@@ -92,53 +98,146 @@ function AuthPage() {
             <CardDescription>Conecta al sistema de diagnóstico OBD-II</CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs
-              value={tab}
-              onValueChange={(v) => {
-                setTab(v as 'login' | 'register')
-                setServerError(null)
-              }}
-            >
-              <TabsList className="mb-6 grid w-full grid-cols-2">
-                <TabsTrigger value="login">Iniciar sesión</TabsTrigger>
-                <TabsTrigger value="register">Registrarse</TabsTrigger>
-              </TabsList>
+            {challengeToken ? (
+              <TwoFactorForm
+                serverError={serverError}
+                onBack={() => {
+                  setChallengeToken(null)
+                  setServerError(null)
+                }}
+                onSubmit={async (code) => {
+                  try {
+                    setServerError(null)
+                    await auth.verifyTwoFactor(challengeToken, code)
+                    navigate({ to: '/', replace: true })
+                  } catch (e) {
+                    // El reto sigue vivo: se deja el paso abierto para reintentar
+                    // sin obligar a repetir email y contrasena.
+                    setServerError(e instanceof Error ? e.message : 'Código incorrecto')
+                  }
+                }}
+              />
+            ) : (
+              <Tabs
+                value={tab}
+                onValueChange={(v) => {
+                  setTab(v as 'login' | 'register')
+                  setServerError(null)
+                }}
+              >
+                <TabsList className="mb-6 grid w-full grid-cols-2">
+                  <TabsTrigger value="login">Iniciar sesión</TabsTrigger>
+                  <TabsTrigger value="register">Registrarse</TabsTrigger>
+                </TabsList>
 
-              <TabsContent value="login">
-                <LoginForm
-                  onSubmit={async (data) => {
-                    try {
-                      setServerError(null)
-                      await auth.login(data)
-                      navigate({ to: '/', replace: true })
-                    } catch (e) {
-                      setServerError(e instanceof Error ? e.message : 'Error al iniciar sesión')
-                    }
-                  }}
-                  serverError={serverError}
-                />
-              </TabsContent>
+                <TabsContent value="login">
+                  <LoginForm
+                    onSubmit={async (data) => {
+                      try {
+                        setServerError(null)
+                        const result = await auth.login(data)
+                        if (result.kind === 'twoFactorRequired') {
+                          setChallengeToken(result.challengeToken)
+                          return
+                        }
+                        navigate({ to: '/', replace: true })
+                      } catch (e) {
+                        setServerError(e instanceof Error ? e.message : 'Error al iniciar sesión')
+                      }
+                    }}
+                    serverError={serverError}
+                  />
+                </TabsContent>
 
-              <TabsContent value="register">
-                <RegisterForm
-                  onSubmit={async (data) => {
-                    try {
-                      setServerError(null)
-                      await auth.register(data)
-                      navigate({ to: '/', replace: true })
-                    } catch (e) {
-                      setServerError(e instanceof Error ? e.message : 'Error al registrarse')
-                    }
-                  }}
-                  serverError={serverError}
-                />
-              </TabsContent>
-            </Tabs>
+                <TabsContent value="register">
+                  <RegisterForm
+                    onSubmit={async (data) => {
+                      try {
+                        setServerError(null)
+                        await auth.register(data)
+                        navigate({ to: '/', replace: true })
+                      } catch (e) {
+                        setServerError(e instanceof Error ? e.message : 'Error al registrarse')
+                      }
+                    }}
+                    serverError={serverError}
+                  />
+                </TabsContent>
+              </Tabs>
+            )}
           </CardContent>
         </Card>
       </div>
       <FooterSection />
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Two-factor step
+// ---------------------------------------------------------------------------
+
+/**
+ * Segundo paso del inicio de sesion.
+ *
+ * Un unico campo para las dos clases de codigo: el backend distingue el TOTP del
+ * de recuperacion por su forma, asi que pedirle al usuario que elija cual esta
+ * metiendo seria trabajo suyo para nada.
+ */
+function TwoFactorForm({
+  onSubmit,
+  onBack,
+  serverError,
+}: {
+  onSubmit: (code: string) => Promise<void>
+  onBack: () => void
+  serverError: string | null
+}) {
+  const [code, setCode] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  return (
+    <form
+      className="space-y-4"
+      onSubmit={async (event) => {
+        event.preventDefault()
+        setSubmitting(true)
+        try {
+          await onSubmit(code)
+        } finally {
+          setSubmitting(false)
+        }
+      }}
+    >
+      <div className="space-y-2">
+        <RequiredLabel htmlFor="login-2fa-code">Código de verificación</RequiredLabel>
+        <Input
+          id="login-2fa-code"
+          // `one-time-code` deja que el llavero del movil ofrezca el codigo.
+          autoComplete="one-time-code"
+          inputMode="numeric"
+          autoFocus
+          placeholder="123456"
+          value={code}
+          onChange={(event) => setCode(event.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">
+          Introduce el código de tu aplicación de autenticación, o uno de tus códigos de
+          recuperación.
+        </p>
+      </div>
+      {serverError && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {serverError}
+        </div>
+      )}
+      <Button type="submit" className="w-full" disabled={submitting || code.trim() === ''}>
+        {submitting ? 'Verificando…' : 'Verificar'}
+      </Button>
+      <Button type="button" variant="ghost" className="w-full" onClick={onBack}>
+        Volver
+      </Button>
+    </form>
   )
 }
 

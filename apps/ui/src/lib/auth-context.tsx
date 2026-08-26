@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { api, AuthError } from '@/lib/api'
 import type { AuthUser, LoginInput, RegisterInput } from '@/components/dashboard/types'
+import type { LoginResult } from '@/lib/api'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,7 +20,14 @@ type AuthStatus = 'loading' | 'authed' | 'anonymous'
 type AuthState = {
   status: AuthStatus
   user: AuthUser | null
-  login: (input: LoginInput) => Promise<void>
+  /**
+   * Primer factor. Devuelve el resultado **sin tragarselo**: con segundo factor
+   * activo no hay sesion todavia, y quien llama necesita saberlo para pintar el
+   * paso del codigo en vez de navegar al escritorio.
+   */
+  login: (input: LoginInput) => Promise<LoginResult>
+  /** Segundo factor: canjea el reto y abre la sesion. */
+  verifyTwoFactor: (challengeToken: string, code: string) => Promise<void>
   register: (input: RegisterInput) => Promise<void>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
@@ -80,8 +88,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const login = useCallback(async (input: LoginInput) => {
-    await api.login(input)
+  /**
+   * Cola comun tras conseguir tokens, venga del primer factor o del segundo:
+   * poblar el usuario desde `/me`, que es la unica fuente de verdad.
+   */
+  const adoptSession = useCallback(async () => {
     try {
       const u = await api.getMe()
       setUser(u)
@@ -92,6 +103,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStatus('anonymous')
     }
   }, [])
+
+  const login = useCallback(
+    async (input: LoginInput): Promise<LoginResult> => {
+      const result = await api.login(input)
+      // Con reto no hay tokens: pedir `/me` aqui solo daria un 401 inutil y
+      // dejaria la pantalla con un error que el usuario no puede corregir.
+      if (result.kind === 'tokens') await adoptSession()
+      return result
+    },
+    [adoptSession],
+  )
+
+  const verifyTwoFactor = useCallback(
+    async (challengeToken: string, code: string) => {
+      // Un codigo incorrecto propaga el error: el formulario lo muestra y el
+      // usuario reintenta con el mismo reto, que sigue vivo.
+      await api.verifyTwoFactor({ challengeToken, code })
+      await adoptSession()
+    },
+    [adoptSession],
+  )
 
   const register = useCallback(async (input: RegisterInput) => {
     try {
@@ -125,8 +157,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo<AuthState>(
-    () => ({ status, user, login, register, logout, refreshUser }),
-    [status, user, login, register, logout, refreshUser],
+    () => ({ status, user, login, verifyTwoFactor, register, logout, refreshUser }),
+    [status, user, login, verifyTwoFactor, register, logout, refreshUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

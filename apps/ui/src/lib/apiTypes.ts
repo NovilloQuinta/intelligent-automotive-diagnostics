@@ -42,3 +42,46 @@ export type ConversationItem = {
 
 /** Register response from backend. */
 export type RegisterResponse = AuthTokens & { user: AuthUser }
+
+// ---------------------------------------------------------------------------
+// Segundo factor (TOTP)
+// ---------------------------------------------------------------------------
+
+/**
+ * Resultado de `POST /api/auth/login`.
+ *
+ * Union discriminada, no una excepcion: que haga falta el segundo factor **no es
+ * un error**, es un camino normal del login. Modelarlo como excepcion obligaria a
+ * distinguirlo por el texto del mensaje.
+ */
+export type LoginResult =
+  { kind: 'tokens' } | { kind: 'twoFactorRequired'; challengeToken: string; expiresAt: string }
+
+/** Cuerpo que devuelve `POST /api/profile/2fa/setup`. */
+export type TwoFactorSetup = {
+  /** URI `otpauth://` que codifica el QR. */
+  otpauthUri: string
+  /** El QR ya renderizado, para un `<img src>`. */
+  qrDataUri: string
+  /** Secreto en Base32, para quien no pueda escanear y lo teclee a mano. */
+  secret: string
+}
+
+/** Cuerpo que devuelve `POST /api/profile/2fa/activate`. */
+export type TwoFactorActivation = {
+  /** Los diez codigos. Es la unica vez que el servidor los entrega en claro. */
+  recoveryCodes: string[]
+}
+
+/** Entrada del canje del reto. */
+export type VerifyTwoFactorInput = {
+  challengeToken: string
+  /** Codigo TOTP o de recuperacion; el backend distingue por la forma. */
+  code: string
+}
+
+/** Entrada de la desactivacion: hacen falta los dos factores. */
+export type DisableTwoFactorInput = {
+  password: string
+  code: string
+}

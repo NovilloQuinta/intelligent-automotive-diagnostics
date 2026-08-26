@@ -71,6 +71,9 @@ function makeUser(overrides: Partial<NonNullable<typeof mockAuthState.user>> = {
     isWorkshop: false,
     role: 'user' as const,
     isAdmin: false,
+    // Por defecto activo: el panel lo exige, y casi todos los casos de este
+    // fichero miden el guard de rol, no el del segundo factor.
+    twoFactorEnabled: true,
     createdAt: '2026-01-01T00:00:00.000Z',
     ...overrides,
   }
@@ -115,6 +118,15 @@ describe('AdminLayout route guard', () => {
   })
 
   // -- admin user ------------------------------------------------------------
+
+  it('manda a activar el segundo factor si el admin no lo tiene', () => {
+    // El backend responde 403 al panel en ese caso: la UI lo dice antes y explica
+    // donde arreglarlo, en vez de dejar un error generico.
+    setAuth('authed', makeUser({ role: 'admin', isAdmin: true, twoFactorEnabled: false }))
+    const { container } = render(<AdminLayout />)
+    expect(container.innerHTML).not.toContain('outlet')
+    expect(container.textContent).toMatch(/segundo factor/i)
+  })
 
   it('renders children via Outlet when user is admin', () => {
     setAuth('authed', makeUser({ role: 'admin', isAdmin: true }))

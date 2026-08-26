@@ -159,6 +159,12 @@ export type AuthUser = {
   isWorkshop: boolean
   role: 'user' | 'admin'
   isAdmin: boolean
+  /**
+   * Si el segundo factor esta activo. El **secreto** no viaja nunca: el backend
+   * lo mantiene fuera de la entidad para que la proyeccion publica no pueda
+   * filtrarlo.
+   */
+  twoFactorEnabled: boolean
 }
 
 export type LoginInput = {

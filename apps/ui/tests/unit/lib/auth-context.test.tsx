@@ -326,3 +326,88 @@ describe('AuthProvider', () => {
     })
   })
 })
+
+describe('AuthProvider — segundo factor', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.restoreAllMocks()
+  })
+
+  it('no autentica cuando el login pide el segundo factor', async () => {
+    vi.spyOn(api, 'login').mockResolvedValue({
+      kind: 'twoFactorRequired',
+      challengeToken: 'reto-abc',
+      expiresAt: '2026-08-26T12:05:00.000Z',
+    })
+    const getMe = vi.spyOn(api, 'getMe')
+    const { result } = renderHook(() => useAuth(), { wrapper })
+    await waitFor(() => expect(result.current.status).toBe('anonymous'))
+
+    await act(async () => {
+      await result.current.login({ email: 'a@b.com', password: 'x' })
+    })
+
+    expect(result.current.status).toBe('anonymous')
+    expect(result.current.user).toBeNull()
+    // Sin tokens no hay a quien preguntar: pedir /me daria un 401 inutil.
+    expect(getMe).not.toHaveBeenCalled()
+  })
+
+  it('devuelve el reto a quien llamo, para que pinte el paso del codigo', async () => {
+    vi.spyOn(api, 'login').mockResolvedValue({
+      kind: 'twoFactorRequired',
+      challengeToken: 'reto-abc',
+      expiresAt: '2026-08-26T12:05:00.000Z',
+    })
+    const { result } = renderHook(() => useAuth(), { wrapper })
+    await waitFor(() => expect(result.current.status).toBe('anonymous'))
+
+    let outcome: Awaited<ReturnType<typeof result.current.login>> | undefined
+    await act(async () => {
+      outcome = await result.current.login({ email: 'a@b.com', password: 'x' })
+    })
+
+    expect(outcome).toMatchObject({ kind: 'twoFactorRequired', challengeToken: 'reto-abc' })
+  })
+
+  it('verifyTwoFactor deja la sesion abierta', async () => {
+    vi.spyOn(api, 'verifyTwoFactor').mockResolvedValue(MOCK_TOKENS)
+    vi.spyOn(api, 'getMe').mockResolvedValue(MOCK_USER)
+    const { result } = renderHook(() => useAuth(), { wrapper })
+    await waitFor(() => expect(result.current.status).toBe('anonymous'))
+
+    await act(async () => {
+      await result.current.verifyTwoFactor('reto-abc', '123456')
+    })
+
+    expect(result.current.status).toBe('authed')
+    expect(result.current.user).toEqual(MOCK_USER)
+  })
+
+  it('un codigo incorrecto deja la sesion cerrada y propaga el error', async () => {
+    vi.spyOn(api, 'verifyTwoFactor').mockRejectedValue(new Error('El código no es válido'))
+    const { result } = renderHook(() => useAuth(), { wrapper })
+    await waitFor(() => expect(result.current.status).toBe('anonymous'))
+
+    await expect(
+      act(async () => {
+        await result.current.verifyTwoFactor('reto-abc', '000000')
+      }),
+    ).rejects.toThrow('El código no es válido')
+
+    expect(result.current.status).toBe('anonymous')
+  })
+
+  it('el login sin segundo factor sigue autenticando igual', async () => {
+    vi.spyOn(api, 'login').mockResolvedValue({ kind: 'tokens' })
+    vi.spyOn(api, 'getMe').mockResolvedValue(MOCK_USER)
+    const { result } = renderHook(() => useAuth(), { wrapper })
+    await waitFor(() => expect(result.current.status).toBe('anonymous'))
+
+    await act(async () => {
+      await result.current.login({ email: 'a@b.com', password: 'x' })
+    })
+
+    expect(result.current.status).toBe('authed')
+  })
+})
