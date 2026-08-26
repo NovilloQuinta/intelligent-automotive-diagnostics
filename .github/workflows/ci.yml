@@ -110,3 +110,69 @@ jobs:
           name: playwright-report
           path: apps/ui/playwright-report/
           retention-days: 7
+
+  # La SPA la sirve nginx dentro del contenedor de UI, asi que sus cabeceras de
+  # seguridad no las ve ningun test de Vitest ni de Playwright: `webServer` de
+  # Playwright levanta Vite, no la imagen. Sin este job, borrar el `add_header`
+  # pasa CI entero y el fallo se descubre en produccion.
+  #
+  # No construye la imagen de UI (varios minutos): monta las confs sobre
+  # `nginx:alpine` con un `dist/` de mentira. Eso valida lo que puede fallar de
+  # verdad — que nginx arranque con esta config y que emita las cabeceras.
+  nginx:
+    name: nginx headers
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fake dist
+        run: |
+          mkdir -p /tmp/dist/assets
+          echo '<!DOCTYPE html><html><body>ok</body></html>' > /tmp/dist/index.html
+          echo 'console.log(1)' > /tmp/dist/assets/app.js
+
+      - name: Validate config
+        run: |
+          docker run --rm \
+            -v "$PWD/apps/ui/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro" \
+            -v "$PWD/apps/ui/nginx/security-headers.conf:/etc/nginx/snippets/security-headers.conf:ro" \
+            -v /tmp/dist:/usr/share/nginx/html:ro \
+            nginx:alpine nginx -t
+
+      - name: Start nginx
+        run: |
+          docker run -d --name ui-nginx -p 8080:80 \
+            -v "$PWD/apps/ui/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro" \
+            -v "$PWD/apps/ui/nginx/security-headers.conf:/etc/nginx/snippets/security-headers.conf:ro" \
+            -v /tmp/dist:/usr/share/nginx/html:ro \
+            nginx:alpine
+          for _ in $(seq 1 20); do
+            curl -sf -o /dev/null http://localhost:8080/ && exit 0
+            sleep 1
+          done
+          echo "nginx no respondio"; docker logs ui-nginx; exit 1
+
+      # Las dos rutas, no solo la raiz: `location /assets/` declara su propio
+      # add_header, y nginx corta ahi la herencia del bloque padre.
+      - name: Assert security headers
+        run: |
+          fail=0
+          for path in / /assets/app.js; do
+            headers=$(curl -sI "http://localhost:8080$path")
+            for header in content-security-policy x-content-type-options referrer-policy; do
+              if ! grep -qi "^$header:" <<< "$headers"; then
+                echo "FALTA $header en $path"
+                fail=1
+              fi
+            done
+            if ! grep -qi "^content-security-policy:.*fonts\.googleapis\.com" <<< "$headers"; then
+              echo "la CSP de $path no permite la hoja de Google Fonts que carga __root.tsx"
+              fail=1
+            fi
+          done
+          exit $fail
+
+      - name: Stop nginx
+        if: always()
+        run: docker rm -f ui-nginx
