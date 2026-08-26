@@ -1247,22 +1247,22 @@ function pie(s) {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Las diez categorías, con la medida que se aplicó en el código.', {
+  s.addText('Los diez identificadores oficiales, con la medida que se aplicó en el código.', {
     x: 0.85, y: 1.62, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
 
   const owasp = [
-    ['API1', 'Autorización de objeto', 'Las consultas filtran por propietario: la sesión de otro usuario devuelve 404, no 403'],
-    ['API2', 'Autenticación', 'bcrypt de 12 rondas, rotación de refresh tokens y bloqueo de cuenta a los 5 fallos'],
-    ['API3', 'Propiedades del objeto', 'Los esquemas Zod son la allowlist de campos: lo no declarado no entra'],
-    ['API4', 'Consumo de recursos', 'Límites por familia: login 5/min, diagnóstico 20/min, cognitivo 5/min; body de 10 KB'],
-    ['API5', 'Autorización de función', 'Todo /api tras el middleware de sesión; administración tras requireAdmin'],
-    ['API6', 'Flujos de negocio sensibles', 'El borrado de códigos de avería lleva límite propio y se apaga con OBD_READ_ONLY'],
-    ['API7', 'SSRF', 'El usuario no controla ninguna URL de salida: proveedor fijo y timeout de 30 s'],
-    ['API8', 'Configuración', 'Helmet 8 con CSP default-src none, HSTS de un año y allowlist de CORS'],
-    ['API9', 'Inventario de la API', 'Especificación OpenAPI versionada y servida por la propia API'],
-    ['API10', 'Consumo de APIs externas', 'Lo recuperado llega al modelo marcado como no fiable, nunca como instrucción'],
+    ['API1', 'Autorización a nivel de objeto', 'Las consultas filtran por propietario: la sesión de otro usuario devuelve 404, no 403'],
+    ['API2', 'Autenticación rota', 'bcrypt de 12 rondas, rotación de refresh tokens y bloqueo de cuenta a los 5 fallos'],
+    ['API3', 'Autorización a nivel de propiedad', 'Los esquemas Zod son la allowlist de campos: lo no declarado no entra'],
+    ['API4', 'Consumo de recursos sin restricción', 'Límites por familia: login 5/min, diagnóstico 20/min, cognitivo 5/min'],
+    ['API5', 'Autorización a nivel de función', 'Todo /api tras el middleware de sesión; administración tras requireAdmin'],
+    ['API6', 'Acceso a flujos de negocio sensibles', 'El borrado de códigos de avería lleva límite propio y se apaga con OBD_READ_ONLY'],
+    ['API7', 'Server Side Request Forgery', 'El usuario no controla ninguna URL de salida: proveedor fijo y timeout de 30 s'],
+    ['API8', 'Configuración de seguridad incorrecta', 'Helmet 8 con CSP default-src none, HSTS de un año y allowlist de CORS'],
+    ['API9', 'Gestión indebida del inventario', 'Especificación OpenAPI versionada y servida por la propia API'],
+    ['API10', 'Consumo inseguro de APIs', 'Lo recuperado llega al modelo marcado como no fiable, nunca como instrucción'],
   ]
   owasp.forEach(([codigo, nombre, medida], k) => {
     const y = 2.28 + k * 0.44
@@ -1271,12 +1271,12 @@ function pie(s) {
       fontFace: 'Arial', fontSize: 12, bold: true, color: AZUL,
     })
     s.addText(nombre, {
-      x: 1.62, y, w: 3.1, h: 0.4, margin: 0, valign: 'middle',
+      x: 1.62, y, w: 3.75, h: 0.4, margin: 0, valign: 'middle',
       fontFace: 'Arial', fontSize: 12, bold: true, color: TINTA,
     })
     s.addText(medida, {
-      x: 4.8, y, w: 7.65, h: 0.4, margin: 0, valign: 'middle',
-      fontFace: 'Calibri', fontSize: 13, color: GRIS,
+      x: 5.45, y, w: 7.0, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Calibri', fontSize: 12, color: GRIS,
     })
   })
 
