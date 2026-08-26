@@ -11,7 +11,7 @@
 | 3 | Flujo de trabajo | Como funciona | **validada** |
 | 4 | Diagnostico determinista y diagnostico cognitivo | Como funciona | pendiente |
 | 5 | Tecnologias utilizadas | Como esta construida | pendiente |
-| 6 | Arquitectura: Clean Architecture y patron hexagonal | Como esta construida | **la reescribe el autor** |
+| 6 | Arquitectura: impacto en el desarrollo del proyecto | Como esta construida | **rehecha** |
 | 7 | Adquisicion de datos mediante OBD-II | Las piezas | pendiente |
 | 8 | Persistencia: modelo relacional y modelo vectorial | Las piezas | pendiente |
 | 9 | Base de datos relacional | Las piezas | pendiente |
@@ -38,6 +38,12 @@
 - **Slide de CI/CD** (2026-08-25): el despliegue automatico no aparecia en ningun sitio.
   La de calidad se queda con TDD, pruebas y seguridad, y el pipeline entero pasa a slide
   propia: integracion -> verificacion -> construccion -> publicacion -> produccion.
+- **Slide 6 rehecha** (2026-08-26): justificaba la arquitectura con argumentos de
+  manual (testabilidad, desacoplamiento) que valen para cualquier proyecto y no
+  decian nada de este. Ahora enumera cuatro ventajas concretas ya cobradas, sacadas
+  del codigo: de los 23 puertos definidos, tres tienen hoy mas de un adaptador en
+  produccion (`ObdRepository`, `Elm327TransportPort`, `LlmClientPort`). Cierra con
+  el ejemplo dibujado: un caso de uso, un puerto, dos adaptadores.
 - **Las tres primeras slides se funden en una** (2026-08-25): "que es", "el problema" y
   "que hace" contaban lo mismo por partes y no cerraban la idea. Ahora es una sola que
   explica el conjunto: a la izquierda donde se queda el escaner de hoy, a la derecha lo

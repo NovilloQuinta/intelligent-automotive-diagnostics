@@ -429,90 +429,103 @@ function pie(s) {
   )
 }
 
-// ============= 4 — POR QUÉ ESTA ARQUITECTURA Y NO OTRA ===================
+// ============= 4 — QUE APORTA LA ARQUITECTURA ============================
 {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Arquitectura: Clean Architecture y patrón hexagonal', {
+  s.addText('Arquitectura: impacto en el desarrollo del proyecto', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Aquí el dominio son normas. Y las normas no las cambia nadie.', {
+  s.addText('Qué ha permitido hacer, en concreto, mientras se construía.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
 
-  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.35, yLista = 2.95
-
-  s.addText('Por qué Clean + Hexagonal', {
-    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
-  })
-  s.addText(
+  const ventajas = [
     [
-      { text: 'El dominio son normas: SAE J1979, ISO 15031, ISO 3779', options: { bullet: true, breakLine: true } },
-      { text: 'Las fórmulas de cada PID y la decodificación del VIN',  options: { bullet: true, breakLine: true } },
-      { text: 'Nada de eso se mezcla con la base de datos ni con el LLM', options: { bullet: true } },
+      'El proyecto se ha desarrollado sin el vehículo',
+      'Todo el desarrollo y las pruebas se han hecho contra emuladores: Audi, Kawasaki y Toyota.',
     ],
-    { x: xIzq, y: yLista, w: colW, h: 2.0, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 10, lineSpacing: 21 },
-  )
-
-  s.addText('Por qué no orientada a eventos', {
-    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 19, bold: true, color: GRIS,
-  })
-  s.addText(
     [
-      { text: 'Es un proceso: no hay servicios que desacoplar',        options: { bullet: true, breakLine: true } },
-      { text: 'El mecánico pregunta y espera: el flujo es síncrono',   options: { bullet: true, breakLine: true } },
-      { text: 'Un solo programador: más piezas es más sitio donde romper', options: { bullet: true } },
+      'La forma de conectarse al coche se decidió al final',
+      'El transporte del lector es otro puerto: por red o por puerto serie, con reintentos por encima.',
     ],
-    { x: xDer, y: yLista, w: colW, h: 2.0, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 10, lineSpacing: 21 },
-  )
-
-  // Ejemplo: donde vive cada cosa en este proyecto
-  s.addText('En este proyecto', {
-    x: 0.85, y: 5.15, w: 11.6, h: 0.32, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 15, bold: true, color: TINTA,
-  })
-  const capas = [
-    ['Dominio', 'Vin, DtcCode, PidCode, Formula, catálogos de PID y DTC'],
-    ['Aplicación', 'IdentifyVehicle, ExecuteCognitiveDiagnosis, ObdRepository, LlmClientPort'],
-    ['Infraestructura', 'Express, Drizzle + SQLite, LanceDB, servidor MCP, transporte ELM327'],
+    [
+      'El diagnóstico cognitivo se añadió sin tocar el determinista',
+      'El servidor MCP entró como un adaptador más. Los casos de uso que ya funcionaban no se modificaron.',
+    ],
+    [
+      'Dos proveedores de modelo con el mismo código de diagnóstico',
+      'En las pruebas el modelo se sustituye por un doble: el flujo se verifica sin llamar a uno real.',
+    ],
   ]
-  capas.forEach(([nombre, contenido], k) => {
-    const y = 5.6 + k * 0.4
-    s.addText(nombre, {
-      x: 0.85, y, w: 1.9, h: 0.34, margin: 0, valign: 'middle',
-      fontFace: 'Calibri', fontSize: 14, bold: true, color: AZUL,
+  ventajas.forEach(([titulo, detalle], k) => {
+    const y = 2.3 + k * 0.79
+    s.addText(String(k + 1).padStart(2, '0'), {
+      x: 0.85, y, w: 0.5, h: 0.32, margin: 0, valign: 'top',
+      fontFace: 'Arial', fontSize: 16, bold: true, color: AZUL,
     })
-    s.addText(contenido, {
-      x: 2.8, y, w: 9.6, h: 0.34, margin: 0, valign: 'middle',
+    s.addText(titulo, {
+      x: 1.45, y, w: 11.0, h: 0.32, margin: 0, valign: 'top',
+      fontFace: 'Arial', fontSize: 17, bold: true, color: TINTA,
+    })
+    s.addText(detalle, {
+      x: 1.45, y: y + 0.33, w: 11.0, h: 0.32, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 14, color: GRIS,
     })
   })
 
+  // Ejemplo: un puerto, dos adaptadores
+  s.addText('Un ejemplo', {
+    x: 0.85, y: 5.5, w: 11.6, h: 0.3, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 15, bold: true, color: TINTA,
+  })
+
+  const nodo = (texto, x, y, w, color) =>
+    s.addText(texto, {
+      x, y, w, h: 0.36, margin: 0, valign: 'middle', align: 'left',
+      fontFace: 'Calibri', fontSize: 13, color,
+    })
+  const flecha = (x, y) =>
+    s.addText('→', {
+      x, y, w: 0.5, h: 0.36, margin: 0, valign: 'middle', align: 'center',
+      fontFace: 'Calibri', fontSize: 16, bold: true, color: AZUL_CL,
+    })
+
+  nodo('Caso de uso de diagnóstico', 0.85, 5.92, 2.9, TINTA)
+  flecha(3.75, 5.92)
+  nodo('Puerto de lectura del vehículo', 4.4, 5.92, 3.1, TINTA)
+  flecha(7.5, 5.68)
+  flecha(7.5, 6.16)
+  nodo('Lector ELM327 conectado al coche', 8.15, 5.68, 4.2, GRIS)
+  nodo('Emulador en el portátil', 8.15, 6.16, 4.2, GRIS)
+
   pie(s)
   s.addNotes(
-    '¿Por qué Clean Architecture y no otra cosa? Porque en este proyecto el dominio no es ' +
-    'algo que me haya inventado yo: son normas. SAE J1979, ISO 15031, ISO 15765-4 para el ' +
-    'bus CAN, ISO 3779 para el VIN. Las fórmulas que convierten cada PID en una magnitud ' +
-    'física, y la decodificación del bastidor. Eso no lo cambia nadie, y no puede estar ' +
-    'mezclado con el acceso a datos ni con el modelo de lenguaje.\n\n' +
-    '¿Y por qué no orientada a eventos? Porque aquí no hay varios servicios que desacoplar: ' +
-    'es un solo proceso. El flujo es síncrono, el mecánico pregunta y se queda esperando. ' +
-    'Un broker y colas me traerían consistencia eventual y mucha más superficie de ' +
-    'depuración sin ganar nada. Y soy un solo programador: cuantas más piezas móviles, más ' +
-    'sitio donde romper.\n\n' +
-    'Abajo está el ejemplo concreto de este proyecto. En el dominio, los value objects y ' +
-    'los catálogos. En aplicación, los casos de uso y los puertos, que dicen qué hace ' +
-    'falta pero no cómo. Y en infraestructura el cómo: Express, Drizzle sobre SQLite, ' +
-    'LanceDB, el servidor MCP y el transporte del ELM327.\n\n' +
-    'El dominio no sabe que existe SQLite, ni Express, ni ningún modelo de lenguaje.\n\n' +
-    '[~80 s · acumulado 5:50]',
+    'Sobre la arquitectura no os voy a contar la teoría, que ya la conocéis. Os cuento qué ' +
+    'me ha dado a mí, en este proyecto concreto.\n\n' +
+    'Lo primero, y es lo más importante: he construido y probado una aplicación de ' +
+    'diagnóstico de vehículos sin tener el vehículo delante. Leer del coche es un puerto, y ' +
+    'detrás hay dos adaptadores intercambiables: el lector ELM327 y un emulador. Tres ' +
+    'vehículos emulados, un Audi, una Kawasaki y un Toyota. La aplicación no distingue cuál ' +
+    'tiene delante.\n\n' +
+    'Lo segundo, la conexión física la pude decidir al final. El transporte del lector es ' +
+    'otro puerto: hay una implementación por red y otra por puerto serie, con una capa de ' +
+    'reintentos por encima. Pasar de una a otra no toca el resto de la aplicación.\n\n' +
+    'Lo tercero. Cuando ya tenía funcionando el diagnóstico determinista, el que aplica las ' +
+    'normas, añadí el cognitivo. El servidor MCP entró como un adaptador de infraestructura ' +
+    'más, y los casos de uso que ya funcionaban se quedaron exactamente igual.\n\n' +
+    'Y lo cuarto, hay dos clientes de modelo de lenguaje, y el código de diagnóstico es el ' +
+    'mismo para los dos. En las pruebas el modelo se sustituye por un doble, así que el ' +
+    'flujo cognitivo se verifica entero sin llamar a un modelo real.\n\n' +
+    'Abajo está el ejemplo de arriba dibujado: un caso de uso, un puerto, y dos adaptadores ' +
+    'detrás.\n\n' +
+    'La contrapartida está reconocida en el ADR: son más ficheros que un monolito, y el ' +
+    'punto donde se cablea todo crece con cada adaptador nuevo. A cambio, dos mil ciento ' +
+    'setenta y una pruebas corren sin coche, sin servidor y sin modelo.\n\n' +
+    '[~85 s · acumulado 5:50]',
   )
 }
 
