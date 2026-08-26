@@ -1308,6 +1308,72 @@ function pie(s) {
   )
 }
 
+// ======= SEGURIDAD DE LA INTERFAZ ========================================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('La interfaz y los riesgos asumidos', {
+    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('La interfaz es una aplicación web, así que ahí manda el Top 10 de aplicaciones web.', {
+    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.45, yLista = 3.05
+
+  s.addText('Medidas en la interfaz', {
+    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'React escapa el HTML por defecto, y no hay inyección directa de marcado sobre datos de usuario', options: { bullet: true, breakLine: true } },
+      { text: 'Cabecera CSP propia: default-src \'self\', sin scripts de terceros', options: { bullet: true, breakLine: true } },
+      { text: 'Validación con Zod también en el cliente, en todos los formularios', options: { bullet: true, breakLine: true } },
+      { text: 'El token viaja en cabecera Bearer y no en cookie, así que no hay CSRF', options: { bullet: true } },
+    ],
+    { x: xIzq, y: yLista, w: colW, h: 3.2, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+  )
+
+  s.addText('Riesgos asumidos, no escondidos', {
+    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'El token vive en localStorage: quedaría expuesto ante un XSS', options: { bullet: true, breakLine: true } },
+      { text: 'No hay doble factor de autenticación', options: { bullet: true, breakLine: true } },
+      { text: 'La base de datos no está cifrada en disco', options: { bullet: true, breakLine: true } },
+      { text: 'Los límites de peticiones viven en memoria y se pierden al reiniciar', options: { bullet: true } },
+    ],
+    { x: xDer, y: yLista, w: colW, h: 3.2, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+  )
+
+  pie(s)
+  s.addNotes(
+    'La lista anterior es la de APIs y cubre el backend. La interfaz es otra cosa: es una ' +
+    'aplicación web, y ahí lo que aplica es el Top 10 clásico.\n\n' +
+    'React escapa el HTML por defecto, y no se inyecta marcado en crudo en ningún sitio con ' +
+    'datos que vengan del usuario, que es por donde entra el XSS. La interfaz sirve su ' +
+    'propia cabecera de Content Security Policy, con default-src propio y sin scripts de ' +
+    'terceros. Los formularios validan con los mismos esquemas Zod que usa la API, así que ' +
+    'la validación de cliente y la de servidor no se pueden desincronizar.\n\n' +
+    'Y una decisión consciente: el token viaja en cabecera Bearer y no en cookie. Eso ' +
+    'elimina el CSRF de raíz, pero obliga a guardarlo en el navegador.\n\n' +
+    'Ahí está el primero de los riesgos que asumo: si hubiera un XSS, el token es robable. ' +
+    'Lo compenso con lo de antes, que es no dar superficie de XSS. Los otros tres son de ' +
+    'alcance: no hay doble factor, la base de datos no está cifrada en disco y los límites ' +
+    'de peticiones viven en memoria, así que un reinicio los resetea. Para una instancia ' +
+    'única de un TFM es asumible, y está escrito en el modelo de seguridad, no escondido.\n\n' +
+    '[~50 s · acumulado 18:35]',
+  )
+}
+
 // ======= INTEGRACIÓN Y DESPLIEGUE CONTINUOS ===============================
 {
   const s = pres.addSlide()
@@ -1402,7 +1468,7 @@ function pie(s) {
     'yo toque nada.\n\n' +
     'La consecuencia práctica es que integrar en main es publicar. La aplicación está ' +
     'desplegada y accesible, no es una demo que solo corre en mi portátil.\n\n' +
-    '[~55 s · acumulado 18:40]',
+    '[~55 s · acumulado 19:30]',
   )
 }
 
@@ -1465,7 +1531,7 @@ function pie(s) {
     'semanas sin exigir nada. Estaba verde, y no comprobaba lo que decía comprobar. Lo he ' +
     'documentado en la deuda conocida del proyecto.\n\n' +
     'Así que sí, acelera mucho. Pero no es todo tan bonito como parece: hay que dedicarle ' +
-    'tiempo a revisar.\n\n[~45 s · acumulado 19:25]',
+    'tiempo a revisar.\n\n[~45 s · acumulado 20:15]',
   )
 }
 

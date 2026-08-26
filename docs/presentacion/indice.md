@@ -1,6 +1,6 @@
 # Indice de la defensa — cerrado
 
-> 19 slides, ~19:25, en bloques: el problema, que resuelve, como funciona,
+> 20 slides, ~20:15, en bloques: el problema, que resuelve, como funciona,
 > como esta construida, las piezas, el resultado y el cierre. **Se trabaja punto por punto**: el autor cuenta que va en el punto,
 > se maqueta, se valida, y solo entonces se pasa al siguiente. Nada de adelantar slides.
 
@@ -22,11 +22,12 @@
 | 14 | Resultados: la aplicacion en funcionamiento | El resultado | pendiente |
 | 15 | Calidad del codigo y seguridad | El resultado | pendiente |
 | 16 | OWASP API Top 10 2023 | El resultado | **nueva** |
-| 17 | Integracion y despliegue continuos | El resultado | validada |
-| 18 | Conclusiones | Cierre | pendiente |
-| 19 | Gracias por la atencion | Cierre | pendiente |
+| 17 | La interfaz y los riesgos asumidos | El resultado | **nueva** |
+| 18 | Integracion y despliegue continuos | El resultado | validada |
+| 19 | Conclusiones | Cierre | pendiente |
+| 20 | Gracias por la atencion | Cierre | pendiente |
 
-**Suma: ~19:25.**
+**Suma: ~20:15.**
 
 ## Cambios acordados sobre la primera propuesta
 
@@ -39,6 +40,10 @@
 - **Slide de CI/CD** (2026-08-25): el despliegue automatico no aparecia en ningun sitio.
   La de calidad se queda con TDD, pruebas y seguridad, y el pipeline entero pasa a slide
   propia: integracion -> verificacion -> construccion -> publicacion -> produccion.
+- **Slide de la interfaz** (2026-08-26): la tabla OWASP cubre el backend, pero la SPA
+  tambien tiene superficie. Slide propia con las medidas del cliente (escapado de
+  React, CSP propia, Zod en formularios, Bearer en vez de cookie) y los cuatro
+  riesgos residuales asumidos. Comprobado en codigo, no copiado del documento.
 - **Slide de OWASP** (2026-08-26): la de calidad solo decia que las diez categorias
   estaban documentadas. Ahora hay una slide propia con las diez y la medida concreta
   que se aplico en cada una, sacadas de `docs/security.md`. Los nombres van en ingles,
