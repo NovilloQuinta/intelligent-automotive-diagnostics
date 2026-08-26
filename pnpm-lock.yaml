@@ -304,6 +304,9 @@ importers:
       jsdom:
         specifier: ^25.0.0
         version: 25.0.1
+      otplib:
+        specifier: ^13.5.0
+        version: 13.5.0
       prettier:
         specifier: ^3.7.3
         version: 3.9.6

@@ -16,11 +16,14 @@ describe('api — endpoints', () => {
   })
   describe('login', () => {
     it('stores tokens on success', async () => {
+      // `twoFactorRequired: false` va a proposito: es lo que manda el backend en
+      // este caso. Un mock que omita la clave deja pasar el bug de discriminar
+      // por presencia (`'x' in body`) en vez de por valor.
       vi.stubGlobal(
         'fetch',
         vi.fn().mockResolvedValueOnce({
           ok: true,
-          json: async () => MOCK_TOKENS,
+          json: async () => ({ ...MOCK_TOKENS, twoFactorRequired: false }),
         }),
       )
 

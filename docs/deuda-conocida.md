@@ -256,6 +256,34 @@ lecturas devuelven `NO DATA`.
 La causa del `live-data` en null **sigue sin identificar**. Si reaparece, esta pista ya esta
 gastada y hay que mirar en otro sitio.
 
+## `pnpm verify` no corre los e2e, y eso dejo pasar un bug real
+
+Detectado el 2026-08-26. El repositorio tiene tres suites de Playwright (`auth`, `logout`,
+`dashboard`) y **ni `pnpm verify` ni el CI las ejecutan**. Todo el trabajo de las dos tareas
+de seguridad de ese dia se subio sin que corrieran una sola vez.
+
+Lo que se colo por ese hueco: `api.login` discriminaba la respuesta con
+`'twoFactorRequired' in body`, y el backend manda esa clave **tambien cuando vale `false`**.
+El operador `in` mira la presencia, no el valor, asi que **todo login correcto se trataba
+como si pidiera segundo factor**: los tokens no se guardaban y la SPA se quedaba en `/login`.
+
+Los 643 tests de la UI no lo vieron porque el mock del test devolvia `MOCK_TOKENS` sin esa
+clave — el mock describia una respuesta que el servidor no manda. Es exactamente la clase de
+error que un mock escrito a mano no puede detectar y un e2e si. Corregido, y el mock alineado
+con la respuesta real.
+
+Pendiente decidir, con su coste:
+
+- **Meter `test:e2e` en `pnpm verify`**: el gate pasa de ~2 min a ~4, y hay que levantar los
+  dos servidores. `playwright.config.ts` ya lo hace, pero su `timeout: 15_000` **no basta**:
+  el arranque de `core-api` (LanceDB + seed) tarda mas y falla con "Timed out waiting".
+- **Meterlo solo en CI**: no ralentiza el trabajo local, pero el fallo llega despues del push.
+- **Dejarlo manual**: lo barato, y lo que ya paso una vez.
+
+Nota de entorno: el `@playwright/test` del repo (1.62.1) espera el build 1234 de Chromium; el
+contenedor de desarrollo remoto trae el 1194, asi que hay que apuntar `executablePath` al
+binario existente o los e2e no arrancan.
+
 ## El esquema de `users` esta escrito a mano en seis ficheros de test
 
 Detectado el 2026-08-26 al anadir dos columnas para el segundo factor: hubo que tocar

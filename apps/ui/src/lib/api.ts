@@ -106,11 +106,12 @@ type TwoFactorChallengeBody = {
 /**
  * Las dos formas posibles del cuerpo de `POST /api/auth/login`.
  *
- * Union y no interseccion con `Partial`: solo la union deja que TypeScript
- * estreche con `'twoFactorRequired' in body` y garantice que los campos del reto
- * estan presentes en esa rama.
+ * El caso con tokens declara `twoFactorRequired?: false` porque el backend **si**
+ * manda esa clave con valor `false`. Distinguir por presencia (`'x' in body`) seria
+ * un error: la clave esta siempre, y todo login correcto se tomaria por un reto.
+ * Se discrimina por el **valor**.
  */
-type LoginResponseBody = AuthTokens | TwoFactorChallengeBody
+type LoginResponseBody = (AuthTokens & { twoFactorRequired?: false }) | TwoFactorChallengeBody
 
 export const api = {
   // ---- Auth ----
@@ -134,7 +135,7 @@ export const api = {
     await assertOk(res, GENERIC_ERROR_MESSAGE)
 
     const body = (await res.json()) as LoginResponseBody
-    if ('twoFactorRequired' in body) {
+    if (body.twoFactorRequired) {
       return {
         kind: 'twoFactorRequired',
         challengeToken: body.challengeToken,
