@@ -28,7 +28,7 @@ Las diez categorías, con la mitigación real y el fichero donde vive. Donde no 
 | **API1 Broken Object Level Auth** | JWT `sub` → `userId`, y las consultas por recurso filtran por propietario: `getDiagnosisSession(id, userId)` devuelve 404 —no 403— si la sesión es de otro usuario, para no filtrar su existencia. El listado de historial va siempre acotado por `userId` |
 | **API2 Broken Authentication** | bcrypt 12 rondas, JWT con `jti` UUID y secretos separados para access/refresh; rotación de refresh tokens con `revoked_at`; bloqueo de cuenta (5 fallos → 15 min, respuesta 423 con `Retry-After`) que no se prolonga al insistir; tokens de reseteo hasheados SHA-256, de un solo uso y con TTL; `assertProductionSecrets` aborta el arranque si los secretos siguen con valor plantilla |
 | **API3 Broken Object Property Level Auth** | Los schemas Zod actúan como allowlist de propiedades en la capa de aplicación: lo que no está declarado no entra. Las respuestas se proyectan campo a campo en el controller, así que un campo nuevo en BD no se filtra solo |
-| **API4 Unrestricted Resource Consumption** | Rate limits por familia: login 5/min, refresh 10/min, auth 20/15min, diagnóstico 20/min, cognitivo 5/min, admin 30/min, global 100/15min. Límite de body 10 KB por defecto y 1 MB en el endpoint cognitivo. Presupuesto de búsqueda web: `MAX_WEB_SEARCHES_PER_SESSION = 3`. Timeout de 30 s en llamadas externas |
+| **API4 Unrestricted Resource Consumption** | Rate limits por familia: login 5/min, refresh 10/min, auth 20/15min, diagnóstico 20/min, cognitivo 5/min, admin 30/min, global 100/15min. Límite de body 10 KB por defecto y 1 MB en el endpoint cognitivo. Presupuesto de búsqueda web: `MAX_WEB_SEARCHES_PER_SESSION = 3`. Timeout de 30 s en llamadas externas. Los contadores se guardan en SQLite, con un namespace por limitador, de modo que reiniciar el proceso no devuelve la cuota y agotar una familia no agota las demás. `RATE_LIMIT_ENABLED` decide si se aplican; sin declarar, solo en producción |
 | **API5 Broken Function Level Auth** | Todo `/api/*` detrás del middleware de autenticación; las rutas de administración van además detrás de `requireAdmin` (`admin.middleware.ts`), montado antes que el router de admin, de modo que un usuario con rol `user` no alcanza ningún handler |
 | **API6 Unrestricted Access to Sensitive Business Flows** | Los flujos caros son los que llaman al LLM y a la red: el diagnóstico cognitivo lleva el límite más estricto (5/min) y la búsqueda web un presupuesto por sesión. El borrado de DTC (`Service 04`), único flujo destructivo, tiene su propio limiter y se desactiva por completo con `OBD_READ_ONLY=true` |
 | **API7 Server Side Request Forgery** | El usuario no controla ninguna URL de salida: las del LLM salen de configuración por entorno y la búsqueda web va contra un proveedor fijo (SerpAPI, `SERPAPI_BASE_URL` constante en `serpApiClient.ts`) con la consulta como parámetro, nunca como destino. Timeout de 30 s |
@@ -66,7 +66,12 @@ existe para medir esto último; los casos de seguridad se exigen 3/3.
 1. **Tokens in localStorage** — XSS → token theft. Mitigation: React's automatic escaping, no `dangerouslySetInnerHTML` on user data.
 2. **No MFA** — out of TFM scope; documented for future work.
 3. **SQLite at-rest encryption** — not implemented; acceptable for TFM scope.
-4. **Rate limits in memory** — lost on restart; acceptable for single-instance TFM.
+4. **Rate limit counters tied to one SQLite file** — el contador ya **no** se pierde al
+   reiniciar: vive en `rate_limit_counters` (SQLite via Drizzle), con un namespace por
+   limitador. Lo que queda: dos replicas sobre **volumenes distintos** siguen contando
+   cada una por su lado, asi que el limite efectivo se multiplica por el numero de
+   ficheros, no de instancias. Varias replicas sobre el mismo volumen si comparten
+   contador. Se cierra del todo con la migracion a PostgreSQL.
 5. **No HSTS in practice** — effective only under HTTPS; docker-compose exposes plain HTTP.
 
 ## Security Contacts

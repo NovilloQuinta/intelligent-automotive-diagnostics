@@ -4,8 +4,10 @@
 > de editar aqui**: este fichero se ha desincronizado dos veces por actualizarlo
 > de memoria.
 >
-> Estado general: 2131 tests en verde (1527 core-api + 604 ui), 0 errores de lint, 76 avisos (69 + 7).
-> Remedido el 2026-08-19 tras sacar la orquestacion del diagnostico a casos de uso.
+> Estado general: 2204 tests en verde (1587 core-api + 617 ui), 0 errores de lint, 77 avisos (70 + 7).
+> Remedido el 2026-08-26 al persistir los contadores de rate limiting. Las cifras anteriores
+> (2131 tests, 76 avisos) se habian quedado atras: `develop` traia ya 1554 + 617 tests y
+> 71 + 7 avisos antes de este cambio.
 > Nada de lo que sigue es bloqueante.
 
 ## Bateria del agente: construida, sin ejecutar
@@ -254,6 +256,30 @@ lecturas devuelven `NO DATA`.
 La causa del `live-data` en null **sigue sin identificar**. Si reaparece, esta pista ya esta
 gastada y hay que mirar en otro sitio.
 
+## Coverage: cuatro ficheros de composicion incumplen el umbral
+
+Medido el 2026-08-26 sobre `develop` limpio, con `pnpm test:coverage`. **Es preexistente**:
+sale identico con y sin el cambio de rate limiting.
+
+| Fichero | statements | branches | functions |
+| --- | --- | --- | --- |
+| `composition/persistence.ts` | 0 % | 0 % | 0 % |
+| `composition/email.ts` | 0 % | 0 % | 0 % |
+| `composition/llm.ts` | 20,68 % | 50 % | 33,33 % |
+| `composition/auth.ts` | 34,78 % | 25 % | — |
+| `composition/admin.ts` | — | 50 % | — |
+
+La causa es concreta: `vitest.config.ts` excluye `'**/composition.ts'` como infraestructura
+de cableado (estrategia de 3 niveles). Cuando el god file `composition.ts` se repartio por
+areas —`auth.ts`, `llm.ts`, `email.ts`, `persistence.ts`, `admin.ts`—, el patron dejo de
+casar con los ficheros nuevos, que son exactamente el mismo tipo de codigo. El umbral no
+cambio; cambio lo que caia dentro.
+
+Decidir cual de las dos: extender el exclude a `composition/**` —coherente con la estrategia,
+pero ampliar un exclude siempre pide justificarse— o darles test de cableado. Hasta que se
+decida, `pnpm test:coverage` **falla en `develop`**, mientras que `pnpm verify` (que no
+incluye coverage) pasa. Esa asimetria es lo que ha dejado que se cuele.
+
 ## Vectorial
 
 Migrar a schema con columna JSON metadata para evitar migraciones futuras.
@@ -291,11 +317,11 @@ GitHub; su contenido ya esta integrado, asi que borrarlas no pierde nada:
   `mkdir -p` antes de abrir la conexion (`db.ts`), porque `better-sqlite3` no lo hace
   y `apps/core-api/data/` esta gitignored. Cubierto por `db.test.ts`.
 - **`swagger.ts` como god file**: el documento OpenAPI se genera desde el codigo.
-- **Coverage bajo umbral**: ningun fichero incumple ya. Al remedir aparecio un cuarto
-  que no estaba documentado (`traceConsole.ts`, functions 66,66 %). `withTimeout.ts` y
-  `sdkErrorUtils.ts` no tenian test ninguno; `diagnosisKnowledgeMapper.ts` cubria el
-  camino feliz pero no las guardas de `deserializeList` (campo ausente, no-string, JSON
-  corrupto, JSON que no es array).
+- **Coverage bajo umbral** (los cuatro de entonces): `traceConsole.ts` (functions 66,66 %),
+  `withTimeout.ts` y `sdkErrorUtils.ts` (sin test ninguno) y `diagnosisKnowledgeMapper.ts`
+  (cubria el camino feliz pero no las guardas de `deserializeList`). **Ojo: la afirmacion
+  "ningun fichero incumple ya" dejo de ser cierta** — ver la seccion "Coverage: cuatro
+  ficheros de composicion" mas arriba.
 - **Los tests de la UI, fuera de lint y formato**: `lint` y `format` de `apps/ui` ya
   cubren `tests/` ademas de `src/`. La estimacion que habia aqui ("~1129 errores de
   `prettier/prettier`") era **de antes de formatear**: aplicado `prettier --write`
