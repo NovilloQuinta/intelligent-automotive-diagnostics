@@ -442,8 +442,12 @@ function pie(s) {
     x: 0.85, y: 1.62, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
+  s.addText('El dominio son normas —SAE J1979, ISO 15031, ISO 3779—: había que poder verificarlas una a una, aisladas.', {
+    x: 0.85, y: 1.98, w: 11.6, h: 0.36, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
+  })
   s.addText('Qué ha aportado en este proyecto', {
-    x: 0.85, y: 2.2, w: 11.6, h: 0.3, margin: 0, valign: 'top',
+    x: 0.85, y: 2.4, w: 11.6, h: 0.3, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 15, bold: true, color: AZUL,
   })
 
@@ -466,7 +470,7 @@ function pie(s) {
     ],
   ]
   ventajas.forEach(([titulo, detalle], k) => {
-    const y = 2.68 + k * 0.73
+    const y = 2.8 + k * 0.70
     s.addText(String(k + 1).padStart(2, '0'), {
       x: 0.85, y, w: 0.5, h: 0.32, margin: 0, valign: 'top',
       fontFace: 'Arial', fontSize: 16, bold: true, color: AZUL,
@@ -509,8 +513,14 @@ function pie(s) {
   pie(s)
   s.addNotes(
     'La arquitectura es Clean Architecture combinada con el patrón hexagonal. Tres capas: dominio, ' +
-    'aplicación e infraestructura, y las dependencias siempre apuntando hacia dentro. La ' +
-    'teoría ya la conocéis, así que os cuento qué me ha dado a mí, en este proyecto ' +
+    'aplicación e infraestructura, y las dependencias siempre apuntando hacia dentro.\n\n' +
+    'La elegí por una razón concreta: aquí el dominio no es algo que me haya inventado yo, ' +
+    'son normas. SAE J1979, ISO 15031 y la ISO 3779 del bastidor. Si el proyecto tiene que ' +
+    'cumplir una norma, tengo que poder demostrar que la cumple, y eso significa poder ' +
+    'verificar cada fórmula y cada decodificación por separado, sin base de datos, sin ' +
+    'servidor y sin coche delante. Esa exigencia de testabilidad es la que manda que las ' +
+    'normas vivan en el dominio y todo lo demás quede detrás de un puerto.\n\n' +
+    'La teoría ya la conocéis, así que os cuento qué me ha dado a mí, en este proyecto ' +
     'concreto.\n\n' +
     'Lo primero, y es lo más importante: he construido y probado una aplicación de ' +
     'diagnóstico de vehículos sin tener el vehículo delante. Leer del coche es un puerto, y ' +
