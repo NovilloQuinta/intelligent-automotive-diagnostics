@@ -298,7 +298,7 @@ function pie(s) {
     'severidad y qué conviene revisar. Y el caso se indexa.\n\n' +
     'Ese último paso es el que hace que el sistema mejore: queda disponible para el ' +
     'siguiente coche que entre con síntomas parecidos.\n\n' +
-    '[~75 s · acumulado 3:10]',
+    '[~75 s · acumulado 2:30]',
   )
 }
 
@@ -366,7 +366,7 @@ function pie(s) {
     'con un límite de sesenta segundos. Y es el único que aprende: indexa los PIDs y DTCs ' +
     'nuevos y guarda el caso resuelto.\n\n' +
     'Por eso conviven. Si no hay modelo configurado, o si no hay internet en el taller, el ' +
-    'determinista sigue funcionando.\n\n[~65 s · acumulado 4:15]',
+    'determinista sigue funcionando.\n\n[~65 s · acumulado 3:35]',
   )
 }
 
@@ -425,7 +425,7 @@ function pie(s) {
     'supertest para los endpoints y Playwright para el extremo a extremo. Y la entrega va ' +
     'con GitHub Actions, Docker y Caddy delante.\n\n' +
     'Lo importante no es la lista: es que todo lo que aparece de la tercera fila para abajo ' +
-    'está detrás de un puerto, así que se puede sustituir sin tocar la lógica.\n\n[~55 s · acumulado 5:10]',
+    'está detrás de un puerto, así que se puede sustituir sin tocar la lógica.\n\n[~55 s · acumulado 4:30]',
   )
 }
 
@@ -512,7 +512,7 @@ function pie(s) {
     'falta pero no cómo. Y en infraestructura el cómo: Express, Drizzle sobre SQLite, ' +
     'LanceDB, el servidor MCP y el transporte del ELM327.\n\n' +
     'El dominio no sabe que existe SQLite, ni Express, ni ningún modelo de lenguaje.\n\n' +
-    '[~80 s · acumulado 6:30]',
+    '[~80 s · acumulado 5:50]',
   )
 }
 
@@ -601,7 +601,7 @@ function pie(s) {
     'Ese dato no son revoluciones todavía. Hay que aplicarle la fórmula del PID: A por 256 ' +
     'más B, dividido entre 4. Con 0B y B8, eso da 750 revoluciones.\n\n' +
     'Esa fórmula la fija la SAE J1979, y por eso está en el dominio y no en el código que ' +
-    'habla con el cable.\n\n[~70 s · acumulado 7:40]',
+    'habla con el cable.\n\n[~70 s · acumulado 7:00]',
   )
 }
 
@@ -664,7 +664,7 @@ function pie(s) {
     'Y no vale con una sola. SQLite tiene buscador de texto, pero busca palabras: si el ' +
     'mecánico escribe "presión de aceite", no encuentra una ficha que ponga "oil ' +
     'pressure". La búsqueda vectorial sí, porque compara significado.\n\n' +
-    'Las dos son embebidas: un fichero y un directorio en disco. Cero servidores.\n\n[~55 s · acumulado 8:35]',
+    'Las dos son embebidas: un fichero y un directorio en disco. Cero servidores.\n\n[~55 s · acumulado 7:55]',
   )
 }
 
@@ -740,7 +740,7 @@ function pie(s) {
     'valida contra el coche.\n\n' +
     'Es un fichero en disco, sin servidor. PostgreSQL se descartó porque a esta escala solo ' +
     'añadía un servicio, una red y un backup que mantener, sin resolver ningún problema ' +
-    'que yo tuviera.\n\n[~60 s · acumulado 9:35]',
+    'que yo tuviera.\n\n[~60 s · acumulado 8:55]',
   )
 }
 
@@ -856,7 +856,7 @@ function pie(s) {
     'propósito es subir la confianza de un caso cada vez que se reutiliza con acierto. La ' +
     'función existe y está testeada, pero no la llamo desde ningún flujo, porque para eso ' +
     'haría falta saber que el diagnóstico acertó de verdad, y nadie le dice al sistema si ' +
-    'el coche se arregló. Inventármelo habría degradado el catálogo.\n\n[~70 s · acumulado 10:45]',
+    'el coche se arregló. Inventármelo habría degradado el catálogo.\n\n[~70 s · acumulado 10:05]',
   )
 }
 
@@ -948,7 +948,7 @@ function pie(s) {
     'Además, cada herramienta declara su esquema, así que los argumentos se validan antes ' +
     'de ejecutar nada. Y el servidor MCP vive en infraestructura: es un adaptador más, el ' +
     'modelo nunca ve el dominio. Como es un protocolo, ese mismo servidor serviría a ' +
-    'cualquier otro cliente que lo hable.\n\n[~75 s · acumulado 12:00]',
+    'cualquier otro cliente que lo hable.\n\n[~75 s · acumulado 11:20]',
   )
 }
 
@@ -1034,7 +1034,7 @@ function pie(s) {
     'El system prompt tiene once bloques. No es solo decirle "eres un mecánico": hay ' +
     'bloques de exploración, de consultar el catálogo antes de inventar, de aprendizaje ' +
     'para PIDs, DTCs y ECUs, de ámbito, de no revelar sus propias tripas, de contenido no ' +
-    'fiable y del formato de salida.\n\n[~80 s · acumulado 13:20]',
+    'fiable y del formato de salida.\n\n[~80 s · acumulado 12:40]',
   )
 }
 
@@ -1104,7 +1104,7 @@ function pie(s) {
     'Que corra en local significa tres cosas: no hace falta clave, no hay latencia de red y ' +
     'no se paga por consulta. Y como es multilingüe, español e inglés caen cerca en ese ' +
     'espacio: por eso "presión de aceite" encuentra una ficha que pone "oil pressure", que ' +
-    'es justo lo que un buscador de texto no hace.\n\n[~65 s · acumulado 14:25]',
+    'es justo lo que un buscador de texto no hace.\n\n[~65 s · acumulado 13:45]',
   )
 }
 
@@ -1155,7 +1155,7 @@ function pie(s) {
     'los servicios 03, 07 y 0A del estándar: almacenadas, pendientes y permanentes.\n\n' +
     'Y a la derecha el informe, que se congela con la sesión: si dentro de seis meses ' +
     'alguien abre ese diagnóstico, ve exactamente lo que se vio ese día.\n\n' +
-    '[~2 min contando la demo. Si hay vídeo del coche real, va aquí. · acumulado 16:25]',
+    '[~2 min contando la demo. Si hay vídeo del coche real, va aquí. · acumulado 15:45]',
   )
 }
 
@@ -1164,11 +1164,11 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Calidad, integración continua y seguridad', {
+  s.addText('Calidad del código y seguridad', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Un único desarrollador: la integración continua es la red de seguridad.', {
+  s.addText('Un único desarrollador: las comprobaciones automáticas son la red de seguridad.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
@@ -1222,7 +1222,105 @@ function pie(s) {
     'tumba la build si aparece una vulnerabilidad crítica.\n\n' +
     'En seguridad, el documento cubre las diez categorías del OWASP API Top 10 de 2023, una ' +
     'a una, con lo que hace el código en cada caso. Incluidos los riesgos residuales, que ' +
-    'están escritos y asumidos, no escondidos.\n\n[~60 s · acumulado 17:25]',
+    'están escritos y asumidos, no escondidos.\n\n[~60 s · acumulado 16:45]',
+  )
+}
+
+// ======= INTEGRACIÓN Y DESPLIEGUE CONTINUOS ===============================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Integración y despliegue continuos', {
+    x: 0.85, y: 0.55, w: 11.6, h: 0.75, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
+  })
+  s.addText('Todo automatizado en GitHub Actions: integrar en main publica la nueva versión en producción.', {
+    x: 0.85, y: 1.38, w: 11.6, h: 0.35, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
+  })
+
+  // La cadena, de la integracion a produccion
+  const etapas = [
+    ['Integración en main', 'push o merge'],
+    ['Verificación', 'lint, tests,\nbuild y typecheck'],
+    ['Construcción', 'tres imágenes\nDocker'],
+    ['Publicación', 'registro de\ncontenedores'],
+    ['Producción', 'el servidor levanta\nla nueva versión'],
+  ]
+  const bw = 2.0, bgap = 0.4, by = 2.05, bh = 0.95
+  etapas.forEach(([t, sub], k) => {
+    const x = 0.85 + k * (bw + bgap)
+    s.addShape(pres.ShapeType.roundRect, {
+      x, y: by, w: bw, h: bh, rectRadius: 0.06,
+      fill: { color: k === etapas.length - 1 ? TINTA : BLANCO },
+      line: { color: k === etapas.length - 1 ? TINTA : 'C9CCD8', width: 1 },
+    })
+    s.addText(t, {
+      x: x + 0.08, y: by + 0.13, w: bw - 0.16, h: 0.3, margin: 0, align: 'center', valign: 'middle',
+      fontFace: 'Arial', fontSize: 11, bold: true, color: k === etapas.length - 1 ? BLANCO : TINTA,
+    })
+    s.addText(sub, {
+      x: x + 0.08, y: by + 0.44, w: bw - 0.16, h: 0.42, margin: 0, align: 'center', valign: 'top',
+      fontFace: 'Calibri', fontSize: 9.5, color: k === etapas.length - 1 ? GRIS_CL : GRIS, lineSpacing: 12,
+    })
+    if (k < etapas.length - 1) {
+      s.addShape(pres.ShapeType.line, {
+        x: x + bw + 0.08, y: by + bh / 2, w: bgap - 0.16, h: 0,
+        line: { color: AZUL, width: 1.5, endArrowType: 'triangle' },
+      })
+    }
+  })
+
+  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 3.42, yLista = 4.0
+
+  s.addText('Integración continua', {
+    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'En cada push y en cada pull request', options: { bullet: true, breakLine: true } },
+      { text: 'Las dos aplicaciones en paralelo, sobre Node 22', options: { bullet: true, breakLine: true } },
+      { text: 'Lint, formato, pruebas, compilación y typecheck',  options: { bullet: true, breakLine: true } },
+      { text: 'Auditoría de dependencias, que detiene la entrega ante una vulnerabilidad crítica', options: { bullet: true } },
+    ],
+    { x: xIzq, y: yLista, w: colW, h: 2.6, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+  )
+
+  s.addText('Despliegue continuo', {
+    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'Se dispara al integrar en la rama de releases', options: { bullet: true, breakLine: true } },
+      { text: 'Construye tres imágenes: API, interfaz y emulador', options: { bullet: true, breakLine: true } },
+      { text: 'Las publica en el registro de contenedores de GitHub', options: { bullet: true, breakLine: true } },
+      { text: 'Y el servidor las descarga y levanta la nueva versión, sin intervención manual', options: { bullet: true } },
+    ],
+    { x: xDer, y: yLista, w: colW, h: 2.6, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+  )
+
+  pie(s)
+  s.addNotes(
+    'Todo el ciclo está automatizado con GitHub Actions, y son dos flujos distintos.\n\n' +
+    'El de integración continua se ejecuta en cada push y en cada pull request contra main ' +
+    'y develop. Levanta las dos aplicaciones en paralelo sobre Node 22 y pasa lint, ' +
+    'formato, las pruebas, la compilación y el typecheck. Y remata con una auditoría de ' +
+    'dependencias que detiene la entrega si aparece una vulnerabilidad crítica.\n\n' +
+    'El de despliegue se dispara solo cuando algo entra en main, que es la rama de ' +
+    'releases. Construye tres imágenes Docker: la API, la interfaz y el emulador ELM327. ' +
+    'Usa caché de la propia plataforma, así que las construcciones sucesivas son rápidas. ' +
+    'Las publica en el registro de contenedores de GitHub.\n\n' +
+    'Y después entra por SSH al servidor, descarga las imágenes nuevas, levanta los ' +
+    'contenedores con la configuración de producción y limpia las imágenes viejas. Sin que ' +
+    'yo toque nada.\n\n' +
+    'La consecuencia práctica es que integrar en main es publicar. La aplicación está ' +
+    'desplegada y accesible, no es una demo que solo corre en mi portátil.\n\n' +
+    '[~55 s · acumulado 17:40]',
   )
 }
 
@@ -1285,7 +1383,7 @@ function pie(s) {
     'semanas sin exigir nada. Estaba verde, y no comprobaba lo que decía comprobar. Lo he ' +
     'documentado en la deuda conocida del proyecto.\n\n' +
     'Así que sí, acelera mucho. Pero no es todo tan bonito como parece: hay que dedicarle ' +
-    'tiempo a revisar.\n\n[~45 s · acumulado 18:10]',
+    'tiempo a revisar.\n\n[~45 s · acumulado 18:25]',
   )
 }
 
@@ -1330,4 +1428,4 @@ function pie(s) {
 }
 
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 19 slides')
+console.log('PPTX escrito: 20 slides')

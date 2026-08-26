@@ -1,6 +1,6 @@
 # Indice de la defensa — cerrado
 
-> 17 slides, ~17 min, en bloques: el problema, que resuelve, como funciona,
+> 18 slides, ~18:25, en bloques: el problema, que resuelve, como funciona,
 > como esta construida, las piezas, el resultado y el cierre. **Se trabaja punto por punto**: el autor cuenta que va en el punto,
 > se maqueta, se valida, y solo entonces se pasa al siguiente. Nada de adelantar slides.
 
@@ -20,11 +20,12 @@
 | 12 | Ciclo de razonamiento del agente | Las piezas | pendiente |
 | 13 | Modelos empleados: lenguaje y embeddings | Las piezas | pendiente |
 | 14 | Resultados: la aplicacion en funcionamiento | El resultado | pendiente |
-| 15 | Calidad, integracion continua y seguridad | El resultado | pendiente |
-| 16 | Conclusiones | Cierre | pendiente |
-| 17 | Gracias por la atencion | Cierre | pendiente |
+| 15 | Calidad del codigo y seguridad | El resultado | pendiente |
+| 16 | Integracion y despliegue continuos | El resultado | **nueva** |
+| 17 | Conclusiones | Cierre | pendiente |
+| 18 | Gracias por la atencion | Cierre | pendiente |
 
-**Suma: ~17 min.**
+**Suma: ~18:25.**
 
 ## Cambios acordados sobre la primera propuesta
 
@@ -34,6 +35,9 @@
 - La slide de los dos diagnosticos se mueve **detras** del bloque de IA: hablaba de
   "el agente", "herramientas" e "indices vectoriales" antes de haberlos explicado.
 - El numero de pagina lo calcula `build.mjs` solo, para que reordenar no lo descuadre.
+- **Slide de CI/CD** (2026-08-25): el despliegue automatico no aparecia en ningun sitio.
+  La de calidad se queda con TDD, pruebas y seguridad, y el pipeline entero pasa a slide
+  propia: integracion -> verificacion -> construccion -> publicacion -> produccion.
 - **Las tres primeras slides se funden en una** (2026-08-25): "que es", "el problema" y
   "que hace" contaban lo mismo por partes y no cerraban la idea. Ahora es una sola que
   explica el conjunto: a la izquierda donde se queda el escaner de hoy, a la derecha lo
