@@ -1247,35 +1247,35 @@ function pie(s) {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Los diez identificadores oficiales, con la medida que se aplicó en el código.', {
+  s.addText('Las diez categorías, con su nombre oficial y la medida que se aplicó en el código.', {
     x: 0.85, y: 1.62, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
 
   const owasp = [
-    ['API1', 'Autorización a nivel de objeto', 'Las consultas filtran por propietario: la sesión de otro usuario devuelve 404, no 403'],
-    ['API2', 'Autenticación rota', 'bcrypt de 12 rondas, rotación de refresh tokens y bloqueo de cuenta a los 5 fallos'],
-    ['API3', 'Autorización a nivel de propiedad', 'Los esquemas Zod son la allowlist de campos: lo no declarado no entra'],
-    ['API4', 'Consumo de recursos sin restricción', 'Límites por familia: login 5/min, diagnóstico 20/min, cognitivo 5/min'],
-    ['API5', 'Autorización a nivel de función', 'Todo /api tras el middleware de sesión; administración tras requireAdmin'],
-    ['API6', 'Acceso a flujos de negocio sensibles', 'El borrado de códigos de avería lleva límite propio y se apaga con OBD_READ_ONLY'],
-    ['API7', 'Server Side Request Forgery', 'El usuario no controla ninguna URL de salida: proveedor fijo y timeout de 30 s'],
-    ['API8', 'Configuración de seguridad incorrecta', 'Helmet 8 con CSP default-src none, HSTS de un año y allowlist de CORS'],
-    ['API9', 'Gestión indebida del inventario', 'Especificación OpenAPI versionada y servida por la propia API'],
-    ['API10', 'Consumo inseguro de APIs', 'Lo recuperado llega al modelo marcado como no fiable, nunca como instrucción'],
+    ['API1', 'Broken Object Level Authorization', 'La sesión de otro usuario devuelve 404, no 403'],
+    ['API2', 'Broken Authentication', 'bcrypt 12 rondas, rotación de refresh y bloqueo a los 5 fallos'],
+    ['API3', 'Broken Object Property Level Authorization', 'Los esquemas Zod son la allowlist de campos'],
+    ['API4', 'Unrestricted Resource Consumption', 'login 5/min, diagnóstico 20/min, cognitivo 5/min'],
+    ['API5', 'Broken Function Level Authorization', 'Todo /api autenticado; administración tras requireAdmin'],
+    ['API6', 'Unrestricted Access to Sensitive Business Flows', 'Borrado de códigos con límite propio y apagable por entorno'],
+    ['API7', 'Server Side Request Forgery', 'El usuario no controla ninguna URL de salida'],
+    ['API8', 'Security Misconfiguration', 'Helmet 8: CSP, HSTS de un año y allowlist de CORS'],
+    ['API9', 'Improper Inventory Management', 'Especificación OpenAPI versionada, servida por la API'],
+    ['API10', 'Unsafe Consumption of APIs', 'Lo recuperado llega al modelo marcado como no fiable'],
   ]
   owasp.forEach(([codigo, nombre, medida], k) => {
     const y = 2.28 + k * 0.44
     s.addText(codigo, {
-      x: 0.85, y, w: 0.75, h: 0.4, margin: 0, valign: 'middle',
-      fontFace: 'Arial', fontSize: 12, bold: true, color: AZUL,
+      x: 0.85, y, w: 0.8, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Arial', fontSize: 11, bold: true, color: AZUL,
     })
     s.addText(nombre, {
-      x: 1.62, y, w: 3.75, h: 0.4, margin: 0, valign: 'middle',
-      fontFace: 'Arial', fontSize: 12, bold: true, color: TINTA,
+      x: 1.65, y, w: 4.35, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Arial', fontSize: 11.5, bold: true, color: TINTA,
     })
     s.addText(medida, {
-      x: 5.45, y, w: 7.0, h: 0.4, margin: 0, valign: 'middle',
+      x: 6.1, y, w: 6.35, h: 0.4, margin: 0, valign: 'middle',
       fontFace: 'Calibri', fontSize: 12, color: GRIS,
     })
   })

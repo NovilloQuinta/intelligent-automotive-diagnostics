@@ -41,7 +41,9 @@
   propia: integracion -> verificacion -> construccion -> publicacion -> produccion.
 - **Slide de OWASP** (2026-08-26): la de calidad solo decia que las diez categorias
   estaban documentadas. Ahora hay una slide propia con las diez y la medida concreta
-  que se aplico en cada una, sacadas de `docs/security.md`.
+  que se aplico en cada una, sacadas de `docs/security.md`. Los nombres van en ingles,
+  tal cual los publica OWASP. El ano es 2023 a proposito: el Top 10:2025 es el de
+  aplicaciones web, otro proyecto; el de APIs sigue en la edicion de 2023.
 - **Slide 6 rehecha** (2026-08-26): justificaba la arquitectura con argumentos de
   manual (testabilidad, desacoplamiento) que valen para cualquier proyecto y no
   decian nada de este. Ahora enumera cinco ventajas concretas ya cobradas, sacadas
