@@ -1295,10 +1295,10 @@ function pie(s) {
   })
   s.addText(
     [
-      { text: 'Se dispara al integrar en la rama de releases', options: { bullet: true, breakLine: true } },
+      { text: 'Se dispara al integrar en main', options: { bullet: true, breakLine: true } },
       { text: 'Construye tres imágenes: API, interfaz y emulador', options: { bullet: true, breakLine: true } },
       { text: 'Las publica en el registro de contenedores de GitHub', options: { bullet: true, breakLine: true } },
-      { text: 'Y el servidor las descarga y levanta la nueva versión, sin intervención manual', options: { bullet: true } },
+      { text: 'El servidor las descarga y levanta la nueva versión, sin intervención manual', options: { bullet: true } },
     ],
     { x: xDer, y: yLista, w: colW, h: 2.6, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
@@ -1428,4 +1428,4 @@ function pie(s) {
 }
 
 await pres.writeFile({ fileName: `${REPO}/docs/presentacion/tfm-intelligent-automotive-diagnostics.pptx` })
-console.log('PPTX escrito: 20 slides')
+console.log(`PPTX escrito: ${pres.slides.length} slides`)

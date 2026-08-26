@@ -1,6 +1,6 @@
 # Presentacion de defensa del TFM
 
-Deck de la defensa ante el tribunal. **15 diapositivas, 15 minutos.**
+Deck de la defensa ante el tribunal. **18 diapositivas, ~18 minutos de guion.**
 
 | Fichero | Que es |
 |---|---|
