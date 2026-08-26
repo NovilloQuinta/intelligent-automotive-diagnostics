@@ -434,13 +434,17 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Arquitectura: impacto en el desarrollo del proyecto', {
+  s.addText('Clean Architecture con puertos y adaptadores', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Qué ha permitido hacer, en concreto, mientras se construía.', {
-    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+  s.addText('Tres capas —dominio, aplicación e infraestructura— con las dependencias siempre hacia dentro.', {
+    x: 0.85, y: 1.62, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+  s.addText('Qué ha aportado en este proyecto', {
+    x: 0.85, y: 2.2, w: 11.6, h: 0.3, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 15, bold: true, color: AZUL,
   })
 
   const ventajas = [
@@ -462,7 +466,7 @@ function pie(s) {
     ],
   ]
   ventajas.forEach(([titulo, detalle], k) => {
-    const y = 2.3 + k * 0.79
+    const y = 2.68 + k * 0.73
     s.addText(String(k + 1).padStart(2, '0'), {
       x: 0.85, y, w: 0.5, h: 0.32, margin: 0, valign: 'top',
       fontFace: 'Arial', fontSize: 16, bold: true, color: AZUL,
@@ -479,7 +483,7 @@ function pie(s) {
 
   // Ejemplo: un puerto, dos adaptadores
   s.addText('Un ejemplo', {
-    x: 0.85, y: 5.5, w: 11.6, h: 0.3, margin: 0, valign: 'top',
+    x: 0.85, y: 5.66, w: 11.6, h: 0.3, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 15, bold: true, color: TINTA,
   })
 
@@ -494,18 +498,20 @@ function pie(s) {
       fontFace: 'Calibri', fontSize: 16, bold: true, color: AZUL_CL,
     })
 
-  nodo('Caso de uso de diagnóstico', 0.85, 5.92, 2.9, TINTA)
-  flecha(3.75, 5.92)
-  nodo('Puerto de lectura del vehículo', 4.4, 5.92, 3.1, TINTA)
-  flecha(7.5, 5.68)
-  flecha(7.5, 6.16)
-  nodo('Lector ELM327 conectado al coche', 8.15, 5.68, 4.2, GRIS)
-  nodo('Emulador en el portátil', 8.15, 6.16, 4.2, GRIS)
+  nodo('Caso de uso de diagnóstico', 0.85, 6.08, 2.9, TINTA)
+  flecha(3.75, 6.08)
+  nodo('Puerto de lectura del vehículo', 4.4, 6.08, 3.1, TINTA)
+  flecha(7.5, 5.86)
+  flecha(7.5, 6.30)
+  nodo('Lector ELM327 conectado al coche', 8.15, 5.86, 4.2, GRIS)
+  nodo('Emulador en el portátil', 8.15, 6.30, 4.2, GRIS)
 
   pie(s)
   s.addNotes(
-    'Sobre la arquitectura no os voy a contar la teoría, que ya la conocéis. Os cuento qué ' +
-    'me ha dado a mí, en este proyecto concreto.\n\n' +
+    'La arquitectura es Clean Architecture con puertos y adaptadores. Tres capas: dominio, ' +
+    'aplicación e infraestructura, y las dependencias siempre apuntando hacia dentro. La ' +
+    'teoría ya la conocéis, así que os cuento qué me ha dado a mí, en este proyecto ' +
+    'concreto.\n\n' +
     'Lo primero, y es lo más importante: he construido y probado una aplicación de ' +
     'diagnóstico de vehículos sin tener el vehículo delante. Leer del coche es un puerto, y ' +
     'detrás hay dos adaptadores intercambiables: el lector ELM327 y un emulador. Tres ' +
