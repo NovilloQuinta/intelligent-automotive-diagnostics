@@ -448,46 +448,27 @@ function pie(s) {
   })
 
   const ventajas = [
-    [
-      'El proyecto se ha desarrollado sin el vehículo',
-      'Todo el desarrollo y las pruebas se han hecho contra emuladores: Audi, Kawasaki y Toyota.',
-    ],
-    [
-      'La forma de conectarse al coche se decidió al final',
-      'El transporte del lector es otro puerto: por red o por puerto serie, con reintentos por encima.',
-    ],
-    [
-      'El diagnóstico cognitivo se añadió sin tocar el determinista',
-      'El servidor MCP entró como un adaptador más. Los casos de uso que ya funcionaban no se modificaron.',
-    ],
-    [
-      'Dos proveedores de modelo con el mismo código de diagnóstico',
-      'En las pruebas el modelo se sustituye por un doble: el flujo se verifica sin llamar a uno real.',
-    ],
-    [
-      'Alta testabilidad, que es lo que exigen las normas',
-      'Las normativas ISO hay que probarlas con test: 2171 pruebas sin coche, sin servidor y sin modelo.',
-    ],
+    'El proyecto se ha desarrollado sin el vehículo',
+    'La forma de conectarse al coche se decidió al final',
+    'El diagnóstico cognitivo se añadió sin tocar el determinista',
+    'Dos proveedores de modelo con el mismo código de diagnóstico',
+    'Alta testabilidad, que es lo que exigen las normas',
   ]
-  ventajas.forEach(([titulo, detalle], k) => {
-    const y = 2.55 + k * 0.68
+  ventajas.forEach((titulo, k) => {
+    const y = 2.68 + k * 0.58
     s.addText(String(k + 1).padStart(2, '0'), {
-      x: 0.85, y, w: 0.5, h: 0.32, margin: 0, valign: 'top',
-      fontFace: 'Arial', fontSize: 16, bold: true, color: AZUL,
+      x: 0.85, y, w: 0.5, h: 0.36, margin: 0, valign: 'top',
+      fontFace: 'Arial', fontSize: 17, bold: true, color: AZUL,
     })
     s.addText(titulo, {
-      x: 1.45, y, w: 11.0, h: 0.32, margin: 0, valign: 'top',
-      fontFace: 'Arial', fontSize: 17, bold: true, color: TINTA,
-    })
-    s.addText(detalle, {
-      x: 1.45, y: y + 0.32, w: 11.0, h: 0.32, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 14, color: GRIS,
+      x: 1.45, y, w: 11.0, h: 0.36, margin: 0, valign: 'top',
+      fontFace: 'Arial', fontSize: 18, bold: true, color: TINTA,
     })
   })
 
   // Ejemplo: un puerto, dos adaptadores
   s.addText('Un ejemplo', {
-    x: 0.85, y: 5.98, w: 11.6, h: 0.3, margin: 0, valign: 'top',
+    x: 0.85, y: 5.66, w: 11.6, h: 0.3, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 15, bold: true, color: TINTA,
   })
 
@@ -502,11 +483,13 @@ function pie(s) {
       fontFace: 'Calibri', fontSize: 16, bold: true, color: AZUL_CL,
     })
 
-  nodo('Caso de uso de diagnóstico', 0.85, 6.34, 2.9, TINTA)
-  flecha(3.75, 6.34)
-  nodo('Puerto de lectura del vehículo', 4.4, 6.34, 3.1, TINTA)
-  flecha(7.5, 6.34)
-  nodo('Lector ELM327 conectado al coche o emulador', 8.15, 6.34, 4.4, GRIS)
+  nodo('Caso de uso de diagnóstico', 0.85, 6.08, 2.9, TINTA)
+  flecha(3.75, 6.08)
+  nodo('Puerto de lectura del vehículo', 4.4, 6.08, 3.1, TINTA)
+  flecha(7.5, 5.86)
+  flecha(7.5, 6.30)
+  nodo('Lector ELM327 conectado al coche', 8.15, 5.86, 4.2, GRIS)
+  nodo('Emulador en el portátil', 8.15, 6.30, 4.2, GRIS)
 
   pie(s)
   s.addNotes(

@@ -45,7 +45,8 @@
   produccion (`ObdRepository`, `Elm327TransportPort`, `LlmClientPort`). Cierra con
   el ejemplo dibujado: un caso de uso, un puerto, dos adaptadores. El punto 5 es la
   testabilidad: las normativas ISO hay que probarlas con test, de ahi 2171 pruebas que
-  corren sin coche, sin servidor y sin modelo.
+  corren sin coche, sin servidor y sin modelo. En la slide van **solo los cinco
+  titulares**; el detalle de cada uno se cuenta en las notas del ponente.
 - **Las tres primeras slides se funden en una** (2026-08-25): "que es", "el problema" y
   "que hace" contaban lo mismo por partes y no cerraban la idea. Ahora es una sola que
   explica el conjunto: a la izquierda donde se queda el escaner de hoy, a la derecha lo
