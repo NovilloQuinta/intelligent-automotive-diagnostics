@@ -66,7 +66,7 @@ function applyBaseMiddleware(app: express.Application, deps: ServerDependencies)
       frameguard: { action: 'deny' },
     }),
   )
-  app.use(createRateLimiter(deps.rateLimit))
+  app.use(createRateLimiter({ namespace: 'global', ...deps.rateLimit }))
   app.use(createAuditLogger(deps.auditRepo))
   // El chat cognitivo reenvia el hilo entero en cada pregunta, asi que su cuerpo
   // crece con la conversacion y con 10 KB se agotaba a la tercera pregunta. Lleva
@@ -174,12 +174,24 @@ function mountAuthRoutes(
   deps: ServerDependencies,
   authMiddleware: express.RequestHandler | undefined,
 ): void {
-  const loginLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 5 })
-  const refreshLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 10 })
+  const loginLimiter = createRateLimiter({
+    namespace: 'auth:login',
+    windowMinutes: 1,
+    maxRequests: 5,
+  })
+  const refreshLimiter = createRateLimiter({
+    namespace: 'auth:refresh',
+    windowMinutes: 1,
+    maxRequests: 10,
+  })
   // Rate limit dedicado para forgot-password: mas estricto que login (evita abuso del envio de email)
-  const forgotPasswordLimiter = createRateLimiter({ windowMinutes: 15, maxRequests: 5 })
+  const forgotPasswordLimiter = createRateLimiter({
+    namespace: 'auth:forgot-password',
+    windowMinutes: 15,
+    maxRequests: 5,
+  })
 
-  app.use('/api/auth', createRateLimiter({ windowMinutes: 15, maxRequests: 20 }))
+  app.use('/api/auth', createRateLimiter({ namespace: 'auth', windowMinutes: 15, maxRequests: 20 }))
   app.use(
     '/api/auth',
     createAuthRoutes(
@@ -197,9 +209,21 @@ function mountAuthRoutes(
  * limites mas estrictos que el global. El cognitivo es el mas caro de todos.
  */
 function applyDiagnosisRateLimits(app: express.Application): void {
-  const diagnosisLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 20 })
-  const cognitiveLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 5 })
-  const clearDtcLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 5 })
+  const diagnosisLimiter = createRateLimiter({
+    namespace: 'diagnosis',
+    windowMinutes: 1,
+    maxRequests: 20,
+  })
+  const cognitiveLimiter = createRateLimiter({
+    namespace: 'diagnosis:cognitive',
+    windowMinutes: 1,
+    maxRequests: 5,
+  })
+  const clearDtcLimiter = createRateLimiter({
+    namespace: 'diagnosis:clear-dtc',
+    windowMinutes: 1,
+    maxRequests: 5,
+  })
 
   app.use('/api/diagnosis', diagnosisLimiter)
   app.use('/api/freeze-frame', diagnosisLimiter)
@@ -221,7 +245,10 @@ function applyAdminRateLimits(
   app: express.Application,
   config: Partial<RateLimiterConfig> | undefined,
 ): void {
-  app.use('/api/admin', createRateLimiter(config ?? { windowMinutes: 1, maxRequests: 30 }))
+  app.use(
+    '/api/admin',
+    createRateLimiter({ namespace: 'admin', ...(config ?? { windowMinutes: 1, maxRequests: 30 }) }),
+  )
 }
 
 /**
@@ -267,7 +294,11 @@ export function createServer(deps: ServerDependencies): express.Application {
 
   if (deps.profileController) {
     // Rate limit dedicado para change-password: protege contra fuerza bruta con un access token robado
-    const changePasswordLimiter = createRateLimiter({ windowMinutes: 15, maxRequests: 5 })
+    const changePasswordLimiter = createRateLimiter({
+      namespace: 'profile:change-password',
+      windowMinutes: 15,
+      maxRequests: 5,
+    })
     app.use('/api/profile', createProfileRoutes(deps.profileController, changePasswordLimiter))
   }
 

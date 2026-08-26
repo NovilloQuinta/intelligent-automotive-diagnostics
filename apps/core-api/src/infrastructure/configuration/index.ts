@@ -22,6 +22,17 @@ const configSchema = z.object({
   SERIAL_PORT_PATH: z.string().default('/dev/ttyUSB0'),
   SERIAL_BAUD_RATE: z.coerce.number().int().positive().default(38400),
   ALLOWED_ORIGINS: z.string().default('http://localhost:5173,http://localhost:4173'),
+  /**
+   * Enciende o apaga el rate limiting con independencia de `NODE_ENV`. Sin
+   * declarar, manda `NODE_ENV === 'production'`, que es el comportamiento
+   * historico; por eso no lleva default. La lee `createRateLimiter`, que no
+   * recibe `AppConfig`: aqui se declara para validarla en el arranque, porque un
+   * `yes` aceptado en silencio dejaria produccion sin limites.
+   */
+  RATE_LIMIT_ENABLED: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.enum(['true', 'false']).optional(),
+  ),
   ACCESS_TOKEN_SECRET: z.string().min(1).default('dev-access-secret'),
   REFRESH_TOKEN_SECRET: z.string().min(1).default('dev-refresh-secret'),
   ACCESS_TOKEN_TTL: z.coerce.number().int().positive().default(900),

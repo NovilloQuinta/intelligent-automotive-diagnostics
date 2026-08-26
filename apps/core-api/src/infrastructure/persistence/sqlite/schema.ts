@@ -1,6 +1,7 @@
 import {
   sqliteTable,
   integer,
+  primaryKey,
   real,
   text,
   unique,
@@ -234,5 +235,32 @@ export const ecuDefinitions = sqliteTable(
       table.model,
       table.responseAddr,
     ),
+  }),
+)
+
+/**
+ * Contador de peticiones por limitador y cliente, para que el rate limiting
+ * sobreviva al reinicio del proceso.
+ *
+ * La clave primaria es el par `(namespace, client_key)`: `namespace` identifica
+ * al limitador —cada `createRateLimiter` declara el suyo— y `client_key` es la
+ * clave que resuelve `express-rate-limit`, hoy la IP del cliente. Sin el
+ * `namespace` los diez limitadores de `server.ts` compartirian fila para una
+ * misma IP y agotar uno agotaria los demas.
+ *
+ * `reset_at` es epoch en milisegundos, no texto ISO: se compara en cada
+ * peticion y su indice es lo que hace barata la purga de ventanas vencidas.
+ */
+export const rateLimitCounters = sqliteTable(
+  'rate_limit_counters',
+  {
+    namespace: text('namespace').notNull(),
+    clientKey: text('client_key').notNull(),
+    hits: integer('hits').notNull().default(0),
+    resetAt: integer('reset_at').notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.namespace, table.clientKey] }),
+    resetAtIdx: index('idx_rate_limit_counters_reset_at').on(table.resetAt),
   }),
 )

@@ -141,3 +141,42 @@ describe('loadConfig — OBD_READ_ONLY', () => {
     expect(loadConfig().OBD_READ_ONLY).toBe(false)
   })
 })
+
+describe('loadConfig — RATE_LIMIT_ENABLED', () => {
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    process.env = { ...originalEnv }
+    delete process.env.RATE_LIMIT_ENABLED
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  it('queda sin definir si no se declara, para que mande NODE_ENV', () => {
+    expect(loadConfig().RATE_LIMIT_ENABLED).toBeUndefined()
+  })
+
+  it('acepta true y false', () => {
+    process.env.RATE_LIMIT_ENABLED = 'true'
+    expect(loadConfig().RATE_LIMIT_ENABLED).toBe('true')
+
+    process.env.RATE_LIMIT_ENABLED = 'false'
+    expect(loadConfig().RATE_LIMIT_ENABLED).toBe('false')
+  })
+
+  it('trata el valor vacio como no declarado', () => {
+    process.env.RATE_LIMIT_ENABLED = ''
+
+    expect(loadConfig().RATE_LIMIT_ENABLED).toBeUndefined()
+  })
+
+  it('rechaza un valor que no sea true ni false', () => {
+    // Un "yes" aceptado en silencio dejaria produccion sin rate limiting y
+    // nadie se enteraria: mejor que el arranque falle.
+    process.env.RATE_LIMIT_ENABLED = 'yes'
+
+    expect(() => loadConfig()).toThrow()
+  })
+})
