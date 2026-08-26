@@ -11,7 +11,7 @@
 | 3 | Flujo de trabajo | Como funciona | **validada** |
 | 4 | Diagnostico determinista y diagnostico cognitivo | Como funciona | pendiente |
 | 5 | Tecnologias utilizadas | Como esta construida | pendiente |
-| 6 | Clean Architecture con puertos y adaptadores | Como esta construida | **rehecha** |
+| 6 | Clean Architecture + Hexagonal | Como esta construida | **rehecha** |
 | 7 | Adquisicion de datos mediante OBD-II | Las piezas | pendiente |
 | 8 | Persistencia: modelo relacional y modelo vectorial | Las piezas | pendiente |
 | 9 | Base de datos relacional | Las piezas | pendiente |

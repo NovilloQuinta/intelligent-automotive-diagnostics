@@ -434,7 +434,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Clean Architecture con puertos y adaptadores', {
+  s.addText('Clean Architecture + Hexagonal', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -508,7 +508,7 @@ function pie(s) {
 
   pie(s)
   s.addNotes(
-    'La arquitectura es Clean Architecture con puertos y adaptadores. Tres capas: dominio, ' +
+    'La arquitectura es Clean Architecture combinada con el patrón hexagonal. Tres capas: dominio, ' +
     'aplicación e infraestructura, y las dependencias siempre apuntando hacia dentro. La ' +
     'teoría ya la conocéis, así que os cuento qué me ha dado a mí, en este proyecto ' +
     'concreto.\n\n' +
