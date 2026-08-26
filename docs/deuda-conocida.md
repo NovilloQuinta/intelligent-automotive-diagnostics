@@ -272,17 +272,33 @@ clave — el mock describia una respuesta que el servidor no manda. Es exactamen
 error que un mock escrito a mano no puede detectar y un e2e si. Corregido, y el mock alineado
 con la respuesta real.
 
-Pendiente decidir, con su coste:
+**Resuelto en parte el 2026-08-26**: hay un job `e2e` en el CI que corre `auth`, `logout` y
+`twoFactor` (8 casos, ~54 s incluyendo el arranque de las dos apps). Se subio de paso el
+`webServer.timeout` de `playwright.config.ts` de 15 s a 120 s, porque el arranque de
+`core-api` —LanceDB mas el seed de fabricantes— ronda los 13 s y el config abortaba antes con
+"Timed out waiting". `pnpm verify` **sigue sin correrlos**: se dejo fuera para no pasar el
+gate local de ~2 min a ~4.
 
-- **Meter `test:e2e` en `pnpm verify`**: el gate pasa de ~2 min a ~4, y hay que levantar los
-  dos servidores. `playwright.config.ts` ya lo hace, pero su `timeout: 15_000` **no basta**:
-  el arranque de `core-api` (LanceDB + seed) tarda mas y falla con "Timed out waiting".
-- **Meterlo solo en CI**: no ralentiza el trabajo local, pero el fallo llega despues del push.
-- **Dejarlo manual**: lo barato, y lo que ya paso una vez.
+## Los seis e2e de `dashboard` no corren en CI
+
+`dashboard.spec.ts` necesita los tres emuladores ELM327, que en `docker-compose.yml` son
+imagenes a construir desde `docker/elm327/Dockerfile` y publicar en 35000-35002. El job `e2e`
+del CI **no los levanta**, asi que estos seis casos solo se ejercitan en local con el stack de
+Docker arriba:
+
+- identificar el vehiculo antes de entrar al menu de diagnostico
+- cambiar de Audi a Kawasaki
+- diagnostico sobre el Audi (con DTC) y sobre la Kawasaki (sin DTC)
+- freeze frame al seleccionar un DTC del Audi
+- telemetria en vivo
+
+Cerrarlo pide anadir los tres servicios al job: build de la imagen, `services:` o
+`docker compose up`, y esperar a que los puertos respondan. Es trabajo aparte, no un olvido.
 
 Nota de entorno: el `@playwright/test` del repo (1.62.1) espera el build 1234 de Chromium; el
-contenedor de desarrollo remoto trae el 1194, asi que hay que apuntar `executablePath` al
-binario existente o los e2e no arrancan.
+contenedor de desarrollo remoto trae el 1194. `playwright.config.ts` lee
+`PLAYWRIGHT_CHROMIUM_PATH` para apuntar al binario que exista — en CI no hace falta, porque
+`playwright install` baja el correcto.
 
 ## El esquema de `users` esta escrito a mano en seis ficheros de test
 
