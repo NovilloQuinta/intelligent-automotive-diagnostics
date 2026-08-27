@@ -57,6 +57,11 @@
   el orden y tres nombres, entran `Software Supply Chain Failures` y `Mishandling of
   Exceptional Conditions`, y SSRF se absorbe dentro de `Broken Access Control`.
   **`docs/security.md` sigue en 2021: hay que actualizarlo para que no se contradigan.**
+- **Rotulo de bloque en cada slide** (2026-08-26): se saltaba de una a otra sin saber en
+  que parte de la charla estabas. Encima del titulo, en azul pequeno, va el bloque:
+  1 El proyecto · 2 Como funciona · 3 Como esta construida · 4 Las piezas ·
+  5 El resultado · 6 Conclusiones. Lo pinta `pie(s, bloque)`, asi que reordenar una
+  slide obliga a revisar su rotulo.
 - **Las dos de OWASP se fusionan en una** (2026-08-26): dos tablas de diez con solape
   real (A01 se parecia a API1 y API5, A02 a API8, A07 a API2). La tabla nueva va por
   la lista de APIs numerada del 01 al 10, con el nombre oficial en ingles y la medida en
