@@ -1412,32 +1412,32 @@ function pie(s) {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 30, bold: true, color: TINTA,
   })
-  s.addText('El backend es una API y la interfaz una aplicación web: cada medida cubre categorías de las dos listas.', {
+  s.addText('Las dos listas que aplican: la de APIs para el backend y la general para la interfaz.', {
     x: 0.85, y: 1.58, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 16, color: GRIS,
   })
 
   const owasp = [
-    ['Sesión en todo /api; la sesión de otro usuario devuelve 404, no 403', 'API1 · API5 · A01'],
-    ['Los esquemas Zod son la allowlist de campos y de entrada', 'API3 · A05 · A06'],
-    ['bcrypt 12 rondas, segundo factor TOTP y bloqueo de cuenta', 'API2 · A04 · A07'],
-    ['Límites por familia, con contadores persistidos en base de datos', 'API4 · API6'],
-    ['Helmet en la API, CSP en la interfaz, puertos solo en loopback', 'API8 · A02'],
-    ['Lockfile, auditoría bloqueante e imágenes etiquetadas por commit', 'A03 · A08'],
-    ['Especificación OpenAPI versionada, servida por la propia API', 'API9'],
-    ['Ninguna URL de salida la elige el usuario', 'API7 · A01'],
-    ['Auditoría con IP, usuario y duración; el error sale sin traza', 'A09 · A10'],
-    ['Lo recuperado llega al modelo marcado como no fiable', 'API10'],
+    ['Acceder a datos de otro usuario', 'Sesión en todo /api; la sesión ajena devuelve 404, no 403'],
+    ['Entradas no controladas', 'Los esquemas Zod son la allowlist de campos y de entrada'],
+    ['Robo de credenciales', 'bcrypt 12 rondas, segundo factor TOTP y bloqueo de cuenta'],
+    ['Abuso de recursos', 'Límites por familia, con contadores persistidos en base de datos'],
+    ['Configuración insegura', 'Helmet en la API, CSP en la interfaz, puertos solo en loopback'],
+    ['Cadena de suministro', 'Lockfile, auditoría bloqueante e imágenes etiquetadas por commit'],
+    ['Endpoints desconocidos', 'Especificación OpenAPI versionada, servida por la propia API'],
+    ['Peticiones a destinos ajenos', 'Ninguna URL de salida la elige el usuario'],
+    ['Sin rastro de lo ocurrido', 'Auditoría con IP, usuario y duración; el error sale sin traza'],
+    ['Datos externos que engañan al modelo', 'Lo recuperado llega marcado como no fiable'],
   ]
-  owasp.forEach(([medida, codigos], k) => {
+  owasp.forEach(([riesgo, medida], k) => {
     const y = 2.28 + k * 0.44
-    s.addText(medida, {
-      x: 0.85, y, w: 8.3, h: 0.4, margin: 0, valign: 'middle',
-      fontFace: 'Calibri', fontSize: 13, color: TINTA,
+    s.addText(riesgo, {
+      x: 0.85, y, w: 4.3, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Arial', fontSize: 12, bold: true, color: TINTA,
     })
-    s.addText(codigos, {
-      x: 9.3, y, w: 3.15, h: 0.4, margin: 0, valign: 'middle', align: 'right',
-      fontFace: 'Arial', fontSize: 11, bold: true, color: AZUL,
+    s.addText(medida, {
+      x: 5.3, y, w: 7.15, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Calibri', fontSize: 12.5, color: GRIS,
     })
   })
 
@@ -1445,9 +1445,10 @@ function pie(s) {
   s.addNotes(
     'Seguridad. Aquí hay dos listas de OWASP en juego, y las dos aplican: la de APIs, ' +
     'porque el backend es una API REST, y la general de aplicaciones web en su edición de ' +
-    '2025, porque la interfaz es una web. En lugar de enseñarlas por separado y repetirme, ' +
-    'la tabla va por medida: a la izquierda lo que hace el código, a la derecha las ' +
-    'categorías que esa medida cubre en una lista y en la otra.\n\n' +
+    '2025, porque la interfaz es una web. No las enseño por separado porque se solapan: la ' +
+    'tabla va por riesgo, a la izquierda el riesgo y a la derecha lo que hace el código. La ' +
+    'correspondencia categoría a categoría con las dos listas está en el modelo de ' +
+    'seguridad del repositorio, por si el tribunal quiere el detalle.\n\n' +
     'No la voy a leer entera. Destaco cuatro.\n\n' +
     'La primera: cuando pides una sesión de diagnóstico que no es tuya, la API responde 404 ' +
     'y no 403, para no confirmar siquiera que existe.\n\n' +
