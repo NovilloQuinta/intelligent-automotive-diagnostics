@@ -1,4 +1,5 @@
 import type { PaginationConfig } from '../../../../src/components/admin/DataTableFilters'
+import { STUB_RANGE } from './filtersStubData'
 
 /**
  * Doble de `DataTableFilters` para los tests de las tablas de administracion.
@@ -19,9 +20,6 @@ export type FiltersStubProps = {
   levelFilter?: { onChange: (level?: string) => void }
   pagination: PaginationConfig
 }
-
-/** Rango fijo que dispara el boton `set-range`, para poder afirmar sobre el. */
-export const STUB_RANGE = { from: '2026-08-01', to: '2026-08-27' }
 
 export function FiltersStub({
   onSearchChange,

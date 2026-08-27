@@ -20,7 +20,7 @@ vi.mock('../../../../src/components/admin/DataTableFilters', async () => {
 })
 
 import { LogsTable } from '../../../../src/components/admin/LogsTable'
-import { STUB_RANGE } from './filtersStub'
+import { STUB_RANGE } from './filtersStubData'
 
 function renderWithQuery(ui: React.ReactElement) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })

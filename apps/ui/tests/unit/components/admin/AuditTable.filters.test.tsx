@@ -21,7 +21,7 @@ vi.mock('../../../../src/components/admin/DataTableFilters', async () => {
 })
 
 import { AuditTable } from '../../../../src/components/admin/AuditTable'
-import { STUB_RANGE } from './filtersStub'
+import { STUB_RANGE } from './filtersStubData'
 
 function renderWithQuery(ui: React.ReactElement) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
