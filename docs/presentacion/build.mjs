@@ -1412,7 +1412,7 @@ function pie(s) {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('OWASP API Top 10 2023 en el backend; la lista de aplicaciones web cubre la interfaz.', {
+  s.addText('OWASP API Top 10 2023 en el backend y OWASP Top 10 2025 en la interfaz.', {
     x: 0.85, y: 1.62, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
