@@ -486,18 +486,37 @@ La salida barata es lo que ya hacen `db.test.ts` y los tests del segundo factor:
 `getDb()`, que aplica las migraciones reales sobre una base en memoria. Ademas de no duplicar
 nada, ejercita la migracion generada, que es justo lo que en produccion puede fallar.
 
-## `openapiSync.test.ts` no ve los routers que no se le declaran
+## `openapiSync.test.ts` no veia los routers no declarados — RESUELTO el 2026-08-27
 
 El test recorre los routers de Express y falla si sirven una ruta sin documentar. Pero la
-lista de routers **se mantiene a mano** dentro del propio test.
+lista de routers **se mantenia a mano dentro del propio test**, asi que solo protegia de los
+seis que alguien se acordo de apuntar.
 
-Al anadir `twoFactor.routes.ts` en el cambio del segundo factor, el test siguio en verde con
-cuatro rutas sin documentar. Solo salto al anadir el router nuevo a esa lista. La garantia,
-entonces, no es "toda ruta servida esta documentada", sino "toda ruta de los routers que
-alguien se acordo de declarar".
+No era teorico: al anadir `twoFactor.routes.ts`, sus **cuatro rutas se sirvieron sin
+documentar con este test en verde**. Solo salto cuando alguien anadio el router nuevo a esa
+lista. La garantia real no era "toda ruta servida esta documentada" sino "toda ruta de los
+routers que alguien recordo declarar".
 
-Cerrarlo pide que la lista salga de un sitio unico —el propio `createServer`, o un registro
-explicito de routers— en vez de repetirse en el test.
+**Ahora no hay lista.** El test intercepta `app.use` mientras `createServer` arranca y se
+queda con las llamadas cuyo argumento es un router de Express —los que traen `stack`—,
+descartando el middleware suelto (rate limiters, helmet, swagger-ui, el manejador de
+errores). Un router nuevo entra en la comprobacion por el mero hecho de montarse en
+`server.ts`. El parcheo va sobre el prototipo de aplicacion de Express y se deshace en un
+`finally`, con un test que comprueba justo eso para que no ensucie el resto de la suite.
+
+Verificado inyectando un router sin documentar en `server.ts`: el test pasa a rojo y nombra
+la ruta (`POST /api/brand-new/undocumented`). Descubre 36 rutas, las cuatro del segundo
+factor incluidas.
+
+Quedaba un segundo agujero, mas silencioso, y tambien esta cerrado: los colaboradores
+opcionales de `ServerDependencies` (los controladores de perfil, segundo factor y admin) se
+declaran con tipo `Required<ServerDependencies>`. Si manana se anade uno nuevo y nadie lo
+pone ahi, **el typecheck falla**; sin esa red, su router no se montaria y sus rutas
+quedarian fuera del contraste sin que nada avisara — el mismo fallo por otra puerta.
+
+Fuera del alcance a proposito: las rutas que `server.ts` registra directamente sobre la app
+y no via router (`/health`, `/`, `/api`, `/api-docs.json`). Son redirecciones y sonda de
+vida, no superficie de la API, y el documento OpenAPI tampoco las declara.
 
 ## Coverage: resuelto el 2026-08-26
 

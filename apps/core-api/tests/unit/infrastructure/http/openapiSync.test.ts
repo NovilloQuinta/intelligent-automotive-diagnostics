@@ -1,15 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import type { Router, RequestHandler } from 'express'
+import express, { type Router, type RequestHandler } from 'express'
 
 import { openApiSpec } from '@/infrastructure/http/openapi/buildOpenApiDocument.js'
-import { createAuthRoutes } from '@/infrastructure/http/routes/auth.routes.js'
-import { createProfileRoutes } from '@/infrastructure/http/routes/profile.routes.js'
-import {
-  createTwoFactorAuthRoutes,
-  createTwoFactorProfileRoutes,
-} from '@/infrastructure/http/routes/twoFactor.routes.js'
-import { createAdminRoutes } from '@/infrastructure/http/routes/admin.routes.js'
-import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
+import { createServer, type ServerDependencies } from '@/infrastructure/http/server.js'
+import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.js'
+import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 import type { ProfileController } from '@/infrastructure/http/controllers/ProfileController.js'
 import type { TwoFactorController } from '@/infrastructure/http/controllers/TwoFactorController.js'
@@ -17,13 +12,88 @@ import type { AdminController } from '@/infrastructure/http/controllers/AdminCon
 import type { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 
 /**
- * Controlador de pega: los factories de rutas solo leen referencias a metodos para
- * registrarlas, nunca las invocan. Un Proxy que devuelve un handler vacio para
- * cualquier propiedad evita enumerar los metodos de los cuatro controladores.
+ * Colaborador de pega: montar la aplicacion solo lee referencias a metodos para
+ * registrarlas, nunca las invoca —aqui no se sirve ninguna peticion—. Un Proxy que
+ * devuelve un handler vacio para cualquier propiedad evita enumerar los metodos de
+ * los cinco controladores, del repositorio de auditoria y del logger.
  */
-function stubController<T>(): T {
+function stub<T>(): T {
   const noop: RequestHandler = () => {}
   return new Proxy({}, { get: () => noop }) as T
+}
+
+/**
+ * Dependencias con las que se monta la aplicacion para inspeccionarla.
+ *
+ * El tipo es `Required<ServerDependencies>` **a proposito**: obliga a rellenar tambien
+ * los colaboradores opcionales. Si manana se anade uno nuevo y nadie lo pone aqui, el
+ * typecheck falla — sin esa red, el router que dependa de el no se montaria y sus rutas
+ * quedarian fuera de la comprobacion en silencio, que es exactamente el fallo que esta
+ * version viene a cerrar.
+ */
+function serverDependencies(): Required<ServerDependencies> {
+  const noop: RequestHandler = () => {}
+  return {
+    rateLimit: {},
+    adminRateLimit: {},
+    auditRepo: stub<AuditLogRepository>(),
+    authController: stub<AuthController>(),
+    diagnosisController: stub<DiagnosisController>(),
+    profileController: stub<ProfileController>(),
+    twoFactorController: stub<TwoFactorController>(),
+    adminController: stub<AdminController>(),
+    requireAdmin: noop,
+    // Con secreto, `createAuthMiddleware` existe y `GET /api/auth/me` llega a registrarse.
+    accessTokenSecret: 'openapi-sync-test-secret',
+    allowedOrigins: '*',
+    nodeEnv: 'test',
+    logger: stub<LoggerPort>(),
+  }
+}
+
+/** Un router de Express se distingue del middleware suelto por su pila de capas. */
+function isRouter(handler: unknown): handler is Router {
+  return typeof handler === 'function' && Array.isArray((handler as { stack?: unknown[] }).stack)
+}
+
+/**
+ * Prefijo de montaje y router de cada router que la aplicacion monta de verdad.
+ *
+ * **Aqui no hay lista que mantener, y ese es el punto.** Se intercepta `app.use` mientras
+ * `createServer` arranca y se recogen las llamadas cuyo argumento es un router —los que
+ * traen `stack`—, descartando el middleware suelto: rate limiters, helmet, swagger-ui y el
+ * manejador de errores. Un router nuevo entra en esta comprobacion por el mero hecho de
+ * montarse en `server.ts`.
+ *
+ * La version anterior enumeraba los routers a mano y por eso no protegia de nada nuevo:
+ * al llegar `twoFactor.routes.ts`, sus cuatro rutas se sirvieron sin documentar con este
+ * test en verde, porque el router no estaba en aquella lista.
+ *
+ * El parcheo es sobre el prototipo de aplicacion de Express y se deshace en un `finally`,
+ * de modo que un fallo al montar no deja el modulo tocado para el resto de la suite.
+ */
+function mountedRouters(): { prefix: string; router: Router }[] {
+  const application = (express as unknown as { application: Record<string, unknown> }).application
+  const originalUse = application.use as (this: unknown, ...args: unknown[]) => unknown
+  const mounted: { prefix: string; router: Router }[] = []
+
+  application.use = function (this: unknown, ...args: unknown[]) {
+    const [prefix, ...handlers] = args
+    if (typeof prefix === 'string') {
+      for (const handler of handlers) {
+        if (isRouter(handler)) mounted.push({ prefix, router: handler })
+      }
+    }
+    return originalUse.apply(this, args)
+  }
+
+  try {
+    createServer(serverDependencies())
+  } finally {
+    application.use = originalUse
+  }
+
+  return mounted
 }
 
 /** Capa del stack de Express que corresponde a una ruta registrada. */
@@ -56,37 +126,14 @@ function collectRoutes(router: Router, prefix: string): string[] {
 }
 
 /**
- * Rutas realmente servidas por la aplicacion, leidas de los routers de Express.
+ * Rutas realmente servidas por la aplicacion, leidas de los routers que monta.
  *
- * Los prefijos replican los puntos de montaje de `server.ts`. `requireAuth` se pasa
- * porque `GET /api/auth/me` solo se registra cuando existe.
- *
- * **Limite conocido de esta comprobacion**: la lista de routers se mantiene a mano.
- * Un router nuevo que no se anada aqui queda fuera del contraste y sus rutas pueden
- * servirse sin documentar sin que nada falle. Al crear un router, anadirlo aqui.
+ * Quedan fuera las rutas que `server.ts` registra directamente sobre la app y no via
+ * router (`/health`, `/`, `/api`, `/api-docs.json`): son redirecciones y sonda de vida,
+ * no superficie de la API, y el documento OpenAPI tampoco las declara.
  */
 function actualRoutes(): string[] {
-  const noop: RequestHandler = () => {}
-  return [
-    ...collectRoutes(
-      createAuthRoutes(stubController<AuthController>(), noop, noop, noop, noop),
-      '/api/auth',
-    ),
-    ...collectRoutes(
-      createProfileRoutes(stubController<ProfileController>(), noop),
-      '/api/profile',
-    ),
-    ...collectRoutes(
-      createTwoFactorAuthRoutes(stubController<TwoFactorController>(), noop),
-      '/api/auth/2fa',
-    ),
-    ...collectRoutes(
-      createTwoFactorProfileRoutes(stubController<TwoFactorController>(), noop),
-      '/api/profile/2fa',
-    ),
-    ...collectRoutes(createAdminRoutes(stubController<AdminController>()), '/api/admin'),
-    ...collectRoutes(createDiagnosisRoutes(stubController<DiagnosisController>()), '/api'),
-  ]
+  return mountedRouters().flatMap(({ prefix, router }) => collectRoutes(router, prefix))
 }
 
 /** Operaciones declaradas en el documento OpenAPI, en el mismo formato `METODO ruta`. */
@@ -98,6 +145,35 @@ function documentedOperations(): string[] {
 }
 
 describe('sincronia entre las rutas de Express y el documento OpenAPI', () => {
+  // Las dos pruebas de abajo comparan conjuntos: si el descubrimiento se rompiera y
+  // devolviera vacio, las dos pasarian sin comprobar nada. Este es el cinturon.
+  it('descubre las rutas montadas, sin lista que mantener', () => {
+    const routes = actualRoutes()
+
+    expect(routes.length).toBeGreaterThan(20)
+    // El segundo factor es el caso que motivo este cambio: sus cuatro rutas vivian en un
+    // router que la version anterior no miraba, y se sirvieron sin documentar en verde.
+    expect(routes).toEqual(
+      expect.arrayContaining([
+        'POST /api/auth/2fa/verify',
+        'POST /api/profile/2fa/setup',
+        'POST /api/profile/2fa/activate',
+        'POST /api/profile/2fa/disable',
+      ]),
+    )
+  })
+
+  // El descubrimiento parchea el prototipo de Express: si no lo devolviera a su sitio,
+  // ensuciaria cualquier test posterior que monte un servidor.
+  it('deja intacto el prototipo de Express al terminar', () => {
+    const application = (express as unknown as { application: Record<string, unknown> }).application
+    const before = application.use
+
+    actualRoutes()
+
+    expect(application.use).toBe(before)
+  })
+
   it('documenta todas las rutas que la aplicacion sirve', () => {
     const undocumented = actualRoutes()
       .filter((route) => !documentedOperations().includes(route))
