@@ -1408,36 +1408,40 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('OWASP API Top 10 2023 y Top 10 2025', {
+  s.addText('Modelo de seguridad', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 30, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('Las dos listas que aplican: la de APIs para el backend y la general para la interfaz.', {
-    x: 0.85, y: 1.58, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 16, color: GRIS,
+  s.addText('OWASP API Top 10 2023 en el backend; la lista de aplicaciones web cubre la interfaz.', {
+    x: 0.85, y: 1.62, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
 
   const owasp = [
-    ['Acceder a datos de otro usuario', 'Sesión en todo /api; la sesión ajena devuelve 404, no 403'],
-    ['Entradas no controladas', 'Los esquemas Zod son la allowlist de campos y de entrada'],
-    ['Robo de credenciales', 'bcrypt 12 rondas, segundo factor TOTP y bloqueo de cuenta'],
-    ['Abuso de recursos', 'Límites por familia, con contadores persistidos en base de datos'],
-    ['Configuración insegura', 'Helmet en la API, CSP en la interfaz, puertos solo en loopback'],
-    ['Cadena de suministro', 'Lockfile, auditoría bloqueante e imágenes etiquetadas por commit'],
-    ['Endpoints desconocidos', 'Especificación OpenAPI versionada, servida por la propia API'],
-    ['Peticiones a destinos ajenos', 'Ninguna URL de salida la elige el usuario'],
-    ['Sin rastro de lo ocurrido', 'Auditoría con IP, usuario y duración; el error sale sin traza'],
-    ['Datos externos que engañan al modelo', 'Lo recuperado llega marcado como no fiable'],
+    ['Broken Object Level Authorization', 'La sesión de otro usuario devuelve 404, no 403'],
+    ['Broken Authentication', 'bcrypt 12 rondas, segundo factor TOTP y bloqueo de cuenta'],
+    ['Broken Object Property Level Authorization', 'Los esquemas Zod son la allowlist de campos'],
+    ['Unrestricted Resource Consumption', 'Límites por familia, con contadores persistidos'],
+    ['Broken Function Level Authorization', 'Administración tras requireAdmin y segundo factor'],
+    ['Unrestricted Access to Sensitive Business Flows', 'Borrado de códigos con límite propio y apagable'],
+    ['Server Side Request Forgery', 'Ninguna URL de salida la elige el usuario'],
+    ['Security Misconfiguration', 'Helmet en la API, CSP en la interfaz, puertos en loopback'],
+    ['Improper Inventory Management', 'Especificación OpenAPI versionada, servida por la propia API'],
+    ['Unsafe Consumption of APIs', 'Lo recuperado llega al modelo marcado como no fiable'],
   ]
-  owasp.forEach(([riesgo, medida], k) => {
+  owasp.forEach(([nombre, medida], k) => {
     const y = 2.28 + k * 0.44
-    s.addText(riesgo, {
-      x: 0.85, y, w: 4.3, h: 0.4, margin: 0, valign: 'middle',
-      fontFace: 'Arial', fontSize: 12, bold: true, color: TINTA,
+    s.addText(String(k + 1).padStart(2, '0'), {
+      x: 0.85, y, w: 0.55, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Arial', fontSize: 12, bold: true, color: AZUL,
+    })
+    s.addText(nombre, {
+      x: 1.5, y, w: 4.5, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Arial', fontSize: 11.5, bold: true, color: TINTA,
     })
     s.addText(medida, {
-      x: 5.3, y, w: 7.15, h: 0.4, margin: 0, valign: 'middle',
-      fontFace: 'Calibri', fontSize: 12.5, color: GRIS,
+      x: 6.1, y, w: 6.35, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Calibri', fontSize: 12, color: GRIS,
     })
   })
 
@@ -1445,10 +1449,11 @@ function pie(s) {
   s.addNotes(
     'Seguridad. Aquí hay dos listas de OWASP en juego, y las dos aplican: la de APIs, ' +
     'porque el backend es una API REST, y la general de aplicaciones web en su edición de ' +
-    '2025, porque la interfaz es una web. No las enseño por separado porque se solapan: la ' +
-    'tabla va por riesgo, a la izquierda el riesgo y a la derecha lo que hace el código. La ' +
-    'correspondencia categoría a categoría con las dos listas está en el modelo de ' +
-    'seguridad del repositorio, por si el tribunal quiere el detalle.\n\n' +
+    '2025, porque la interfaz es una web. En la tabla enseño la de APIs, que es la que ' +
+    'cubre la superficie principal; las medidas de la interfaz —el escapado de React, la ' +
+    'política de contenido que sirve nginx, la validación con los mismos esquemas— cubren ' +
+    'la otra, y la correspondencia completa está en el modelo de seguridad del ' +
+    'repositorio.\n\n' +
     'No la voy a leer entera. Destaco cuatro.\n\n' +
     'La primera: cuando pides una sesión de diagnóstico que no es tuya, la API responde 404 ' +
     'y no 403, para no confirmar siquiera que existe.\n\n' +

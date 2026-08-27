@@ -23,7 +23,7 @@
 | 15 | Resultados: la aplicacion en funcionamiento | El resultado | pendiente |
 | 16 | Calidad del codigo | El resultado · proceso | **rehecha** |
 | 17 | Integracion y despliegue continuos | El resultado · proceso | **reordenada** |
-| 18 | OWASP API Top 10 2023 y Top 10 2025 | El resultado · seguridad | **fusionada** |
+| 18 | Modelo de seguridad | El resultado · seguridad | **fusionada** |
 | 19 | Conclusiones | Cierre | pendiente |
 | 20 | Gracias por la atencion | Cierre | pendiente |
 
@@ -59,10 +59,11 @@
   **`docs/security.md` sigue en 2021: hay que actualizarlo para que no se contradigan.**
 - **Las dos de OWASP se fusionan en una** (2026-08-26): dos tablas de diez con solape
   real (A01 se parecia a API1 y API5, A02 a API8, A07 a API2). La tabla nueva va por
-  riesgo, no por categoria: cada fila dice el riesgo en castellano y lo que hace el
-  codigo. Diez filas en vez de veinte. **Los codigos (API1, A01...) se probaron en la
-  slide y se quitaron**: sin el nombre de la categoria al lado no se entienden. La
-  correspondencia categoria a categoria vive en `docs/security.md`.
+  la lista de APIs numerada del 01 al 10, con el nombre oficial en ingles y la medida en
+  castellano. Se probo con los codigos (`API1 · A01`) y sin nombre de categoria no se
+  entienden; se probo tambien con el riesgo en castellano y el autor lo rechazo. Las
+  medidas de la interfaz cubren la lista web, y la correspondencia completa esta en
+  `docs/security.md`.
 - **Las dos slides de seguridad, mismo formato** (2026-08-26): la 17 era de columnas y
   la 16 una tabla. Ahora las dos son la misma tabla: codigo, nombre oficial y medida.
   La 16 es la lista de APIs (backend), la 17 la de aplicaciones web (interfaz). El
