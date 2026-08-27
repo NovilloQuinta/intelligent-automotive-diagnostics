@@ -42,6 +42,12 @@ export default defineConfig({
         // delegan, controladores HTTP, factories y helpers de glue. Validados
         // por TypeScript/ESLint, no por tests de cobertura.
         '**/composition.ts',
+        // Los modulos de `composition/` salieron de partir `composition.ts`, que
+        // ya estaba excluido arriba: siguen siendo el mismo cableado DI, y
+        // partirlo no cambio su naturaleza. `TwoFactorController` NO se excluye
+        // —los controladores se prueban, como `AuthController`—: tiene sus
+        // rutas de error en `tests/unit/infrastructure/http/`.
+        'src/infrastructure/composition/**',
         '**/simulatorAdapter.ts',
         '**/lancedb.ts',
         '**/AdminController.ts',

@@ -1,34 +1,40 @@
 name: intelligent-automotive-diagnostics
 
+# `IMAGE_TAG` fija que version corre. Lo escribe el despliegue en el `.env` de
+# este directorio con el SHA del commit, y `latest` queda solo como red por si
+# alguien levanta el stack a mano.
+#
+# **Volver atras** = poner en `.env` el SHA anterior y `docker compose up -d`.
+# Por eso el despliegue ya no borra todas las imagenes sin usar: sin la anterior
+# en disco no hay marcha atras.
+
 services:
   elm327-audi:
-    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/elm327:latest
+    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/elm327:${IMAGE_TAG:-latest}
     environment:
       - SCENARIO_SCRIPT=run_audi.py
-    ports:
-      - "35000:35000"
     restart: unless-stopped
 
   elm327-kawasaki:
-    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/elm327:latest
+    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/elm327:${IMAGE_TAG:-latest}
     environment:
       - SCENARIO_SCRIPT=run_kawasaki.py
-    ports:
-      - "35001:35001"
     restart: unless-stopped
 
   elm327-toyota:
-    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/elm327:latest
+    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/elm327:${IMAGE_TAG:-latest}
     environment:
       - SCENARIO_SCRIPT=run_toyota.py
-    ports:
-      - "35002:35002"
     restart: unless-stopped
 
   api:
-    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/api:latest
+    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/api:${IMAGE_TAG:-latest}
     ports:
-      - "4000:4000"
+      # Solo loopback: Caddy corre en el host y llega por localhost:4000.
+      # Publicarlo en 0.0.0.0 dejaria la API accesible saltandose el proxy,
+      # y con `trust proxy` el cliente pondria su propio X-Forwarded-For:
+      # rate limit por IP inutil y log de auditoria envenenable.
+      - "127.0.0.1:4000:4000"
     environment:
       - NODE_ENV=production
       - PORT=4000
@@ -47,6 +53,11 @@ services:
       - LLM_MODEL=${LLM_MODEL:-}
       - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET:?ACCESS_TOKEN_SECRET is required}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET:?REFRESH_TOKEN_SECRET is required}
+      # Cifra el secreto TOTP en la base (AES-256-GCM). La API se niega a
+      # arrancar en produccion sin ella, porque el valor por defecto es de
+      # desarrollo y dejaria los secretos cifrados con una clave publica.
+      # Si se pierde, los segundos factores ya registrados son irrecuperables.
+      - TOTP_ENCRYPTION_KEY=${TOTP_ENCRYPTION_KEY:?TOTP_ENCRYPTION_KEY is required (openssl rand -base64 32)}
       - ACCESS_TOKEN_TTL=${ACCESS_TOKEN_TTL:-900}
       - REFRESH_TOKEN_TTL=${REFRESH_TOKEN_TTL:-604800}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://diag.jcodinglabs.com}
@@ -75,9 +86,10 @@ services:
       start_period: 15s
 
   ui:
-    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/ui:latest
+    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/ui:${IMAGE_TAG:-latest}
     ports:
-      - "${UI_PORT:-8080}:80"
+      # Solo loopback: quien sirve al exterior es Caddy, en el mismo host.
+      - "127.0.0.1:${UI_PORT:-8080}:80"
     restart: unless-stopped
     depends_on:
       api:

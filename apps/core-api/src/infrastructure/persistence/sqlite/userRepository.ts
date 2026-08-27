@@ -120,6 +120,30 @@ export class SqliteUserRepository implements UserRepository {
     await this.db.update(schema.users).set({ passwordHash }).where(eq(schema.users.id, userId))
   }
 
+  async findTwoFactorSecret(userId: number): Promise<string | null> {
+    const rows = await this.db
+      .select({ secret: schema.users.twoFactorSecret })
+      .from(schema.users)
+      .where(eq(schema.users.id, userId))
+      .limit(1)
+
+    return rows[0]?.secret ?? null
+  }
+
+  async saveTwoFactorSecret(userId: number, encryptedSecret: string | null): Promise<void> {
+    await this.db
+      .update(schema.users)
+      .set({ twoFactorSecret: encryptedSecret })
+      .where(eq(schema.users.id, userId))
+  }
+
+  async setTwoFactorEnabled(userId: number, enabled: boolean): Promise<void> {
+    await this.db
+      .update(schema.users)
+      .set({ twoFactorEnabled: enabled })
+      .where(eq(schema.users.id, userId))
+  }
+
   async updateProfile(
     userId: number,
     patch: Partial<Pick<User, 'username' | 'address' | 'businessName' | 'taxId'>>,

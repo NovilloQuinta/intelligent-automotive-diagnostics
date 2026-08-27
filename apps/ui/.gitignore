@@ -1,1 +1,7 @@
 .playwright-mcp/
+
+# Artefactos de Playwright: capturas y trazas de los e2e. Se regeneran corriendo
+# `pnpm test:e2e`, asi que versionarlas solo mete ruido binario en el historial.
+tests/e2e/screenshots/
+test-results/
+playwright-report/

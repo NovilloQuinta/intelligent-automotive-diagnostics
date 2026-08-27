@@ -66,7 +66,9 @@ describe('Admin integration', () => {
         address TEXT,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         failed_login_attempts INTEGER NOT NULL DEFAULT 0,
-        locked_until TEXT
+        locked_until TEXT,
+        two_factor_secret TEXT,
+        two_factor_enabled INTEGER NOT NULL DEFAULT 0
       );
       CREATE TABLE IF NOT EXISTS refresh_tokens (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -130,6 +132,10 @@ describe('Admin integration', () => {
       userType: 'individual',
       role: 'admin',
     })
+    // El panel exige segundo factor activo: sin esto, `requireAdmin` responde 403
+    // y estos tests medirian el guard nuevo en vez de lo que quieren medir.
+    await userRepo.setTwoFactorEnabled(adminUser.id, true)
+
     normalToken = authService.generateTokens(normalUser.id).accessToken
     adminToken = authService.generateTokens(adminUser.id).accessToken
 

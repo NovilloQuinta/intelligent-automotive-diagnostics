@@ -50,6 +50,32 @@ function AdminLayout() {
     )
   }
 
+  // El backend responde 403 al panel si el administrador no tiene segundo factor.
+  // Sin este aviso, el admin veria un error generico y no sabria que hacer: la
+  // pantalla para activarlo esta en su perfil, y esa si le sigue abierta.
+  if (!auth.user.twoFactorEnabled) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0d1117] px-4">
+        <div className="max-w-md text-center">
+          <Shield className="mx-auto h-12 w-12 text-primary" />
+          <h2 className="mt-4 text-xl font-semibold text-foreground">
+            Activa el segundo factor para entrar
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            El panel de administración expone los usuarios, los registros y la auditoría. Una sola
+            contraseña no basta para llegar ahí.
+          </p>
+          <Link
+            to="/profile"
+            className="mt-6 inline-block rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+          >
+            Ir a mi perfil
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen bg-[#0d1117]">
       <aside className="flex w-56 flex-col border-r border-white/5 bg-black/40 p-4">

@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import type { AddressInfo } from 'node:net'
 import type { Server } from 'node:http'
 import type { Request, Response } from 'express'
 import { createServer } from '@/infrastructure/http/server.js'
+import { getDb, closeDb, resetDb } from '@/infrastructure/persistence/sqlite/db.js'
 import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
 import { Vin } from '@/domain/value-objects/Vin.js'
 import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.js'
@@ -161,13 +165,29 @@ async function postJson(baseUrl: string, path: string, body: unknown) {
 }
 
 describe('HTTP server rate limits', () => {
+  const tempRoots: string[] = []
+
+  // El contador ya no muere con el middleware: vive en `rate_limit_counters`.
+  // Sin esto, el primer caso que agota login dejaria a los demas empezando en 429.
   beforeEach(() => {
     process.env.NODE_ENV = 'production'
+    resetDb()
   })
 
   afterEach(() => {
     process.env.NODE_ENV = originalNodeEnv
+    resetDb()
+    for (const root of tempRoots.splice(0)) {
+      fs.rmSync(root, { recursive: true, force: true })
+    }
   })
+
+  /** Ruta a un fichero .db en una carpeta temporal propia de este test. */
+  function tempDbPath(): string {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'rate-limits-'))
+    tempRoots.push(root)
+    return path.join(root, 'diagnostics.db')
+  }
 
   it('should allow 5 POST /api/auth/login requests and return 429 on the 6th', async () => {
     const { baseUrl, close } = await bootApp()
@@ -325,6 +345,75 @@ describe('HTTP server rate limits', () => {
       const diagnosisBody = { scenarioId: 'audi-a3-idle' }
       const diagnosisRes = await postJson(baseUrl, '/api/diagnosis', diagnosisBody)
       expect(diagnosisRes.status).toBe(200)
+    } finally {
+      await close()
+    }
+  })
+
+  // Cognitivo y clear-dtc comparten ventana y limite (1 min / 5). Es el par que
+  // un namespace derivado de la configuracion no sabria distinguir.
+  it('should not let cognitive-diagnosis exhaustion affect clear-dtc', async () => {
+    const { baseUrl, close } = await bootApp()
+    try {
+      const cognitiveBody = { scenarioId: 'audi-a3-idle', query: '¿Por que tiembla?' }
+      for (let i = 0; i < 5; i += 1) {
+        await postJson(baseUrl, '/api/mcp/cognitive-diagnosis', cognitiveBody)
+      }
+      const exhausted = await postJson(baseUrl, '/api/mcp/cognitive-diagnosis', cognitiveBody)
+      expect(exhausted.status).toBe(429)
+
+      const clearDtcRes = await postJson(baseUrl, '/api/clear-dtc', {
+        scenarioId: 'audi-a3-idle',
+      })
+      expect(clearDtcRes.status).not.toBe(429)
+    } finally {
+      await close()
+    }
+  })
+
+  // El objetivo de todo el cambio: antes, reiniciar el proceso devolvia a cada
+  // cliente su cuota entera. Se simula cerrando la conexion —que es lo unico que
+  // sobrevivia en el heap— y reabriendo el mismo fichero.
+  it('keeps the counter across a process restart', async () => {
+    const dbPath = tempDbPath()
+    const credentials = { email: 'user@example.com', password: 'wrong-password' }
+
+    resetDb()
+    getDb(dbPath)
+    const first = await bootApp()
+    try {
+      for (let i = 0; i < 5; i += 1) {
+        await postJson(first.baseUrl, '/api/auth/login', credentials)
+      }
+      const exhausted = await postJson(first.baseUrl, '/api/auth/login', credentials)
+      expect(exhausted.status).toBe(429)
+    } finally {
+      await first.close()
+    }
+
+    closeDb()
+    getDb(dbPath)
+    const second = await bootApp()
+    try {
+      const res = await postJson(second.baseUrl, '/api/auth/login', credentials)
+      expect(res.status).toBe(429)
+    } finally {
+      await second.close()
+    }
+  })
+
+  // Control del test anterior: si la asercion pasara por cualquier motivo que no
+  // fuese el contador guardado, este caso tambien daria 429 y no lo hace.
+  it('starts from zero on a fresh database', async () => {
+    resetDb()
+    getDb(tempDbPath())
+    const { baseUrl, close } = await bootApp()
+    try {
+      const res = await postJson(baseUrl, '/api/auth/login', {
+        email: 'user@example.com',
+        password: 'wrong-password',
+      })
+      expect(res.status).toBe(401)
     } finally {
       await close()
     }

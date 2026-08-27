@@ -12,11 +12,16 @@ import { createAuthMiddleware } from '@/infrastructure/http/middleware/auth.midd
 import { createAuthRoutes } from '@/infrastructure/http/routes/auth.routes.js'
 import { createDiagnosisRoutes } from '@/infrastructure/http/routes/diagnosis.routes.js'
 import { createProfileRoutes } from '@/infrastructure/http/routes/profile.routes.js'
+import {
+  createTwoFactorAuthRoutes,
+  createTwoFactorProfileRoutes,
+} from '@/infrastructure/http/routes/twoFactor.routes.js'
 import { createAdminRoutes } from '@/infrastructure/http/routes/admin.routes.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { AuthController } from '@/infrastructure/http/controllers/AuthController.js'
 import type { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 import type { ProfileController } from '@/infrastructure/http/controllers/ProfileController.js'
+import type { TwoFactorController } from '@/infrastructure/http/controllers/TwoFactorController.js'
 import type { AdminController } from '@/infrastructure/http/controllers/AdminController.js'
 import type { RequestHandler } from 'express'
 
@@ -40,6 +45,8 @@ export interface ServerDependencies {
   readonly authController: AuthController
   readonly diagnosisController: DiagnosisController
   readonly profileController?: ProfileController
+  /** `undefined` en tests que no ejercitan el segundo factor. */
+  readonly twoFactorController?: TwoFactorController
   /** `undefined` en tests que no ejercitan `/api/admin` (evita cablear el stack completo). */
   readonly adminController?: AdminController
   /** Construido en `composition.ts` con `createRequireAdmin(userRepo)`. */
@@ -66,7 +73,7 @@ function applyBaseMiddleware(app: express.Application, deps: ServerDependencies)
       frameguard: { action: 'deny' },
     }),
   )
-  app.use(createRateLimiter(deps.rateLimit))
+  app.use(createRateLimiter({ namespace: 'global', ...deps.rateLimit }))
   app.use(createAuditLogger(deps.auditRepo))
   // El chat cognitivo reenvia el hilo entero en cada pregunta, asi que su cuerpo
   // crece con la conversacion y con 10 KB se agotaba a la tercera pregunta. Lleva
@@ -174,12 +181,36 @@ function mountAuthRoutes(
   deps: ServerDependencies,
   authMiddleware: express.RequestHandler | undefined,
 ): void {
-  const loginLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 5 })
-  const refreshLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 10 })
+  const loginLimiter = createRateLimiter({
+    namespace: 'auth:login',
+    windowMinutes: 1,
+    maxRequests: 5,
+  })
+  const refreshLimiter = createRateLimiter({
+    namespace: 'auth:refresh',
+    windowMinutes: 1,
+    maxRequests: 10,
+  })
   // Rate limit dedicado para forgot-password: mas estricto que login (evita abuso del envio de email)
-  const forgotPasswordLimiter = createRateLimiter({ windowMinutes: 15, maxRequests: 5 })
+  const forgotPasswordLimiter = createRateLimiter({
+    namespace: 'auth:forgot-password',
+    windowMinutes: 15,
+    maxRequests: 5,
+  })
 
-  app.use('/api/auth', createRateLimiter({ windowMinutes: 15, maxRequests: 20 }))
+  app.use('/api/auth', createRateLimiter({ namespace: 'auth', windowMinutes: 15, maxRequests: 20 }))
+
+  if (deps.twoFactorController) {
+    // Seis digitos son un millon de combinaciones: sin freno propio, el segundo
+    // paso seria el eslabon barato de la cadena.
+    const verifyLimiter = createRateLimiter({
+      namespace: 'auth:2fa-verify',
+      windowMinutes: 1,
+      maxRequests: 5,
+    })
+    app.use('/api/auth/2fa', createTwoFactorAuthRoutes(deps.twoFactorController, verifyLimiter))
+  }
+
   app.use(
     '/api/auth',
     createAuthRoutes(
@@ -197,9 +228,21 @@ function mountAuthRoutes(
  * limites mas estrictos que el global. El cognitivo es el mas caro de todos.
  */
 function applyDiagnosisRateLimits(app: express.Application): void {
-  const diagnosisLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 20 })
-  const cognitiveLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 5 })
-  const clearDtcLimiter = createRateLimiter({ windowMinutes: 1, maxRequests: 5 })
+  const diagnosisLimiter = createRateLimiter({
+    namespace: 'diagnosis',
+    windowMinutes: 1,
+    maxRequests: 20,
+  })
+  const cognitiveLimiter = createRateLimiter({
+    namespace: 'diagnosis:cognitive',
+    windowMinutes: 1,
+    maxRequests: 5,
+  })
+  const clearDtcLimiter = createRateLimiter({
+    namespace: 'diagnosis:clear-dtc',
+    windowMinutes: 1,
+    maxRequests: 5,
+  })
 
   app.use('/api/diagnosis', diagnosisLimiter)
   app.use('/api/freeze-frame', diagnosisLimiter)
@@ -221,7 +264,10 @@ function applyAdminRateLimits(
   app: express.Application,
   config: Partial<RateLimiterConfig> | undefined,
 ): void {
-  app.use('/api/admin', createRateLimiter(config ?? { windowMinutes: 1, maxRequests: 30 }))
+  app.use(
+    '/api/admin',
+    createRateLimiter({ namespace: 'admin', ...(config ?? { windowMinutes: 1, maxRequests: 30 }) }),
+  )
 }
 
 /**
@@ -267,8 +313,26 @@ export function createServer(deps: ServerDependencies): express.Application {
 
   if (deps.profileController) {
     // Rate limit dedicado para change-password: protege contra fuerza bruta con un access token robado
-    const changePasswordLimiter = createRateLimiter({ windowMinutes: 15, maxRequests: 5 })
+    const changePasswordLimiter = createRateLimiter({
+      namespace: 'profile:change-password',
+      windowMinutes: 15,
+      maxRequests: 5,
+    })
     app.use('/api/profile', createProfileRoutes(deps.profileController, changePasswordLimiter))
+  }
+
+  if (deps.twoFactorController) {
+    // Desactivar el segundo factor merece el mismo freno que cambiar la contrasena:
+    // las dos cosas se hacen con contrasena y las dos son irreversibles de facto.
+    const disableLimiter = createRateLimiter({
+      namespace: 'profile:2fa-disable',
+      windowMinutes: 15,
+      maxRequests: 5,
+    })
+    app.use(
+      '/api/profile/2fa',
+      createTwoFactorProfileRoutes(deps.twoFactorController, disableLimiter),
+    )
   }
 
   mountAdminRoutes(app, deps)

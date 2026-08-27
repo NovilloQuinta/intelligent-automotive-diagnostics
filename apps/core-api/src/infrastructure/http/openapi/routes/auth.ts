@@ -119,4 +119,73 @@ export const authOperations: readonly OperationSpec[] = [
       '401': { description: 'Falta el token o no es valido' },
     },
   },
+  {
+    method: 'post',
+    path: '/api/auth/2fa/verify',
+    tag: 'Auth',
+    summary: 'Segundo paso del login: canjear el reto por tokens',
+    description:
+      'Se presenta el `challengeToken` que devolvio el login junto a un codigo TOTP o de ' +
+      'recuperacion. Los codigos de recuperacion valen una sola vez. Un codigo incorrecto ' +
+      'cuenta para el mismo bloqueo de cuenta que una contrasena incorrecta, y el endpoint ' +
+      'lleva su propio limite de 5 por minuto.',
+    requestBody: 'VerifyTwoFactorRequest',
+    responses: {
+      '200': { description: 'Autenticado', schema: 'TokenPair' },
+      '400': { description: 'Cuerpo invalido' },
+      '401': { description: 'Reto invalido o caducado, o codigo incorrecto' },
+      '423': { description: 'Cuenta bloqueada por intentos fallidos' },
+      '429': { description: 'Demasiados intentos' },
+    },
+  },
+  {
+    method: 'post',
+    path: '/api/profile/2fa/setup',
+    tag: 'Auth',
+    summary: 'Preparar el alta del segundo factor',
+    description:
+      'Genera el secreto TOTP, lo guarda cifrado y devuelve el QR. **No activa nada**: ' +
+      'hace falta confirmar con un codigo en `/api/profile/2fa/activate`, para que un QR ' +
+      'mal escaneado no deje al usuario fuera de su cuenta. La respuesta lleva ' +
+      '`Cache-Control: no-store` porque contiene el secreto en claro.',
+    auth: true,
+    responses: {
+      '200': { description: 'Alta preparada', schema: 'TwoFactorSetup' },
+      '401': { description: 'Falta el token o no es valido' },
+      '409': { description: 'El segundo factor ya esta activo' },
+    },
+  },
+  {
+    method: 'post',
+    path: '/api/profile/2fa/activate',
+    tag: 'Auth',
+    summary: 'Activar el segundo factor',
+    description:
+      'Confirma con un codigo generado por la app y enciende el segundo factor. Devuelve ' +
+      'los diez codigos de recuperacion: es la unica vez que salen en claro.',
+    auth: true,
+    responses: {
+      '200': { description: 'Activado', schema: 'TwoFactorRecoveryCodes' },
+      '400': { description: 'Falta el codigo' },
+      '401': { description: 'Falta el token, o el codigo es incorrecto' },
+      '409': { description: 'No se ha preparado el alta' },
+    },
+  },
+  {
+    method: 'post',
+    path: '/api/profile/2fa/disable',
+    tag: 'Auth',
+    summary: 'Desactivar el segundo factor',
+    description:
+      'Exige contrasena **y** un codigo vigente (TOTP o de recuperacion). Con solo el ' +
+      'access token no se puede: un token robado es justo lo que el segundo factor cubre. ' +
+      'Borra el secreto y los codigos de recuperacion.',
+    auth: true,
+    responses: {
+      '200': { description: 'Desactivado', schema: 'SuccessAck' },
+      '401': { description: 'Falta el token, o la contrasena o el codigo son incorrectos' },
+      '423': { description: 'Cuenta bloqueada por intentos fallidos' },
+      '429': { description: 'Demasiados intentos' },
+    },
+  },
 ]

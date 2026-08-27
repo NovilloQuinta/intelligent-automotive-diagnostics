@@ -16,19 +16,137 @@ describe('api — endpoints', () => {
   })
   describe('login', () => {
     it('stores tokens on success', async () => {
+      // `twoFactorRequired: false` va a proposito: es lo que manda el backend en
+      // este caso. Un mock que omita la clave deja pasar el bug de discriminar
+      // por presencia (`'x' in body`) en vez de por valor.
       vi.stubGlobal(
         'fetch',
         vi.fn().mockResolvedValueOnce({
           ok: true,
-          json: async () => MOCK_TOKENS,
+          json: async () => ({ ...MOCK_TOKENS, twoFactorRequired: false }),
         }),
       )
 
       const result = await api.login({ email: 'a@b.com', password: 'secret' })
 
-      expect(result).toEqual(MOCK_TOKENS)
+      expect(result).toEqual({ kind: 'tokens' })
       expect(localStorage.getItem('iad.accessToken')).toBe('access-abc')
       expect(localStorage.getItem('iad.refreshToken')).toBe('refresh-xyz')
+    })
+
+    it('devuelve el reto y NO guarda nada cuando hace falta el segundo factor', async () => {
+      // Guardar el reto como si fuera un token dejaria a la SPA creyendose dentro.
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            twoFactorRequired: true,
+            challengeToken: 'reto-abc',
+            expiresAt: '2026-08-26T12:05:00.000Z',
+          }),
+        }),
+      )
+
+      const result = await api.login({ email: 'a@b.com', password: 'secret' })
+
+      expect(result).toEqual({
+        kind: 'twoFactorRequired',
+        challengeToken: 'reto-abc',
+        expiresAt: '2026-08-26T12:05:00.000Z',
+      })
+      expect(localStorage.getItem('iad.accessToken')).toBeNull()
+      expect(localStorage.getItem('iad.refreshToken')).toBeNull()
+    })
+  })
+
+  describe('segundo factor', () => {
+    it('verifyTwoFactor guarda los tokens del canje', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValueOnce({ ok: true, json: async () => MOCK_TOKENS }),
+      )
+
+      await api.verifyTwoFactor({ challengeToken: 'reto-abc', code: '123456' })
+
+      expect(localStorage.getItem('iad.accessToken')).toBe('access-abc')
+    })
+
+    it('verifyTwoFactor no manda cabecera de autorizacion: todavia no hay sesion', async () => {
+      const fetchMock = vi.fn().mockResolvedValueOnce({ ok: true, json: async () => MOCK_TOKENS })
+      vi.stubGlobal('fetch', fetchMock)
+
+      await api.verifyTwoFactor({ challengeToken: 'reto-abc', code: '123456' })
+
+      const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+      expect((init.headers as Record<string, string>).Authorization).toBeUndefined()
+    })
+
+    it('verifyTwoFactor traduce el 423 igual que el login', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValueOnce({
+          ok: false,
+          status: 423,
+          json: async () => ({
+            error: 'Account temporarily locked due to too many failed login attempts',
+            lockedUntil: new Date(Date.now() + 9 * 60 * 1000).toISOString(),
+            retryAfterSeconds: 540,
+          }),
+        }),
+      )
+
+      await expect(
+        api.verifyTwoFactor({ challengeToken: 'reto-abc', code: '000000' }),
+      ).rejects.toThrow(/minutos/)
+    })
+
+    it('setupTwoFactor devuelve el QR', async () => {
+      setStoredTokens()
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            otpauthUri: 'otpauth://totp/IAD:a@b.com?secret=ABC',
+            qrDataUri: 'data:image/png;base64,AAA',
+            secret: 'ABC',
+          }),
+        }),
+      )
+
+      const result = await api.setupTwoFactor()
+
+      expect(result.qrDataUri).toMatch(/^data:image\/png/)
+      expect(result.secret).toBe('ABC')
+    })
+
+    it('activateTwoFactor devuelve los codigos de recuperacion', async () => {
+      setStoredTokens()
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ recoveryCodes: ['AB2C-XY7Z', 'QR3M-KT9P'] }),
+        }),
+      )
+
+      const result = await api.activateTwoFactor('123456')
+
+      expect(result.recoveryCodes).toHaveLength(2)
+    })
+
+    it('disableTwoFactor manda contrasena y codigo', async () => {
+      setStoredTokens()
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValueOnce({ ok: true, json: async () => ({ success: true }) })
+      vi.stubGlobal('fetch', fetchMock)
+
+      await api.disableTwoFactor({ password: 'Password1!', code: '123456' })
+
+      const [, init] = fetchMock.mock.calls[0] as [string, RequestInit]
+      expect(JSON.parse(init.body as string)).toEqual({ password: 'Password1!', code: '123456' })
     })
 
     it('explains the lockout in Spanish with the remaining minutes on 423', async () => {

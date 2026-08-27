@@ -40,6 +40,10 @@ export const openApiExamples: ExampleMap = {
     taxId: 'B12345678',
     address: 'Poligono Industrial 12, Nave 3',
   },
+  VerifyTwoFactorRequest: {
+    challengeToken: 'k3Jd9wQm2ZpL7xR1vTn5bY8cH4sA6gF0eU-oI2yN',
+    code: '123456',
+  },
   ChangePasswordRequest: {
     currentPassword: 'Diagnostico2026!',
     newPassword: 'Diagnostico2027!',

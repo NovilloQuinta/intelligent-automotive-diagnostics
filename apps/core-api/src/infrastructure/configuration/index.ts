@@ -1,5 +1,8 @@
 import { z } from 'zod'
 
+/** Clave de desarrollo, publica a proposito: 32 bytes de relleno en base64. */
+const DEV_TOTP_ENCRYPTION_KEY = Buffer.alloc(32, 0).toString('base64')
+
 const configSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
@@ -22,6 +25,24 @@ const configSchema = z.object({
   SERIAL_PORT_PATH: z.string().default('/dev/ttyUSB0'),
   SERIAL_BAUD_RATE: z.coerce.number().int().positive().default(38400),
   ALLOWED_ORIGINS: z.string().default('http://localhost:5173,http://localhost:4173'),
+  /**
+   * Enciende o apaga el rate limiting con independencia de `NODE_ENV`. Sin
+   * declarar, manda `NODE_ENV === 'production'`, que es el comportamiento
+   * historico; por eso no lleva default. La lee `createRateLimiter`, que no
+   * recibe `AppConfig`: aqui se declara para validarla en el arranque, porque un
+   * `yes` aceptado en silencio dejaria produccion sin limites.
+   */
+  RATE_LIMIT_ENABLED: z.preprocess(
+    (v) => (v === '' ? undefined : v),
+    z.enum(['true', 'false']).optional(),
+  ),
+  /**
+   * Clave AES-256 (32 bytes en base64) con la que se cifra el secreto TOTP en la
+   * base de datos. Trae valor por defecto para que un clon limpio arranque, pero
+   * `assertProductionSecrets` lo rechaza en produccion: con la clave del
+   * repositorio, cifrar el secreto no protegeria de nada.
+   */
+  TOTP_ENCRYPTION_KEY: z.string().min(1).default(DEV_TOTP_ENCRYPTION_KEY),
   ACCESS_TOKEN_SECRET: z.string().min(1).default('dev-access-secret'),
   REFRESH_TOKEN_SECRET: z.string().min(1).default('dev-refresh-secret'),
   ACCESS_TOKEN_TTL: z.coerce.number().int().positive().default(900),
@@ -66,5 +87,8 @@ export function assertProductionSecrets(config: AppConfig): void {
     config.REFRESH_TOKEN_SECRET === 'change-me-in-production'
   ) {
     throw new Error('REFRESH_TOKEN_SECRET must be set in production')
+  }
+  if (config.TOTP_ENCRYPTION_KEY === DEV_TOTP_ENCRYPTION_KEY) {
+    throw new Error('TOTP_ENCRYPTION_KEY must be set in production')
   }
 }

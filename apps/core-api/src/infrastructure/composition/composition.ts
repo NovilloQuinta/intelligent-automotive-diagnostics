@@ -12,6 +12,10 @@ import {
   seedAdminUser,
 } from '@/infrastructure/composition/auth.js'
 import { createAdminController } from '@/infrastructure/composition/admin.js'
+import {
+  createTwoFactorStack,
+  createTwoFactorLoginSupport,
+} from '@/infrastructure/composition/twoFactor.js'
 import { createServer } from '@/infrastructure/http/server.js'
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
 import { SqliteVehicleRepository } from '@/infrastructure/persistence/sqlite/vehicleRepository.js'
@@ -62,17 +66,22 @@ async function createDiagnosisLayer(
 
 /** Composition Root: cablea todas las dependencias y devuelve la app Express configurada. */
 export async function buildApp(config: AppConfig): Promise<Application> {
-  const { db, auditRepo, userRepo, tokenStore, logRepo, passwordResetTokenRepo } =
-    createPersistenceRepositories(config)
+  const repos = createPersistenceRepositories(config)
+  const { db, auditRepo, userRepo, tokenStore, logRepo, passwordResetTokenRepo } = repos
   const logger = new Logger(config.NODE_ENV, db)
   const vehicleRepo = new SqliteVehicleRepository(db)
   const emailSender = createEmailSender(config, logger)
+
+  // El login necesita poder emitir retos: sin ese soporte falla cerrado ante una
+  // cuenta con 2FA, en vez de entregar tokens saltandose el segundo paso.
   const auth = createAuthStack(
     config,
     { userRepo, tokenStore, passwordResetTokenRepo },
     emailSender,
     logger,
+    createTwoFactorLoginSupport(repos),
   )
+  const twoFactor = createTwoFactorStack(config, repos, auth.authService, logger)
   await seedAdminUser(config, userRepo, auth.authService, logger)
   await seedManufacturerCatalog(vehicleRepo, logger)
   const authController = createAuthController(auth)
@@ -89,6 +98,7 @@ export async function buildApp(config: AppConfig): Promise<Application> {
     authController,
     diagnosisController,
     profileController: profile.profileController,
+    twoFactorController: twoFactor.controller,
     adminController,
     requireAdmin: createRequireAdmin(userRepo),
     auditRepo,

@@ -53,6 +53,11 @@ import type {
   LiveDataResponse,
   RegisterResponse,
   ScenariosResponse,
+  DisableTwoFactorInput,
+  LoginResult,
+  TwoFactorActivation,
+  TwoFactorSetup,
+  VerifyTwoFactorInput,
 } from '@/lib/apiTypes'
 
 /**
@@ -65,7 +70,10 @@ export type {
   CognitiveOutput,
   ConversationItem,
   LiveDataResponse,
+  LoginResult,
   PidObservation,
+  TwoFactorActivation,
+  TwoFactorSetup,
 } from '@/lib/apiTypes'
 
 // ---------------------------------------------------------------------------
@@ -88,11 +96,35 @@ async function accountLockedMessage(res: Response): Promise<string> {
   return `${base} Inténtalo de nuevo en ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}.`
 }
 
+/** Forma del cuerpo cuando el login devuelve reto en vez de tokens. */
+type TwoFactorChallengeBody = {
+  twoFactorRequired: true
+  challengeToken: string
+  expiresAt: string
+}
+
+/**
+ * Las dos formas posibles del cuerpo de `POST /api/auth/login`.
+ *
+ * El caso con tokens declara `twoFactorRequired?: false` porque el backend **si**
+ * manda esa clave con valor `false`. Distinguir por presencia (`'x' in body`) seria
+ * un error: la clave esta siempre, y todo login correcto se tomaria por un reto.
+ * Se discrimina por el **valor**.
+ */
+type LoginResponseBody = (AuthTokens & { twoFactorRequired?: false }) | TwoFactorChallengeBody
+
 export const api = {
   // ---- Auth ----
 
-  /** POST /api/auth/login — returns tokens only (no user object). */
-  async login(input: LoginInput): Promise<AuthTokens> {
+  /**
+   * POST /api/auth/login — primer factor.
+   *
+   * Devuelve `kind: 'tokens'` cuando la cuenta no tiene segundo factor, y en ese
+   * caso los guarda. Con segundo factor activo devuelve el reto y **no guarda
+   * nada**: guardar el reto como si fuera un token dejaria a la SPA creyendose
+   * dentro con una credencial que no abre ninguna ruta.
+   */
+  async login(input: LoginInput): Promise<LoginResult> {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -101,9 +133,65 @@ export const api = {
     })
     if (res.status === 423) throw new ApiHttpError(await accountLockedMessage(res), res.status)
     await assertOk(res, GENERIC_ERROR_MESSAGE)
+
+    const body = (await res.json()) as LoginResponseBody
+    if (body.twoFactorRequired) {
+      return {
+        kind: 'twoFactorRequired',
+        challengeToken: body.challengeToken,
+        expiresAt: body.expiresAt,
+      }
+    }
+
+    setTokens({ accessToken: body.accessToken, refreshToken: body.refreshToken })
+    return { kind: 'tokens' }
+  },
+
+  /**
+   * POST /api/auth/2fa/verify — segundo factor.
+   *
+   * Va con `fetch` desnudo y no con `apiFetch`, igual que `login`: todavia no hay
+   * sesion que adjuntar, y `apiFetch` intentaria refrescar un token inexistente.
+   */
+  async verifyTwoFactor(input: VerifyTwoFactorInput): Promise<AuthTokens> {
+    const res = await fetch('/api/auth/2fa/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+    })
+    if (res.status === 423) throw new ApiHttpError(await accountLockedMessage(res), res.status)
+    await assertOk(res, 'El código no es válido o ha caducado')
+
     const tokens = (await res.json()) as AuthTokens
     setTokens(tokens)
     return tokens
+  },
+
+  /** POST /api/profile/2fa/setup — prepara el alta y devuelve el QR. No activa nada. */
+  async setupTwoFactor(): Promise<TwoFactorSetup> {
+    const res = await apiFetch('/api/profile/2fa/setup', { method: 'POST' })
+    await assertOk(res, 'No se ha podido preparar el segundo factor')
+    return (await res.json()) as TwoFactorSetup
+  },
+
+  /** POST /api/profile/2fa/activate — confirma con un codigo y entrega los de recuperacion. */
+  async activateTwoFactor(code: string): Promise<TwoFactorActivation> {
+    const res = await apiFetch('/api/profile/2fa/activate', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    })
+    await assertOk(res, 'El código no es válido')
+    return (await res.json()) as TwoFactorActivation
+  },
+
+  /** POST /api/profile/2fa/disable — exige contrasena **y** codigo vigente. */
+  async disableTwoFactor(input: DisableTwoFactorInput): Promise<void> {
+    const res = await apiFetch('/api/profile/2fa/disable', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    })
+    await assertOk(res, 'No se ha podido desactivar el segundo factor')
   },
 
   /** POST /api/auth/register — returns tokens + user. */

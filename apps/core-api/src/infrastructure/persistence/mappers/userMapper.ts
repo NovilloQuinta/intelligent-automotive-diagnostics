@@ -20,6 +20,7 @@ export function toUser(row: UserRow): User {
     createdAt: row.createdAt,
     failedLoginAttempts: row.failedLoginAttempts,
     lockedUntil: row.lockedUntil,
+    twoFactorEnabled: row.twoFactorEnabled,
   })
 }
 

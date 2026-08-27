@@ -2,13 +2,21 @@ import type { UserRepository } from '@/application/ports/UserRepository.js'
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
-import { persistRefreshToken } from '@/application/shared/hashToken.js'
+import { randomBytes } from 'node:crypto'
+import { hashToken, persistRefreshToken } from '@/application/shared/hashToken.js'
+import type { TwoFactorChallengeRepository } from '@/application/ports/TwoFactorChallengeRepository.js'
+import { isAccountLocked } from '@/application/shared/accountLock.js'
 import { loginUserSchema, type LoginUserInput } from '@/application/dto/auth/LoginUserInput.js'
 import type { LoginUserOutput } from '@/application/dto/auth/LoginUserOutput.js'
 
-/** Indica si `lockedUntil` marca un bloqueo todavia vigente. */
-function isLocked(lockedUntil: string | null | undefined): lockedUntil is string {
-  return !!lockedUntil && new Date(lockedUntil) > new Date()
+/** Bytes del token de reto. 32 bytes son 256 bits: no se adivina. */
+const CHALLENGE_TOKEN_BYTES = 32
+
+/** Cableado del segundo factor. Ausente = la aplicacion no lo tiene montado. */
+export interface TwoFactorLoginSupport {
+  readonly challengeRepo: TwoFactorChallengeRepository
+  /** Vida del reto en milisegundos. Corta: es un paso intermedio, no una sesion. */
+  readonly challengeTtlMs: number
 }
 
 /** Caso de uso: inicio de sesion. */
@@ -19,6 +27,7 @@ export class LoginUserUseCase {
     private readonly tokenStore: RefreshTokenRepository,
     private readonly refreshTokenTtlMs: number,
     private readonly logger?: LoggerPort,
+    private readonly twoFactor?: TwoFactorLoginSupport,
   ) {}
 
   async execute(input: LoginUserInput): Promise<LoginUserOutput> {
@@ -31,7 +40,7 @@ export class LoginUserUseCase {
       throw new InvalidCredentialsError()
     }
 
-    if (isLocked(user.lockedUntil)) {
+    if (isAccountLocked(user.lockedUntil)) {
       this.logger?.warn('auth.locked_out', { userId: user.id, lockedUntil: user.lockedUntil })
       throw new AccountLockedError(user.lockedUntil)
     }
@@ -47,7 +56,7 @@ export class LoginUserUseCase {
       // El intento que alcanza el umbral ya deja la cuenta bloqueada: se
       // responde 423 aqui mismo, en vez de un 401 que no explica nada y
       // dejar el aviso para el intento siguiente.
-      if (isLocked(state.lockedUntil)) {
+      if (isAccountLocked(state.lockedUntil)) {
         this.logger?.warn('auth.locked_out', { userId: user.id, lockedUntil: state.lockedUntil })
         throw new AccountLockedError(state.lockedUntil)
       }
@@ -56,12 +65,59 @@ export class LoginUserUseCase {
 
     await this.userRepo.resetFailedLogins(user.id)
 
+    if (user.twoFactorEnabled) {
+      return this.issueChallenge(user.id)
+    }
+
     const tokens = this.authService.generateTokens(user.id)
     await persistRefreshToken(this.tokenStore, user.id, tokens, this.refreshTokenTtlMs)
 
     this.logger?.info('auth.login_success', { userId: user.id })
 
-    return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken }
+    return {
+      twoFactorRequired: false,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    }
+  }
+
+  /**
+   * Emite el vale para el segundo paso.
+   *
+   * Se guarda **hasheado**, como los tokens de reseteo: quien lea la base no puede
+   * canjear nada. Y se invalidan los retos anteriores del usuario, para que varios
+   * intentos de login no dejen una coleccion de vales vivos a la vez.
+   */
+  private async issueChallenge(userId: number): Promise<LoginUserOutput> {
+    if (!this.twoFactor) {
+      // Fallar cerrado: la alternativa seria entregar tokens saltandose el segundo
+      // factor porque el cableado esta incompleto, que es peor que no dejar entrar.
+      this.logger?.error('auth.two_factor_not_configured', { userId })
+      throw new TwoFactorNotConfiguredError()
+    }
+
+    const { challengeRepo, challengeTtlMs } = this.twoFactor
+    await challengeRepo.invalidateAllForUser(userId)
+
+    const challengeToken = randomBytes(CHALLENGE_TOKEN_BYTES).toString('base64url')
+    const expiresAt = new Date(Date.now() + challengeTtlMs).toISOString()
+    await challengeRepo.save(userId, hashToken(challengeToken), expiresAt)
+
+    this.logger?.info('auth.two_factor_challenge_issued', { userId })
+
+    return { twoFactorRequired: true, challengeToken, expiresAt }
+  }
+}
+
+/**
+ * Error cuando un usuario tiene el segundo factor activo pero la aplicacion no
+ * tiene montado el soporte para verificarlo. Es un fallo de despliegue, no del
+ * usuario: se responde 500, no 401.
+ */
+export class TwoFactorNotConfiguredError extends Error {
+  constructor() {
+    super('Two-factor authentication is enabled for this account but not configured on the server')
+    this.name = 'TwoFactorNotConfiguredError'
   }
 }
 

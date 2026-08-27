@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { loadConfig } from '@/infrastructure/configuration/index.js'
+import { loadConfig, assertProductionSecrets } from '@/infrastructure/configuration/index.js'
 
 describe('loadConfig — LANCEDB_PATH', () => {
   const originalEnv = process.env
@@ -139,5 +139,114 @@ describe('loadConfig — OBD_READ_ONLY', () => {
 
     process.env.OBD_READ_ONLY = '0'
     expect(loadConfig().OBD_READ_ONLY).toBe(false)
+  })
+})
+
+describe('loadConfig — RATE_LIMIT_ENABLED', () => {
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    process.env = { ...originalEnv }
+    delete process.env.RATE_LIMIT_ENABLED
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  it('queda sin definir si no se declara, para que mande NODE_ENV', () => {
+    expect(loadConfig().RATE_LIMIT_ENABLED).toBeUndefined()
+  })
+
+  it('acepta true y false', () => {
+    process.env.RATE_LIMIT_ENABLED = 'true'
+    expect(loadConfig().RATE_LIMIT_ENABLED).toBe('true')
+
+    process.env.RATE_LIMIT_ENABLED = 'false'
+    expect(loadConfig().RATE_LIMIT_ENABLED).toBe('false')
+  })
+
+  it('trata el valor vacio como no declarado', () => {
+    process.env.RATE_LIMIT_ENABLED = ''
+
+    expect(loadConfig().RATE_LIMIT_ENABLED).toBeUndefined()
+  })
+
+  it('rechaza un valor que no sea true ni false', () => {
+    // Un "yes" aceptado en silencio dejaria produccion sin rate limiting y
+    // nadie se enteraria: mejor que el arranque falle.
+    process.env.RATE_LIMIT_ENABLED = 'yes'
+
+    expect(() => loadConfig()).toThrow()
+  })
+})
+
+describe('loadConfig — TOTP_ENCRYPTION_KEY', () => {
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    process.env = { ...originalEnv }
+    delete process.env.TOTP_ENCRYPTION_KEY
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  it('trae un valor de desarrollo para que un clon limpio arranque', () => {
+    expect(loadConfig().TOTP_ENCRYPTION_KEY).toBeTruthy()
+  })
+
+  it('el valor por defecto son 32 bytes en base64, utilizables tal cual', () => {
+    const key = Buffer.from(loadConfig().TOTP_ENCRYPTION_KEY, 'base64')
+
+    expect(key.byteLength).toBe(32)
+  })
+
+  it('respeta la clave indicada por entorno', () => {
+    const key = Buffer.alloc(32, 7).toString('base64')
+    process.env.TOTP_ENCRYPTION_KEY = key
+
+    expect(loadConfig().TOTP_ENCRYPTION_KEY).toBe(key)
+  })
+})
+
+describe('assertProductionSecrets — TOTP_ENCRYPTION_KEY', () => {
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    process.env = { ...originalEnv }
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  /** Config valida de produccion, salvo lo que cada test rompa a proposito. */
+  function productionConfig() {
+    process.env.NODE_ENV = 'production'
+    process.env.ACCESS_TOKEN_SECRET = 'una-clave-de-acceso-larga-y-propia'
+    process.env.REFRESH_TOKEN_SECRET = 'una-clave-de-refresco-larga-y-propia'
+    return loadConfig()
+  }
+
+  it('rechaza arrancar en produccion con la clave de desarrollo', () => {
+    // Con la clave por defecto, cualquiera con el repositorio descifra los
+    // secretos TOTP de produccion: el segundo factor no valdria nada.
+    const config = productionConfig()
+
+    expect(() => assertProductionSecrets(config)).toThrow(/TOTP_ENCRYPTION_KEY/)
+  })
+
+  it('acepta una clave propia', () => {
+    process.env.TOTP_ENCRYPTION_KEY = Buffer.alloc(32, 42).toString('base64')
+
+    expect(() => assertProductionSecrets(productionConfig())).not.toThrow()
+  })
+
+  it('fuera de produccion no exige nada', () => {
+    process.env.NODE_ENV = 'development'
+
+    expect(() => assertProductionSecrets(loadConfig())).not.toThrow()
   })
 })

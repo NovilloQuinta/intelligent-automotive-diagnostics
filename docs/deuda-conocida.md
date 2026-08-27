@@ -4,16 +4,19 @@
 > de editar aqui**: este fichero se ha desincronizado dos veces por actualizarlo
 > de memoria.
 >
-> Estado general: 2171 tests en verde (1554 core-api + 617 ui, mas 2 skipped), 0 errores
-> de lint, 78 avisos (71 + 7). Remedido el 2026-08-25 corriendo `pnpm test:all` y `pnpm lint`
-> en las dos apps. Nada de lo que sigue es bloqueante salvo donde se diga.
+> Estado general: 2403 tests en verde (1748 core-api + 655 ui), 0 errores de lint, 77 avisos (70 + 7).
+> `pnpm test:coverage` vuelve a pasar (exit 0) tras 31 tests nuevos en `TwoFactorController`
+> y `nullLogger`. Remedido el 2026-08-26 al cerrar la deuda de coverage. Antes de las dos tareas de
+> seguridad de ese dia, `develop` estaba en 1554 + 617 tests y 71 + 7 avisos; las cifras que
+> figuraban aqui (2131 tests, 76 avisos) ya se habian quedado atras por su cuenta.
+> Nada de lo que sigue es bloqueante.
 
 ## El umbral de cobertura del Core apunta a un fichero que ya no existe
 
-Detectado el 2026-08-25 preparando la defensa. **Es el unico hallazgo de hoy que rompe
+Detectado el 2026-08-25 preparando la defensa. **Sigue abierto tras el merge del 2026-08-26.** **Es el unico hallazgo de hoy que rompe
 una garantia, no solo la documentacion.**
 
-`apps/core-api/vitest.config.ts:58` exige 100% a esta ruta:
+`apps/core-api/vitest.config.ts:64` exige 100% a esta ruta:
 
 ```
 'src/application/use-cases/processVehicleDiagnosis.ts'
@@ -37,7 +40,7 @@ rompe nada: es documentacion que se quedo atras.
 | Donde | Dice | El codigo hace |
 |---|---|---|
 | `.env.example:54,57` | `LLM_BASE_URL` y `LLM_MODEL` tienen valor por defecto | `composition/llm.ts:36` los exige con `requireConfig`: **la API no arranca sin ellos** con `LLM_PROVIDER=openai` |
-| `docs/tfm/04` §4.5 | El system prompt tiene 7 bloques | `cognitiveDiagnosisPrompt.ts` exporta **11**: se anadieron `ECU_LEARNING`, `SCOPE`, `CAPABILITY` e `INTERNALS` |
+| `docs/tfm/04` §4.5 | El system prompt tiene 7 bloques | `cognitiveDiagnosisPrompt.ts` exporta **12**: se anadieron `ECU_LEARNING`, `SCOPE`, `CAPABILITY` e `INTERNALS` |
 | ADR-007 §3 | 3 tablas en LanceDB | `vectorTableConfigs.ts` declara **4**: falta `ecus_index` en el ADR |
 | `docs/tfm/04` §4.11 | La criticidad sale de "reglas de umbrales" | `DiagnosisResult.computeSeverity`: 0 DTCs -> baja, con freeze frame -> critica, con DTCs sin freeze frame -> alta |
 
@@ -290,6 +293,106 @@ lecturas devuelven `NO DATA`.
 La causa del `live-data` en null **sigue sin identificar**. Si reaparece, esta pista ya esta
 gastada y hay que mirar en otro sitio.
 
+## `pnpm verify` no corre los e2e, y eso dejo pasar un bug real
+
+Detectado el 2026-08-26. El repositorio tiene tres suites de Playwright (`auth`, `logout`,
+`dashboard`) y **ni `pnpm verify` ni el CI las ejecutan**. Todo el trabajo de las dos tareas
+de seguridad de ese dia se subio sin que corrieran una sola vez.
+
+Lo que se colo por ese hueco: `api.login` discriminaba la respuesta con
+`'twoFactorRequired' in body`, y el backend manda esa clave **tambien cuando vale `false`**.
+El operador `in` mira la presencia, no el valor, asi que **todo login correcto se trataba
+como si pidiera segundo factor**: los tokens no se guardaban y la SPA se quedaba en `/login`.
+
+Los 643 tests de la UI no lo vieron porque el mock del test devolvia `MOCK_TOKENS` sin esa
+clave — el mock describia una respuesta que el servidor no manda. Es exactamente la clase de
+error que un mock escrito a mano no puede detectar y un e2e si. Corregido, y el mock alineado
+con la respuesta real.
+
+**Resuelto en parte el 2026-08-26**: hay un job `e2e` en el CI que corre `auth`, `logout` y
+`twoFactor` (8 casos, ~54 s incluyendo el arranque de las dos apps). Se subio de paso el
+`webServer.timeout` de `playwright.config.ts` de 15 s a 120 s, porque el arranque de
+`core-api` —LanceDB mas el seed de fabricantes— ronda los 13 s y el config abortaba antes con
+"Timed out waiting". `pnpm verify` **sigue sin correrlos**: se dejo fuera para no pasar el
+gate local de ~2 min a ~4.
+
+## Los seis e2e de `dashboard` no corren en CI
+
+`dashboard.spec.ts` necesita los tres emuladores ELM327, que en `docker-compose.yml` son
+imagenes a construir desde `docker/elm327/Dockerfile` y publicar en 35000-35002. El job `e2e`
+del CI **no los levanta**, asi que estos seis casos solo se ejercitan en local con el stack de
+Docker arriba:
+
+- identificar el vehiculo antes de entrar al menu de diagnostico
+- cambiar de Audi a Kawasaki
+- diagnostico sobre el Audi (con DTC) y sobre la Kawasaki (sin DTC)
+- freeze frame al seleccionar un DTC del Audi
+- telemetria en vivo
+
+Cerrarlo pide anadir los tres servicios al job: build de la imagen, `services:` o
+`docker compose up`, y esperar a que los puertos respondan. Es trabajo aparte, no un olvido.
+
+Nota de entorno: el `@playwright/test` del repo (1.62.1) espera el build 1234 de Chromium; el
+contenedor de desarrollo remoto trae el 1194. `playwright.config.ts` lee
+`PLAYWRIGHT_CHROMIUM_PATH` para apuntar al binario que exista — en CI no hace falta, porque
+`playwright install` baja el correcto.
+
+## El esquema de `users` esta escrito a mano en seis ficheros de test
+
+Detectado el 2026-08-26 al anadir dos columnas para el segundo factor: hubo que tocar
+**seis** ficheros de test que declaran su propio `CREATE TABLE users` en SQL crudo
+(`admin.integration`, `auth.integration`, `userRepository` —tres tablas—, `vehicleRepository`,
+`refreshTokenStore`, `passwordResetTokenRepository`).
+
+Esas copias derivan de `schema.ts` sin que nada lo compruebe: si una se queda atras, su test
+falla con un error de SQL que no dice nada del origen real. El patron viene de antes y no lo
+introdujo este cambio, pero cada columna nueva lo hace mas caro.
+
+La salida barata es lo que ya hacen `db.test.ts` y los tests del segundo factor: `resetDb()` +
+`getDb()`, que aplica las migraciones reales sobre una base en memoria. Ademas de no duplicar
+nada, ejercita la migracion generada, que es justo lo que en produccion puede fallar.
+
+## `openapiSync.test.ts` no ve los routers que no se le declaran
+
+El test recorre los routers de Express y falla si sirven una ruta sin documentar. Pero la
+lista de routers **se mantiene a mano** dentro del propio test.
+
+Al anadir `twoFactor.routes.ts` en el cambio del segundo factor, el test siguio en verde con
+cuatro rutas sin documentar. Solo salto al anadir el router nuevo a esa lista. La garantia,
+entonces, no es "toda ruta servida esta documentada", sino "toda ruta de los routers que
+alguien se acordo de declarar".
+
+Cerrarlo pide que la lista salga de un sitio unico —el propio `createServer`, o un registro
+explicito de routers— en vez de repetirse en el test.
+
+## Coverage: resuelto el 2026-08-26
+
+`pnpm test:coverage` pasa (exit 0). Antes fallaba en `develop` desde que el god file
+`composition.ts` se repartio por areas: `vitest.config.ts` excluia `'**/composition.ts'`
+como cableado DI, y el patron dejo de casar con los ficheros nuevos, que son exactamente el
+mismo tipo de codigo. El umbral no cambio; cambio lo que caia dentro.
+
+Eran **ocho** ficheros, no cuatro como decia esta entrada: a los cinco de `composition/`
+(`persistence`, `email`, `llm`, `auth`, `admin`) se sumaron tres del trabajo de seguridad
+del mismo dia — `nullLogger.ts`, `composition/twoFactor.ts` y `TwoFactorController.ts`.
+
+Resuelto en dos direcciones distintas, y la distincion importa:
+
+- **Excluido** `src/infrastructure/composition/**`. Es el mismo cableado DI que
+  `composition.ts`, que ya estaba excluido: partir un fichero no cambia su naturaleza.
+- **Testeados** `TwoFactorController.ts` y `nullLogger.ts`, no excluidos. El controlador
+  estaba al 74,78 % y le faltaban justo las ramas de error (401 sin token, 423 con
+  `Retry-After`, 401 por credencial invalida, los 500). Eso es contrato de seguridad, no
+  relleno de cobertura, y ademas `AuthController` tampoco esta excluido: excluir este habria
+  sido incoherente. 31 tests nuevos en `tests/unit/infrastructure/http/twoFactorController.test.ts`
+  y `tests/unit/application/nullLogger.test.ts`.
+
+**Ningun umbral se toco**: siguen en 80 statements / 60 branches / 90 functions / 80 lines,
+`perFile`, con `processVehicleDiagnosis.ts` al 100 %.
+
+Queda en pie la asimetria que dejo que esto se colara: `pnpm test:coverage` **no entra en
+`pnpm verify` ni en CI**, asi que nada avisa cuando vuelve a romperse.
+
 ## Vectorial
 
 Migrar a schema con columna JSON metadata para evitar migraciones futuras.
@@ -327,11 +430,11 @@ GitHub; su contenido ya esta integrado, asi que borrarlas no pierde nada:
   `mkdir -p` antes de abrir la conexion (`db.ts`), porque `better-sqlite3` no lo hace
   y `apps/core-api/data/` esta gitignored. Cubierto por `db.test.ts`.
 - **`swagger.ts` como god file**: el documento OpenAPI se genera desde el codigo.
-- **Coverage bajo umbral**: ningun fichero incumple ya. Al remedir aparecio un cuarto
-  que no estaba documentado (`traceConsole.ts`, functions 66,66 %). `withTimeout.ts` y
-  `sdkErrorUtils.ts` no tenian test ninguno; `diagnosisKnowledgeMapper.ts` cubria el
-  camino feliz pero no las guardas de `deserializeList` (campo ausente, no-string, JSON
-  corrupto, JSON que no es array).
+- **Coverage bajo umbral** (los cuatro de entonces): `traceConsole.ts` (functions 66,66 %),
+  `withTimeout.ts` y `sdkErrorUtils.ts` (sin test ninguno) y `diagnosisKnowledgeMapper.ts`
+  (cubria el camino feliz pero no las guardas de `deserializeList`). **Ojo: la afirmacion
+  "ningun fichero incumple ya" dejo de ser cierta** — ver la seccion "Coverage: cuatro
+  ficheros de composicion" mas arriba.
 - **Los tests de la UI, fuera de lint y formato**: `lint` y `format` de `apps/ui` ya
   cubren `tests/` ademas de `src/`. La estimacion que habia aqui ("~1129 errores de
   `prettier/prettier`") era **de antes de formatear**: aplicado `prettier --write`

@@ -7,6 +7,7 @@ import { forgotPasswordSchema } from '@/application/dto/auth/ForgotPasswordInput
 import { resetPasswordSchema } from '@/application/dto/auth/ResetPasswordInput.js'
 import { updateProfileSchema } from '@/application/dto/profile/UpdateProfileInput.js'
 import { changePasswordSchema } from '@/application/dto/profile/ChangePasswordInput.js'
+import { verifyTwoFactorSchema } from '@/application/dto/auth/VerifyTwoFactorInput.js'
 import { knowledgeSearchInputSchema } from '@/application/dto/admin/KnowledgeSearchInput.js'
 import {
   DiagnosisBodySchema,
@@ -37,6 +38,7 @@ export const openApiSchemas: SchemaMap = {
   ResetPasswordRequest: resetPasswordSchema,
   UpdateProfileRequest: updateProfileSchema,
   ChangePasswordRequest: changePasswordSchema,
+  VerifyTwoFactorRequest: verifyTwoFactorSchema,
   KnowledgeSearchRequest: knowledgeSearchInputSchema,
   DiagnosisRequest: DiagnosisBodySchema,
   McpToolRequest: McpToolBodySchema,
@@ -50,6 +52,9 @@ export const openApiSchemas: SchemaMap = {
   UpdatedProfile: auth.updatedProfileSchema,
   SuccessAck: auth.successAckSchema,
   MessageAck: auth.messageAckSchema,
+  TwoFactorChallenge: auth.twoFactorChallengeSchema,
+  TwoFactorSetup: auth.twoFactorSetupSchema,
+  TwoFactorRecoveryCodes: auth.twoFactorRecoveryCodesSchema,
 
   // ---- Respuestas: diagnostico ----
   Scenario: diagnosis.scenarioSchema,
