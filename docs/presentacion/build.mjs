@@ -146,6 +146,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
+  s.addText('1  Introducción', {
+    x: 0.85, y: 0.36, w: 11.6, h: 0.3, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 13, bold: true, color: AZUL,
+  })
   s.addText([
       { text: '1.1  ', options: { color: AZUL } },
       { text: 'Diagnóstico de averías de vehículos asistido por IA' },
@@ -224,6 +228,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
+  s.addText('2  Funcionamiento', {
+    x: 0.85, y: 0.12, w: 11.6, h: 0.3, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 13, bold: true, color: AZUL,
+  })
   s.addText([
       { text: '2.1  ', options: { color: AZUL } },
       { text: 'Flujo de trabajo' },
@@ -424,6 +432,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
+  s.addText('3  Diseño', {
+    x: 0.85, y: 0.26, w: 11.6, h: 0.3, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 13, bold: true, color: AZUL,
+  })
   s.addText([
       { text: '3.1  ', options: { color: AZUL } },
       { text: 'Tecnologías utilizadas' },
@@ -588,6 +600,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
+  s.addText('4  Implementación', {
+    x: 0.85, y: 0.36, w: 11.6, h: 0.3, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 13, bold: true, color: AZUL,
+  })
   s.addText([
       { text: '4.1  ', options: { color: AZUL } },
       { text: 'Adquisición de datos mediante OBD-II' },
@@ -1269,6 +1285,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
+  s.addText('5  Resultados', {
+    x: 0.85, y: 0.21, w: 11.6, h: 0.3, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 13, bold: true, color: AZUL,
+  })
   s.addText([
       { text: '5.1  ', options: { color: AZUL } },
       { text: 'Resultados: la aplicación en funcionamiento' },
@@ -1323,6 +1343,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
+  s.addText('6  Calidad y seguridad', {
+    x: 0.85, y: 0.36, w: 11.6, h: 0.3, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 13, bold: true, color: AZUL,
+  })
   s.addText([
       { text: '6.1  ', options: { color: AZUL } },
       { text: 'Calidad del código' },
@@ -1571,6 +1595,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
+  s.addText('7  Conclusiones', {
+    x: 0.85, y: 0.36, w: 11.6, h: 0.3, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 13, bold: true, color: AZUL,
+  })
   s.addText([
       { text: '7.1  ', options: { color: AZUL } },
       { text: 'Conclusiones' },

@@ -59,10 +59,12 @@
   Exceptional Conditions`, y SSRF se absorbe dentro de `Broken Access Control`.
   **`docs/security.md` sigue en 2021: hay que actualizarlo para que no se contradigan.**
 - **Titulos numerados** (2026-08-26): el indice y las slides no se relacionaban. Cada
-  titulo lleva delante su numero de seccion en azul (`4.2 Persistencia: ...`), asi que
-  desde cualquier slide se sabe en que punto del indice estas. Seis titulos largos
-  bajan a 29 pt para que el numero no los parta en dos lineas.
-  **Si se reordena una slide hay que renumerarla a mano.**
+  titulo lleva delante su numero de seccion en azul (`4.2 Persistencia: ...`). Y la
+  **primera slide de cada seccion lleva encima el encabezado del bloque** (`4 Implementacion`),
+  que es lo que hace cierta la numeracion: sin el, un `4.1` cuelga de un padre que no
+  aparece en ningun sitio. Se descarto meter siete slides-cartel vacias.
+  Seis titulos largos bajan a 29 pt para que el numero no los parta en dos lineas.
+  **Si se reordena una slide hay que renumerarla a mano, y revisar quien abre seccion.**
 - **Slide de indice** (2026-08-26): se saltaba de una slide a otra sin saber en que
   parte de la charla estabas. Se probo con un rotulo de bloque encima de cada titulo
   y el autor lo rechazo: no se ve en otras presentaciones y mete parafernalia. La
