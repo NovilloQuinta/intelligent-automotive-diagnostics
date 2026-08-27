@@ -22,7 +22,7 @@
 | 14 | Resultados: la aplicacion en funcionamiento | El resultado | pendiente |
 | 15 | Calidad del codigo | El resultado | **rehecha** |
 | 16 | OWASP API Top 10 2023 | El resultado | **nueva** |
-| 17 | La interfaz y los riesgos abiertos | El resultado | **nueva** |
+| 17 | Seguridad de la interfaz | El resultado | **nueva** |
 | 18 | Integracion y despliegue continuos | El resultado | validada |
 | 19 | Conclusiones | Cierre | pendiente |
 | 20 | Gracias por la atencion | Cierre | pendiente |

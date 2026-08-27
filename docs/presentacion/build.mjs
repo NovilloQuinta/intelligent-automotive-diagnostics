@@ -1314,7 +1314,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('La interfaz y los riesgos abiertos', {
+  s.addText('Seguridad de la interfaz', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -1340,16 +1340,16 @@ function pie(s) {
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  s.addText('Lo que queda abierto', {
+  s.addText('Riesgos y cómo se acotan', {
     x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
   s.addText(
     [
-      { text: 'El token vive en localStorage: quedaría expuesto ante un XSS', options: { bullet: true, breakLine: true } },
-      { text: 'Pasarlo a cookie httpOnly está pendiente, y arrastra proteger CSRF', options: { bullet: true, breakLine: true } },
-      { text: 'La base no está cifrada en reposo; el secreto TOTP sí, con AES-256-GCM', options: { bullet: true, breakLine: true } },
-      { text: 'El segundo factor es opcional, salvo para administradores', options: { bullet: true } },
+      { text: 'El token en localStorage lo acota una interfaz sin superficie de XSS', options: { bullet: true, breakLine: true } },
+      { text: 'Y si aun así se robara, el bloqueo de cuenta y la rotación de refresco acotan el daño', options: { bullet: true, breakLine: true } },
+      { text: 'El secreto del segundo factor va cifrado con AES-256-GCM, con la clave fuera de la base', options: { bullet: true, breakLine: true } },
+      { text: 'El segundo factor es obligatorio para administradores', options: { bullet: true } },
     ],
     { x: xDer, y: yLista, w: colW, h: 3.2, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
@@ -1367,17 +1367,20 @@ function pie(s) {
     'Zod que usa la API.\n\n' +
     'Y una decisión consciente: el token viaja en cabecera Bearer y no en cookie. Eso ' +
     'elimina el CSRF de raíz, pero obliga a guardarlo en el navegador.\n\n' +
-    'A la derecha está lo que sigue abierto, y quiero ser claro con esto porque esta ' +
+    'A la derecha están los riesgos que quedan, y quiero ser claro con esto porque esta ' +
     'semana se ha movido. El segundo factor ya no falta: hay TOTP con alta por código QR, ' +
-    'diez códigos de recuperación de un solo uso guardados hasheados, y es obligatorio ' +
-    'para administradores. Los contadores del límite de peticiones tampoco se pierden ya ' +
-    'al reiniciar: viven en la base de datos.\n\n' +
-    'Lo que queda abierto son tres cosas. El token en el navegador, con el trabajo ya ' +
-    'definido para pasarlo a cookie httpOnly. El cifrado en reposo, que es una decisión ' +
-    'sin tomar entre cifrar el disco del servidor o usar SQLCipher; entre tanto, el ' +
-    'secreto del segundo factor, que es el dato que de verdad sería una llave, va cifrado ' +
-    'columna a columna con AES-256-GCM y la clave no vive en la base. Y que el segundo ' +
-    'factor sea opcional para el usuario corriente, que es decisión de producto.\n\n' +
+    'diez códigos de recuperación de un solo uso guardados hasheados, y es obligatorio para ' +
+    'administradores. Los contadores del límite de peticiones tampoco se pierden ya al ' +
+    'reiniciar: viven en la base de datos.\n\n' +
+    'Del token en el navegador: sigue en localStorage, y la respuesta no es esconderlo sino ' +
+    'que no haya por dónde leerlo. React escapa, no hay marcado en crudo, y la política de ' +
+    'contenido no admite scripts en línea. Y si aun así se robara, el bloqueo de cuenta y la ' +
+    'rotación de refresco acotan la ventana. Pasarlo a cookie httpOnly está definido como ' +
+    'trabajo, con su protección CSRF.\n\n' +
+    'De la base sin cifrar en reposo: el dato que de verdad sería una llave es el secreto del ' +
+    'segundo factor, y ese va cifrado columna a columna con AES-256-GCM, con la clave fuera ' +
+    'de la base. Un volcado del fichero ya no basta para anular el segundo factor. Cifrar el ' +
+    'disco entero es una decisión de despliegue, no de código, y está sin tomar.\n\n' +
     '[~50 s · acumulado 18:35]',
   )
 }
