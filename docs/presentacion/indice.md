@@ -20,7 +20,7 @@
 | 12 | Ciclo de razonamiento del agente | Las piezas | pendiente |
 | 13 | Modelos empleados: lenguaje y embeddings | Las piezas | pendiente |
 | 14 | Resultados: la aplicacion en funcionamiento | El resultado | pendiente |
-| 15 | Calidad del codigo y seguridad | El resultado | pendiente |
+| 15 | Calidad del codigo | El resultado | **rehecha** |
 | 16 | OWASP API Top 10 2023 | El resultado | **nueva** |
 | 17 | La interfaz y los riesgos asumidos | El resultado | **nueva** |
 | 18 | Integracion y despliegue continuos | El resultado | validada |
@@ -40,6 +40,11 @@
 - **Slide de CI/CD** (2026-08-25): el despliegue automatico no aparecia en ningun sitio.
   La de calidad se queda con TDD, pruebas y seguridad, y el pipeline entero pasa a slide
   propia: integracion -> verificacion -> construccion -> publicacion -> produccion.
+- **Slide 15 depurada** (2026-08-26): su columna derecha repetia palabra por palabra la
+  de integracion continua (lint, formato, Node 22, auditoria de dependencias) y su
+  ultimo punto repetia la slide de OWASP. Ahora la derecha habla solo de cobertura:
+  por fichero y no de media, minimos reales, y la exclusion escrita de infraestructura.
+  Pierde el "y seguridad" del titulo, que ya tiene dos slides propias.
 - **Slide de la interfaz** (2026-08-26): la tabla OWASP cubre el backend, pero la SPA
   tambien tiene superficie. Slide propia con las medidas del cliente (escapado de
   React, CSP propia, Zod en formularios, Bearer en vez de cookie) y los cuatro

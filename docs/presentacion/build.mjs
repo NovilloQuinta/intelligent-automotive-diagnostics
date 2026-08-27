@@ -1176,7 +1176,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Calidad del código y seguridad', {
+  s.addText('Calidad del código', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -1195,23 +1195,23 @@ function pie(s) {
     [
       { text: 'TDD: primero el test que falla, luego el código', options: { bullet: true, breakLine: true } },
       { text: '2.171 pruebas en verde, en 209 ficheros', options: { bullet: true, breakLine: true } },
-      { text: 'La cobertura se exige fichero a fichero, no de media', options: { bullet: true, breakLine: true } },
-      { text: '45 cambios especificados y archivados con OpenSpec', options: { bullet: true } },
+      { text: 'Cada cambio se especifica antes de escribirse', options: { bullet: true, breakLine: true } },
+      { text: '45 cambios documentados y archivados con OpenSpec', options: { bullet: true } },
     ],
     { x: xIzq, y: yLista, w: colW, h: 3.1, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  s.addText('Verificaciones en cada push', {
+  s.addText('Cobertura', {
     x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
   s.addText(
     [
-      { text: 'Lint, formato, tests, build y typecheck', options: { bullet: true, breakLine: true } },
-      { text: 'Las dos apps en paralelo, sobre Node 22', options: { bullet: true, breakLine: true } },
-      { text: 'Auditoría de dependencias que rompe si hay algo crítico', options: { bullet: true, breakLine: true } },
-      { text: 'OWASP API Top 10 2023: las diez categorías, documentadas', options: { bullet: true } },
+      { text: 'Se exige fichero a fichero, no de media', options: { bullet: true, breakLine: true } },
+      { text: 'Ningún fichero se esconde detrás de otro muy cubierto', options: { bullet: true, breakLine: true } },
+      { text: 'Mínimos por fichero: 80% de líneas y 90% de funciones', options: { bullet: true, breakLine: true } },
+      { text: 'La infraestructura se excluye a propósito, con la lista escrita', options: { bullet: true } },
     ],
     { x: xDer, y: yLista, w: colW, h: 3.1, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
@@ -1220,21 +1220,22 @@ function pie(s) {
   pie(s)
   s.addNotes(
     'Este proyecto lo he hecho yo solo, así que lo que avisa de las roturas no es un ' +
-    'compañero: es el CI.\n\n' +
+    'compañero: son las comprobaciones automáticas.\n\n' +
     'El código se escribe con TDD, primero el test que falla y luego el código mínimo que ' +
     'lo pasa. Ahora mismo hay 2.171 pruebas en verde repartidas en 209 ficheros, entre el ' +
     'backend y el frontend.\n\n' +
-    'Y la cobertura no se mide de media, que es la trampa habitual: está configurada por ' +
-    'fichero. Un fichero sin tests no puede esconderse detrás de otro que esté muy ' +
-    'cubierto.\n\n' +
-    'Cada cambio va documentado con OpenSpec antes de escribirse: hay 45 cambios ' +
-    'especificados y archivados, con su diseño, sus specs y sus tareas.\n\n' +
-    'En cada push, el CI corre lint, formato, los tests, el build y el typecheck, para las ' +
-    'dos aplicaciones en paralelo sobre Node 22. Y pasa una auditoría de dependencias que ' +
-    'tumba la build si aparece una vulnerabilidad crítica.\n\n' +
-    'En seguridad, el documento cubre las diez categorías del OWASP API Top 10 de 2023, una ' +
-    'a una, con lo que hace el código en cada caso. Incluidos los riesgos residuales, que ' +
-    'están escritos y asumidos, no escondidos.\n\n[~60 s · acumulado 16:45]',
+    'Y cada cambio se especifica antes de escribirse, con OpenSpec: hay 45 cambios ' +
+    'documentados y archivados, con su diseño, sus specs y sus tareas. Eso es lo que hace ' +
+    'que un proyecto de una sola persona no dependa de lo que yo recuerde.\n\n' +
+    'De la cobertura quiero destacar una cosa, porque es donde se hace la trampa habitual. ' +
+    'No se mide de media: se exige fichero a fichero. Con la media, un fichero sin tests se ' +
+    'esconde detrás de otro que esté muy cubierto y el número global sigue saliendo bonito. ' +
+    'Aquí cada fichero tiene que llegar por su cuenta al 80% de líneas y al 90% de ' +
+    'funciones.\n\n' +
+    'Y la infraestructura está excluida a propósito: el cableado de dependencias, los ' +
+    'adaptadores que solo delegan y los controladores no se cubren con tests de cobertura, ' +
+    'los valida el compilador. Esa lista de exclusiones está escrita en la configuración, no ' +
+    'es un olvido.\n\n[~60 s · acumulado 16:45]',
   )
 }
 
