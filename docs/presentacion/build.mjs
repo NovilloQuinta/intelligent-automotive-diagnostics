@@ -150,10 +150,7 @@ function pie(s) {
     x: 0.85, y: 0.36, w: 11.6, h: 0.9, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText([
-    { text: '1.1  ', options: { color: AZUL } },
-    { text: 'Diagnóstico de averías de vehículos asistido por IA' },
-  ], {
+  s.addText('Diagnóstico de averías de vehículos asistido por IA', {
     x: 0.85, y: 1.2, w: 11.6, h: 0.36, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
@@ -1289,10 +1286,7 @@ function pie(s) {
     x: 0.85, y: 0.21, w: 11.6, h: 0.75, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText([
-    { text: '5.1  ', options: { color: AZUL } },
-    { text: 'Resultados: la aplicación en funcionamiento' },
-  ], {
+  s.addText('La aplicación en funcionamiento', {
     x: 0.85, y: 0.88, w: 11.6, h: 0.36, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
@@ -1598,13 +1592,6 @@ function pie(s) {
   s.addText('7  Conclusiones', {
     x: 0.85, y: 0.36, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
-  })
-  s.addText([
-    { text: '7.1  ', options: { color: AZUL } },
-    { text: 'Conclusiones' },
-  ], {
-    x: 0.85, y: 1.15, w: 11.6, h: 0.36, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('Balance de haber desarrollado el proyecto con asistencia de IA.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',

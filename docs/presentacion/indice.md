@@ -58,6 +58,10 @@
   el orden y tres nombres, entran `Software Supply Chain Failures` y `Mishandling of
   Exceptional Conditions`, y SSRF se absorbe dentro de `Broken Access Control`.
   **`docs/security.md` sigue en 2021: hay que actualizarlo para que no se contradigan.**
+- **Sin decimal en las secciones de una sola slide** (2026-08-26): `7.1 Conclusiones`
+  debajo de `7 Conclusiones` repetia la palabra, y `5.1 Resultados: la aplicacion...`
+  debajo de `5 Resultados` tambien. El decimal se usa solo donde la seccion tiene mas
+  de una slide: 2, 3, 4 y 6. En la 1 se queda el titulo pero sin numero.
 - **Escala tipografica unica** (2026-08-26): encabezado de seccion 34 pt, titulo de
   slide 26 pt, subtitulo 15 pt. Antes cada slide llevaba el tamano que le habia
   tocado (34, 32, 30, 29) y el subtitulo iba a 17, casi igual que el titulo. Los tres
