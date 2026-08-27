@@ -147,19 +147,19 @@ function pie(s) {
   s.background = { color: BLANCO }
 
   s.addText('1  Introducción', {
-    x: 0.85, y: 0.36, w: 11.6, h: 0.3, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 13, bold: true, color: AZUL,
+    x: 0.85, y: 0.36, w: 11.6, h: 0.9, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
   s.addText([
-      { text: '1.1  ', options: { color: AZUL } },
-      { text: 'Diagnóstico de averías de vehículos asistido por IA' },
-    ], {
-    x: 0.85, y: 0.7, w: 11.6, h: 0.9, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
+    { text: '1.1  ', options: { color: AZUL } },
+    { text: 'Diagnóstico de averías de vehículos asistido por IA' },
+  ], {
+    x: 0.85, y: 1.2, w: 11.6, h: 0.36, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('Se conecta al vehículo, interpreta los datos de sus centralitas y propone las causas de la avería.', {
     x: 0.85, y: 1.7, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
 
   const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.55, yLista = 3.25
@@ -229,15 +229,15 @@ function pie(s) {
   s.background = { color: BLANCO }
 
   s.addText('2  Funcionamiento', {
-    x: 0.85, y: 0.12, w: 11.6, h: 0.3, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 13, bold: true, color: AZUL,
+    x: 0.85, y: 0.12, w: 11.6, h: 0.65, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
   s.addText([
-      { text: '2.1  ', options: { color: AZUL } },
-      { text: 'Flujo de trabajo' },
-    ], {
-    x: 0.85, y: 0.42, w: 11.6, h: 0.65, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 30, bold: true, color: TINTA,
+    { text: '2.1  ', options: { color: AZUL } },
+    { text: 'Flujo de trabajo' },
+  ], {
+    x: 0.85, y: 0.68, w: 11.6, h: 0.36, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('Desde la conexión del adaptador hasta el registro del caso resuelto.', {
     x: 0.85, y: 1.18, w: 11.6, h: 0.3, margin: 0, valign: 'top',
@@ -366,11 +366,11 @@ function pie(s) {
       { text: 'Diagnóstico determinista y diagnóstico cognitivo' },
     ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 29, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('El determinista siempre está disponible; el cognitivo requiere un modelo configurado.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
 
   const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.45, yLista = 3.05
@@ -433,19 +433,19 @@ function pie(s) {
   s.background = { color: BLANCO }
 
   s.addText('3  Diseño', {
-    x: 0.85, y: 0.26, w: 11.6, h: 0.3, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 13, bold: true, color: AZUL,
+    x: 0.85, y: 0.26, w: 11.6, h: 0.8, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
   s.addText([
-      { text: '3.1  ', options: { color: AZUL } },
-      { text: 'Tecnologías utilizadas' },
-    ], {
-    x: 0.85, y: 0.6, w: 11.6, h: 0.8, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+    { text: '3.1  ', options: { color: AZUL } },
+    { text: 'Tecnologías utilizadas' },
+  ], {
+    x: 0.85, y: 1.0, w: 11.6, h: 0.36, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('TypeScript en todo el proyecto, y cada dependencia externa detrás de un puerto.', {
     x: 0.85, y: 1.5, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 16, color: GRIS,
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
 
   const filas = [
@@ -503,11 +503,11 @@ function pie(s) {
       { text: 'Clean Architecture + Hexagonal' },
     ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('Tres capas —dominio, aplicación e infraestructura— con las dependencias siempre hacia dentro.', {
     x: 0.85, y: 1.62, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
   s.addText('Qué ha aportado en este proyecto', {
     x: 0.85, y: 2.15, w: 11.6, h: 0.3, margin: 0, valign: 'top',
@@ -601,19 +601,19 @@ function pie(s) {
   s.background = { color: BLANCO }
 
   s.addText('4  Implementación', {
-    x: 0.85, y: 0.36, w: 11.6, h: 0.3, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 13, bold: true, color: AZUL,
+    x: 0.85, y: 0.36, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
   s.addText([
-      { text: '4.1  ', options: { color: AZUL } },
-      { text: 'Adquisición de datos mediante OBD-II' },
-    ], {
-    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 29, bold: true, color: TINTA,
+    { text: '4.1  ', options: { color: AZUL } },
+    { text: 'Adquisición de datos mediante OBD-II' },
+  ], {
+    x: 0.85, y: 1.15, w: 11.6, h: 0.36, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('Ejemplo: lectura del régimen de giro del motor.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
 
   // Cadena: aplicacion -> ELM327 -> bus CAN -> centralita
@@ -701,11 +701,11 @@ function pie(s) {
       { text: 'Persistencia: modelo relacional y modelo vectorial' },
     ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 29, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('Una responde por clave exacta; la otra, por similitud semántica.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
 
   const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.5, yLista = 3.1
@@ -767,11 +767,11 @@ function pie(s) {
       { text: 'Base de datos relacional' },
     ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('13 tablas: todo aquello que se consulta por una clave conocida.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
 
   const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.5, yLista = 3.1
@@ -846,11 +846,11 @@ function pie(s) {
       { text: 'Base de datos vectorial e índice de confianza' },
     ], {
     x: 0.85, y: 0.65, w: 11.6, h: 0.8, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('Almacena el conocimiento que el sistema adquiere durante los diagnósticos.', {
     x: 0.85, y: 1.55, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 16, color: GRIS,
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
 
   // --- Izquierda: colecciones + ejemplo real -------------------------------
@@ -965,11 +965,11 @@ function pie(s) {
       { text: 'Model Context Protocol: herramientas del agente' },
     ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 29, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('El modelo no accede al vehículo: solicita herramientas y el sistema decide si se ejecutan.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
 
   // --- Izquierda: las 16 tools, con su nombre real -------------------------
@@ -1060,11 +1060,11 @@ function pie(s) {
       { text: 'Ciclo de razonamiento del agente' },
     ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('Del inicio del diagnóstico hasta la respuesta que recibe el mecánico.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
 
   // --- Izquierda: el ciclo -------------------------------------------------
@@ -1149,11 +1149,11 @@ function pie(s) {
       { text: 'Modelos empleados: lenguaje y embeddings' },
     ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 29, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('Uno razona y es intercambiable; el otro genera los vectores y se ejecuta en local.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
 
   const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.45, yLista = 3.05
@@ -1222,11 +1222,11 @@ function pie(s) {
       { text: 'La interfaz del mecánico' },
     ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('Una aplicación de página única: el servidor entrega datos, nunca pantallas.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
 
   const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.45, yLista = 3.05
@@ -1286,15 +1286,15 @@ function pie(s) {
   s.background = { color: BLANCO }
 
   s.addText('5  Resultados', {
-    x: 0.85, y: 0.21, w: 11.6, h: 0.3, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 13, bold: true, color: AZUL,
+    x: 0.85, y: 0.21, w: 11.6, h: 0.75, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
   s.addText([
-      { text: '5.1  ', options: { color: AZUL } },
-      { text: 'Resultados: la aplicación en funcionamiento' },
-    ], {
-    x: 0.85, y: 0.55, w: 11.6, h: 0.75, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
+    { text: '5.1  ', options: { color: AZUL } },
+    { text: 'Resultados: la aplicación en funcionamiento' },
+  ], {
+    x: 0.85, y: 0.88, w: 11.6, h: 0.36, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('Audi A3 2.0 TDI. Todos los datos proceden del bus del vehículo.', {
     x: 0.85, y: 1.38, w: 11.6, h: 0.35, margin: 0, valign: 'top',
@@ -1344,19 +1344,19 @@ function pie(s) {
   s.background = { color: BLANCO }
 
   s.addText('6  Calidad y seguridad', {
-    x: 0.85, y: 0.36, w: 11.6, h: 0.3, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 13, bold: true, color: AZUL,
+    x: 0.85, y: 0.36, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
   s.addText([
-      { text: '6.1  ', options: { color: AZUL } },
-      { text: 'Calidad del código' },
-    ], {
-    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+    { text: '6.1  ', options: { color: AZUL } },
+    { text: 'Calidad del código' },
+  ], {
+    x: 0.85, y: 1.15, w: 11.6, h: 0.36, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('Un único desarrollador: las comprobaciones automáticas son la red de seguridad.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
 
   const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.45, yLista = 3.05
@@ -1423,7 +1423,7 @@ function pie(s) {
       { text: 'Integración y despliegue continuos' },
     ], {
     x: 0.85, y: 0.55, w: 11.6, h: 0.75, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('Integrar en main publica en producción, pero solo si la verificación ha pasado antes.', {
     x: 0.85, y: 1.38, w: 11.6, h: 0.35, margin: 0, valign: 'top',
@@ -1525,11 +1525,11 @@ function pie(s) {
       { text: 'Modelo de seguridad' },
     ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('OWASP API Top 10 2023 en el backend y OWASP Top 10 2025 en la interfaz.', {
     x: 0.85, y: 1.62, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
 
   const owasp = [
@@ -1596,19 +1596,19 @@ function pie(s) {
   s.background = { color: BLANCO }
 
   s.addText('7  Conclusiones', {
-    x: 0.85, y: 0.36, w: 11.6, h: 0.3, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 13, bold: true, color: AZUL,
+    x: 0.85, y: 0.36, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
   s.addText([
-      { text: '7.1  ', options: { color: AZUL } },
-      { text: 'Conclusiones' },
-    ], {
-    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+    { text: '7.1  ', options: { color: AZUL } },
+    { text: 'Conclusiones' },
+  ], {
+    x: 0.85, y: 1.15, w: 11.6, h: 0.36, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 26, bold: true, color: TINTA,
   })
   s.addText('Balance de haber desarrollado el proyecto con asistencia de IA.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+    fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
 
   const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.5, yLista = 3.1

@@ -58,12 +58,15 @@
   el orden y tres nombres, entran `Software Supply Chain Failures` y `Mishandling of
   Exceptional Conditions`, y SSRF se absorbe dentro de `Broken Access Control`.
   **`docs/security.md` sigue en 2021: hay que actualizarlo para que no se contradigan.**
+- **Escala tipografica unica** (2026-08-26): encabezado de seccion 34 pt, titulo de
+  slide 26 pt, subtitulo 15 pt. Antes cada slide llevaba el tamano que le habia
+  tocado (34, 32, 30, 29) y el subtitulo iba a 17, casi igual que el titulo. Los tres
+  niveles se leen ahora como tres niveles. **Al anadir una slide, respetar 34/26/15.**
 - **Titulos numerados** (2026-08-26): el indice y las slides no se relacionaban. Cada
   titulo lleva delante su numero de seccion en azul (`4.2 Persistencia: ...`). Y la
   **primera slide de cada seccion lleva encima el encabezado del bloque** (`4 Implementacion`),
   que es lo que hace cierta la numeracion: sin el, un `4.1` cuelga de un padre que no
   aparece en ningun sitio. Se descarto meter siete slides-cartel vacias.
-  Seis titulos largos bajan a 29 pt para que el numero no los parta en dos lineas.
   **Si se reordena una slide hay que renumerarla a mano, y revisar quien abre seccion.**
 - **Slide de indice** (2026-08-26): se saltaba de una slide a otra sin saber en que
   parte de la charla estabas. Se probo con un rotulo de bloque encima de cada titulo
