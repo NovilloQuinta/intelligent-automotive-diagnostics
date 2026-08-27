@@ -31,7 +31,7 @@
     "typecheck:ui": "cd apps/ui && pnpm typecheck",
     "typecheck:scripts": "cd apps/core-api && pnpm typecheck:scripts",
     "eval:agent": "cd apps/core-api && pnpm eval:agent",
-    "verify": "pnpm lint:all && pnpm format && pnpm format:ui && pnpm test:all && pnpm build && pnpm build:ui && pnpm typecheck && pnpm typecheck:ui && pnpm typecheck:scripts"
+    "verify": "pnpm lint:all && pnpm format && pnpm format:ui && pnpm test:coverage && pnpm test:ui && pnpm build && pnpm build:ui && pnpm typecheck && pnpm typecheck:ui && pnpm typecheck:scripts"
   },
   "devDependencies": {
     "eslint-plugin-jsdoc": "^63.3.3",

@@ -524,8 +524,40 @@ Resuelto en dos direcciones distintas, y la distincion importa:
 **Ningun umbral se toco**: siguen en 80 statements / 60 branches / 90 functions / 80 lines,
 `perFile`, con `processVehicleDiagnosis.ts` al 100 %.
 
-Queda en pie la asimetria que dejo que esto se colara: `pnpm test:coverage` **no entra en
-`pnpm verify` ni en CI**, asi que nada avisa cuando vuelve a romperse.
+La asimetria que dejo que esto se colara **queda cerrada el 2026-08-27**, y solo para
+`core-api`: `pnpm test:coverage` entra en `pnpm verify` (sustituye a `pnpm test` dentro de la
+cadena, no se suma a el) y en el CI, donde la matriz declara el comando por app
+(`core-api` -> `test:coverage`, `ui` -> `test`). No es una segunda pasada de la suite: es la
+misma instrumentada, asi que el coste del gate apenas cambia.
+
+Lo que **no** queda cerrado es la UI — ver la seccion siguiente.
+
+## La cobertura de la UI no pasa, y no estaba anotada
+
+Medido el 2026-08-27, que es cuando se descubrio: `pnpm test:coverage:ui` **falla (exit 1)**.
+Los 655 tests estan en verde; lo que no pasa son los umbrales `perFile` de
+`apps/ui/vitest.config.ts`. Son **39 incumplimientos en 14 ficheros**.
+
+Esta deuda no figuraba aqui: la entrada anterior hablaba solo de `core-api`, y nadie habia
+mirado la otra mitad. Por eso el CI deja `ui` en `pnpm test` — cablearlo a `test:coverage`
+hoy dejaria la rama en rojo.
+
+Los 14 ficheros se parten en dos grupos que **no** merecen el mismo trato:
+
+- **Seis `src/routes/*.tsx` a 0 % en las cuatro metricas** (`history`, `admin.index`,
+  `admin.users`, `admin.logs`, `admin.audit`, `admin.knowledge`). Son glue de TanStack de
+  6 a 15 lineas: un `createFileRoute` y, como mucho, un `<div className="p-6">` envolviendo
+  un componente que **si** esta testeado aparte. `src/routes/__root.tsx` —121 lineas, mas
+  sustancial que cualquiera de estos— ya esta excluido en el config con el motivo
+  "infrastructure: route config + providers + Toaster". Excluirlos es aplicar esa decision
+  ya tomada de forma coherente, no bajar el liston.
+- **Ocho ficheros de codigo real por debajo del umbral**: `useDiagnosisHistoryDetail.ts`
+  (0 %, 54 lineas, sin ningun test — hay uno para `useDiagnosisHistory`, que es otro),
+  `useVehicleAutoDetect.ts` (75,4 % lineas), `DashboardPage.tsx` y `useDiagnosis.ts`
+  (66,66 % funciones), `HistoryPage.tsx`, `AuditTable.tsx`, `UsersTable.tsx` (50 %
+  funciones), `LogsTable.tsx` (66,66 %), `KnowledgePanel.tsx` (71,42 %),
+  `DataTableFilters.tsx` (80 %) y `lib/errors.ts` (50 % ramas). Esto **si** son tests que
+  faltan, y es el trabajo que hay que hacer para poder cablear la UI al gate.
 
 ## Vectorial
 

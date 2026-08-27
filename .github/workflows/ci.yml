@@ -16,7 +16,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [core-api, ui]
+        # `test` se declara por app a proposito. En `core-api` corre la suite con
+        # cobertura, que es la misma pasada instrumentada —no una segunda— y hace
+        # que los umbrales `perFile` de `vitest.config.ts` fallen el CI. Antes no
+        # los miraba nadie: `pnpm test:coverage` se rompio en `develop` durante
+        # dias sin que ningun gate se enterara.
+        #
+        # `ui` sigue en `pnpm test` porque su cobertura HOY no pasa: 39 umbrales
+        # incumplidos en 14 ficheros, con los 655 tests en verde. Cambiarlo a
+        # `test:coverage` sin cerrar antes ese hueco dejaria el CI en rojo.
+        # Anotado en `docs/deuda-conocida.md`.
+        include:
+          - app: core-api
+            test: test:coverage
+          - app: ui
+            test: test
 
     defaults:
       run:
@@ -43,7 +57,7 @@ jobs:
 
       - run: pnpm format
 
-      - run: pnpm test
+      - run: pnpm ${{ matrix.test }}
 
       - run: pnpm build
 
