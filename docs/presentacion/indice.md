@@ -22,7 +22,7 @@
 | 14 | Resultados: la aplicacion en funcionamiento | El resultado | pendiente |
 | 15 | Calidad del codigo | El resultado | **rehecha** |
 | 16 | OWASP API Top 10 2023 | El resultado | **nueva** |
-| 17 | Seguridad de la interfaz | El resultado | **nueva** |
+| 17 | OWASP Top 10 2021 | El resultado | **nueva** |
 | 18 | Integracion y despliegue continuos | El resultado | validada |
 | 19 | Conclusiones | Cierre | pendiente |
 | 20 | Gracias por la atencion | Cierre | pendiente |
@@ -40,6 +40,10 @@
 - **Slide de CI/CD** (2026-08-25): el despliegue automatico no aparecia en ningun sitio.
   La de calidad se queda con TDD, pruebas y seguridad, y el pipeline entero pasa a slide
   propia: integracion -> verificacion -> construccion -> publicacion -> produccion.
+- **Las dos slides de seguridad, mismo formato** (2026-08-26): la 17 era de columnas y
+  la 16 una tabla. Ahora las dos son la misma tabla: codigo, nombre oficial y medida.
+  La 16 es la lista de APIs (backend), la 17 la de aplicaciones web (interfaz). El
+  matiz de los riesgos que quedan vive en las notas del ponente, no en la slide.
 - **Deck resincronizado con develop** (2026-08-26): entraron 19 commits mientras se
   montaban las slides y cuatro quedaron desfasadas. Cerrados dos de los riesgos que
   enumeraba la 17 (segundo factor TOTP y contadores de rate limit persistidos), la CSP

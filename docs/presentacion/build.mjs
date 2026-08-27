@@ -1309,78 +1309,69 @@ function pie(s) {
   )
 }
 
-// ======= SEGURIDAD DE LA INTERFAZ ========================================
+// ======= OWASP TOP 10 (APLICACIONES WEB) =================================
 {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Seguridad de la interfaz', {
+  s.addText('OWASP Top 10 2021', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
-  s.addText('La interfaz es una aplicación web, así que ahí manda el Top 10 de aplicaciones web.', {
-    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+  s.addText('La interfaz es una aplicación web: el mismo ejercicio con la lista de aplicaciones web.', {
+    x: 0.85, y: 1.62, w: 11.6, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 17, color: GRIS,
   })
 
-  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.45, yLista = 3.05
-
-  s.addText('Medidas en la interfaz', {
-    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
+  const web = [
+    ['A01', 'Broken Access Control', 'Sesión en todo /api; administración con segundo factor'],
+    ['A02', 'Cryptographic Failures', 'bcrypt 12 rondas, secretos separados y TOTP cifrado'],
+    ['A03', 'Injection', 'Consultas parametrizadas con Drizzle y validación Zod'],
+    ['A04', 'Insecure Design', 'Capas separadas, DTOs validados y límites por endpoint'],
+    ['A05', 'Security Misconfiguration', 'Helmet en la API, CSP en la interfaz, puertos en loopback'],
+    ['A06', 'Vulnerable and Outdated Components', 'Auditoría de dependencias en cada push, y es bloqueante'],
+    ['A07', 'Identification and Authentication Failures', 'Segundo factor, bloqueo de cuenta y contraseña con reglas'],
+    ['A08', 'Software and Data Integrity Failures', 'Lockfile, imágenes por commit y despliegue solo tras CI verde'],
+    ['A09', 'Security Logging and Monitoring Failures', 'Registro estructurado y auditoría con IP, usuario y duración'],
+    ['A10', 'Server-Side Request Forgery', 'El usuario no controla ninguna URL de salida'],
+  ]
+  web.forEach(([codigo, nombre, medida], k) => {
+    const y = 2.28 + k * 0.44
+    s.addText(codigo, {
+      x: 0.85, y, w: 0.8, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Arial', fontSize: 11, bold: true, color: AZUL,
+    })
+    s.addText(nombre, {
+      x: 1.65, y, w: 4.35, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Arial', fontSize: 11.5, bold: true, color: TINTA,
+    })
+    s.addText(medida, {
+      x: 6.1, y, w: 6.35, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Calibri', fontSize: 12, color: GRIS,
+    })
   })
-  s.addText(
-    [
-      { text: 'React escapa el HTML por defecto, y no hay inyección directa de marcado sobre datos de usuario', options: { bullet: true, breakLine: true } },
-      { text: 'La CSP la sirve nginx, con script-src \'self\' y sin scripts en línea', options: { bullet: true, breakLine: true } },
-      { text: 'Validación con Zod también en el cliente, en todos los formularios', options: { bullet: true, breakLine: true } },
-      { text: 'El token viaja en cabecera Bearer y no en cookie, así que no hay CSRF', options: { bullet: true } },
-    ],
-    { x: xIzq, y: yLista, w: colW, h: 3.2, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
-  )
-
-  s.addText('Riesgos y cómo se acotan', {
-    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
-  })
-  s.addText(
-    [
-      { text: 'El token en localStorage lo acota una interfaz sin superficie de XSS', options: { bullet: true, breakLine: true } },
-      { text: 'Y si aun así se robara, el bloqueo de cuenta y la rotación de refresco acotan el daño', options: { bullet: true, breakLine: true } },
-      { text: 'El secreto del segundo factor va cifrado con AES-256-GCM, con la clave fuera de la base', options: { bullet: true, breakLine: true } },
-      { text: 'El segundo factor es obligatorio para administradores', options: { bullet: true } },
-    ],
-    { x: xDer, y: yLista, w: colW, h: 3.2, margin: 0, valign: 'top',
-      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
-  )
 
   pie(s)
   s.addNotes(
-    'La lista anterior es la de APIs y cubre el backend. La interfaz es otra cosa: es una ' +
-    'aplicación web, y ahí lo que aplica es el Top 10 clásico.\n\n' +
-    'React escapa el HTML por defecto, y no se inyecta marcado en crudo en ningún sitio con ' +
-    'datos que vengan del usuario, que es por donde entra el XSS. La política de seguridad ' +
-    'de contenido la sirve el nginx que sirve la interfaz, con script-src propio y sin ' +
-    'scripts en línea, y hay una comprobación en la integración continua que arranca nginx ' +
-    'y verifica que las cabeceras salen. Los formularios validan con los mismos esquemas ' +
-    'Zod que usa la API.\n\n' +
-    'Y una decisión consciente: el token viaja en cabecera Bearer y no en cookie. Eso ' +
-    'elimina el CSRF de raíz, pero obliga a guardarlo en el navegador.\n\n' +
-    'A la derecha están los riesgos que quedan, y quiero ser claro con esto porque esta ' +
-    'semana se ha movido. El segundo factor ya no falta: hay TOTP con alta por código QR, ' +
-    'diez códigos de recuperación de un solo uso guardados hasheados, y es obligatorio para ' +
-    'administradores. Los contadores del límite de peticiones tampoco se pierden ya al ' +
-    'reiniciar: viven en la base de datos.\n\n' +
-    'Del token en el navegador: sigue en localStorage, y la respuesta no es esconderlo sino ' +
-    'que no haya por dónde leerlo. React escapa, no hay marcado en crudo, y la política de ' +
-    'contenido no admite scripts en línea. Y si aun así se robara, el bloqueo de cuenta y la ' +
-    'rotación de refresco acotan la ventana. Pasarlo a cookie httpOnly está definido como ' +
-    'trabajo, con su protección CSRF.\n\n' +
-    'De la base sin cifrar en reposo: el dato que de verdad sería una llave es el secreto del ' +
-    'segundo factor, y ese va cifrado columna a columna con AES-256-GCM, con la clave fuera ' +
-    'de la base. Un volcado del fichero ya no basta para anular el segundo factor. Cifrar el ' +
-    'disco entero es una decisión de despliegue, no de código, y está sin tomar.\n\n' +
+    'La lista anterior cubre el backend, que es una API. La interfaz es otra cosa: es una ' +
+    'aplicación web, y ahí aplica el Top 10 clásico. Mismo ejercicio: las diez categorías con ' +
+    'la medida concreta.\n\n' +
+    'Destaco lo que es propio de la interfaz. React escapa el HTML por defecto y no se ' +
+    'inyecta marcado en crudo en ningún sitio con datos del usuario, que es por donde entra ' +
+    'el XSS. La política de contenido la sirve el nginx que sirve la interfaz, con script-src ' +
+    'propio y sin scripts en línea, y hay una comprobación en integración continua que ' +
+    'arranca nginx y verifica que las cabeceras salen. Los formularios validan con los mismos ' +
+    'esquemas Zod que usa la API, así que cliente y servidor no se pueden desincronizar.\n\n' +
+    'En la A05 quiero pararme: hasta esta semana los contenedores publicaban sus puertos en ' +
+    'todas las interfaces, o sea que se podía llegar a la API por la IP del servidor sin ' +
+    'pasar por el proxy, y con ello saltarse el TLS y falsear la IP de origen. Ahora la API y ' +
+    'la interfaz solo se publican en loopback y los emuladores no se publican en absoluto. ' +
+    'Desde fuera solo queda el 443.\n\n' +
+    'Y una decisión consciente en la A02: el token viaja en cabecera Bearer y no en cookie. ' +
+    'Eso elimina el CSRF de raíz, y a cambio vive en el navegador. La respuesta a eso no es ' +
+    'esconderlo, es que no haya por dónde leerlo, que es todo lo de arriba. El secreto del ' +
+    'segundo factor, que sí sería una llave, va cifrado con AES-256-GCM y su clave no vive en ' +
+    'la base de datos.\n\n' +
     '[~50 s · acumulado 18:35]',
   )
 }
