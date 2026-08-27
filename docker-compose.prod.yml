@@ -1,26 +1,34 @@
 name: intelligent-automotive-diagnostics
 
+# `IMAGE_TAG` fija que version corre. Lo escribe el despliegue en el `.env` de
+# este directorio con el SHA del commit, y `latest` queda solo como red por si
+# alguien levanta el stack a mano.
+#
+# **Volver atras** = poner en `.env` el SHA anterior y `docker compose up -d`.
+# Por eso el despliegue ya no borra todas las imagenes sin usar: sin la anterior
+# en disco no hay marcha atras.
+
 services:
   elm327-audi:
-    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/elm327:latest
+    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/elm327:${IMAGE_TAG:-latest}
     environment:
       - SCENARIO_SCRIPT=run_audi.py
     restart: unless-stopped
 
   elm327-kawasaki:
-    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/elm327:latest
+    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/elm327:${IMAGE_TAG:-latest}
     environment:
       - SCENARIO_SCRIPT=run_kawasaki.py
     restart: unless-stopped
 
   elm327-toyota:
-    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/elm327:latest
+    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/elm327:${IMAGE_TAG:-latest}
     environment:
       - SCENARIO_SCRIPT=run_toyota.py
     restart: unless-stopped
 
   api:
-    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/api:latest
+    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/api:${IMAGE_TAG:-latest}
     ports:
       # Solo loopback: Caddy corre en el host y llega por localhost:4000.
       # Publicarlo en 0.0.0.0 dejaria la API accesible saltandose el proxy,
@@ -73,7 +81,7 @@ services:
       start_period: 15s
 
   ui:
-    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/ui:latest
+    image: ghcr.io/novilloquinta/intelligent-automotive-diagnostics/ui:${IMAGE_TAG:-latest}
     ports:
       # Solo loopback: quien sirve al exterior es Caddy, en el mismo host.
       - "127.0.0.1:${UI_PORT:-8080}:80"

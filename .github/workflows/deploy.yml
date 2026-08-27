@@ -1,17 +1,58 @@
 name: CD
 
+# Dispara al **terminar la CI** en `main`, no al hacer push. Antes las dos
+# corrian en paralelo, asi que un commit roto se desplegaba igual: nadie miraba
+# si los tests habian pasado. Con `workflow_run` el despliegue solo existe si la
+# CI acabo en verde sobre ese mismo commit.
+#
+# Ojo con `github.sha` en este contexto: apunta al ultimo commit de la rama por
+# defecto, **no** al que disparo la CI. El commit real es
+# `github.event.workflow_run.head_sha`, y es el que se usa en todo el fichero.
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
+  # Escotilla manual: permite desplegar un commit concreto sin pasar por la CI,
+  # que es lo que hace falta cuando urge volver a una version anterior.
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'SHA a desplegar (vacio = HEAD de main)'
+        required: false
 
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ghcr.io/novilloquinta/intelligent-automotive-diagnostics
 
 jobs:
+  # El SHA se resuelve en su propio job y no dentro de `build-push` porque aquel
+  # tiene matriz: cada pata sobreescribe los outputs del job, y aunque las tres
+  # calculasen lo mismo, apoyarse en eso es fragil.
+  resolve:
+    name: Resolve commit
+    runs-on: ubuntu-latest
+    # En `workflow_dispatch` no hay `workflow_run`, y la condicion se cumple por
+    # el primer termino.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
+    outputs:
+      image_tag: ${{ steps.resolve.outputs.tag }}
+
+    steps:
+      - name: Resolve commit
+        id: resolve
+        run: |
+          TAG="${{ inputs.image_tag || github.event.workflow_run.head_sha || github.sha }}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "Desplegando $TAG"
+
   build-push:
     name: Build & Push
     runs-on: ubuntu-latest
+    needs: resolve
     permissions:
       contents: read
       packages: write
@@ -28,6 +69,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.image_tag }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -39,19 +82,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Dos etiquetas: el SHA identifica que commit corre en produccion y es lo
+      # que permite volver atras; `latest` se queda por comodidad para levantar
+      # el stack a mano.
       - name: Build & push ${{ matrix.image.name }}
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ${{ matrix.image.dockerfile }}
           push: true
-          tags: ${{ env.IMAGE_PREFIX }}/${{ matrix.image.name }}:latest
+          tags: |
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.image.name }}:${{ needs.resolve.outputs.image_tag }}
+            ${{ env.IMAGE_PREFIX }}/${{ matrix.image.name }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   deploy:
     name: Deploy to VPS
-    needs: build-push
+    needs: [resolve, build-push]
     runs-on: ubuntu-latest
     if: ${{ !cancelled() && needs.build-push.result == 'success' }}
     permissions:
@@ -61,28 +109,44 @@ jobs:
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
+        env:
+          IMAGE_TAG: ${{ needs.resolve.outputs.image_tag }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          envs: IMAGE_TAG
           script: |
             set -e
 
             APP_DIR=/var/www/intelligent-automotive-diagnostics
-            REPO_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+            PLAIN_URL="https://github.com/${{ github.repository }}.git"
+            AUTH_URL="https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
 
             if [ ! -d "$APP_DIR" ]; then
               echo ">>> Clonando repo en $APP_DIR..."
-              git clone "$REPO_URL" "$APP_DIR"
+              git clone "$AUTH_URL" "$APP_DIR"
             fi
 
             cd "$APP_DIR"
 
-            echo ">>> Pulling latest..."
-            git remote set-url origin "$REPO_URL"
-            git fetch origin main
-            git checkout main
-            git pull origin main
+            # El origin se queda SIN el token. Antes se guardaba con `set-url`,
+            # lo que dejaba la credencial en claro dentro del .git/config del
+            # VPS. Ahora el token solo se usa como argumento del fetch.
+            git remote set-url origin "$PLAIN_URL"
+
+            echo ">>> Traendo $IMAGE_TAG..."
+            git fetch "$AUTH_URL" main
+            git checkout -f "$IMAGE_TAG"
+
+            echo ">>> Fijando IMAGE_TAG en .env..."
+            # Solo se toca esa linea: el .env del VPS lleva las claves reales
+            # (LLM_API_KEY, los secretos de token) y reescribirlo entero las
+            # borraria.
+            touch .env
+            grep -v '^IMAGE_TAG=' .env > .env.next || true
+            echo "IMAGE_TAG=$IMAGE_TAG" >> .env.next
+            mv .env.next .env
 
             echo ">>> Logging in to GHCR..."
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
@@ -93,8 +157,49 @@ jobs:
             echo ">>> Deploying..."
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
-            echo ">>> Pruning old images..."
-            docker image prune -af
+            # `prune -af` a secas borraba TAMBIEN la version anterior, que es
+            # justo la que hace falta para volver atras. Se conservan siete dias.
+            echo ">>> Limpiando imagenes de mas de 7 dias..."
+            docker image prune -af --filter "until=168h"
 
             echo ">>> Status:"
             docker compose -f docker-compose.prod.yml ps
+
+      # El paso anterior acababa en `ps`, que sale verde aunque un contenedor
+      # este reiniciandose en bucle. Esto es lo que convierte "he desplegado" en
+      # "funciona": si la API o la web no responden, el job falla y queda dicho.
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            cd /var/www/intelligent-automotive-diagnostics
+
+            check() {
+              name="$1"
+              url="$2"
+              for _ in $(seq 1 30); do
+                if curl -sf -o /dev/null "$url"; then
+                  echo "OK  $name"
+                  return 0
+                fi
+                sleep 2
+              done
+              echo "FALLA  $name no respondio en 60s ($url)"
+              docker compose -f docker-compose.prod.yml logs --tail=50
+              return 1
+            }
+
+            # Por loopback: es donde se publican desde que dejaron de exponerse
+            # en 0.0.0.0, y es exactamente la ruta que usa Caddy.
+            check "api" http://127.0.0.1:4000/health
+            check "ui" http://127.0.0.1:8080/
+            # Y por fuera, que es lo unico que prueba que Caddy y el TLS siguen
+            # en pie despues del despliegue.
+            check "publico" https://diag.jcodinglabs.com/
+
+            echo ">>> Version desplegada:"
+            grep '^IMAGE_TAG=' .env
