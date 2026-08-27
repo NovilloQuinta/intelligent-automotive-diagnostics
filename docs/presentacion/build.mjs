@@ -1194,7 +1194,7 @@ function pie(s) {
   s.addText(
     [
       { text: 'TDD: primero el test que falla, luego el código', options: { bullet: true, breakLine: true } },
-      { text: '2.171 pruebas en verde, en 209 ficheros', options: { bullet: true, breakLine: true } },
+      { text: '2.403 pruebas en verde, en 219 ficheros', options: { bullet: true, breakLine: true } },
       { text: 'Cada cambio se especifica antes de escribirse', options: { bullet: true, breakLine: true } },
       { text: '45 cambios documentados y archivados con OpenSpec', options: { bullet: true } },
     ],
@@ -1222,7 +1222,7 @@ function pie(s) {
     'Este proyecto lo he hecho yo solo, así que lo que avisa de las roturas no es un ' +
     'compañero: son las comprobaciones automáticas.\n\n' +
     'El código se escribe con TDD, primero el test que falla y luego el código mínimo que ' +
-    'lo pasa. Ahora mismo hay 2.171 pruebas en verde repartidas en 209 ficheros, entre el ' +
+    'lo pasa. Ahora mismo hay 2.403 pruebas en verde repartidas en 219 ficheros, entre el ' +
     'backend y el frontend.\n\n' +
     'Y cada cambio se especifica antes de escribirse, con OpenSpec: hay 45 cambios ' +
     'documentados y archivados, con su diseño, sus specs y sus tareas. Eso es lo que hace ' +
@@ -1255,13 +1255,13 @@ function pie(s) {
 
   const owasp = [
     ['API1', 'Broken Object Level Authorization', 'La sesión de otro usuario devuelve 404, no 403'],
-    ['API2', 'Broken Authentication', 'bcrypt 12 rondas, rotación de refresh y bloqueo a los 5 fallos'],
+    ['API2', 'Broken Authentication', 'bcrypt 12 rondas, segundo factor TOTP y bloqueo de cuenta a los 5 fallos'],
     ['API3', 'Broken Object Property Level Authorization', 'Los esquemas Zod son la allowlist de campos'],
-    ['API4', 'Unrestricted Resource Consumption', 'login 5/min, diagnóstico 20/min, cognitivo 5/min'],
-    ['API5', 'Broken Function Level Authorization', 'Todo /api autenticado; administración tras requireAdmin'],
+    ['API4', 'Unrestricted Resource Consumption', 'login 5/min, diagnóstico 20/min; contadores persistidos en base de datos'],
+    ['API5', 'Broken Function Level Authorization', 'Todo /api autenticado; el panel de administración exige segundo factor'],
     ['API6', 'Unrestricted Access to Sensitive Business Flows', 'Borrado de códigos con límite propio y apagable por entorno'],
     ['API7', 'Server Side Request Forgery', 'El usuario no controla ninguna URL de salida'],
-    ['API8', 'Security Misconfiguration', 'Helmet 8: CSP, HSTS de un año y allowlist de CORS'],
+    ['API8', 'Security Misconfiguration', 'Helmet 8 en la API, CSP propia en la interfaz, puertos solo en loopback'],
     ['API9', 'Improper Inventory Management', 'Especificación OpenAPI versionada, servida por la API'],
     ['API10', 'Unsafe Consumption of APIs', 'Lo recuperado llega al modelo marcado como no fiable'],
   ]
@@ -1314,7 +1314,7 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('La interfaz y los riesgos asumidos', {
+  s.addText('La interfaz y los riesgos abiertos', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -1332,7 +1332,7 @@ function pie(s) {
   s.addText(
     [
       { text: 'React escapa el HTML por defecto, y no hay inyección directa de marcado sobre datos de usuario', options: { bullet: true, breakLine: true } },
-      { text: 'Cabecera CSP propia: default-src \'self\', sin scripts de terceros', options: { bullet: true, breakLine: true } },
+      { text: 'La CSP la sirve nginx, con script-src \'self\' y sin scripts en línea', options: { bullet: true, breakLine: true } },
       { text: 'Validación con Zod también en el cliente, en todos los formularios', options: { bullet: true, breakLine: true } },
       { text: 'El token viaja en cabecera Bearer y no en cookie, así que no hay CSRF', options: { bullet: true } },
     ],
@@ -1340,16 +1340,16 @@ function pie(s) {
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  s.addText('Riesgos asumidos, no escondidos', {
+  s.addText('Lo que queda abierto', {
     x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
   })
   s.addText(
     [
       { text: 'El token vive en localStorage: quedaría expuesto ante un XSS', options: { bullet: true, breakLine: true } },
-      { text: 'No hay doble factor de autenticación', options: { bullet: true, breakLine: true } },
-      { text: 'La base de datos no está cifrada en disco', options: { bullet: true, breakLine: true } },
-      { text: 'Los límites de peticiones viven en memoria y se pierden al reiniciar', options: { bullet: true } },
+      { text: 'Pasarlo a cookie httpOnly está pendiente, y arrastra proteger CSRF', options: { bullet: true, breakLine: true } },
+      { text: 'La base no está cifrada en reposo; el secreto TOTP sí, con AES-256-GCM', options: { bullet: true, breakLine: true } },
+      { text: 'El segundo factor es opcional, salvo para administradores', options: { bullet: true } },
     ],
     { x: xDer, y: yLista, w: colW, h: 3.2, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
@@ -1360,17 +1360,24 @@ function pie(s) {
     'La lista anterior es la de APIs y cubre el backend. La interfaz es otra cosa: es una ' +
     'aplicación web, y ahí lo que aplica es el Top 10 clásico.\n\n' +
     'React escapa el HTML por defecto, y no se inyecta marcado en crudo en ningún sitio con ' +
-    'datos que vengan del usuario, que es por donde entra el XSS. La interfaz sirve su ' +
-    'propia cabecera de Content Security Policy, con default-src propio y sin scripts de ' +
-    'terceros. Los formularios validan con los mismos esquemas Zod que usa la API, así que ' +
-    'la validación de cliente y la de servidor no se pueden desincronizar.\n\n' +
+    'datos que vengan del usuario, que es por donde entra el XSS. La política de seguridad ' +
+    'de contenido la sirve el nginx que sirve la interfaz, con script-src propio y sin ' +
+    'scripts en línea, y hay una comprobación en la integración continua que arranca nginx ' +
+    'y verifica que las cabeceras salen. Los formularios validan con los mismos esquemas ' +
+    'Zod que usa la API.\n\n' +
     'Y una decisión consciente: el token viaja en cabecera Bearer y no en cookie. Eso ' +
     'elimina el CSRF de raíz, pero obliga a guardarlo en el navegador.\n\n' +
-    'Ahí está el primero de los riesgos que asumo: si hubiera un XSS, el token es robable. ' +
-    'Lo compenso con lo de antes, que es no dar superficie de XSS. Los otros tres son de ' +
-    'alcance: no hay doble factor, la base de datos no está cifrada en disco y los límites ' +
-    'de peticiones viven en memoria, así que un reinicio los resetea. Para una instancia ' +
-    'única de un TFM es asumible, y está escrito en el modelo de seguridad, no escondido.\n\n' +
+    'A la derecha está lo que sigue abierto, y quiero ser claro con esto porque esta ' +
+    'semana se ha movido. El segundo factor ya no falta: hay TOTP con alta por código QR, ' +
+    'diez códigos de recuperación de un solo uso guardados hasheados, y es obligatorio ' +
+    'para administradores. Los contadores del límite de peticiones tampoco se pierden ya ' +
+    'al reiniciar: viven en la base de datos.\n\n' +
+    'Lo que queda abierto son tres cosas. El token en el navegador, con el trabajo ya ' +
+    'definido para pasarlo a cookie httpOnly. El cifrado en reposo, que es una decisión ' +
+    'sin tomar entre cifrar el disco del servidor o usar SQLCipher; entre tanto, el ' +
+    'secreto del segundo factor, que es el dato que de verdad sería una llave, va cifrado ' +
+    'columna a columna con AES-256-GCM y la clave no vive en la base. Y que el segundo ' +
+    'factor sea opcional para el usuario corriente, que es decisión de producto.\n\n' +
     '[~50 s · acumulado 18:35]',
   )
 }
@@ -1384,7 +1391,7 @@ function pie(s) {
     x: 0.85, y: 0.55, w: 11.6, h: 0.75, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
   })
-  s.addText('Todo automatizado en GitHub Actions: integrar en main publica la nueva versión en producción.', {
+  s.addText('Integrar en main publica en producción, pero solo si la verificación ha pasado antes.', {
     x: 0.85, y: 1.38, w: 11.6, h: 0.35, margin: 0, valign: 'top',
     fontFace: 'Calibri', fontSize: 15, color: GRIS,
   })
@@ -1392,10 +1399,10 @@ function pie(s) {
   // La cadena, de la integracion a produccion
   const etapas = [
     ['Integración en main', 'push o merge'],
-    ['Verificación', 'lint, tests,\nbuild y typecheck'],
+    ['Verificación', 'lint, tests, e2e\ny cabeceras'],
     ['Construcción', 'tres imágenes\nDocker'],
     ['Publicación', 'registro de\ncontenedores'],
-    ['Producción', 'el servidor levanta\nla nueva versión'],
+    ['Producción', 'se levanta\ny se comprueba'],
   ]
   const bw = 2.0, bgap = 0.4, by = 2.05, bh = 0.95
   etapas.forEach(([t, sub], k) => {
@@ -1430,9 +1437,10 @@ function pie(s) {
   s.addText(
     [
       { text: 'En cada push y en cada pull request', options: { bullet: true, breakLine: true } },
-      { text: 'Las dos aplicaciones en paralelo, sobre Node 22', options: { bullet: true, breakLine: true } },
-      { text: 'Lint, formato, pruebas, compilación y typecheck',  options: { bullet: true, breakLine: true } },
-      { text: 'Auditoría de dependencias, que detiene la entrega ante una vulnerabilidad crítica', options: { bullet: true } },
+      { text: 'Las dos aplicaciones en paralelo', options: { bullet: true, breakLine: true } },
+      { text: 'Lint, formato, pruebas y typecheck',  options: { bullet: true, breakLine: true } },
+      { text: 'Recorridos de extremo a extremo y cabeceras', options: { bullet: true, breakLine: true } },
+      { text: 'Auditoría de dependencias, que detiene si algo es crítico', options: { bullet: true } },
     ],
     { x: xIzq, y: yLista, w: colW, h: 2.6, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
@@ -1444,10 +1452,10 @@ function pie(s) {
   })
   s.addText(
     [
-      { text: 'Se dispara al integrar en main', options: { bullet: true, breakLine: true } },
+      { text: 'Solo arranca si la verificación ha terminado en verde', options: { bullet: true, breakLine: true } },
       { text: 'Construye tres imágenes: API, interfaz y emulador', options: { bullet: true, breakLine: true } },
-      { text: 'Las publica en el registro de contenedores de GitHub', options: { bullet: true, breakLine: true } },
-      { text: 'El servidor las descarga y levanta la nueva versión, sin intervención manual', options: { bullet: true } },
+      { text: 'Las publica etiquetadas por commit, no solo como «latest»', options: { bullet: true, breakLine: true } },
+      { text: 'Tras levantar comprueba la API, la interfaz y la web pública, o falla', options: { bullet: true } },
     ],
     { x: xDer, y: yLista, w: colW, h: 2.6, margin: 0, valign: 'top',
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },

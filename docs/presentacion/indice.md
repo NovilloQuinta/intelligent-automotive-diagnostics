@@ -22,7 +22,7 @@
 | 14 | Resultados: la aplicacion en funcionamiento | El resultado | pendiente |
 | 15 | Calidad del codigo | El resultado | **rehecha** |
 | 16 | OWASP API Top 10 2023 | El resultado | **nueva** |
-| 17 | La interfaz y los riesgos asumidos | El resultado | **nueva** |
+| 17 | La interfaz y los riesgos abiertos | El resultado | **nueva** |
 | 18 | Integracion y despliegue continuos | El resultado | validada |
 | 19 | Conclusiones | Cierre | pendiente |
 | 20 | Gracias por la atencion | Cierre | pendiente |
@@ -40,6 +40,12 @@
 - **Slide de CI/CD** (2026-08-25): el despliegue automatico no aparecia en ningun sitio.
   La de calidad se queda con TDD, pruebas y seguridad, y el pipeline entero pasa a slide
   propia: integracion -> verificacion -> construccion -> publicacion -> produccion.
+- **Deck resincronizado con develop** (2026-08-26): entraron 19 commits mientras se
+  montaban las slides y cuatro quedaron desfasadas. Cerrados dos de los riesgos que
+  enumeraba la 17 (segundo factor TOTP y contadores de rate limit persistidos), la CSP
+  la sirve ahora nginx, el despliegue solo corre tras CI en verde y etiqueta por commit,
+  y las cifras de pruebas pasan de 2171 a 2403. **Antes de tocar el deck hay que bajarse
+  develop**: esta vez lo aviso el autor, no yo.
 - **Slide 15 depurada** (2026-08-26): su columna derecha repetia palabra por palabra la
   de integracion continua (lint, formato, Node 22, auditoria de dependencias) y su
   ultimo punto repetia la slide de OWASP. Ahora la derecha habla solo de cobertura:
