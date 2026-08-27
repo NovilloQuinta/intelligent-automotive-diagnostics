@@ -4,9 +4,9 @@
 > de editar aqui**: este fichero se ha desincronizado dos veces por actualizarlo
 > de memoria.
 >
-> Estado general: 2372 tests en verde (1717 core-api + 655 ui), 0 errores de lint, 77 avisos (70 + 7).
-> Remedido el 2026-08-26 al servir la CSP desde el nginx del contenedor de UI: +14 tests de
-> configuracion de nginx, -2 de un `src/server.ts` que no se desplegaba y se ha borrado. Antes de las dos tareas de
+> Estado general: 2403 tests en verde (1748 core-api + 655 ui), 0 errores de lint, 77 avisos (70 + 7).
+> `pnpm test:coverage` vuelve a pasar (exit 0) tras 31 tests nuevos en `TwoFactorController`
+> y `nullLogger`. Remedido el 2026-08-26 al cerrar la deuda de coverage. Antes de las dos tareas de
 > seguridad de ese dia, `develop` estaba en 1554 + 617 tests y 71 + 7 avisos; las cifras que
 > figuraban aqui (2131 tests, 76 avisos) ya se habian quedado atras por su cuenta.
 > Nada de lo que sigue es bloqueante.
@@ -329,29 +329,33 @@ alguien se acordo de declarar".
 Cerrarlo pide que la lista salga de un sitio unico —el propio `createServer`, o un registro
 explicito de routers— en vez de repetirse en el test.
 
-## Coverage: cuatro ficheros de composicion incumplen el umbral
+## Coverage: resuelto el 2026-08-26
 
-Medido el 2026-08-26 sobre `develop` limpio, con `pnpm test:coverage`. **Es preexistente**:
-sale identico con y sin el cambio de rate limiting.
+`pnpm test:coverage` pasa (exit 0). Antes fallaba en `develop` desde que el god file
+`composition.ts` se repartio por areas: `vitest.config.ts` excluia `'**/composition.ts'`
+como cableado DI, y el patron dejo de casar con los ficheros nuevos, que son exactamente el
+mismo tipo de codigo. El umbral no cambio; cambio lo que caia dentro.
 
-| Fichero | statements | branches | functions |
-| --- | --- | --- | --- |
-| `composition/persistence.ts` | 0 % | 0 % | 0 % |
-| `composition/email.ts` | 0 % | 0 % | 0 % |
-| `composition/llm.ts` | 20,68 % | 50 % | 33,33 % |
-| `composition/auth.ts` | 34,78 % | 25 % | — |
-| `composition/admin.ts` | — | 50 % | — |
+Eran **ocho** ficheros, no cuatro como decia esta entrada: a los cinco de `composition/`
+(`persistence`, `email`, `llm`, `auth`, `admin`) se sumaron tres del trabajo de seguridad
+del mismo dia — `nullLogger.ts`, `composition/twoFactor.ts` y `TwoFactorController.ts`.
 
-La causa es concreta: `vitest.config.ts` excluye `'**/composition.ts'` como infraestructura
-de cableado (estrategia de 3 niveles). Cuando el god file `composition.ts` se repartio por
-areas —`auth.ts`, `llm.ts`, `email.ts`, `persistence.ts`, `admin.ts`—, el patron dejo de
-casar con los ficheros nuevos, que son exactamente el mismo tipo de codigo. El umbral no
-cambio; cambio lo que caia dentro.
+Resuelto en dos direcciones distintas, y la distincion importa:
 
-Decidir cual de las dos: extender el exclude a `composition/**` —coherente con la estrategia,
-pero ampliar un exclude siempre pide justificarse— o darles test de cableado. Hasta que se
-decida, `pnpm test:coverage` **falla en `develop`**, mientras que `pnpm verify` (que no
-incluye coverage) pasa. Esa asimetria es lo que ha dejado que se cuele.
+- **Excluido** `src/infrastructure/composition/**`. Es el mismo cableado DI que
+  `composition.ts`, que ya estaba excluido: partir un fichero no cambia su naturaleza.
+- **Testeados** `TwoFactorController.ts` y `nullLogger.ts`, no excluidos. El controlador
+  estaba al 74,78 % y le faltaban justo las ramas de error (401 sin token, 423 con
+  `Retry-After`, 401 por credencial invalida, los 500). Eso es contrato de seguridad, no
+  relleno de cobertura, y ademas `AuthController` tampoco esta excluido: excluir este habria
+  sido incoherente. 31 tests nuevos en `tests/unit/infrastructure/http/twoFactorController.test.ts`
+  y `tests/unit/application/nullLogger.test.ts`.
+
+**Ningun umbral se toco**: siguen en 80 statements / 60 branches / 90 functions / 80 lines,
+`perFile`, con `processVehicleDiagnosis.ts` al 100 %.
+
+Queda en pie la asimetria que dejo que esto se colara: `pnpm test:coverage` **no entra en
+`pnpm verify` ni en CI**, asi que nada avisa cuando vuelve a romperse.
 
 ## Vectorial
 
