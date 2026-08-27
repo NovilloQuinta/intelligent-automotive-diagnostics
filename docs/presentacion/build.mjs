@@ -44,14 +44,8 @@ function cabecera(s, kicker, titulo) {
 }
 
 let numeroSlide = 1  // la portada no lleva pie
-function pie(s, bloque) {
+function pie(s) {
   numeroSlide += 1
-  if (bloque) {
-    s.addText(bloque, {
-      x: 0.85, y: 0.3, w: 11.6, h: 0.3, margin: 0, valign: 'top',
-      fontFace: 'Arial', fontSize: 11, bold: true, color: AZUL, charSpacing: 0.6,
-    })
-  }
   logoBig(s, 0.85, 6.85, 0.24)
   s.addText(String(numeroSlide), {
     x: 12.1, y: 6.85, w: 0.35, h: 0.24, margin: 0, align: 'right',
@@ -104,6 +98,46 @@ function pie(s, bloque) {
     'con un modelo de lenguaje.\n\n' +
     'Lo de la derecha no es una maqueta: es la aplicación funcionando, mostrando tres ' +
     'averías que acaba de leer de la centralita.\n\n[~15 s · acumulado 0:15]',
+  )
+}
+
+// ======= INDICE ==========================================================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Índice', {
+    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+
+  const secciones = [
+    'Introducción',
+    'Funcionamiento',
+    'Diseño',
+    'Implementación',
+    'Resultados',
+    'Calidad y seguridad',
+    'Conclusiones',
+  ]
+  secciones.forEach((nombre, k) => {
+    const y = 2.2 + k * 0.62
+    s.addText(String(k + 1), {
+      x: 0.85, y, w: 0.6, h: 0.5, margin: 0, valign: 'middle',
+      fontFace: 'Arial', fontSize: 20, bold: true, color: AZUL,
+    })
+    s.addText(nombre, {
+      x: 1.7, y, w: 10.7, h: 0.5, margin: 0, valign: 'middle',
+      fontFace: 'Arial', fontSize: 20, color: TINTA,
+    })
+  })
+
+  pie(s)
+  s.addNotes(
+    'El recorrido es este. Empiezo por qué resuelve la herramienta, sigo por cómo funciona ' +
+    'de cara al mecánico, luego el diseño y la implementación pieza a pieza, os enseño la ' +
+    'aplicación funcionando, y cierro con cómo se sostiene: calidad y seguridad. Las ' +
+    'conclusiones al final.\n\n[~15 s · acumulado 0:30]',
   )
 }
 
@@ -163,7 +197,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 14, lineSpacing: 22 },
   )
 
-  pie(s, '1 · Introducción')
+  pie(s)
   s.addNotes(
     'Esto es una herramienta de diagnóstico de averías de coche. Se enchufa al coche, lee ' +
     'sus centralitas y le dice al mecánico qué le pasa y por dónde mirar.\n\n' +
@@ -178,7 +212,7 @@ function pie(s, bloque) {
     'Y lo último es lo que la hace distinta: el caso resuelto se guarda, y cuando entre otro ' +
     'coche con síntomas parecidos, ese caso aparece como referencia. La herramienta mejora ' +
     'con el uso.\n\n' +
-    '[~60 s · acumulado 1:15]',
+    '[~60 s · acumulado 1:30]',
   )
 }
 
@@ -286,7 +320,7 @@ function pie(s, bloque) {
     if (k > 0) flechaV(cxD, y - PITCH + CH, y)
   })
 
-  pie(s, '2 · Funcionamiento')
+  pie(s)
   s.addNotes(
     'Este es el flujo de trabajo completo.\n\n' +
     'Arranca arriba a la izquierda, donde arranca de verdad: se enchufa el adaptador al ' +
@@ -304,7 +338,7 @@ function pie(s, bloque) {
     'severidad y qué conviene revisar. Y el caso se indexa.\n\n' +
     'Ese último paso es el que hace que el sistema mejore: queda disponible para el ' +
     'siguiente coche que entre con síntomas parecidos.\n\n' +
-    '[~75 s · acumulado 2:30]',
+    '[~75 s · acumulado 2:45]',
   )
 }
 
@@ -356,7 +390,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  pie(s, '2 · Funcionamiento')
+  pie(s)
   s.addNotes(
     'El sistema hace dos diagnósticos distintos, y conviven.\n\n' +
     'El determinista es el de toda la vida. Lee cuatro PIDs fijos —revoluciones, ' +
@@ -372,7 +406,7 @@ function pie(s, bloque) {
     'con un límite de sesenta segundos. Y es el único que aprende: indexa los PIDs y DTCs ' +
     'nuevos y guarda el caso resuelto.\n\n' +
     'Por eso conviven. Si no hay modelo configurado, o si no hay internet en el taller, el ' +
-    'determinista sigue funcionando.\n\n[~65 s · acumulado 3:35]',
+    'determinista sigue funcionando.\n\n[~65 s · acumulado 3:50]',
   )
 }
 
@@ -414,7 +448,7 @@ function pie(s, bloque) {
     })
   })
 
-  pie(s, '3 · Diseño')
+  pie(s)
   s.addNotes(
     'Con qué está hecho, por piezas.\n\n' +
     'Todo es TypeScript en modo estricto, sobre Node 22, tanto el backend como el ' +
@@ -431,7 +465,7 @@ function pie(s, bloque) {
     'supertest para los endpoints y Playwright para el extremo a extremo. Y la entrega va ' +
     'con GitHub Actions, Docker y Caddy delante.\n\n' +
     'Lo importante no es la lista: es que todo lo que aparece de la tercera fila para abajo ' +
-    'está detrás de un puerto, así que se puede sustituir sin tocar la lógica.\n\n[~55 s · acumulado 4:30]',
+    'está detrás de un puerto, así que se puede sustituir sin tocar la lógica.\n\n[~55 s · acumulado 4:45]',
   )
 }
 
@@ -497,7 +531,7 @@ function pie(s, bloque) {
   nodo('Lector ELM327 conectado al coche', 8.15, 5.86, 4.2, GRIS)
   nodo('Emulador en el portátil', 8.15, 6.30, 4.2, GRIS)
 
-  pie(s, '3 · Diseño')
+  pie(s)
   s.addNotes(
     'La arquitectura es Clean Architecture combinada con el patrón hexagonal. Tres capas: dominio, ' +
     'aplicación e infraestructura, y las dependencias siempre apuntando hacia dentro.\n\n' +
@@ -530,7 +564,7 @@ function pie(s, bloque) {
     'La contrapartida está reconocida en el ADR: son más ficheros que un monolito, y el ' +
     'punto donde se cablea todo crece con cada adaptador nuevo. A cambio, dos mil ciento ' +
     'setenta y una pruebas corren sin coche, sin servidor y sin modelo.\n\n' +
-    '[~85 s · acumulado 5:50]',
+    '[~85 s · acumulado 6:05]',
   )
 }
 
@@ -605,7 +639,7 @@ function pie(s, bloque) {
     { x: 0.85, y: 5.65, w: 11.6, h: 0.45, margin: 0, valign: 'middle',
       fontFace: 'Arial', fontSize: 19, bold: true },
   )
-  pie(s, '4 · Implementación')
+  pie(s)
   s.addNotes(
     'Esto es todo lo que hay que entender del OBD-II para seguir el resto de la charla.\n\n' +
     'La aplicación quiere saber a cuántas revoluciones está el motor. Manda dos bytes: 01 ' +
@@ -619,7 +653,7 @@ function pie(s, bloque) {
     'Ese dato no son revoluciones todavía. Hay que aplicarle la fórmula del PID: A por 256 ' +
     'más B, dividido entre 4. Con 0B y B8, eso da 750 revoluciones.\n\n' +
     'Esa fórmula la fija la SAE J1979, y por eso está en el dominio y no en el código que ' +
-    'habla con el cable.\n\n[~70 s · acumulado 7:00]',
+    'habla con el cable.\n\n[~70 s · acumulado 7:15]',
   )
 }
 
@@ -668,7 +702,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 12, lineSpacing: 22 },
   )
 
-  pie(s, '4 · Implementación')
+  pie(s)
   s.addNotes(
     'El proyecto tiene dos bases de datos, y cada una guarda una cosa distinta.\n\n' +
     'En SQLite va todo lo que se pide por una clave: los usuarios, que pueden ser ' +
@@ -682,7 +716,7 @@ function pie(s, bloque) {
     'Y no vale con una sola. SQLite tiene buscador de texto, pero busca palabras: si el ' +
     'mecánico escribe "presión de aceite", no encuentra una ficha que ponga "oil ' +
     'pressure". La búsqueda vectorial sí, porque compara significado.\n\n' +
-    'Las dos son embebidas: un fichero y un directorio en disco. Cero servidores.\n\n[~55 s · acumulado 7:55]',
+    'Las dos son embebidas: un fichero y un directorio en disco. Cero servidores.\n\n[~55 s · acumulado 8:10]',
   )
 }
 
@@ -740,7 +774,7 @@ function pie(s, bloque) {
     })
   })
 
-  pie(s, '4 · Implementación')
+  pie(s)
   s.addNotes(
     'En SQLite hay trece tablas, y ahí está todo lo que se puede pedir por una clave ' +
     'exacta.\n\n' +
@@ -758,7 +792,7 @@ function pie(s, bloque) {
     'valida contra el coche.\n\n' +
     'Es un fichero en disco, sin servidor. PostgreSQL se descartó porque a esta escala solo ' +
     'añadía un servicio, una red y un backup que mantener, sin resolver ningún problema ' +
-    'que yo tuviera.\n\n[~60 s · acumulado 8:55]',
+    'que yo tuviera.\n\n[~60 s · acumulado 9:10]',
   )
 }
 
@@ -849,7 +883,7 @@ function pie(s, bloque) {
     fontFace: 'Calibri', fontSize: 13, color: GRIS, lineSpacing: 17,
   })
 
-  pie(s, '4 · Implementación')
+  pie(s)
   s.addNotes(
     'En la base vectorial no van los datos del taller: esos están en SQLite. Aquí va solo ' +
     'lo que el sistema aprende. Hay PIDs propietarios, que cada fabricante se inventa fuera ' +
@@ -874,7 +908,7 @@ function pie(s, bloque) {
     'propósito es subir la confianza de un caso cada vez que se reutiliza con acierto. La ' +
     'función existe y está testeada, pero no la llamo desde ningún flujo, porque para eso ' +
     'haría falta saber que el diagnóstico acertó de verdad, y nadie le dice al sistema si ' +
-    'el coche se arregló. Inventármelo habría degradado el catálogo.\n\n[~70 s · acumulado 10:05]',
+    'el coche se arregló. Inventármelo habría degradado el catálogo.\n\n[~70 s · acumulado 10:20]',
   )
 }
 
@@ -943,7 +977,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 14, color: TINTA, paraSpaceAfter: 10, lineSpacing: 20 },
   )
 
-  pie(s, '4 · Implementación')
+  pie(s)
   s.addNotes(
     'El modelo no toca el coche directamente. Lo que hace es pedir herramientas, y el ' +
     'sistema decide si las ejecuta y con qué argumentos. Ese contrato es el MCP, el Model ' +
@@ -966,7 +1000,7 @@ function pie(s, bloque) {
     'Además, cada herramienta declara su esquema, así que los argumentos se validan antes ' +
     'de ejecutar nada. Y el servidor MCP vive en infraestructura: es un adaptador más, el ' +
     'modelo nunca ve el dominio. Como es un protocolo, ese mismo servidor serviría a ' +
-    'cualquier otro cliente que lo hable.\n\n[~75 s · acumulado 11:20]',
+    'cualquier otro cliente que lo hable.\n\n[~75 s · acumulado 11:35]',
   )
 }
 
@@ -1029,7 +1063,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 14, color: TINTA, paraSpaceAfter: 10, lineSpacing: 20 },
   )
 
-  pie(s, '4 · Implementación')
+  pie(s)
   s.addNotes(
     'Este es el recorrido completo, desde que el mecánico le da al botón.\n\n' +
     'Lo primero que pasa no lo hace la IA: el flujo determinista lee los PIDs generales del ' +
@@ -1052,7 +1086,7 @@ function pie(s, bloque) {
     'El system prompt tiene once bloques. No es solo decirle "eres un mecánico": hay ' +
     'bloques de exploración, de consultar el catálogo antes de inventar, de aprendizaje ' +
     'para PIDs, DTCs y ECUs, de ámbito, de no revelar sus propias tripas, de contenido no ' +
-    'fiable y del formato de salida.\n\n[~80 s · acumulado 12:40]',
+    'fiable y del formato de salida.\n\n[~80 s · acumulado 12:55]',
   )
 }
 
@@ -1106,7 +1140,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  pie(s, '4 · Implementación')
+  pie(s)
   s.addNotes(
     'Aquí hay dos modelos, y no hacen lo mismo.\n\n' +
     'El de lenguaje es el que razona, y es intercambiable: una variable de entorno decide ' +
@@ -1122,7 +1156,7 @@ function pie(s, bloque) {
     'Que corra en local significa tres cosas: no hace falta clave, no hay latencia de red y ' +
     'no se paga por consulta. Y como es multilingüe, español e inglés caen cerca en ese ' +
     'espacio: por eso "presión de aceite" encuentra una ficha que pone "oil pressure", que ' +
-    'es justo lo que un buscador de texto no hace.\n\n[~65 s · acumulado 13:45]',
+    'es justo lo que un buscador de texto no hace.\n\n[~65 s · acumulado 14:00]',
   )
 }
 
@@ -1172,7 +1206,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  pie(s, '4 · Implementación')
+  pie(s)
   s.addNotes(
     'Hasta aquí he hablado del motor del sistema. Esto es lo que ve quien lo usa.\n\n' +
     'El recorrido del mecánico es corto a propósito: conecta el adaptador, la aplicación ' +
@@ -1187,7 +1221,7 @@ function pie(s, bloque) {
     'Y no es un servidor de páginas: se compila a ficheros estáticos y los sirve nginx, que ' +
     'es también quien pone las cabeceras de seguridad. La API va bajo el mismo origen, así ' +
     'que la interfaz nunca hace una petición fuera.\n\n' +
-    '[~45 s · acumulado 14:30]',
+    '[~45 s · acumulado 14:45]',
   )
 }
 
@@ -1225,7 +1259,7 @@ function pie(s, bloque) {
     })
   })
 
-  pie(s, '5 · Resultados')
+  pie(s)
   s.addNotes(
     'Esto es la aplicación corriendo contra un Audi A3 2.0 TDI. Y quiero subrayar una ' +
     'cosa: nada de lo que se ve está escrito a mano. Todo sale del bus del coche.\n\n' +
@@ -1238,7 +1272,7 @@ function pie(s, bloque) {
     'los servicios 03, 07 y 0A del estándar: almacenadas, pendientes y permanentes.\n\n' +
     'Y a la derecha el informe, que se congela con la sesión: si dentro de seis meses ' +
     'alguien abre ese diagnóstico, ve exactamente lo que se vio ese día.\n\n' +
-    '[~2 min contando la demo. Si hay vídeo del coche real, va aquí. · acumulado 16:30]',
+    '[~2 min contando la demo. Si hay vídeo del coche real, va aquí. · acumulado 16:45]',
   )
 }
 
@@ -1288,7 +1322,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  pie(s, '6 · Calidad y seguridad')
+  pie(s)
   s.addNotes(
     'Este proyecto lo he hecho yo solo, así que lo que avisa de las roturas no es un ' +
     'compañero: son las comprobaciones automáticas.\n\n' +
@@ -1306,7 +1340,7 @@ function pie(s, bloque) {
     'Y la infraestructura está excluida a propósito: el cableado de dependencias, los ' +
     'adaptadores que solo delegan y los controladores no se cubren con tests de cobertura, ' +
     'los valida el compilador. Esa lista de exclusiones está escrita en la configuración, no ' +
-    'es un olvido.\n\n[~60 s · acumulado 17:30]',
+    'es un olvido.\n\n[~60 s · acumulado 17:45]',
   )
 }
 
@@ -1389,7 +1423,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  pie(s, '6 · Calidad y seguridad')
+  pie(s)
   s.addNotes(
     'Todo el ciclo está automatizado con GitHub Actions, y son dos flujos distintos.\n\n' +
     'El de integración continua se ejecuta en cada push y en cada pull request contra main ' +
@@ -1405,7 +1439,7 @@ function pie(s, bloque) {
     'yo toque nada.\n\n' +
     'La consecuencia práctica es que integrar en main es publicar. La aplicación está ' +
     'desplegada y accesible, no es una demo que solo corre en mi portátil.\n\n' +
-    '[~55 s · acumulado 18:25]',
+    '[~55 s · acumulado 18:40]',
   )
 }
 
@@ -1451,7 +1485,7 @@ function pie(s, bloque) {
     })
   })
 
-  pie(s, '6 · Calidad y seguridad')
+  pie(s)
   s.addNotes(
     'Seguridad. Aquí hay dos listas de OWASP en juego, y las dos aplican: la de APIs, ' +
     'porque el backend es una API REST, y la general de aplicaciones web en su edición de ' +
@@ -1477,7 +1511,7 @@ function pie(s, bloque) {
     'modo OBD contra una lista blanca antes de tocar el socket, con un test de invariante ' +
     'que falla si alguien añade un método que emita un servicio de control sobre el ' +
     'vehículo.\n\n' +
-    '[~70 s · acumulado 19:35]',
+    '[~70 s · acumulado 19:50]',
   )
 }
 
@@ -1525,7 +1559,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 13, lineSpacing: 22 },
   )
 
-  pie(s, '7 · Conclusiones')
+  pie(s)
   s.addNotes(
     'Para terminar, lo que me llevo de haber hecho esto.\n\n' +
     'Lo primero, que con IA se pueden construir cosas complejas mucho más rápido. Un ' +
@@ -1540,7 +1574,7 @@ function pie(s, bloque) {
     'semanas sin exigir nada. Estaba verde, y no comprobaba lo que decía comprobar. Lo he ' +
     'documentado en la deuda conocida del proyecto.\n\n' +
     'Así que sí, acelera mucho. Pero no es todo tan bonito como parece: hay que dedicarle ' +
-    'tiempo a revisar.\n\n[~45 s · acumulado 20:20]',
+    'tiempo a revisar.\n\n[~45 s · acumulado 20:35]',
   )
 }
 

@@ -1,35 +1,36 @@
 # Indice de la defensa — cerrado
 
-> 20 slides, ~20:20, en bloques: el problema, que resuelve, como funciona,
+> 21 slides, ~20:35, en bloques: el problema, que resuelve, como funciona,
 > como esta construida, las piezas, el resultado y el cierre. **Se trabaja punto por punto**: el autor cuenta que va en el punto,
 > se maqueta, se valida, y solo entonces se pasa al siguiente. Nada de adelantar slides.
 
 | # | Slide | Bloque | Estado |
 |---|---|---|---|
 | 1 | Portada | | **validada** |
-| 2 | Diagnostico de averias de vehiculos asistido por IA | Introduccion | pendiente |
-| 3 | Flujo de trabajo | Funcionamiento | **validada** |
-| 4 | Diagnostico determinista y diagnostico cognitivo | Funcionamiento | pendiente |
-| 5 | Tecnologias utilizadas | Diseno | pendiente |
-| 6 | Clean Architecture + Hexagonal | Diseno | **rehecha** |
-| 7 | Adquisicion de datos mediante OBD-II | Implementacion | pendiente |
-| 8 | Persistencia: modelo relacional y modelo vectorial | Implementacion | pendiente |
-| 9 | Base de datos relacional | Implementacion | pendiente |
-| 10 | Base de datos vectorial e indice de confianza | Implementacion | pendiente |
-| 11 | Model Context Protocol: herramientas del agente | Implementacion | pendiente |
-| 12 | Ciclo de razonamiento del agente | Implementacion | pendiente |
-| 13 | Modelos empleados: lenguaje y embeddings | Implementacion | pendiente |
-| 14 | La interfaz del mecanico | Implementacion | **nueva** |
-| 15 | Resultados: la aplicacion en funcionamiento | Resultados | pendiente |
-| 16 | Calidad del codigo | Calidad y seguridad | **rehecha** |
-| 17 | Integracion y despliegue continuos | Calidad y seguridad | **reordenada** |
-| 18 | Modelo de seguridad | Calidad y seguridad | **fusionada** |
-| 19 | Conclusiones | Conclusiones | pendiente |
-| 20 | Gracias por la atencion | Conclusiones | pendiente |
+| 2 | Indice | | **nueva** |
+| 3 | Diagnostico de averias de vehiculos asistido por IA | 1 Introduccion | pendiente |
+| 4 | Flujo de trabajo | 2 Funcionamiento | **validada** |
+| 5 | Diagnostico determinista y diagnostico cognitivo | 2 Funcionamiento | pendiente |
+| 6 | Tecnologias utilizadas | 3 Diseno | pendiente |
+| 7 | Clean Architecture + Hexagonal | 3 Diseno | **rehecha** |
+| 8 | Adquisicion de datos mediante OBD-II | 4 Implementacion | pendiente |
+| 9 | Persistencia: modelo relacional y modelo vectorial | 4 Implementacion | pendiente |
+| 10 | Base de datos relacional | 4 Implementacion | pendiente |
+| 11 | Base de datos vectorial e indice de confianza | 4 Implementacion | pendiente |
+| 12 | Model Context Protocol: herramientas del agente | 4 Implementacion | pendiente |
+| 13 | Ciclo de razonamiento del agente | 4 Implementacion | pendiente |
+| 14 | Modelos empleados: lenguaje y embeddings | 4 Implementacion | pendiente |
+| 15 | La interfaz del mecanico | 4 Implementacion | **nueva** |
+| 16 | Resultados: la aplicacion en funcionamiento | 5 Resultados | pendiente |
+| 17 | Calidad del codigo | 6 Calidad y seguridad | **rehecha** |
+| 18 | Integracion y despliegue continuos | 6 Calidad y seguridad | **reordenada** |
+| 19 | Modelo de seguridad | 6 Calidad y seguridad | **fusionada** |
+| 20 | Conclusiones | 7 Conclusiones | pendiente |
+| 21 | Gracias por la atencion | | pendiente |
 
 > **Los titulos los revisa el autor.** Se le propuso una tanda y la rechazo.
 
-**Suma: ~20:20.**
+**Suma: ~20:35.**
 
 ## Cambios acordados sobre la primera propuesta
 
@@ -57,12 +58,11 @@
   el orden y tres nombres, entran `Software Supply Chain Failures` y `Mishandling of
   Exceptional Conditions`, y SSRF se absorbe dentro de `Broken Access Control`.
   **`docs/security.md` sigue en 2021: hay que actualizarlo para que no se contradigan.**
-- **Rotulo de bloque en cada slide** (2026-08-26): se saltaba de una a otra sin saber en
-  que parte de la charla estabas. Encima del titulo, en azul pequeno, va el bloque:
-  1 Introduccion · 2 Funcionamiento · 3 Diseno · 4 Implementacion · 5 Resultados ·
-  6 Calidad y seguridad · 7 Conclusiones. **Nombres, no frases**: la primera tanda
-  ("Las piezas", "El resultado", "Como funciona") la rechazo el autor por conversacional.
-  Lo pinta `pie(s, bloque)`, asi que mover una slide obliga a revisar su rotulo.
+- **Slide de indice** (2026-08-26): se saltaba de una slide a otra sin saber en que
+  parte de la charla estabas. Se probo con un rotulo de bloque encima de cada titulo
+  y el autor lo rechazo: no se ve en otras presentaciones y mete parafernalia. La
+  solucion es la de siempre, una slide de indice con las siete secciones detras de
+  la portada.
 - **Las dos de OWASP se fusionan en una** (2026-08-26): dos tablas de diez con solape
   real (A01 se parecia a API1 y API5, A02 a API8, A07 a API2). La tabla nueva va por
   la lista de APIs numerada del 01 al 10, con el nombre oficial en ingles y la medida en
