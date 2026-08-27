@@ -1,6 +1,7 @@
-import { describe, it, expect, beforeAll } from 'vitest'
-import Database from 'better-sqlite3'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { sql } from 'drizzle-orm'
+import { getDb, resetDb } from '@/infrastructure/persistence/sqlite/db.js'
+import type { DiagnosticsDb } from '@/infrastructure/persistence/sqlite/db.js'
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
 import type { CreateUserInput } from '@/application/dto/auth/CreateUserInput.js'
 import { Email } from '@/domain/value-objects/Email.js'
@@ -27,38 +28,12 @@ describe('SqliteUserRepository', () => {
   let repo: SqliteUserRepository
 
   beforeAll(() => {
-    const sqlite = new Database(':memory:')
-    sqlite.pragma('foreign_keys = ON')
+    resetDb()
+    repo = new SqliteUserRepository(getDb())
+  })
 
-    sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL UNIQUE,
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        user_type TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'user',
-        business_name TEXT,
-        tax_id TEXT,
-        address TEXT,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        failed_login_attempts INTEGER NOT NULL DEFAULT 0,
-        locked_until TEXT,
-        two_factor_secret TEXT,
-        two_factor_enabled INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE IF NOT EXISTS refresh_tokens (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL REFERENCES users(id),
-        token_hash TEXT NOT NULL UNIQUE,
-        expires_at TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        revoked_at TEXT
-      );
-    `)
-
-    repo = new SqliteUserRepository(drizzle(sqlite))
+  afterAll(() => {
+    resetDb()
   })
 
   describe('create', () => {
@@ -268,28 +243,8 @@ describe('SqliteUserRepository — list/stats', () => {
   let repo: SqliteUserRepository
 
   beforeAll(async () => {
-    const sqlite = new Database(':memory:')
-    sqlite.pragma('foreign_keys = ON')
-    sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL UNIQUE,
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        user_type TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'user',
-        business_name TEXT,
-        tax_id TEXT,
-        address TEXT,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        failed_login_attempts INTEGER NOT NULL DEFAULT 0,
-        locked_until TEXT,
-        two_factor_secret TEXT,
-        two_factor_enabled INTEGER NOT NULL DEFAULT 0
-      );
-    `)
-
-    repo = new SqliteUserRepository(drizzle(sqlite))
+    resetDb()
+    repo = new SqliteUserRepository(getDb())
 
     await repo.create({
       username: 'juan',
@@ -349,38 +304,24 @@ describe('SqliteUserRepository — list/stats', () => {
 
 describe('SqliteUserRepository — caducidad del bloqueo', () => {
   let repo: SqliteUserRepository
-  let sqlite: Database.Database
+  let db: DiagnosticsDb
 
   beforeAll(() => {
-    sqlite = new Database(':memory:')
-    sqlite.pragma('foreign_keys = ON')
-    sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL UNIQUE,
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        user_type TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'user',
-        business_name TEXT,
-        tax_id TEXT,
-        address TEXT,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        failed_login_attempts INTEGER NOT NULL DEFAULT 0,
-        locked_until TEXT,
-        two_factor_secret TEXT,
-        two_factor_enabled INTEGER NOT NULL DEFAULT 0
-      );
-    `)
-    repo = new SqliteUserRepository(drizzle(sqlite))
+    resetDb()
+    db = getDb()
+    repo = new SqliteUserRepository(db)
+  })
+
+  afterAll(() => {
+    resetDb()
   })
 
   /** Deja al usuario bloqueado y adelanta el reloj poniendo el bloqueo en el pasado. */
   async function lockAndExpire(userId: number): Promise<void> {
     for (let i = 0; i < 5; i += 1) await repo.incrementFailedLogin(userId)
-    sqlite
-      .prepare('UPDATE users SET locked_until = ? WHERE id = ?')
-      .run(new Date(Date.now() - 60_000).toISOString(), userId)
+    db.run(
+      sql`UPDATE users SET locked_until = ${new Date(Date.now() - 60_000).toISOString()} WHERE id = ${userId}`,
+    )
   }
 
   it('deberia reiniciar el contador cuando el bloqueo anterior ya expiro', async () => {
@@ -429,7 +370,7 @@ describe('SqliteUserRepository — caducidad del bloqueo', () => {
     // Bloqueo vigente pero a punto de expirar: si el intento lo reescribiera,
     // se veria saltar de nuevo a los 15 minutos.
     const expiresSoon = new Date(Date.now() + 2000).toISOString()
-    sqlite.prepare('UPDATE users SET locked_until = ? WHERE id = ?').run(expiresSoon, user.id)
+    db.run(sql`UPDATE users SET locked_until = ${expiresSoon} WHERE id = ${user.id}`)
 
     const state = await repo.incrementFailedLogin(user.id)
 
