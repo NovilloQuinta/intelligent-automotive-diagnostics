@@ -1,6 +1,6 @@
 # Indice de la defensa — cerrado
 
-> 20 slides, ~20:15, en bloques: el problema, que resuelve, como funciona,
+> 21 slides, ~21:00, en bloques: el problema, que resuelve, como funciona,
 > como esta construida, las piezas, el resultado y el cierre. **Se trabaja punto por punto**: el autor cuenta que va en el punto,
 > se maqueta, se valida, y solo entonces se pasa al siguiente. Nada de adelantar slides.
 
@@ -9,25 +9,26 @@
 | 1 | Portada | | **validada** |
 | 2 | Diagnostico de averias de vehiculos asistido por IA | Que es y que resuelve | pendiente |
 | 3 | Flujo de trabajo | Como funciona | **validada** |
-| 4 | Diagnostico determinista y diagnostico cognitivo | Como funciona | pendiente |
-| 5 | Tecnologias utilizadas | Como esta construida | pendiente |
-| 6 | Clean Architecture + Hexagonal | Como esta construida | **rehecha** |
-| 7 | Adquisicion de datos mediante OBD-II | Las piezas | pendiente |
+| 4 | Adquisicion de datos mediante OBD-II | Como funciona | **reordenada** |
+| 5 | Diagnostico determinista y diagnostico cognitivo | Como funciona | **reordenada** |
+| 6 | Tecnologias utilizadas | Como esta construida | pendiente |
+| 7 | Clean Architecture + Hexagonal | Como esta construida | **rehecha** |
 | 8 | Persistencia: modelo relacional y modelo vectorial | Las piezas | pendiente |
 | 9 | Base de datos relacional | Las piezas | pendiente |
 | 10 | Base de datos vectorial e indice de confianza | Las piezas | pendiente |
 | 11 | Model Context Protocol: herramientas del agente | Las piezas | pendiente |
 | 12 | Ciclo de razonamiento del agente | Las piezas | pendiente |
 | 13 | Modelos empleados: lenguaje y embeddings | Las piezas | pendiente |
-| 14 | Resultados: la aplicacion en funcionamiento | El resultado | pendiente |
-| 15 | Calidad del codigo | El resultado · proceso | **rehecha** |
-| 16 | Integracion y despliegue continuos | El resultado · proceso | **reordenada** |
-| 17 | OWASP API Top 10 2023 | El resultado · seguridad | **nueva** |
-| 18 | OWASP Top 10 2025 | El resultado · seguridad | **nueva** |
-| 19 | Conclusiones | Cierre | pendiente |
-| 20 | Gracias por la atencion | Cierre | pendiente |
+| 14 | La interfaz del mecanico | Las piezas | **nueva** |
+| 15 | Resultados: la aplicacion en funcionamiento | El resultado | pendiente |
+| 16 | Calidad del codigo | El resultado · proceso | **rehecha** |
+| 17 | Integracion y despliegue continuos | El resultado · proceso | **reordenada** |
+| 18 | OWASP API Top 10 2023 | El resultado · seguridad | **nueva** |
+| 19 | OWASP Top 10 2025 | El resultado · seguridad | **nueva** |
+| 20 | Conclusiones | Cierre | pendiente |
+| 21 | Gracias por la atencion | Cierre | pendiente |
 
-**Suma: ~20:15.**
+**Suma: ~21:00.**
 
 ## Cambios acordados sobre la primera propuesta
 
@@ -40,6 +41,12 @@
 - **Slide de CI/CD** (2026-08-25): el despliegue automatico no aparecia en ningun sitio.
   La de calidad se queda con TDD, pruebas y seguridad, y el pipeline entero pasa a slide
   propia: integracion -> verificacion -> construccion -> publicacion -> produccion.
+- **Arranque reordenado** (2026-08-26): del 2 al 7 no habia hilo. Ahora va que es ->
+  flujo -> como se lee el coche (OBD-II) -> los dos diagnosticos -> con que esta hecho
+  -> como esta organizado. El OBD-II sube del 7 al 4: es la entrada de todo lo demas.
+- **Slide de la interfaz** (2026-08-26): el deck era casi todo backend. La UI solo
+  aparecia como capturas en la demo y como una fila de tecnologias. Ahora tiene slide
+  propia justo antes de la demo: que hace el mecanico y como esta construida.
 - **Orden del bloque final corregido** (2026-08-26): calidad y CI/CD son proceso, y
   estaban partidas por las dos de seguridad. Ahora van 15 calidad, 16 CI/CD, 17 OWASP
   de APIs, 18 OWASP de aplicaciones web. La seguridad cierra el cuerpo.

@@ -302,6 +302,95 @@ function pie(s) {
   )
 }
 
+// =================== 5 — OBD-II: CÓMO SE LEE EL COCHE =====================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('Adquisición de datos mediante OBD-II', {
+    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('Ejemplo: lectura del régimen de giro del motor.', {
+    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  // Cadena: aplicacion -> ELM327 -> bus CAN -> centralita
+  const pasos = ['La aplicación', 'Adaptador\nELM327', 'Bus CAN\ndel coche', 'Centralita\ndel motor']
+  const bw = 2.4, bh = 1.15, bgap = 0.65, by = 2.55
+  pasos.forEach((t, i) => {
+    const x = 0.85 + i * (bw + bgap)
+    s.addShape(pres.ShapeType.roundRect, {
+      x, y: by, w: bw, h: bh, rectRadius: 0.06,
+      fill: { color: BLANCO }, line: { color: 'C9CCD8', width: 1 },
+    })
+    s.addText(t, {
+      x, y: by, w: bw, h: bh, margin: 0, align: 'center', valign: 'middle',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, lineSpacing: 20,
+    })
+    if (i < pasos.length - 1) {
+      s.addShape(pres.ShapeType.line, {
+        x: x + bw + 0.12, y: by + bh / 2, w: bgap - 0.24, h: 0,
+        line: { color: AZUL, width: 1.5, endArrowType: 'triangle' },
+      })
+    }
+  })
+
+  // Lo que viaja por el cable
+  s.addText('Va', {
+    x: 0.85, y: 4.35, w: 1.1, h: 0.33, margin: 0, valign: 'middle',
+    fontFace: 'Calibri', fontSize: 14, bold: true, color: GRIS,
+  })
+  s.addText('01 0C', {
+    x: 2.0, y: 4.35, w: 3.0, h: 0.33, margin: 0, valign: 'middle',
+    fontFace: 'Courier New', fontSize: 16, bold: true, color: TINTA,
+  })
+  s.addText('modo 01, PID 0C — revoluciones', {
+    x: 4.6, y: 4.35, w: 7.5, h: 0.33, margin: 0, valign: 'middle',
+    fontFace: 'Calibri', fontSize: 14, color: GRIS,
+  })
+
+  s.addText('Vuelve', {
+    x: 0.85, y: 4.85, w: 1.1, h: 0.33, margin: 0, valign: 'middle',
+    fontFace: 'Calibri', fontSize: 14, bold: true, color: GRIS,
+  })
+  s.addText('41 0C 0B B8', {
+    x: 2.0, y: 4.85, w: 3.0, h: 0.33, margin: 0, valign: 'middle',
+    fontFace: 'Courier New', fontSize: 16, bold: true, color: TINTA,
+  })
+  s.addText('los dos bytes de datos son A = 0B y B = B8', {
+    x: 4.6, y: 4.85, w: 7.5, h: 0.33, margin: 0, valign: 'middle',
+    fontFace: 'Calibri', fontSize: 14, color: GRIS,
+  })
+
+  // La formula del dominio
+  s.addText(
+    [
+      { text: '(A × 256 + B) / 4   =   (11 × 256 + 184) / 4   =   ', options: { color: TINTA } },
+      { text: '750 rpm',                                             options: { color: AZUL } },
+    ],
+    { x: 0.85, y: 5.65, w: 11.6, h: 0.45, margin: 0, valign: 'middle',
+      fontFace: 'Arial', fontSize: 19, bold: true },
+  )
+  pie(s)
+  s.addNotes(
+    'Esto es todo lo que hay que entender del OBD-II para seguir el resto de la charla.\n\n' +
+    'La aplicación quiere saber a cuántas revoluciones está el motor. Manda dos bytes: 01 ' +
+    '0C. El 01 es el modo, que en la norma significa "dame un dato en vivo", y el 0C es el ' +
+    'PID concreto, las revoluciones.\n\n' +
+    'Eso sale por el adaptador ELM327, que es el cachivache que se enchufa al conector del ' +
+    'coche, entra en el bus CAN, y llega a la centralita del motor.\n\n' +
+    'La centralita contesta 41 0C 0B B8. El 41 es el 01 más cuarenta, que es como la norma ' +
+    'marca que es una respuesta. El 0C confirma qué PID contesta. Y los dos últimos bytes ' +
+    'son el dato en crudo.\n\n' +
+    'Ese dato no son revoluciones todavía. Hay que aplicarle la fórmula del PID: A por 256 ' +
+    'más B, dividido entre 4. Con 0B y B8, eso da 750 revoluciones.\n\n' +
+    'Esa fórmula la fija la SAE J1979, y por eso está en el dominio y no en el código que ' +
+    'habla con el cable.\n\n[~70 s · acumulado 7:00]',
+  )
+}
+
 // ============ LOS DOS DIAGNÓSTICOS (cierra el bloque de IA) ============== ============================
 {
   const s = pres.addSlide()
@@ -525,95 +614,6 @@ function pie(s) {
     'punto donde se cablea todo crece con cada adaptador nuevo. A cambio, dos mil ciento ' +
     'setenta y una pruebas corren sin coche, sin servidor y sin modelo.\n\n' +
     '[~85 s · acumulado 5:50]',
-  )
-}
-
-// =================== 5 — OBD-II: CÓMO SE LEE EL COCHE =====================
-{
-  const s = pres.addSlide()
-  s.background = { color: BLANCO }
-
-  s.addText('Adquisición de datos mediante OBD-II', {
-    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
-  })
-  s.addText('Ejemplo: lectura del régimen de giro del motor.', {
-    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
-  })
-
-  // Cadena: aplicacion -> ELM327 -> bus CAN -> centralita
-  const pasos = ['La aplicación', 'Adaptador\nELM327', 'Bus CAN\ndel coche', 'Centralita\ndel motor']
-  const bw = 2.4, bh = 1.15, bgap = 0.65, by = 2.55
-  pasos.forEach((t, i) => {
-    const x = 0.85 + i * (bw + bgap)
-    s.addShape(pres.ShapeType.roundRect, {
-      x, y: by, w: bw, h: bh, rectRadius: 0.06,
-      fill: { color: BLANCO }, line: { color: 'C9CCD8', width: 1 },
-    })
-    s.addText(t, {
-      x, y: by, w: bw, h: bh, margin: 0, align: 'center', valign: 'middle',
-      fontFace: 'Calibri', fontSize: 15, color: TINTA, lineSpacing: 20,
-    })
-    if (i < pasos.length - 1) {
-      s.addShape(pres.ShapeType.line, {
-        x: x + bw + 0.12, y: by + bh / 2, w: bgap - 0.24, h: 0,
-        line: { color: AZUL, width: 1.5, endArrowType: 'triangle' },
-      })
-    }
-  })
-
-  // Lo que viaja por el cable
-  s.addText('Va', {
-    x: 0.85, y: 4.35, w: 1.1, h: 0.33, margin: 0, valign: 'middle',
-    fontFace: 'Calibri', fontSize: 14, bold: true, color: GRIS,
-  })
-  s.addText('01 0C', {
-    x: 2.0, y: 4.35, w: 3.0, h: 0.33, margin: 0, valign: 'middle',
-    fontFace: 'Courier New', fontSize: 16, bold: true, color: TINTA,
-  })
-  s.addText('modo 01, PID 0C — revoluciones', {
-    x: 4.6, y: 4.35, w: 7.5, h: 0.33, margin: 0, valign: 'middle',
-    fontFace: 'Calibri', fontSize: 14, color: GRIS,
-  })
-
-  s.addText('Vuelve', {
-    x: 0.85, y: 4.85, w: 1.1, h: 0.33, margin: 0, valign: 'middle',
-    fontFace: 'Calibri', fontSize: 14, bold: true, color: GRIS,
-  })
-  s.addText('41 0C 0B B8', {
-    x: 2.0, y: 4.85, w: 3.0, h: 0.33, margin: 0, valign: 'middle',
-    fontFace: 'Courier New', fontSize: 16, bold: true, color: TINTA,
-  })
-  s.addText('los dos bytes de datos son A = 0B y B = B8', {
-    x: 4.6, y: 4.85, w: 7.5, h: 0.33, margin: 0, valign: 'middle',
-    fontFace: 'Calibri', fontSize: 14, color: GRIS,
-  })
-
-  // La formula del dominio
-  s.addText(
-    [
-      { text: '(A × 256 + B) / 4   =   (11 × 256 + 184) / 4   =   ', options: { color: TINTA } },
-      { text: '750 rpm',                                             options: { color: AZUL } },
-    ],
-    { x: 0.85, y: 5.65, w: 11.6, h: 0.45, margin: 0, valign: 'middle',
-      fontFace: 'Arial', fontSize: 19, bold: true },
-  )
-  pie(s)
-  s.addNotes(
-    'Esto es todo lo que hay que entender del OBD-II para seguir el resto de la charla.\n\n' +
-    'La aplicación quiere saber a cuántas revoluciones está el motor. Manda dos bytes: 01 ' +
-    '0C. El 01 es el modo, que en la norma significa "dame un dato en vivo", y el 0C es el ' +
-    'PID concreto, las revoluciones.\n\n' +
-    'Eso sale por el adaptador ELM327, que es el cachivache que se enchufa al conector del ' +
-    'coche, entra en el bus CAN, y llega a la centralita del motor.\n\n' +
-    'La centralita contesta 41 0C 0B B8. El 41 es el 01 más cuarenta, que es como la norma ' +
-    'marca que es una respuesta. El 0C confirma qué PID contesta. Y los dos últimos bytes ' +
-    'son el dato en crudo.\n\n' +
-    'Ese dato no son revoluciones todavía. Hay que aplicarle la fórmula del PID: A por 256 ' +
-    'más B, dividido entre 4. Con 0B y B8, eso da 750 revoluciones.\n\n' +
-    'Esa fórmula la fija la SAE J1979, y por eso está en el dominio y no en el código que ' +
-    'habla con el cable.\n\n[~70 s · acumulado 7:00]',
   )
 }
 
@@ -1120,6 +1120,71 @@ function pie(s) {
   )
 }
 
+// ======= LA INTERFAZ DEL MECANICO ========================================
+{
+  const s = pres.addSlide()
+  s.background = { color: BLANCO }
+
+  s.addText('La interfaz del mecánico', {
+    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+  })
+  s.addText('Una aplicación de página única: el servidor entrega datos, nunca pantallas.', {
+    x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  })
+
+  const colW = 5.3, xIzq = 0.85, xDer = 7.15, yTit = 2.45, yLista = 3.05
+
+  s.addText('Lo que hace el mecánico', {
+    x: xIzq, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'Identifica el vehículo por su VIN y entra al diagnóstico', options: { bullet: true, breakLine: true } },
+      { text: 'Sigue la telemetría en vivo, que se refresca cada segundo', options: { bullet: true, breakLine: true } },
+      { text: 'Consulta las averías almacenadas, pendientes y permanentes', options: { bullet: true, breakLine: true } },
+      { text: 'Pregunta al agente y se lleva el informe de la sesión', options: { bullet: true } },
+    ],
+    { x: xIzq, y: yLista, w: colW, h: 3.2, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+  )
+
+  s.addText('Cómo está construida', {
+    x: xDer, y: yTit, w: colW, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Arial', fontSize: 19, bold: true, color: AZUL,
+  })
+  s.addText(
+    [
+      { text: 'React 19 con TanStack Router y Query', options: { bullet: true, breakLine: true } },
+      { text: 'Valida los formularios con los mismos esquemas que la API', options: { bullet: true, breakLine: true } },
+      { text: 'Se compila a ficheros estáticos, que sirve nginx', options: { bullet: true, breakLine: true } },
+      { text: 'Consume la API por el mismo origen: nunca sale fuera', options: { bullet: true } },
+    ],
+    { x: xDer, y: yLista, w: colW, h: 3.2, margin: 0, valign: 'top',
+      fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
+  )
+
+  pie(s)
+  s.addNotes(
+    'Hasta aquí he hablado del motor del sistema. Esto es lo que ve quien lo usa.\n\n' +
+    'El recorrido del mecánico es corto a propósito: conecta el adaptador, la aplicación ' +
+    'lee el bastidor y le dice qué coche tiene delante, y entra al diagnóstico. A partir de ' +
+    'ahí ve la telemetría en vivo, que se refresca una vez por segundo, y las averías ' +
+    'separadas en los tres grupos que distingue la norma: almacenadas, pendientes y ' +
+    'permanentes. Si quiere ir más allá, pregunta al agente, y al cerrar se lleva el informe ' +
+    'de la sesión, que queda congelado.\n\n' +
+    'Por dentro es una aplicación aparte del backend, en el mismo repositorio. React 19 con ' +
+    'TanStack Router y Query. Los formularios validan con los mismos esquemas Zod que usa la ' +
+    'API, así que la validación del cliente y la del servidor no se pueden desincronizar.\n\n' +
+    'Y no es un servidor de páginas: se compila a ficheros estáticos y los sirve nginx, que ' +
+    'es también quien pone las cabeceras de seguridad. La API va bajo el mismo origen, así ' +
+    'que la interfaz nunca hace una petición fuera.\n\n' +
+    '[~45 s · acumulado 14:30]',
+  )
+}
+
 // ======= LA APLICACIÓN FUNCIONANDO ========================================
 {
   const s = pres.addSlide()
@@ -1167,7 +1232,7 @@ function pie(s) {
     'los servicios 03, 07 y 0A del estándar: almacenadas, pendientes y permanentes.\n\n' +
     'Y a la derecha el informe, que se congela con la sesión: si dentro de seis meses ' +
     'alguien abre ese diagnóstico, ve exactamente lo que se vio ese día.\n\n' +
-    '[~2 min contando la demo. Si hay vídeo del coche real, va aquí. · acumulado 15:45]',
+    '[~2 min contando la demo. Si hay vídeo del coche real, va aquí. · acumulado 16:30]',
   )
 }
 
@@ -1235,7 +1300,7 @@ function pie(s) {
     'Y la infraestructura está excluida a propósito: el cableado de dependencias, los ' +
     'adaptadores que solo delegan y los controladores no se cubren con tests de cobertura, ' +
     'los valida el compilador. Esa lista de exclusiones está escrita en la configuración, no ' +
-    'es un olvido.\n\n[~60 s · acumulado 16:45]',
+    'es un olvido.\n\n[~60 s · acumulado 17:30]',
   )
 }
 
@@ -1334,7 +1399,7 @@ function pie(s) {
     'yo toque nada.\n\n' +
     'La consecuencia práctica es que integrar en main es publicar. La aplicación está ' +
     'desplegada y accesible, no es una demo que solo corre en mi portátil.\n\n' +
-    '[~55 s · acumulado 17:40]',
+    '[~55 s · acumulado 18:25]',
   )
 }
 
@@ -1404,7 +1469,7 @@ function pie(s) {
     'Los riesgos residuales están escritos y asumidos, no escondidos: los tokens en ' +
     'localStorage, la ausencia de MFA, la base sin cifrar en disco y los límites de ' +
     'peticiones en memoria.\n\n' +
-    '[~60 s · acumulado 18:40]',
+    '[~60 s · acumulado 19:25]',
   )
 }
 
@@ -1472,7 +1537,7 @@ function pie(s) {
     'esconderlo, es que no haya por dónde leerlo, que es todo lo de arriba. El secreto del ' +
     'segundo factor, que sí sería una llave, va cifrado con AES-256-GCM y su clave no vive en ' +
     'la base de datos.\n\n' +
-    '[~50 s · acumulado 19:30]',
+    '[~50 s · acumulado 20:15]',
   )
 }
 
@@ -1535,7 +1600,7 @@ function pie(s) {
     'semanas sin exigir nada. Estaba verde, y no comprobaba lo que decía comprobar. Lo he ' +
     'documentado en la deuda conocida del proyecto.\n\n' +
     'Así que sí, acelera mucho. Pero no es todo tan bonito como parece: hay que dedicarle ' +
-    'tiempo a revisar.\n\n[~45 s · acumulado 20:15]',
+    'tiempo a revisar.\n\n[~45 s · acumulado 21:00]',
   )
 }
 
