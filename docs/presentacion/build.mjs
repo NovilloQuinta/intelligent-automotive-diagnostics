@@ -1403,141 +1403,69 @@ function pie(s) {
   )
 }
 
-// ======= OWASP API TOP 10 =================================================
+// ======= OWASP: LAS DOS LISTAS ===========================================
 {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('OWASP API Top 10 2023', {
+  s.addText('OWASP API Top 10 2023 y Top 10 2025', {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 30, bold: true, color: TINTA,
   })
-  s.addText('El backend es una API REST, así que la lista que aplica es la de APIs.', {
-    x: 0.85, y: 1.62, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
+  s.addText('El backend es una API y la interfaz una aplicación web: cada medida cubre categorías de las dos listas.', {
+    x: 0.85, y: 1.58, w: 11.6, h: 0.4, margin: 0, valign: 'top',
+    fontFace: 'Calibri', fontSize: 16, color: GRIS,
   })
 
   const owasp = [
-    ['API1', 'Broken Object Level Authorization', 'La sesión de otro usuario devuelve 404, no 403'],
-    ['API2', 'Broken Authentication', 'bcrypt 12 rondas, segundo factor TOTP y bloqueo de cuenta a los 5 fallos'],
-    ['API3', 'Broken Object Property Level Authorization', 'Los esquemas Zod son la allowlist de campos'],
-    ['API4', 'Unrestricted Resource Consumption', 'login 5/min, diagnóstico 20/min; contadores persistidos en base de datos'],
-    ['API5', 'Broken Function Level Authorization', 'Todo /api autenticado; el panel de administración exige segundo factor'],
-    ['API6', 'Unrestricted Access to Sensitive Business Flows', 'Borrado de códigos con límite propio y apagable por entorno'],
-    ['API7', 'Server Side Request Forgery', 'El usuario no controla ninguna URL de salida'],
-    ['API8', 'Security Misconfiguration', 'Helmet 8 en la API, CSP propia en la interfaz, puertos solo en loopback'],
-    ['API9', 'Improper Inventory Management', 'Especificación OpenAPI versionada, servida por la API'],
-    ['API10', 'Unsafe Consumption of APIs', 'Lo recuperado llega al modelo marcado como no fiable'],
+    ['Sesión en todo /api; la sesión de otro usuario devuelve 404, no 403', 'API1 · API5 · A01'],
+    ['Los esquemas Zod son la allowlist de campos y de entrada', 'API3 · A05 · A06'],
+    ['bcrypt 12 rondas, segundo factor TOTP y bloqueo de cuenta', 'API2 · A04 · A07'],
+    ['Límites por familia, con contadores persistidos en base de datos', 'API4 · API6'],
+    ['Helmet en la API, CSP en la interfaz, puertos solo en loopback', 'API8 · A02'],
+    ['Lockfile, auditoría bloqueante e imágenes etiquetadas por commit', 'A03 · A08'],
+    ['Especificación OpenAPI versionada, servida por la propia API', 'API9'],
+    ['Ninguna URL de salida la elige el usuario', 'API7 · A01'],
+    ['Auditoría con IP, usuario y duración; el error sale sin traza', 'A09 · A10'],
+    ['Lo recuperado llega al modelo marcado como no fiable', 'API10'],
   ]
-  owasp.forEach(([codigo, nombre, medida], k) => {
+  owasp.forEach(([medida, codigos], k) => {
     const y = 2.28 + k * 0.44
-    s.addText(codigo, {
-      x: 0.85, y, w: 0.8, h: 0.4, margin: 0, valign: 'middle',
-      fontFace: 'Arial', fontSize: 11, bold: true, color: AZUL,
-    })
-    s.addText(nombre, {
-      x: 1.65, y, w: 4.35, h: 0.4, margin: 0, valign: 'middle',
-      fontFace: 'Arial', fontSize: 11.5, bold: true, color: TINTA,
-    })
     s.addText(medida, {
-      x: 6.1, y, w: 6.35, h: 0.4, margin: 0, valign: 'middle',
-      fontFace: 'Calibri', fontSize: 12, color: GRIS,
+      x: 0.85, y, w: 8.3, h: 0.4, margin: 0, valign: 'middle',
+      fontFace: 'Calibri', fontSize: 13, color: TINTA,
+    })
+    s.addText(codigos, {
+      x: 9.3, y, w: 3.15, h: 0.4, margin: 0, valign: 'middle', align: 'right',
+      fontFace: 'Arial', fontSize: 11, bold: true, color: AZUL,
     })
   })
 
   pie(s)
   s.addNotes(
-    'Esta es la tabla de seguridad. Uso el API Security Top 10 y no el Top 10 de ' +
-    'aplicaciones web porque lo que este proyecto expone es una API REST: sus tres primeros ' +
-    'riesgos son fallos de autorización a nivel de objeto, de propiedad y de función, que en ' +
-    'la lista web ni siquiera aparecen como categorías propias.\n\n' +
-    'No la voy a leer entera, pero quiero que se vea que las diez categorías están cubiertas ' +
-    'con una medida concreta y no con una declaración de intenciones.\n\n' +
-    'Destaco cuatro. La primera: cuando pides una sesión de diagnóstico que no es tuya, la ' +
-    'API responde 404 y no 403, para no confirmar siquiera que existe.\n\n' +
-    'La cuarta: los límites de peticiones no son uno global, van por familia. El diagnóstico ' +
-    'cognitivo, que es el que cuesta dinero porque llama al modelo, tiene el más estricto, ' +
-    'cinco por minuto.\n\n' +
-    'La sexta es la que más me importa por lo que hay al otro lado: el borrado de códigos de ' +
-    'avería es el único flujo destructivo sobre el coche, así que tiene su propio límite y ' +
-    'se puede apagar entero con una variable de entorno. Y además el adaptador valida el ' +
+    'Seguridad. Aquí hay dos listas de OWASP en juego, y las dos aplican: la de APIs, ' +
+    'porque el backend es una API REST, y la general de aplicaciones web en su edición de ' +
+    '2025, porque la interfaz es una web. En lugar de enseñarlas por separado y repetirme, ' +
+    'la tabla va por medida: a la izquierda lo que hace el código, a la derecha las ' +
+    'categorías que esa medida cubre en una lista y en la otra.\n\n' +
+    'No la voy a leer entera. Destaco cuatro.\n\n' +
+    'La primera: cuando pides una sesión de diagnóstico que no es tuya, la API responde 404 ' +
+    'y no 403, para no confirmar siquiera que existe.\n\n' +
+    'Los límites de peticiones no son uno global, van por familia: el diagnóstico cognitivo, ' +
+    'que es el que cuesta dinero porque llama al modelo, tiene el más estricto. Y los ' +
+    'contadores ya no viven en memoria, así que un reinicio no los borra.\n\n' +
+    'La de la configuración es la que más me importa por lo que se arregló esta semana: los ' +
+    'contenedores publicaban sus puertos en todas las interfaces, o sea que se llegaba a la ' +
+    'API por la IP del servidor sin pasar por el proxy, saltándose el TLS y pudiendo falsear ' +
+    'la IP de origen. Ahora la API y la interfaz solo se publican en loopback y los ' +
+    'emuladores no se publican en absoluto.\n\n' +
+    'Y la última: todo lo que viene de fuera, la búsqueda web y los casos previos de otros ' +
+    'talleres, llega al modelo etiquetado como material no fiable, y el system prompt le ' +
+    'dice que eso es referencia y nunca una orden. A eso se suma que el adaptador valida el ' +
     'modo OBD contra una lista blanca antes de tocar el socket, con un test de invariante ' +
-    'que falla si alguien añade un método que emita un servicio de control.\n\n' +
-    'Y la décima: todo lo que viene de fuera —la búsqueda web y los casos previos de otros ' +
-    'talleres— llega al modelo etiquetado como material no fiable, y el system prompt le ' +
-    'dice que eso es referencia y nunca una orden.\n\n' +
-    'Los riesgos residuales están escritos y asumidos, no escondidos: los tokens en ' +
-    'localStorage, la ausencia de MFA, la base sin cifrar en disco y los límites de ' +
-    'peticiones en memoria.\n\n' +
-    '[~60 s · acumulado 19:25]',
-  )
-}
-
-// ======= OWASP TOP 10 (APLICACIONES WEB) =================================
-{
-  const s = pres.addSlide()
-  s.background = { color: BLANCO }
-
-  s.addText('OWASP Top 10 2025', {
-    x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
-  })
-  s.addText('La interfaz es una aplicación web: el mismo ejercicio con la lista de aplicaciones web.', {
-    x: 0.85, y: 1.62, w: 11.6, h: 0.4, margin: 0, valign: 'top',
-    fontFace: 'Calibri', fontSize: 17, color: GRIS,
-  })
-
-  const web = [
-    ['A01', 'Broken Access Control', 'Sesión en todo /api, y ninguna URL de salida la elige el usuario'],
-    ['A02', 'Security Misconfiguration', 'Helmet en la API, CSP en la interfaz, puertos solo en loopback'],
-    ['A03', 'Software Supply Chain Failures', 'Lockfile, auditoría bloqueante e imágenes etiquetadas por commit'],
-    ['A04', 'Cryptographic Failures', 'bcrypt 12 rondas, secretos separados y secreto TOTP cifrado'],
-    ['A05', 'Injection', 'Consultas parametrizadas con Drizzle y validación Zod'],
-    ['A06', 'Insecure Design', 'Capas separadas, DTOs validados y límites por endpoint'],
-    ['A07', 'Authentication Failures', 'Segundo factor, bloqueo de cuenta y contraseña con reglas'],
-    ['A08', 'Software and Data Integrity Failures', 'Se despliega solo tras la verificación, y se comprueba después'],
-    ['A09', 'Security Logging and Alerting Failures', 'Registro estructurado y auditoría con IP, usuario y duración'],
-    ['A10', 'Mishandling of Exceptional Conditions', 'El error se registra entero y sale sin traza ni detalle interno'],
-  ]
-  web.forEach(([codigo, nombre, medida], k) => {
-    const y = 2.28 + k * 0.44
-    s.addText(codigo, {
-      x: 0.85, y, w: 0.8, h: 0.4, margin: 0, valign: 'middle',
-      fontFace: 'Arial', fontSize: 11, bold: true, color: AZUL,
-    })
-    s.addText(nombre, {
-      x: 1.65, y, w: 4.35, h: 0.4, margin: 0, valign: 'middle',
-      fontFace: 'Arial', fontSize: 11.5, bold: true, color: TINTA,
-    })
-    s.addText(medida, {
-      x: 6.1, y, w: 6.35, h: 0.4, margin: 0, valign: 'middle',
-      fontFace: 'Calibri', fontSize: 12, color: GRIS,
-    })
-  })
-
-  pie(s)
-  s.addNotes(
-    'La lista anterior cubre el backend, que es una API. La interfaz es otra cosa: es una ' +
-    'aplicación web, y ahí aplica el Top 10 general, en su edición de 2025. Mismo ejercicio: ' +
-    'las diez categorías con ' +
-    'la medida concreta.\n\n' +
-    'Destaco lo que es propio de la interfaz. React escapa el HTML por defecto y no se ' +
-    'inyecta marcado en crudo en ningún sitio con datos del usuario, que es por donde entra ' +
-    'el XSS. La política de contenido la sirve el nginx que sirve la interfaz, con script-src ' +
-    'propio y sin scripts en línea, y hay una comprobación en integración continua que ' +
-    'arranca nginx y verifica que las cabeceras salen. Los formularios validan con los mismos ' +
-    'esquemas Zod que usa la API, así que cliente y servidor no se pueden desincronizar.\n\n' +
-    'En la A02 quiero pararme: hasta esta semana los contenedores publicaban sus puertos en ' +
-    'todas las interfaces, o sea que se podía llegar a la API por la IP del servidor sin ' +
-    'pasar por el proxy, y con ello saltarse el TLS y falsear la IP de origen. Ahora la API y ' +
-    'la interfaz solo se publican en loopback y los emuladores no se publican en absoluto. ' +
-    'Desde fuera solo queda el 443.\n\n' +
-    'Y una decisión consciente en la A04: el token viaja en cabecera Bearer y no en cookie. ' +
-    'Eso elimina el CSRF de raíz, y a cambio vive en el navegador. La respuesta a eso no es ' +
-    'esconderlo, es que no haya por dónde leerlo, que es todo lo de arriba. El secreto del ' +
-    'segundo factor, que sí sería una llave, va cifrado con AES-256-GCM y su clave no vive en ' +
-    'la base de datos.\n\n' +
-    '[~50 s · acumulado 20:15]',
+    'que falla si alguien añade un método que emita un servicio de control sobre el ' +
+    'vehículo.\n\n' +
+    '[~70 s · acumulado 19:35]',
   )
 }
 
@@ -1600,7 +1528,7 @@ function pie(s) {
     'semanas sin exigir nada. Estaba verde, y no comprobaba lo que decía comprobar. Lo he ' +
     'documentado en la deuda conocida del proyecto.\n\n' +
     'Así que sí, acelera mucho. Pero no es todo tan bonito como parece: hay que dedicarle ' +
-    'tiempo a revisar.\n\n[~45 s · acumulado 21:00]',
+    'tiempo a revisar.\n\n[~45 s · acumulado 20:20]',
   )
 }
 

@@ -1,6 +1,6 @@
 # Indice de la defensa — cerrado
 
-> 21 slides, ~21:00, en bloques: el problema, que resuelve, como funciona,
+> 20 slides, ~20:20, en bloques: el problema, que resuelve, como funciona,
 > como esta construida, las piezas, el resultado y el cierre. **Se trabaja punto por punto**: el autor cuenta que va en el punto,
 > se maqueta, se valida, y solo entonces se pasa al siguiente. Nada de adelantar slides.
 
@@ -23,12 +23,13 @@
 | 15 | Resultados: la aplicacion en funcionamiento | El resultado | pendiente |
 | 16 | Calidad del codigo | El resultado · proceso | **rehecha** |
 | 17 | Integracion y despliegue continuos | El resultado · proceso | **reordenada** |
-| 18 | OWASP API Top 10 2023 | El resultado · seguridad | **nueva** |
-| 19 | OWASP Top 10 2025 | El resultado · seguridad | **nueva** |
-| 20 | Conclusiones | Cierre | pendiente |
-| 21 | Gracias por la atencion | Cierre | pendiente |
+| 18 | OWASP API Top 10 2023 y Top 10 2025 | El resultado · seguridad | **fusionada** |
+| 19 | Conclusiones | Cierre | pendiente |
+| 20 | Gracias por la atencion | Cierre | pendiente |
 
-**Suma: ~21:00.**
+> **Los titulos los revisa el autor.** Se le propuso una tanda y la rechazo.
+
+**Suma: ~20:20.**
 
 ## Cambios acordados sobre la primera propuesta
 
@@ -56,6 +57,11 @@
   el orden y tres nombres, entran `Software Supply Chain Failures` y `Mishandling of
   Exceptional Conditions`, y SSRF se absorbe dentro de `Broken Access Control`.
   **`docs/security.md` sigue en 2021: hay que actualizarlo para que no se contradigan.**
+- **Las dos de OWASP se fusionan en una** (2026-08-26): dos tablas de diez con solape
+  real (A01 se parecia a API1 y API5, A02 a API8, A07 a API2). La tabla nueva va por
+  medida, no por categoria: cada fila dice lo que hace el codigo y que categorias cubre
+  en las dos listas. Diez filas en vez de veinte, y el solape deja de verse como
+  repeticion para verse como cobertura.
 - **Las dos slides de seguridad, mismo formato** (2026-08-26): la 17 era de columnas y
   la 16 una tabla. Ahora las dos son la misma tabla: codigo, nombre oficial y medida.
   La 16 es la lista de APIs (backend), la 17 la de aplicaciones web (interfaz). El
