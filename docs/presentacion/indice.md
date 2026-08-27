@@ -8,24 +8,24 @@
 |---|---|---|---|
 | 1 | Portada | | **validada** |
 | 2 | Indice | | **nueva** |
-| 3 | Diagnostico de averias de vehiculos asistido por IA | 1 Introduccion | pendiente |
-| 4 | Flujo de trabajo | 2 Funcionamiento | **validada** |
-| 5 | Diagnostico determinista y diagnostico cognitivo | 2 Funcionamiento | pendiente |
-| 6 | Tecnologias utilizadas | 3 Diseno | pendiente |
-| 7 | Clean Architecture + Hexagonal | 3 Diseno | **rehecha** |
-| 8 | Adquisicion de datos mediante OBD-II | 4 Implementacion | pendiente |
-| 9 | Persistencia: modelo relacional y modelo vectorial | 4 Implementacion | pendiente |
-| 10 | Base de datos relacional | 4 Implementacion | pendiente |
-| 11 | Base de datos vectorial e indice de confianza | 4 Implementacion | pendiente |
-| 12 | Model Context Protocol: herramientas del agente | 4 Implementacion | pendiente |
-| 13 | Ciclo de razonamiento del agente | 4 Implementacion | pendiente |
-| 14 | Modelos empleados: lenguaje y embeddings | 4 Implementacion | pendiente |
-| 15 | La interfaz del mecanico | 4 Implementacion | **nueva** |
-| 16 | Resultados: la aplicacion en funcionamiento | 5 Resultados | pendiente |
-| 17 | Calidad del codigo | 6 Calidad y seguridad | **rehecha** |
-| 18 | Integracion y despliegue continuos | 6 Calidad y seguridad | **reordenada** |
-| 19 | Modelo de seguridad | 6 Calidad y seguridad | **fusionada** |
-| 20 | Conclusiones | 7 Conclusiones | pendiente |
+| 3 | Diagnostico de averias de vehiculos asistido por IA| 1 Introduccion | pendiente |
+| 4 | Flujo de trabajo| 2 Funcionamiento | **validada** |
+| 5 | Diagnostico determinista y diagnostico cognitivo| 2 Funcionamiento | pendiente |
+| 6 | Tecnologias utilizadas| 3 Diseno | pendiente |
+| 7 | Clean Architecture + Hexagonal| 3 Diseno | **rehecha** |
+| 8 | Adquisicion de datos mediante OBD-II| 4 Implementacion | pendiente |
+| 9 | Persistencia: modelo relacional y modelo vectorial| 4 Implementacion | pendiente |
+| 10 | Base de datos relacional| 4 Implementacion | pendiente |
+| 11 | Base de datos vectorial e indice de confianza| 4 Implementacion | pendiente |
+| 12 | Model Context Protocol: herramientas del agente| 4 Implementacion | pendiente |
+| 13 | Ciclo de razonamiento del agente| 4 Implementacion | pendiente |
+| 14 | Modelos empleados: lenguaje y embeddings| 4 Implementacion | pendiente |
+| 15 | La interfaz del mecanico| 4 Implementacion | **nueva** |
+| 16 | Resultados: la aplicacion en funcionamiento| 5 Resultados | pendiente |
+| 17 | Calidad del codigo| 6 Calidad y seguridad | **rehecha** |
+| 18 | Integracion y despliegue continuos| 6 Calidad y seguridad | **reordenada** |
+| 19 | Modelo de seguridad| 6 Calidad y seguridad | **fusionada** |
+| 20 | Conclusiones| 7 Conclusiones | pendiente |
 | 21 | Gracias por la atencion | | pendiente |
 
 > **Los titulos los revisa el autor.** Se le propuso una tanda y la rechazo.
@@ -58,6 +58,11 @@
   el orden y tres nombres, entran `Software Supply Chain Failures` y `Mishandling of
   Exceptional Conditions`, y SSRF se absorbe dentro de `Broken Access Control`.
   **`docs/security.md` sigue en 2021: hay que actualizarlo para que no se contradigan.**
+- **Titulos numerados** (2026-08-26): el indice y las slides no se relacionaban. Cada
+  titulo lleva delante su numero de seccion en azul (`4.2 Persistencia: ...`), asi que
+  desde cualquier slide se sabe en que punto del indice estas. Seis titulos largos
+  bajan a 29 pt para que el numero no los parta en dos lineas.
+  **Si se reordena una slide hay que renumerarla a mano.**
 - **Slide de indice** (2026-08-26): se saltaba de una slide a otra sin saber en que
   parte de la charla estabas. Se probo con un rotulo de bloque encima de cada titulo
   y el autor lo rechazo: no se ve en otras presentaciones y mete parafernalia. La

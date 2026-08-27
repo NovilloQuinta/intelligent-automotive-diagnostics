@@ -146,7 +146,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Diagnóstico de averías de vehículos asistido por IA', {
+  s.addText([
+      { text: '1.1  ', options: { color: AZUL } },
+      { text: 'Diagnóstico de averías de vehículos asistido por IA' },
+    ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.9, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
   })
@@ -221,7 +224,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Flujo de trabajo', {
+  s.addText([
+      { text: '2.1  ', options: { color: AZUL } },
+      { text: 'Flujo de trabajo' },
+    ], {
     x: 0.85, y: 0.42, w: 11.6, h: 0.65, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 30, bold: true, color: TINTA,
   })
@@ -347,9 +353,12 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Diagnóstico determinista y diagnóstico cognitivo', {
+  s.addText([
+      { text: '2.2  ', options: { color: AZUL } },
+      { text: 'Diagnóstico determinista y diagnóstico cognitivo' },
+    ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 29, bold: true, color: TINTA,
   })
   s.addText('El determinista siempre está disponible; el cognitivo requiere un modelo configurado.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
@@ -415,7 +424,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Tecnologías utilizadas', {
+  s.addText([
+      { text: '3.1  ', options: { color: AZUL } },
+      { text: 'Tecnologías utilizadas' },
+    ], {
     x: 0.85, y: 0.6, w: 11.6, h: 0.8, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -474,7 +486,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Clean Architecture + Hexagonal', {
+  s.addText([
+      { text: '3.2  ', options: { color: AZUL } },
+      { text: 'Clean Architecture + Hexagonal' },
+    ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -573,9 +588,12 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Adquisición de datos mediante OBD-II', {
+  s.addText([
+      { text: '4.1  ', options: { color: AZUL } },
+      { text: 'Adquisición de datos mediante OBD-II' },
+    ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 29, bold: true, color: TINTA,
   })
   s.addText('Ejemplo: lectura del régimen de giro del motor.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
@@ -662,9 +680,12 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Persistencia: modelo relacional y modelo vectorial', {
+  s.addText([
+      { text: '4.2  ', options: { color: AZUL } },
+      { text: 'Persistencia: modelo relacional y modelo vectorial' },
+    ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 29, bold: true, color: TINTA,
   })
   s.addText('Una responde por clave exacta; la otra, por similitud semántica.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
@@ -725,7 +746,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Base de datos relacional', {
+  s.addText([
+      { text: '4.3  ', options: { color: AZUL } },
+      { text: 'Base de datos relacional' },
+    ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -801,7 +825,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Base de datos vectorial e índice de confianza', {
+  s.addText([
+      { text: '4.4  ', options: { color: AZUL } },
+      { text: 'Base de datos vectorial e índice de confianza' },
+    ], {
     x: 0.85, y: 0.65, w: 11.6, h: 0.8, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -917,9 +944,12 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Model Context Protocol: herramientas del agente', {
+  s.addText([
+      { text: '4.5  ', options: { color: AZUL } },
+      { text: 'Model Context Protocol: herramientas del agente' },
+    ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 29, bold: true, color: TINTA,
   })
   s.addText('El modelo no accede al vehículo: solicita herramientas y el sistema decide si se ejecutan.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
@@ -1009,7 +1039,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Ciclo de razonamiento del agente', {
+  s.addText([
+      { text: '4.6  ', options: { color: AZUL } },
+      { text: 'Ciclo de razonamiento del agente' },
+    ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -1095,9 +1128,12 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Modelos empleados: lenguaje y embeddings', {
+  s.addText([
+      { text: '4.7  ', options: { color: AZUL } },
+      { text: 'Modelos empleados: lenguaje y embeddings' },
+    ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
-    fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
+    fontFace: 'Arial', fontSize: 29, bold: true, color: TINTA,
   })
   s.addText('Uno razona y es intercambiable; el otro genera los vectores y se ejecuta en local.', {
     x: 0.85, y: 1.65, w: 11.6, h: 0.4, margin: 0, valign: 'top',
@@ -1165,7 +1201,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('La interfaz del mecánico', {
+  s.addText([
+      { text: '4.8  ', options: { color: AZUL } },
+      { text: 'La interfaz del mecánico' },
+    ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -1230,7 +1269,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Resultados: la aplicación en funcionamiento', {
+  s.addText([
+      { text: '5.1  ', options: { color: AZUL } },
+      { text: 'Resultados: la aplicación en funcionamiento' },
+    ], {
     x: 0.85, y: 0.55, w: 11.6, h: 0.75, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
   })
@@ -1281,7 +1323,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Calidad del código', {
+  s.addText([
+      { text: '6.1  ', options: { color: AZUL } },
+      { text: 'Calidad del código' },
+    ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -1349,7 +1394,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Integración y despliegue continuos', {
+  s.addText([
+      { text: '6.2  ', options: { color: AZUL } },
+      { text: 'Integración y despliegue continuos' },
+    ], {
     x: 0.85, y: 0.55, w: 11.6, h: 0.75, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 32, bold: true, color: TINTA,
   })
@@ -1448,7 +1496,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Modelo de seguridad', {
+  s.addText([
+      { text: '6.3  ', options: { color: AZUL } },
+      { text: 'Modelo de seguridad' },
+    ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
@@ -1520,7 +1571,10 @@ function pie(s) {
   const s = pres.addSlide()
   s.background = { color: BLANCO }
 
-  s.addText('Conclusiones', {
+  s.addText([
+      { text: '7.1  ', options: { color: AZUL } },
+      { text: 'Conclusiones' },
+    ], {
     x: 0.85, y: 0.7, w: 11.6, h: 0.85, margin: 0, valign: 'top',
     fontFace: 'Arial', fontSize: 34, bold: true, color: TINTA,
   })
