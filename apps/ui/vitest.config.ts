@@ -32,6 +32,19 @@ export default defineConfig({
         "src/hooks/use-mobile.tsx", // shadcn/ui hook — TIER INFRA
         "src/lib/utils.ts", // shadcn/ui utility — TIER INFRA
         "src/routes/__root.tsx", // infrastructure: route config + providers + Toaster
+        // Rutas que solo declaran `createFileRoute` y montan un componente ya
+        // testeado aparte, con un titulo como mucho. Son 6-15 lineas de glue de
+        // TanStack: la misma naturaleza que `__root.tsx` de aqui arriba, que ya
+        // estaba excluido siendo 121 lineas y bastante mas sustancial.
+        // Las rutas CON logica propia (`admin.tsx`, `login.tsx`, `profile.tsx`,
+        // `index.tsx`, `forgot-password.tsx`, `reset-password.tsx`,
+        // `history.$sessionId.tsx`) NO se excluyen y siguen midiendose.
+        "src/routes/history.tsx",
+        "src/routes/admin.index.tsx",
+        "src/routes/admin.users.tsx",
+        "src/routes/admin.logs.tsx",
+        "src/routes/admin.audit.tsx",
+        "src/routes/admin.knowledge.tsx",
       ],
       thresholds: {
         statements: 80,

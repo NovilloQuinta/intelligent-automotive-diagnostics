@@ -10,7 +10,12 @@ vi.mock('../../../src/lib/api', () => ({
   },
 }))
 
+vi.mock('sonner', () => ({
+  toast: { success: vi.fn(), error: vi.fn() },
+}))
+
 import { api } from '../../../src/lib/api'
+import { toast } from 'sonner'
 
 function wrapper({ children }: { children: React.ReactNode }) {
   const qc = new QueryClient({
@@ -106,5 +111,64 @@ describe('useDiagnosis', () => {
       expect(result.current.result).toBeNull()
     })
     expect(result.current.loading).toBe(false)
+  })
+
+  it('avisa con un toast de error y el mensaje real cuando el diagnostico falla', async () => {
+    vi.mocked(api.runDiagnosis).mockRejectedValueOnce(new Error('ELM327 sin responder'))
+
+    const { result } = renderHook(() => useDiagnosis('audi-a3-idle'), { wrapper })
+
+    await act(async () => {
+      await result.current.runDiagnosis().catch(() => undefined)
+    })
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Error de diagnóstico', {
+        description: 'ELM327 sin responder',
+      })
+    })
+    expect(result.current.result).toBeNull()
+    expect(result.current.loading).toBe(false)
+  })
+
+  // Lo que se lanza en un `catch` no siempre es un Error: sin el respaldo, el
+  // mecanico veria `undefined` como descripcion del fallo.
+  it('usa el mensaje de respaldo cuando lo lanzado no es un Error', async () => {
+    vi.mocked(api.runDiagnosis).mockRejectedValueOnce('boom')
+
+    const { result } = renderHook(() => useDiagnosis('audi-a3-idle'), { wrapper })
+
+    await act(async () => {
+      await result.current.runDiagnosis().catch(() => undefined)
+    })
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith('Error de diagnóstico', {
+        description: 'Fallo al ejecutar el diagnóstico',
+      })
+    })
+  })
+
+  it('anuncia la severidad en el toast de exito', async () => {
+    vi.mocked(api.runDiagnosis).mockResolvedValueOnce({
+      rawData: '{}',
+      parsedValues: { rpm: 750, coolantTemp: 90, speed: 0, intakeTemp: 25 },
+      dtcCodes: [],
+      diagnosisText: '[LOW] No faults',
+      severity: 'low' as const,
+    })
+
+    const { result } = renderHook(() => useDiagnosis('audi-a3-idle'), { wrapper })
+
+    await act(async () => {
+      await result.current.runDiagnosis()
+    })
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith(
+        'Diagnóstico completado',
+        expect.objectContaining({ description: expect.stringContaining('Severidad:') }),
+      )
+    })
   })
 })

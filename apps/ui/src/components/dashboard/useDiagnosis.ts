@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { extractErrorMessage } from '@/lib/errors'
@@ -12,10 +12,14 @@ export function useDiagnosis(selectedId: string) {
   const queryClient = useQueryClient()
   const queryKey = [DIAGNOSIS_QUERY_KEY, selectedId] as const
 
+  // Esta query no busca nada: solo se suscribe a la entrada de cache que escribe
+  // `onSuccess` mas abajo, para que el resultado se limpie solo al cambiar de
+  // vehiculo. `skipToken` lo dice de forma explicita y con tipos; antes habia un
+  // `queryFn` que duplicaba `mutationFn` y era inalcanzable —con `enabled: false`
+  // y sin exponer `refetch`, nada podia dispararlo—.
   const { data: result } = useQuery<DiagnosisResponse>({
     queryKey,
-    queryFn: () => api.runDiagnosis(selectedId),
-    enabled: false,
+    queryFn: skipToken,
   })
 
   const mutation = useMutation({

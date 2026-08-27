@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { DataTableFilters } from '../../../../src/components/admin/DataTableFilters'
 
 const BASE_PAGINATION = {
@@ -139,5 +140,19 @@ describe('DataTableFilters', () => {
     expect(screen.getByRole('button', { name: /hoy/i })).toBeDefined()
     expect(screen.getByRole('button', { name: /7 d/i })).toBeDefined()
     expect(screen.getByRole('button', { name: /30 d/i })).toBeDefined()
+  })
+
+  // El desplegable de tamano de pagina entrega un string; la tabla espera un
+  // numero. Sin la conversion, el backend recibe "50" y pagina de forma erratica.
+  it('should call onPageSizeChange with a number when the page size changes', async () => {
+    const onPageSizeChange = vi.fn()
+    render(
+      <DataTableFilters {...BASE_PROPS} pagination={{ ...BASE_PAGINATION, onPageSizeChange }} />,
+    )
+
+    await userEvent.click(screen.getByRole('combobox'))
+    await userEvent.click(await screen.findByRole('option', { name: '50' }))
+
+    expect(onPageSizeChange).toHaveBeenCalledWith(50)
   })
 })

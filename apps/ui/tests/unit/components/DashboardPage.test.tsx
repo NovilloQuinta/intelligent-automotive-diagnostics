@@ -867,4 +867,84 @@ describe('DashboardPage', () => {
     const checked = screen.getAllByRole('checkbox').filter((c) => (c as HTMLInputElement).checked)
     expect(checked).toHaveLength(4)
   })
+
+  it('should send the typed question to the cognitive diagnosis', () => {
+    mockAuthStatus.value = 'authed'
+    const trigger = vi.fn()
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario],
+      selectedId: scenario.id,
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    })
+    mockUseCapabilities.mockReturnValue({ cognitiveDiagnosis: true })
+    mockUseCognitiveDiagnosis.mockReturnValue({
+      pidRows: null,
+      loading: false,
+      trigger,
+      reset: vi.fn(),
+      diagnosisText: 'Revisar bujías.',
+      severity: 'high',
+      confidence: 0.9,
+      recommendations: null,
+      // El campo de repregunta solo aparece con conversacion ya empezada.
+      conversationHistory: [
+        { __type: 'user_message', content: 'diagnostica el coche' },
+        { __type: 'raw_response', content: 'Revisar bujías.' },
+      ],
+    })
+
+    render(<DashboardPage />)
+
+    fireEvent.click(screen.getByTitle('Diagnóstico'))
+    fireEvent.change(screen.getByPlaceholderText('Pregunta al mecánico...'), {
+      target: { value: '¿por qué falla el cilindro 1?' },
+    })
+    fireEvent.click(screen.getByText('Enviar'))
+
+    expect(trigger).toHaveBeenCalledWith('¿por qué falla el cilindro 1?')
+  })
+
+  // La pantalla del wizard tiene su propia cabecera: cerrar sesion tiene que
+  // funcionar tambien antes de haber identificado ningun vehiculo.
+  it('should call auth.logout from the identification wizard screen', () => {
+    mockAuthStatus.value = 'authed'
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario],
+      selectedId: '',
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    })
+    mockUseVehicleAutoDetect.mockReturnValue(
+      wizardState({ step: 'selecting', scenarioId: '', vehicle: null }),
+    )
+
+    render(<DashboardPage />)
+
+    fireEvent.click(screen.getByTitle('Cerrar sesión'))
+
+    expect(mockLogout).toHaveBeenCalledTimes(1)
+  })
+
+  // Sin vehiculo confirmado el menu lateral no navega a ningun sitio: pulsarlo
+  // no debe romper nada ni sacar al usuario del wizard.
+  it('should stay on the wizard when a sidebar section is clicked without a vehicle', () => {
+    mockAuthStatus.value = 'authed'
+    mockUseScenarios.mockReturnValue({
+      scenarios: [scenario],
+      selectedId: '',
+      setSelectedId: vi.fn(),
+      scenariosError: null,
+    })
+    mockUseVehicleAutoDetect.mockReturnValue(
+      wizardState({ step: 'selecting', scenarioId: '', vehicle: null }),
+    )
+
+    render(<DashboardPage />)
+
+    fireEvent.click(screen.getByTitle('Diagnóstico'))
+
+    expect(screen.getByText('Identificación del vehículo')).toBeDefined()
+    expect(screen.queryByText('Telemetría en vivo')).toBeNull()
+  })
 })
