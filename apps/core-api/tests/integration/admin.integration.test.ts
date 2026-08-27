@@ -1,7 +1,6 @@
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import request from 'supertest'
-import Database from 'better-sqlite3'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { getDb, resetDb } from '@/infrastructure/persistence/sqlite/db.js'
 import { vi } from 'vitest'
 import { createServer } from '@/infrastructure/http/server.js'
 import { createAdminController } from '@/infrastructure/composition/admin.js'
@@ -51,54 +50,8 @@ describe('Admin integration', () => {
   let adminToken: string
 
   beforeAll(async () => {
-    const sqlite = new Database(':memory:')
-    sqlite.pragma('foreign_keys = ON')
-    sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL UNIQUE,
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        user_type TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'user',
-        business_name TEXT,
-        tax_id TEXT,
-        address TEXT,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        failed_login_attempts INTEGER NOT NULL DEFAULT 0,
-        locked_until TEXT,
-        two_factor_secret TEXT,
-        two_factor_enabled INTEGER NOT NULL DEFAULT 0
-      );
-      CREATE TABLE IF NOT EXISTS refresh_tokens (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL REFERENCES users(id),
-        token_hash TEXT NOT NULL UNIQUE,
-        expires_at TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        revoked_at TEXT
-      );
-      CREATE TABLE IF NOT EXISTS logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        level TEXT NOT NULL,
-        message TEXT NOT NULL,
-        context TEXT,
-        created_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-      CREATE TABLE IF NOT EXISTS audit_logs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        method TEXT NOT NULL,
-        path TEXT NOT NULL,
-        status_code INTEGER NOT NULL,
-        ip TEXT,
-        user_agent TEXT,
-        duration_ms INTEGER,
-        user_id INTEGER,
-        created_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-    `)
-
-    const db = drizzle(sqlite)
+    resetDb()
+    const db = getDb()
     const userRepo = new SqliteUserRepository(db)
     const logRepo = new SqliteLogRepository(db)
     const auditRepo = new SqliteAuditLogRepository(db)
@@ -186,6 +139,10 @@ describe('Admin integration', () => {
       auditRepo: mockAuditRepo,
       logger: mockLogger,
     })
+  })
+
+  afterAll(() => {
+    resetDb()
   })
 
   const endpoints: { method: 'get' | 'post'; path: string }[] = [

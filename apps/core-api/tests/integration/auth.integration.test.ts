@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeAll } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import request from 'supertest'
-import Database from 'better-sqlite3'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { sql } from 'drizzle-orm'
+import { getDb, resetDb } from '@/infrastructure/persistence/sqlite/db.js'
+import type { DiagnosticsDb } from '@/infrastructure/persistence/sqlite/db.js'
 import { createServer } from '@/infrastructure/http/server.js'
 import type { AuditLogRepository } from '@/application/ports/AuditLogRepository.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
@@ -57,50 +58,13 @@ describe('Auth integration', () => {
   let app: ReturnType<typeof createServer>
   let emailSender: CapturingEmailSender
   let userRepo: SqliteUserRepository
-  let rawDb: Database.Database
+  let rawDb: DiagnosticsDb
   let authServiceForSeed: ReturnType<typeof createAuthService>
 
   beforeAll(() => {
-    const sqlite = new Database(':memory:')
-    sqlite.pragma('foreign_keys = ON')
-    rawDb = sqlite
-
-    sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL UNIQUE,
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        user_type TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'user',
-        business_name TEXT,
-        tax_id TEXT,
-        address TEXT,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        failed_login_attempts INTEGER NOT NULL DEFAULT 0,
-        locked_until TEXT,
-        two_factor_secret TEXT,
-        two_factor_enabled INTEGER NOT NULL DEFAULT 0
-      );
-      CREATE TABLE IF NOT EXISTS refresh_tokens (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL REFERENCES users(id),
-        token_hash TEXT NOT NULL UNIQUE,
-        expires_at TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        revoked_at TEXT
-      );
-      CREATE TABLE IF NOT EXISTS password_reset_tokens (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL REFERENCES users(id),
-        token_hash TEXT NOT NULL UNIQUE,
-        expires_at TEXT NOT NULL,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        used_at TEXT
-      );
-    `)
-
-    const db = drizzle(sqlite)
+    resetDb()
+    const db = getDb()
+    rawDb = db
     userRepo = new SqliteUserRepository(db)
     const tokenStore = new SqliteRefreshTokenStore(db)
     const passwordResetTokenRepo = new SqlitePasswordResetTokenRepository(db)
@@ -161,6 +125,10 @@ describe('Auth integration', () => {
       auditRepo: mockAuditRepo,
       logger: mockLogger,
     })
+  })
+
+  afterAll(() => {
+    resetDb()
   })
 
   describe('POST /api/auth/register', () => {
@@ -295,7 +263,7 @@ describe('Auth integration', () => {
 
     it('should let the user in again once the lockout window has passed', async () => {
       const expired = new Date(Date.now() - 1000).toISOString()
-      rawDb.prepare('UPDATE users SET locked_until = ? WHERE email = ?').run(expired, LOCKED_EMAIL)
+      rawDb.run(sql`UPDATE users SET locked_until = ${expired} WHERE email = ${LOCKED_EMAIL}`)
 
       await request(app)
         .post('/api/auth/login')
@@ -305,9 +273,9 @@ describe('Auth integration', () => {
 
     it('should restart the counter after an expired lockout instead of relocking on one typo', async () => {
       const expired = new Date(Date.now() - 1000).toISOString()
-      rawDb
-        .prepare('UPDATE users SET failed_login_attempts = 5, locked_until = ? WHERE email = ?')
-        .run(expired, LOCKED_EMAIL)
+      rawDb.run(
+        sql`UPDATE users SET failed_login_attempts = 5, locked_until = ${expired} WHERE email = ${LOCKED_EMAIL}`,
+      )
 
       await request(app)
         .post('/api/auth/login')

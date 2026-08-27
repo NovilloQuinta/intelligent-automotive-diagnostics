@@ -471,20 +471,24 @@ contenedor de desarrollo remoto trae el 1194. `playwright.config.ts` lee
 `PLAYWRIGHT_CHROMIUM_PATH` para apuntar al binario que exista — en CI no hace falta, porque
 `playwright install` baja el correcto.
 
-## El esquema de `users` esta escrito a mano en seis ficheros de test
+## El esquema de `users` a mano en seis ficheros de test — RESUELTO el 2026-08-27
 
-Detectado el 2026-08-26 al anadir dos columnas para el segundo factor: hubo que tocar
-**seis** ficheros de test que declaran su propio `CREATE TABLE users` en SQL crudo
-(`admin.integration`, `auth.integration`, `userRepository` —tres tablas—, `vehicleRepository`,
-`refreshTokenStore`, `passwordResetTokenRepository`).
+Seis ficheros declaraban su propio `CREATE TABLE users` en SQL crudo. Eran copias del
+esquema real que nada comprobaba: al anadir las dos columnas del segundo factor hubo que
+tocar los seis a mano, y dejarse uno daba un error de SQL que no decia nada del origen.
 
-Esas copias derivan de `schema.ts` sin que nada lo compruebe: si una se queda atras, su test
-falla con un error de SQL que no dice nada del origen real. El patron viene de antes y no lo
-introdujo este cambio, pero cada columna nueva lo hace mas caro.
+Los seis pasan a `resetDb()` + `getDb()`, que es lo que ya hacian `db.test.ts` y los tests
+del segundo factor: aplica **las migraciones reales** sobre una base en memoria. Ademas de
+no duplicar nada, ejercita la migracion generada, que es justo lo que puede fallar en
+produccion; antes se probaba contra un esquema inventado que se parecia al real.
 
-La salida barata es lo que ya hacen `db.test.ts` y los tests del segundo factor: `resetDb()` +
-`getDb()`, que aplica las migraciones reales sobre una base en memoria. Ademas de no duplicar
-nada, ejercita la migracion generada, que es justo lo que en produccion puede fallar.
+**404 lineas menos, 78 mas.** Mismo numero de tests antes y despues, que es lo que debe pasar
+en un refactor. Las migraciones no siembran datos —los dos `INSERT` de `drizzle/` son
+reconstrucciones de tabla—, asi que los tests que cuentan filas siguen valiendo.
+
+De paso desaparecieron los ultimos accesos al handle crudo de `better-sqlite3` dentro de los
+tests: los cuatro `prepare(...).run(...)` que quedaban pasan por `db.run(sql\`...\`)` de
+Drizzle, con los valores interpolados como parametros.
 
 ## `openapiSync.test.ts` no veia los routers no declarados — RESUELTO el 2026-08-27
 

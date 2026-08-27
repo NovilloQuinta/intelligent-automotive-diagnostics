@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeAll } from 'vitest'
-import Database from 'better-sqlite3'
-import { drizzle } from 'drizzle-orm/better-sqlite3'
-import { eq } from 'drizzle-orm'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { eq, sql } from 'drizzle-orm'
 import * as schema from '@/infrastructure/persistence/sqlite/schema.js'
+import { getDb, resetDb } from '@/infrastructure/persistence/sqlite/db.js'
+import type { DiagnosticsDb } from '@/infrastructure/persistence/sqlite/db.js'
 import { SqliteVehicleRepository } from '@/infrastructure/persistence/sqlite/vehicleRepository.js'
 import { VinDecodeError, Vin } from '@/domain/value-objects/Vin.js'
 import type { VehicleProfile } from '@/domain/entities/VehicleProfile.js'
@@ -14,146 +14,17 @@ import type { EcuDefinition } from '@/domain/entities/EcuDefinition.js'
 import { PidCode } from '@/domain/value-objects/PidCode.js'
 
 describe('SqliteVehicleRepository', () => {
-  let db: ReturnType<typeof drizzle>
+  let db: DiagnosticsDb
   let repo: SqliteVehicleRepository
-  let sqlite: InstanceType<typeof Database>
 
   beforeAll(() => {
-    sqlite = new Database(':memory:')
-    sqlite.pragma('journal_mode = WAL')
-    sqlite.pragma('foreign_keys = ON')
-
-    sqlite.exec(`
-      CREATE TABLE IF NOT EXISTS vehicles (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        vin TEXT NOT NULL UNIQUE,
-        make TEXT NOT NULL,
-        model TEXT NOT NULL,
-        year INTEGER NOT NULL,
-        engine_type TEXT NOT NULL,
-        first_seen TEXT NOT NULL DEFAULT (datetime('now')),
-        last_seen TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-
-      CREATE TABLE IF NOT EXISTS ecus (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        vehicle_id INTEGER NOT NULL REFERENCES vehicles(id),
-        name TEXT NOT NULL,
-        request_addr TEXT NOT NULL,
-        response_addr TEXT NOT NULL,
-        type TEXT NOT NULL,
-        protocol TEXT NOT NULL DEFAULT 'CAN_11_500',
-        discovered_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-
-      CREATE TABLE IF NOT EXISTS pid_definitions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        mode TEXT NOT NULL,
-        pid_code TEXT NOT NULL,
-        name TEXT NOT NULL,
-        description TEXT,
-        formula TEXT NOT NULL,
-        unit TEXT,
-        data_bytes INTEGER NOT NULL DEFAULT 1,
-        pid_type TEXT NOT NULL DEFAULT 'formula',
-        min_value REAL,
-        max_value REAL,
-        manufacturer TEXT,
-        model TEXT,
-        system TEXT,
-        confidence REAL NOT NULL DEFAULT 1.0,
-        source TEXT NOT NULL DEFAULT 'manual',
-        created_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-
-      CREATE UNIQUE INDEX IF NOT EXISTS pid_definitions_mode_pid_manufacturer_model_unique
-        ON pid_definitions (mode, pid_code, manufacturer, model);
-
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT NOT NULL UNIQUE,
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        user_type TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'user',
-        business_name TEXT,
-        tax_id TEXT,
-        address TEXT,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        failed_login_attempts INTEGER NOT NULL DEFAULT 0,
-        locked_until TEXT,
-        two_factor_secret TEXT,
-        two_factor_enabled INTEGER NOT NULL DEFAULT 0
-      );
-
-      CREATE TABLE IF NOT EXISTS diagnosis_sessions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        vehicle_id INTEGER REFERENCES vehicles(id),
-        user_id INTEGER REFERENCES users(id),
-        scenario_id TEXT,
-        started_at TEXT NOT NULL DEFAULT (datetime('now')),
-        ended_at TEXT,
-        result_json TEXT,
-        severity TEXT,
-        dtc_count INTEGER
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_diagnosis_sessions_user_started
-        ON diagnosis_sessions (user_id, started_at);
-
-      CREATE TABLE IF NOT EXISTS pid_readings (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        pid_def_id INTEGER REFERENCES pid_definitions(id),
-        session_id INTEGER NOT NULL REFERENCES diagnosis_sessions(id),
-        mode TEXT NOT NULL,
-        pid_code TEXT NOT NULL,
-        raw_hex TEXT NOT NULL,
-        parsed_value REAL,
-        timestamp TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_pid_readings_session_id
-        ON pid_readings (session_id);
-
-      CREATE TABLE IF NOT EXISTS dtc_definitions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        manufacturer TEXT NOT NULL,
-        model TEXT NOT NULL,
-        code TEXT NOT NULL,
-        description TEXT,
-        confidence REAL NOT NULL DEFAULT 0.5,
-        source TEXT NOT NULL DEFAULT 'web',
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        UNIQUE(manufacturer, model, code)
-      );
-
-      CREATE TABLE IF NOT EXISTS ecu_definitions (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        manufacturer TEXT NOT NULL,
-        model TEXT NOT NULL,
-        response_addr TEXT NOT NULL,
-        request_addr TEXT NOT NULL,
-        name TEXT NOT NULL,
-        type TEXT NOT NULL,
-        system TEXT,
-        confidence REAL NOT NULL DEFAULT 0.3,
-        source TEXT NOT NULL DEFAULT 'web',
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        UNIQUE(manufacturer, model, response_addr)
-      );
-
-      CREATE TABLE IF NOT EXISTS vehicle_identities (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        wmi TEXT NOT NULL UNIQUE,
-        manufacturer TEXT NOT NULL,
-        confidence REAL NOT NULL DEFAULT 0.3,
-        source TEXT NOT NULL DEFAULT 'web',
-        created_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-    `)
-
-    db = drizzle(sqlite, { schema })
+    resetDb()
+    db = getDb()
     repo = new SqliteVehicleRepository(db)
+  })
+
+  afterAll(() => {
+    resetDb()
   })
 
   const toyotaAuris: VehicleProfile = {
@@ -297,10 +168,9 @@ describe('SqliteVehicleRepository', () => {
         .limit(1)
 
       expect(row[0].system).toBe('Engine')
-      const columns = sqlite
-        .prepare(`SELECT name FROM pragma_table_info('pid_definitions')`)
-        .all()
-        .map((c) => (c as { name: string }).name)
+      const columns = db
+        .all<{ name: string }>(sql`SELECT name FROM pragma_table_info('pid_definitions')`)
+        .map((c) => c.name)
       expect(columns).not.toContain('vehicle_id')
       expect(columns).not.toContain('ecu_id')
     })
