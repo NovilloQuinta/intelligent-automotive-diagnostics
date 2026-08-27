@@ -163,7 +163,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 14, lineSpacing: 22 },
   )
 
-  pie(s, '1 · El proyecto')
+  pie(s, '1 · Introducción')
   s.addNotes(
     'Esto es una herramienta de diagnóstico de averías de coche. Se enchufa al coche, lee ' +
     'sus centralitas y le dice al mecánico qué le pasa y por dónde mirar.\n\n' +
@@ -286,7 +286,7 @@ function pie(s, bloque) {
     if (k > 0) flechaV(cxD, y - PITCH + CH, y)
   })
 
-  pie(s, '2 · Cómo funciona')
+  pie(s, '2 · Funcionamiento')
   s.addNotes(
     'Este es el flujo de trabajo completo.\n\n' +
     'Arranca arriba a la izquierda, donde arranca de verdad: se enchufa el adaptador al ' +
@@ -356,7 +356,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  pie(s, '2 · Cómo funciona')
+  pie(s, '2 · Funcionamiento')
   s.addNotes(
     'El sistema hace dos diagnósticos distintos, y conviven.\n\n' +
     'El determinista es el de toda la vida. Lee cuatro PIDs fijos —revoluciones, ' +
@@ -414,7 +414,7 @@ function pie(s, bloque) {
     })
   })
 
-  pie(s, '3 · Cómo está construida')
+  pie(s, '3 · Diseño')
   s.addNotes(
     'Con qué está hecho, por piezas.\n\n' +
     'Todo es TypeScript en modo estricto, sobre Node 22, tanto el backend como el ' +
@@ -497,7 +497,7 @@ function pie(s, bloque) {
   nodo('Lector ELM327 conectado al coche', 8.15, 5.86, 4.2, GRIS)
   nodo('Emulador en el portátil', 8.15, 6.30, 4.2, GRIS)
 
-  pie(s, '3 · Cómo está construida')
+  pie(s, '3 · Diseño')
   s.addNotes(
     'La arquitectura es Clean Architecture combinada con el patrón hexagonal. Tres capas: dominio, ' +
     'aplicación e infraestructura, y las dependencias siempre apuntando hacia dentro.\n\n' +
@@ -605,7 +605,7 @@ function pie(s, bloque) {
     { x: 0.85, y: 5.65, w: 11.6, h: 0.45, margin: 0, valign: 'middle',
       fontFace: 'Arial', fontSize: 19, bold: true },
   )
-  pie(s, '4 · Las piezas')
+  pie(s, '4 · Implementación')
   s.addNotes(
     'Esto es todo lo que hay que entender del OBD-II para seguir el resto de la charla.\n\n' +
     'La aplicación quiere saber a cuántas revoluciones está el motor. Manda dos bytes: 01 ' +
@@ -668,7 +668,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 12, lineSpacing: 22 },
   )
 
-  pie(s, '4 · Las piezas')
+  pie(s, '4 · Implementación')
   s.addNotes(
     'El proyecto tiene dos bases de datos, y cada una guarda una cosa distinta.\n\n' +
     'En SQLite va todo lo que se pide por una clave: los usuarios, que pueden ser ' +
@@ -740,7 +740,7 @@ function pie(s, bloque) {
     })
   })
 
-  pie(s, '4 · Las piezas')
+  pie(s, '4 · Implementación')
   s.addNotes(
     'En SQLite hay trece tablas, y ahí está todo lo que se puede pedir por una clave ' +
     'exacta.\n\n' +
@@ -849,7 +849,7 @@ function pie(s, bloque) {
     fontFace: 'Calibri', fontSize: 13, color: GRIS, lineSpacing: 17,
   })
 
-  pie(s, '4 · Las piezas')
+  pie(s, '4 · Implementación')
   s.addNotes(
     'En la base vectorial no van los datos del taller: esos están en SQLite. Aquí va solo ' +
     'lo que el sistema aprende. Hay PIDs propietarios, que cada fabricante se inventa fuera ' +
@@ -943,7 +943,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 14, color: TINTA, paraSpaceAfter: 10, lineSpacing: 20 },
   )
 
-  pie(s, '4 · Las piezas')
+  pie(s, '4 · Implementación')
   s.addNotes(
     'El modelo no toca el coche directamente. Lo que hace es pedir herramientas, y el ' +
     'sistema decide si las ejecuta y con qué argumentos. Ese contrato es el MCP, el Model ' +
@@ -1029,7 +1029,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 14, color: TINTA, paraSpaceAfter: 10, lineSpacing: 20 },
   )
 
-  pie(s, '4 · Las piezas')
+  pie(s, '4 · Implementación')
   s.addNotes(
     'Este es el recorrido completo, desde que el mecánico le da al botón.\n\n' +
     'Lo primero que pasa no lo hace la IA: el flujo determinista lee los PIDs generales del ' +
@@ -1106,7 +1106,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  pie(s, '4 · Las piezas')
+  pie(s, '4 · Implementación')
   s.addNotes(
     'Aquí hay dos modelos, y no hacen lo mismo.\n\n' +
     'El de lenguaje es el que razona, y es intercambiable: una variable de entorno decide ' +
@@ -1172,7 +1172,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  pie(s, '4 · Las piezas')
+  pie(s, '4 · Implementación')
   s.addNotes(
     'Hasta aquí he hablado del motor del sistema. Esto es lo que ve quien lo usa.\n\n' +
     'El recorrido del mecánico es corto a propósito: conecta el adaptador, la aplicación ' +
@@ -1225,7 +1225,7 @@ function pie(s, bloque) {
     })
   })
 
-  pie(s, '5 · El resultado')
+  pie(s, '5 · Resultados')
   s.addNotes(
     'Esto es la aplicación corriendo contra un Audi A3 2.0 TDI. Y quiero subrayar una ' +
     'cosa: nada de lo que se ve está escrito a mano. Todo sale del bus del coche.\n\n' +
@@ -1288,7 +1288,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  pie(s, '5 · El resultado')
+  pie(s, '6 · Calidad y seguridad')
   s.addNotes(
     'Este proyecto lo he hecho yo solo, así que lo que avisa de las roturas no es un ' +
     'compañero: son las comprobaciones automáticas.\n\n' +
@@ -1389,7 +1389,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 15, color: TINTA, paraSpaceAfter: 11, lineSpacing: 21 },
   )
 
-  pie(s, '5 · El resultado')
+  pie(s, '6 · Calidad y seguridad')
   s.addNotes(
     'Todo el ciclo está automatizado con GitHub Actions, y son dos flujos distintos.\n\n' +
     'El de integración continua se ejecuta en cada push y en cada pull request contra main ' +
@@ -1451,7 +1451,7 @@ function pie(s, bloque) {
     })
   })
 
-  pie(s, '5 · El resultado')
+  pie(s, '6 · Calidad y seguridad')
   s.addNotes(
     'Seguridad. Aquí hay dos listas de OWASP en juego, y las dos aplican: la de APIs, ' +
     'porque el backend es una API REST, y la general de aplicaciones web en su edición de ' +
@@ -1525,7 +1525,7 @@ function pie(s, bloque) {
       fontFace: 'Calibri', fontSize: 16, color: TINTA, paraSpaceAfter: 13, lineSpacing: 22 },
   )
 
-  pie(s, '6 · Conclusiones')
+  pie(s, '7 · Conclusiones')
   s.addNotes(
     'Para terminar, lo que me llevo de haber hecho esto.\n\n' +
     'Lo primero, que con IA se pueden construir cosas complejas mucho más rápido. Un ' +

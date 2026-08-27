@@ -7,25 +7,25 @@
 | # | Slide | Bloque | Estado |
 |---|---|---|---|
 | 1 | Portada | | **validada** |
-| 2 | Diagnostico de averias de vehiculos asistido por IA | Que es y que resuelve | pendiente |
-| 3 | Flujo de trabajo | Como funciona | **validada** |
-| 4 | Diagnostico determinista y diagnostico cognitivo | Como funciona | pendiente |
-| 5 | Tecnologias utilizadas | Como esta construida | pendiente |
-| 6 | Clean Architecture + Hexagonal | Como esta construida | **rehecha** |
-| 7 | Adquisicion de datos mediante OBD-II | Las piezas | pendiente |
-| 8 | Persistencia: modelo relacional y modelo vectorial | Las piezas | pendiente |
-| 9 | Base de datos relacional | Las piezas | pendiente |
-| 10 | Base de datos vectorial e indice de confianza | Las piezas | pendiente |
-| 11 | Model Context Protocol: herramientas del agente | Las piezas | pendiente |
-| 12 | Ciclo de razonamiento del agente | Las piezas | pendiente |
-| 13 | Modelos empleados: lenguaje y embeddings | Las piezas | pendiente |
-| 14 | La interfaz del mecanico | Las piezas | **nueva** |
-| 15 | Resultados: la aplicacion en funcionamiento | El resultado | pendiente |
-| 16 | Calidad del codigo | El resultado · proceso | **rehecha** |
-| 17 | Integracion y despliegue continuos | El resultado · proceso | **reordenada** |
-| 18 | Modelo de seguridad | El resultado · seguridad | **fusionada** |
-| 19 | Conclusiones | Cierre | pendiente |
-| 20 | Gracias por la atencion | Cierre | pendiente |
+| 2 | Diagnostico de averias de vehiculos asistido por IA | Introduccion | pendiente |
+| 3 | Flujo de trabajo | Funcionamiento | **validada** |
+| 4 | Diagnostico determinista y diagnostico cognitivo | Funcionamiento | pendiente |
+| 5 | Tecnologias utilizadas | Diseno | pendiente |
+| 6 | Clean Architecture + Hexagonal | Diseno | **rehecha** |
+| 7 | Adquisicion de datos mediante OBD-II | Implementacion | pendiente |
+| 8 | Persistencia: modelo relacional y modelo vectorial | Implementacion | pendiente |
+| 9 | Base de datos relacional | Implementacion | pendiente |
+| 10 | Base de datos vectorial e indice de confianza | Implementacion | pendiente |
+| 11 | Model Context Protocol: herramientas del agente | Implementacion | pendiente |
+| 12 | Ciclo de razonamiento del agente | Implementacion | pendiente |
+| 13 | Modelos empleados: lenguaje y embeddings | Implementacion | pendiente |
+| 14 | La interfaz del mecanico | Implementacion | **nueva** |
+| 15 | Resultados: la aplicacion en funcionamiento | Resultados | pendiente |
+| 16 | Calidad del codigo | Calidad y seguridad | **rehecha** |
+| 17 | Integracion y despliegue continuos | Calidad y seguridad | **reordenada** |
+| 18 | Modelo de seguridad | Calidad y seguridad | **fusionada** |
+| 19 | Conclusiones | Conclusiones | pendiente |
+| 20 | Gracias por la atencion | Conclusiones | pendiente |
 
 > **Los titulos los revisa el autor.** Se le propuso una tanda y la rechazo.
 
@@ -59,9 +59,10 @@
   **`docs/security.md` sigue en 2021: hay que actualizarlo para que no se contradigan.**
 - **Rotulo de bloque en cada slide** (2026-08-26): se saltaba de una a otra sin saber en
   que parte de la charla estabas. Encima del titulo, en azul pequeno, va el bloque:
-  1 El proyecto · 2 Como funciona · 3 Como esta construida · 4 Las piezas ·
-  5 El resultado · 6 Conclusiones. Lo pinta `pie(s, bloque)`, asi que reordenar una
-  slide obliga a revisar su rotulo.
+  1 Introduccion · 2 Funcionamiento · 3 Diseno · 4 Implementacion · 5 Resultados ·
+  6 Calidad y seguridad · 7 Conclusiones. **Nombres, no frases**: la primera tanda
+  ("Las piezas", "El resultado", "Como funciona") la rechazo el autor por conversacional.
+  Lo pinta `pie(s, bloque)`, asi que mover una slide obliga a revisar su rotulo.
 - **Las dos de OWASP se fusionan en una** (2026-08-26): dos tablas de diez con solape
   real (A01 se parecia a API1 y API5, A02 a API8, A07 a API2). La tabla nueva va por
   la lista de APIs numerada del 01 al 10, con el nombre oficial en ingles y la medida en
