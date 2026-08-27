@@ -20,10 +20,10 @@
 | 12 | Ciclo de razonamiento del agente | Las piezas | pendiente |
 | 13 | Modelos empleados: lenguaje y embeddings | Las piezas | pendiente |
 | 14 | Resultados: la aplicacion en funcionamiento | El resultado | pendiente |
-| 15 | Calidad del codigo | El resultado | **rehecha** |
-| 16 | OWASP API Top 10 2023 | El resultado | **nueva** |
-| 17 | OWASP Top 10 2021 | El resultado | **nueva** |
-| 18 | Integracion y despliegue continuos | El resultado | validada |
+| 15 | Calidad del codigo | El resultado · proceso | **rehecha** |
+| 16 | Integracion y despliegue continuos | El resultado · proceso | **reordenada** |
+| 17 | OWASP API Top 10 2023 | El resultado · seguridad | **nueva** |
+| 18 | OWASP Top 10 2025 | El resultado · seguridad | **nueva** |
 | 19 | Conclusiones | Cierre | pendiente |
 | 20 | Gracias por la atencion | Cierre | pendiente |
 
@@ -40,6 +40,14 @@
 - **Slide de CI/CD** (2026-08-25): el despliegue automatico no aparecia en ningun sitio.
   La de calidad se queda con TDD, pruebas y seguridad, y el pipeline entero pasa a slide
   propia: integracion -> verificacion -> construccion -> publicacion -> produccion.
+- **Orden del bloque final corregido** (2026-08-26): calidad y CI/CD son proceso, y
+  estaban partidas por las dos de seguridad. Ahora van 15 calidad, 16 CI/CD, 17 OWASP
+  de APIs, 18 OWASP de aplicaciones web. La seguridad cierra el cuerpo.
+- **El Top 10 web pasa a la edicion 2025** (2026-08-26): la de 2021 es la que tiene
+  `docs/security.md`, pero la edicion vigente desde enero de 2026 es la de 2025. Cambian
+  el orden y tres nombres, entran `Software Supply Chain Failures` y `Mishandling of
+  Exceptional Conditions`, y SSRF se absorbe dentro de `Broken Access Control`.
+  **`docs/security.md` sigue en 2021: hay que actualizarlo para que no se contradigan.**
 - **Las dos slides de seguridad, mismo formato** (2026-08-26): la 17 era de columnas y
   la 16 una tabla. Ahora las dos son la misma tabla: codigo, nombre oficial y medida.
   La 16 es la lista de APIs (backend), la 17 la de aplicaciones web (interfaz). El
