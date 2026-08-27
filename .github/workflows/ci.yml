@@ -16,21 +16,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # `test` se declara por app a proposito. En `core-api` corre la suite con
-        # cobertura, que es la misma pasada instrumentada —no una segunda— y hace
-        # que los umbrales `perFile` de `vitest.config.ts` fallen el CI. Antes no
-        # los miraba nadie: `pnpm test:coverage` se rompio en `develop` durante
-        # dias sin que ningun gate se enterara.
+        # Las dos apps corren la suite CON cobertura, que es la misma pasada
+        # instrumentada —no una segunda— y hace que los umbrales `perFile` de
+        # cada `vitest.config.ts` fallen el CI. Antes no los miraba nadie:
+        # `pnpm test:coverage` se rompio en `develop` durante dias sin que
+        # ningun gate se enterara, y la cobertura de la UI llevaba mas tiempo
+        # rota sin estar siquiera anotada.
         #
-        # `ui` sigue en `pnpm test` porque su cobertura HOY no pasa: 39 umbrales
-        # incumplidos en 14 ficheros, con los 655 tests en verde. Cambiarlo a
-        # `test:coverage` sin cerrar antes ese hueco dejaria el CI en rojo.
-        # Anotado en `docs/deuda-conocida.md`.
+        # Se declara por app en vez de fijarlo en el step porque el comando es
+        # lo unico que puede divergir entre las dos: si alguna vez hay que
+        # sacar una del gate, se ve aqui y no escondido en un `if`.
         include:
           - app: core-api
             test: test:coverage
           - app: ui
-            test: test
+            test: test:coverage
 
     defaults:
       run:

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ApiHttpError } from '../../../../src/lib/api-errors'
 import type {
@@ -118,5 +119,52 @@ describe('KnowledgePanel', () => {
     fireEvent.click(searchButton)
 
     expect(await screen.findByText(/catálogo vectorial no disponible/i)).toBeDefined()
+  })
+
+  // Enter dentro del campo es el atajo que usa cualquiera antes de buscar el boton.
+  it('busca al pulsar Enter en el campo de texto', async () => {
+    mockKnowledgeStats.mockResolvedValue(makeStats())
+    mockKnowledgeSearch.mockResolvedValue(makeSearchResults())
+
+    renderWithQuery(<KnowledgePanel />)
+    await screen.findByText('120')
+
+    const textInput = screen.getByPlaceholderText(/texto/i)
+    fireEvent.change(textInput, { target: { value: 'misfire' } })
+    fireEvent.keyDown(textInput, { key: 'Enter' })
+
+    expect(await screen.findByText(/Cylinder 1 Misfire/)).toBeDefined()
+  })
+
+  it('no busca con cualquier otra tecla', async () => {
+    mockKnowledgeStats.mockResolvedValue(makeStats())
+    mockKnowledgeSearch.mockResolvedValue(makeSearchResults())
+
+    renderWithQuery(<KnowledgePanel />)
+    await screen.findByText('120')
+
+    const textInput = screen.getByPlaceholderText(/texto/i)
+    fireEvent.change(textInput, { target: { value: 'misfire' } })
+    fireEvent.keyDown(textInput, { key: 'a' })
+
+    expect(mockKnowledgeSearch).not.toHaveBeenCalled()
+  })
+
+  it('busca en el indice elegido en el desplegable', async () => {
+    mockKnowledgeStats.mockResolvedValue(makeStats())
+    mockKnowledgeSearch.mockResolvedValue(makeSearchResults())
+
+    renderWithQuery(<KnowledgePanel />)
+    await screen.findByText('120')
+
+    await userEvent.click(screen.getByRole('combobox'))
+    await userEvent.click(await screen.findByRole('option', { name: 'DTCs' }))
+
+    fireEvent.change(screen.getByPlaceholderText(/texto/i), { target: { value: 'misfire' } })
+    fireEvent.click(screen.getByRole('button', { name: /buscar/i }))
+
+    await waitFor(() => {
+      expect(mockKnowledgeSearch).toHaveBeenCalledWith(expect.objectContaining({ index: 'dtcs' }))
+    })
   })
 })

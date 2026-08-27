@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import type { DiagnosisSession } from '../../../../src/components/dashboard/types'
 
@@ -215,5 +215,67 @@ describe('HistoryPage', () => {
 
     expect(screen.getByRole('button', { name: /anterior/i })).toBeDefined()
     expect(screen.getByRole('button', { name: /siguiente/i })).toBeDefined()
+  })
+
+  /** Ultimo filtro con el que la pagina pidio el historial. */
+  function lastFilter() {
+    return mockUseDiagnosisHistory.mock.calls.at(-1)?.[0]
+  }
+
+  it('should pass the "Desde" date to the hook as an ISO timestamp', async () => {
+    const { HistoryPage } = await import('../../../../src/components/history/HistoryPage')
+    render(<HistoryPage />)
+
+    fireEvent.change(screen.getByLabelText('Desde'), { target: { value: '2026-08-01' } })
+
+    expect(lastFilter()).toMatchObject({ from: new Date('2026-08-01').toISOString() })
+  })
+
+  it('should pass the "Hasta" date to the hook as an ISO timestamp', async () => {
+    const { HistoryPage } = await import('../../../../src/components/history/HistoryPage')
+    render(<HistoryPage />)
+
+    fireEvent.change(screen.getByLabelText('Hasta'), { target: { value: '2026-08-27' } })
+
+    expect(lastFilter()).toMatchObject({ to: new Date('2026-08-27').toISOString() })
+  })
+
+  // Vaciar el campo tiene que quitar el filtro, no mandar un "Invalid Date".
+  it('should clear the date filter when the input is emptied', async () => {
+    const { HistoryPage } = await import('../../../../src/components/history/HistoryPage')
+    render(<HistoryPage />)
+
+    const fromInput = screen.getByLabelText('Desde')
+    fireEvent.change(fromInput, { target: { value: '2026-08-01' } })
+    expect(lastFilter()?.from).toBeTruthy()
+
+    fireEvent.change(fromInput, { target: { value: '' } })
+
+    expect(lastFilter()?.from).toBeFalsy()
+  })
+
+  it('should fill both dates when a shortcut is clicked', async () => {
+    const { HistoryPage } = await import('../../../../src/components/history/HistoryPage')
+    render(<HistoryPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: '7 d' }))
+
+    const filter = lastFilter()
+    expect(filter?.from).toBeTruthy()
+    expect(filter?.to).toBeTruthy()
+    expect(new Date(filter.from).getTime()).toBeLessThan(new Date(filter.to).getTime())
+  })
+
+  // Cambiar el filtro estando en otra pagina debe devolver a la primera: si no,
+  // se pide una pagina que el resultado filtrado puede no tener.
+  it('should go back to page 1 when a shortcut changes the range', async () => {
+    mockUseDiagnosisHistory.mockReturnValue(setHookState({ sessions: SAMPLE_SESSIONS, total: 100 }))
+
+    const { HistoryPage } = await import('../../../../src/components/history/HistoryPage')
+    render(<HistoryPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: '7 d' }))
+
+    expect(lastFilter()).toMatchObject({ offset: 0 })
   })
 })

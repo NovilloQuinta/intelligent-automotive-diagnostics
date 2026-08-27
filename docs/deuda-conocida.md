@@ -354,40 +354,52 @@ Resuelto en dos direcciones distintas, y la distincion importa:
 **Ningun umbral se toco**: siguen en 80 statements / 60 branches / 90 functions / 80 lines,
 `perFile`, con `processVehicleDiagnosis.ts` al 100 %.
 
-La asimetria que dejo que esto se colara **queda cerrada el 2026-08-27**, y solo para
-`core-api`: `pnpm test:coverage` entra en `pnpm verify` (sustituye a `pnpm test` dentro de la
-cadena, no se suma a el) y en el CI, donde la matriz declara el comando por app
-(`core-api` -> `test:coverage`, `ui` -> `test`). No es una segunda pasada de la suite: es la
-misma instrumentada, asi que el coste del gate apenas cambia.
+La asimetria que dejo que esto se colara **queda cerrada el 2026-08-27**, y para las **dos
+apps**: `pnpm test:coverage` (core-api) y `pnpm test:coverage:ui` entran en `pnpm verify` y en
+el CI, donde la matriz declara el comando por app. Sustituyen a `pnpm test`, no se suman a el:
+es la misma suite instrumentada, asi que el gate apenas encarece.
 
-Lo que **no** queda cerrado es la UI — ver la seccion siguiente.
+## La cobertura de la UI: rota sin estar anotada, resuelta el 2026-08-27
 
-## La cobertura de la UI no pasa, y no estaba anotada
+Al cablear el coverage al gate se descubrio que `pnpm test:coverage:ui` **fallaba** (exit 1):
+655 tests en verde y **39 umbrales `perFile` incumplidos en 14 ficheros**. No figuraba en
+ningun sitio —la entrada anterior hablaba solo de `core-api`— porque nadie habia mirado la
+otra mitad. Ahora pasa: **exit 0, 700 tests**, 98,14 % statements / 93,11 % branches /
+97,96 % functions.
 
-Medido el 2026-08-27, que es cuando se descubrio: `pnpm test:coverage:ui` **falla (exit 1)**.
-Los 655 tests estan en verde; lo que no pasa son los umbrales `perFile` de
-`apps/ui/vitest.config.ts`. Son **39 incumplimientos en 14 ficheros**.
+Se cerro por dos vias distintas, y la distincion importa:
 
-Esta deuda no figuraba aqui: la entrada anterior hablaba solo de `core-api`, y nadie habia
-mirado la otra mitad. Por eso el CI deja `ui` en `pnpm test` — cablearlo a `test:coverage`
-hoy dejaria la rama en rojo.
+- **Excluidos seis `src/routes/*.tsx`** (`history`, `admin.index`, `admin.users`,
+  `admin.logs`, `admin.audit`, `admin.knowledge`). Son glue de TanStack de 6 a 15 lineas: un
+  `createFileRoute`, un titulo y el componente real —que si esta testeado aparte—. No es
+  bajar el liston: `src/routes/__root.tsx`, de 121 lineas y bastante mas sustancial, ya
+  estaba excluido con ese mismo motivo. Las rutas CON logica propia (`admin.tsx`,
+  `login.tsx`, `profile.tsx`, `index.tsx`, `forgot-password.tsx`, `reset-password.tsx`,
+  `history.$sessionId.tsx`) siguen midiendose.
+- **Escritos 45 tests** para los otros ocho ficheros. Lo que faltaba en todos era lo mismo:
+  **manejadores de eventos que ningun test disparaba**. No era relleno de cobertura, era
+  comportamiento sin probar — entre otros, que cambiar un filtro devuelva la tabla a la
+  pagina 1 (sin eso se pide una pagina que el resultado filtrado puede no tener), que el
+  desplegable de tamano de pagina convierta a numero, que `resultJson` corrupto no tumbe la
+  pantalla de detalle, y que un `throw` que no es `Error` acabe en el mensaje de respaldo y
+  no en un `undefined` en la cara del mecanico.
 
-Los 14 ficheros se parten en dos grupos que **no** merecen el mismo trato:
+Dos cosas salieron de paso:
 
-- **Seis `src/routes/*.tsx` a 0 % en las cuatro metricas** (`history`, `admin.index`,
-  `admin.users`, `admin.logs`, `admin.audit`, `admin.knowledge`). Son glue de TanStack de
-  6 a 15 lineas: un `createFileRoute` y, como mucho, un `<div className="p-6">` envolviendo
-  un componente que **si** esta testeado aparte. `src/routes/__root.tsx` —121 lineas, mas
-  sustancial que cualquiera de estos— ya esta excluido en el config con el motivo
-  "infrastructure: route config + providers + Toaster". Excluirlos es aplicar esa decision
-  ya tomada de forma coherente, no bajar el liston.
-- **Ocho ficheros de codigo real por debajo del umbral**: `useDiagnosisHistoryDetail.ts`
-  (0 %, 54 lineas, sin ningun test — hay uno para `useDiagnosisHistory`, que es otro),
-  `useVehicleAutoDetect.ts` (75,4 % lineas), `DashboardPage.tsx` y `useDiagnosis.ts`
-  (66,66 % funciones), `HistoryPage.tsx`, `AuditTable.tsx`, `UsersTable.tsx` (50 %
-  funciones), `LogsTable.tsx` (66,66 %), `KnowledgePanel.tsx` (71,42 %),
-  `DataTableFilters.tsx` (80 %) y `lib/errors.ts` (50 % ramas). Esto **si** son tests que
-  faltan, y es el trabajo que hay que hacer para poder cablear la UI al gate.
+- **`tests/setup.ts` recibe los shims de puntero de jsdom** (`hasPointerCapture`,
+  `setPointerCapture`, `releasePointerCapture`, `scrollIntoView`). Sin ellos, `userEvent`
+  no puede abrir un `Select` de Radix y todos los desplegables quedaban sin poder probarse.
+  No son mocks de logica propia: son huecos de jsdom respecto al DOM real.
+- **`useDiagnosis.ts` tenia un `queryFn` inalcanzable.** Duplicaba `mutationFn`, pero la
+  query iba con `enabled: false` y el hook no expone `refetch`: nada podia dispararlo. Se
+  sustituyo por `skipToken`, que dice con tipos lo que la query hace de verdad —suscribirse a
+  la entrada de cache que escribe `onSuccess`— sin cambiar comportamiento. El fichero pasa de
+  66,66 % a 100 % en las cuatro metricas.
+
+Queda un doble de test que conviene conocer: los tests de filtros de las tres tablas de
+administracion doblan `DataTableFilters` (`tests/unit/components/admin/filtersStub.tsx`) para
+disparar sus callbacks como botones normales. `DataTableFilters` tiene sus propios tests, que
+renderizan el componente real, desplegable de Radix incluido.
 
 ## Vectorial
 
