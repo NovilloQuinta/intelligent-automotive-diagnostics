@@ -5,17 +5,15 @@
 
 ## Solo las puede hacer el autor
 
-1. **Reescribir la slide 6, "Arquitectura: Clean Architecture y patron hexagonal".**
-   El borrador actual no convence al autor. Las razones reales estan en `docs/adr/001`
-   y en lo que el autor conto: el dominio son normas (SAE J1979, ISO 15031, ISO 3779,
-   las formulas de PID, la decodificacion del VIN), y por eso no puede mezclarse con la
-   base de datos ni con el LLM. Ademas, un solo programador.
-2. **Grabar el video del coche real.** El guion esta en `docs/guion-demo.md`. Cuando
-   exista, sustituye una de las cuatro capturas de la slide 14.
-3. **Capturas del diagnostico cognitivo.** Necesitan `LLM_API_KEY` real, que solo esta
-   en la maquina del autor.
+1. **Grabar el video del coche real.** El guion esta en `docs/guion-demo.md`. Cuando
+   exista, sustituye una de las cuatro capturas de la slide 16.
+2. **Capturas del diagnostico cognitivo.** Necesitan `LLM_API_KEY` real, que solo esta
+   en la maquina del autor. Hoy la slide 16 no ensena el chat con el agente.
+3. **Repasar los titulos.** El autor los revisa el mismo; se le propuso una tanda y la
+   rechazo. Los numeros de seccion ya estan puestos y no hay que tocarlos.
 4. **Ensayar con cronometro.** Cada slide lleva en sus notas el tiempo acumulado.
-   El deck suma ~17 min; el limite habitual son 15.
+   El deck suma ~20:35.
+5. **Validar las 13 slides marcadas como pendientes** en `indice.md`.
 
 ## Se pueden delegar a un agente
 
