@@ -9,10 +9,10 @@
 | 1 | Portada | | **validada** |
 | 2 | Diagnostico de averias de vehiculos asistido por IA | Que es y que resuelve | pendiente |
 | 3 | Flujo de trabajo | Como funciona | **validada** |
-| 4 | Adquisicion de datos mediante OBD-II | Como funciona | **reordenada** |
-| 5 | Diagnostico determinista y diagnostico cognitivo | Como funciona | **reordenada** |
-| 6 | Tecnologias utilizadas | Como esta construida | pendiente |
-| 7 | Clean Architecture + Hexagonal | Como esta construida | **rehecha** |
+| 4 | Diagnostico determinista y diagnostico cognitivo | Como funciona | pendiente |
+| 5 | Tecnologias utilizadas | Como esta construida | pendiente |
+| 6 | Clean Architecture + Hexagonal | Como esta construida | **rehecha** |
+| 7 | Adquisicion de datos mediante OBD-II | Las piezas | pendiente |
 | 8 | Persistencia: modelo relacional y modelo vectorial | Las piezas | pendiente |
 | 9 | Base de datos relacional | Las piezas | pendiente |
 | 10 | Base de datos vectorial e indice de confianza | Las piezas | pendiente |
@@ -41,9 +41,10 @@
 - **Slide de CI/CD** (2026-08-25): el despliegue automatico no aparecia en ningun sitio.
   La de calidad se queda con TDD, pruebas y seguridad, y el pipeline entero pasa a slide
   propia: integracion -> verificacion -> construccion -> publicacion -> produccion.
-- **Arranque reordenado** (2026-08-26): del 2 al 7 no habia hilo. Ahora va que es ->
-  flujo -> como se lee el coche (OBD-II) -> los dos diagnosticos -> con que esta hecho
-  -> como esta organizado. El OBD-II sube del 7 al 4: es la entrada de todo lo demas.
+- **El OBD-II se queda en el 7** (2026-08-26): se probo a subirlo al 4 y no encaja. Es
+  una slide tecnica de como se lee el bus, con la formula de un PID, y cortaba la
+  explicacion entre el flujo y los dos diagnosticos. Abre el bloque de piezas, que es
+  su sitio: primero de donde salen los datos, luego donde se guardan.
 - **Slide de la interfaz** (2026-08-26): el deck era casi todo backend. La UI solo
   aparecia como capturas en la demo y como una fila de tecnologias. Ahora tiene slide
   propia justo antes de la demo: que hace el mecanico y como esta construida.
