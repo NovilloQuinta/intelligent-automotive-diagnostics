@@ -91,6 +91,33 @@ curl -sI https://diag.jcodinglabs.com/ | grep -i content-security-policy
 Las dos primeras confirman que los puertos dejaron de estar en `0.0.0.0`. La
 tercera, que la CSP llega al navegador.
 
+## PENDIENTE: TOTP_ENCRYPTION_KEY en el VPS
+
+**Bloquea el despliegue.** Mientras no exista, `docker compose` se niega a levantar
+la API y la web sigue caida.
+
+```bash
+ssh <vps>
+cd /var/www/intelligent-automotive-diagnostics
+echo "TOTP_ENCRYPTION_KEY=$(openssl rand -base64 32)" >> .env
+docker compose -f docker-compose.prod.yml up -d
+```
+
+La ultima linea reaprovecha el `IMAGE_TAG` que ya quedo fijado, asi que no hace
+falta volver a pasar por GitHub: levanta con la imagen que ya esta descargada.
+
+**Guarda esa clave donde guardes las demas.** Cifra los secretos TOTP en la base
+(AES-256-GCM). Si se pierde, los segundos factores ya registrados no se pueden
+descifrar y sus duenos tendrian que darse de alta otra vez.
+
+De donde viene: el segundo factor anadido el 2026-08-26 comprueba al arrancar que
+la clave no sea la de desarrollo (`configuration/index.ts:91`), porque esa es un
+buffer de ceros conocido. La comprobacion es correcta; lo que faltaba era pasar la
+variable al contenedor en `docker-compose.prod.yml`, que es lo que tumbo el
+despliegue de `a316a9c`. La base **no** se toco: `assertProductionSecrets` corre
+antes que `buildApp`, y `migrate()` vive dentro de este, asi que las cinco
+migraciones pendientes siguen sin aplicarse.
+
 ## Secretos
 
 `VPS_HOST`, `VPS_USER` y `VPS_SSH_KEY` son secretos del repositorio. El
