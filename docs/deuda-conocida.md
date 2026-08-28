@@ -4,10 +4,11 @@
 > de editar aqui**: este fichero se ha desincronizado dos veces por actualizarlo
 > de memoria.
 >
-> Estado general: 2425 tests en verde (1770 core-api + 655 ui, con 1 skip en cada app),
-> `pnpm verify` y `pnpm test:coverage` pasan (exit 0). Remedido el 2026-08-28 tras
-> endurecer el diagnostico cognitivo (ver "Bateria del agente" mas abajo): +22 tests
-> sobre las 2403 del 2026-08-26. Nada de lo que sigue es bloqueante.
+> Estado general, remedido el 2026-08-30 tras traer `claude/proyecto-pendientes-nyytej` a
+> `main`: **2482 tests en verde** (1780 core-api + 702 ui, con 1 skip en cada app), 0 errores
+> de lint, **70 avisos** (63 + 7). El coverage de **las dos apps** entra en `pnpm verify` y en
+> el CI; el e2e cubre las cuatro suites, `dashboard` incluida. Nada de lo que sigue es
+> bloqueante.
 
 ## Bateria del agente: corrida por primera vez el 2026-08-28, ampliada el mismo dia
 
