@@ -20,6 +20,7 @@ export interface OpenAiClientConfig {
   readonly apiKey: string
   readonly baseURL: string
   readonly model: string
+  /** Temperatura 0-2 (rango de OpenAI). Sin ella el cliente aplica `DEFAULT_TEMPERATURE`. */
   readonly temperature?: number
   readonly maxIterations?: number
   readonly timeoutMs?: number

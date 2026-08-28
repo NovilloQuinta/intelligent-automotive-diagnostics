@@ -76,6 +76,8 @@ grupo A.
 **`LLM_TEMPERATURE` añadido** el 2026-08-28 (`infrastructure/configuration/index.ts`,
 clientes Anthropic/OpenAI): antes corria al 1.0 por defecto del SDK, documentado aqui
 como "lo peor para evaluar". Default nuevo del cliente: 0.3 si no se fija por env.
+Rango de validacion 0-2 en la config general (lo comparten los dos proveedores), 0-1
+en `anthropicClient.ts`, 0-2 en `openAiClient.ts` (cada cliente valida ademas el suyo).
 `seed` sigue sin existir en la Messages API de Anthropic.
 
 ## Bug de produccion cerrado: respuestas truncadas servidas como completas
@@ -658,6 +660,22 @@ Queda un doble de test que conviene conocer: los tests de filtros de las tres ta
 administracion doblan `DataTableFilters` (`tests/unit/components/admin/filtersStub.tsx`) para
 disparar sus callbacks como botones normales. `DataTableFilters` tiene sus propios tests, que
 renderizan el componente real, desplegable de Radix incluido.
+
+## Configuracion y clientes LLM: deuda menor preexistente, vista al tocar la temperatura (30/08)
+
+Detectada por `gga run --no-cache` sobre `configuration/index.ts` y `openAiClient.ts` al
+traer `LLM_TEMPERATURE` de `claude/proyecto-pendientes-nyytej` — ninguna de las lineas
+senaladas la toco este cambio, ya estaban en `main`:
+
+- `configuration/index.ts`: el preprocess `v === 'true' || v === true` se repite 3 veces
+  identico (`OBD_READ_ONLY`, `OBD_TRACE`, `SMTP_SECURE`) — justo en el umbral DRY del
+  proyecto. Extraer `booleanFromEnv(v)`.
+- Los sentinels de secreto por defecto (`'dev-access-secret'`, `'dev-refresh-secret'`,
+  `'change-me-in-production'`) estan duplicados entre el schema y `assertProductionSecrets`:
+  si cambia el default del schema, la guardia de produccion se queda callada.
+- `openAiClient.ts`: los finish reasons `'length'`/`'stop'` van sin nombrar, a diferencia de
+  `anthropicClient.ts`. Y `} as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming`
+  fuerza el cast sobre el payload entero en vez de tipar `tools` correctamente.
 
 ## Vectorial
 

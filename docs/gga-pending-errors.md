@@ -12,6 +12,19 @@ Cada entrada debe corregirse en una rama `fix/gga-*` antes del siguiente milesto
 - **Archivo:linea** — descripcion del error
 -->
 
+### 2026-08-30 — cherry-pick c7a895e (feat(llm): permitir fijar la temperatura del muestreo)
+
+`STATUS: FAILED` real: 4 hallazgos de deuda preexistente en `configuration/index.ts` y
+`openAiClient.ts` (boolean preprocess repetido 3x, sentinels de secreto duplicados, finish
+reasons sin nombrar, cast amplio sobre el payload). Confirmado con `git show 5bfff21` que
+ninguna de esas lineas la toco este cambio. Anotado en `docs/deuda-conocida.md`. De paso,
+esta rama implementaba `LLM_TEMPERATURE` de forma distinta a como ya lo tenia `main` (añadido
+independientemente el 29/08): se combino a mano — default 0.3 del cliente si no se configura
+(el de `main`) + rango de validacion 0-2 y JSDoc mas completo (el de la rama) — y se corrigieron
+dos duplicados de `temperature` que el auto-merge de git dejo en `openAiClient.ts` sin marcar
+conflicto (interface + schema Zod + el objeto de la llamada a la API). Forzado con
+`--no-verify`, nada mas pendiente en el codigo que toca este commit.
+
 ### 2026-08-30 — cherry-pick e1e0779 (refactor(core): convertir en tablas los switch del parser y el simulador)
 
 GGA con cache dio `STATUS: FAILED` (magic strings `'u'`/`'raw'`/`'<<'`/`'>>'` en pidFormula.ts,
