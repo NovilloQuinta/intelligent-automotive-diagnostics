@@ -215,6 +215,22 @@ export function createReliableTransport<TConn>(
     conn = openConnection()
   }
 
+  /**
+   * Cierra el episodio de reconexion en curso y deja el transporte listo para otro.
+   *
+   * La ventana de 30 s es el presupuesto de **un** episodio, no de la vida del
+   * transporte. Antes no se reseteaba nada al agotarla: el estado se quedaba en
+   * `reconnecting` con `reconnectStartedAt` en el pasado, asi que toda peticion
+   * posterior vencia el presupuesto al instante y se rechazaba sin intentar abrir
+   * nada. Un cable de OBD movido medio minuto dejaba la herramienta inservible hasta
+   * reiniciar el proceso, aunque el coche ya hubiera vuelto.
+   */
+  function endReconnectEpisode(): void {
+    reconnectState = 'connected'
+    reconnectAttempt = 0
+    reconnectStartedAt = 0
+  }
+
   function scheduleReconnect(): void {
     if (reconnectState === 'closed' || reconnectPromise !== null) return
     if (reconnectState !== 'reconnecting') {
@@ -222,6 +238,7 @@ export function createReliableTransport<TConn>(
       reconnectStartedAt = Date.now()
     }
     if (Date.now() - reconnectStartedAt >= RECONNECT_MAX_TOTAL_MS) {
+      endReconnectEpisode()
       failQueue(new Elm327ConnectionError('Reconnection failed after 30s'))
       return
     }
@@ -237,7 +254,15 @@ export function createReliableTransport<TConn>(
           resolve()
           return
         }
-        conn = openConnection()
+        // `io.open()` lanza cuando el dispositivo no esta —el cable fuera, el puerto
+        // serie inexistente—. Sin este guarda, la excepcion escapaba del temporizador
+        // como rechazo no capturado y `reconnectPromise` no se limpiaba nunca: la cola
+        // se quedaba esperando a una promesa muerta.
+        try {
+          conn = openConnection()
+        } catch {
+          conn = null
+        }
         reconnectPromise = null
         resolve()
       }, delay)
