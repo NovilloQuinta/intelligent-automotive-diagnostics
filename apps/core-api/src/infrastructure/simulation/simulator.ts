@@ -2,6 +2,7 @@ import type { SimulationScenario } from './scenario.js'
 import type { EcuInfo } from '@/domain/entities/EcuInfo.js'
 import { FreezeFrame } from '@/domain/value-objects/FreezeFrame.js'
 import type { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
+import type { LiveData } from '@/domain/value-objects/LiveData.js'
 import { VehicleStatus } from '@/domain/value-objects/VehicleStatus.js'
 import {
   MODE_CURRENT_DATA,
@@ -54,9 +55,56 @@ const MAF_SCALE = 100
 /** SAE J1979: el voltaje se transmite en milivoltios (`(A*256+B)/1000`). */
 const VOLTAGE_SCALE = 1000
 
+/** Base de porcentaje: `value` llega en 0-100, se reescala antes de codificar el byte. */
+const PERCENT_BASIS = 100
+
 /** Codifica un entero no negativo en dos bytes SAE J1979 (alto, bajo). */
 function toTwoBytes(raw: number): number[] {
   return [Math.floor(raw / BYTE_RANGE), raw % BYTE_RANGE]
+}
+
+/** Codificaciones que comparten varios PID, nombradas para no repetir la formula. */
+const encodeTemperature = (value: number): number[] => [Math.round(value + TEMP_OFFSET)]
+const encodeWholeByte = (value: number): number[] => [Math.round(value)]
+const encodePercent = (value: number): number[] => [
+  Math.round((value * PERCENT_SCALE) / PERCENT_BASIS),
+]
+const encodeFuelTrim = (value: number): number[] => [
+  Math.round(((value + FUEL_TRIM_OFFSET) * FUEL_TRIM_SCALE) / PERCENT_BASIS),
+]
+
+/**
+ * Codificacion inversa de cada PID Mode 01 modelado: valor fisico -> bytes SAE J1979.
+ *
+ * Es una tabla, no logica: antes vivia como un `switch` de dieciseis casos dentro de
+ * `readPidRawBytes`, que por eso llegaba a complejidad 18. Anadir un PID es anadir una
+ * fila, y la ausencia de fila es exactamente lo que significa "no modelado".
+ */
+const PID_ENCODERS: Record<string, (value: number) => number[]> = {
+  [PID_RPM]: (value) => toTwoBytes(Math.round(value * RPM_SCALE)),
+  [PID_COOLANT_TEMP]: encodeTemperature,
+  [PID_INTAKE_TEMP]: encodeTemperature,
+  [PID_AMBIENT_AIR_TEMP]: encodeTemperature,
+  [PID_ENGINE_OIL_TEMP]: encodeTemperature,
+  [PID_SPEED]: encodeWholeByte,
+  [PID_MANIFOLD_ABS_PRESSURE]: encodeWholeByte,
+  [PID_ENGINE_LOAD]: encodePercent,
+  [PID_THROTTLE_POSITION]: encodePercent,
+  [PID_FUEL_TANK_LEVEL]: encodePercent,
+  [PID_SHORT_TERM_FUEL_TRIM]: encodeFuelTrim,
+  [PID_LONG_TERM_FUEL_TRIM]: encodeFuelTrim,
+  [PID_TIMING_ADVANCE]: (value) => [Math.round((value + TIMING_OFFSET) * TIMING_SCALE)],
+  [PID_MASS_AIR_FLOW]: (value) => toTwoBytes(Math.round(value * MAF_SCALE)),
+  [PID_DISTANCE_SINCE_CLEARED]: (value) => toTwoBytes(Math.round(value)),
+  [PID_CONTROL_MODULE_VOLTAGE]: (value) => toTwoBytes(Math.round(value * VOLTAGE_SCALE)),
+}
+
+/** Los cuatro sensores que el escenario modela directamente en `sensorValues`. */
+const SENSOR_READERS: Record<string, (sensors: LiveData) => number> = {
+  [PID_RPM]: (sensors) => sensors.rpm,
+  [PID_COOLANT_TEMP]: (sensors) => sensors.coolantTemp,
+  [PID_SPEED]: (sensors) => sensors.speed,
+  [PID_INTAKE_TEMP]: (sensors) => sensors.intakeTemp,
 }
 
 /** Simulador de tramas OBD-II que convierte escenarios a bytes hexadecimales. */
@@ -98,26 +146,12 @@ export class ObdSimulator {
    * @returns El valor fisico, o `undefined` si el PID no esta modelado.
    */
   private resolvePidValue(mode: string, pid: string): number | undefined {
-    const key = `${mode} ${pid}`
     const pidValues = this.scenario.pidValues ?? {}
+    const key = `${mode} ${pid}`
     if (key in pidValues) return pidValues[key]
 
-    const sv = this.scenario.sensorValues
-    if (mode === MODE_CURRENT_DATA) {
-      switch (pid.toUpperCase()) {
-        case PID_RPM:
-          return sv.rpm
-        case PID_COOLANT_TEMP:
-          return sv.coolantTemp
-        case PID_SPEED:
-          return sv.speed
-        case PID_INTAKE_TEMP:
-          return sv.intakeTemp
-        default:
-          return undefined
-      }
-    }
-    return undefined
+    if (mode !== MODE_CURRENT_DATA) return undefined
+    return SENSOR_READERS[pid.toUpperCase()]?.(this.scenario.sensorValues)
   }
 
   /**
@@ -130,37 +164,11 @@ export class ObdSimulator {
    */
   readPidRawBytes(mode: string, pid: string): number[] {
     const value = this.resolvePidValue(mode, pid)
-    if (value === undefined) throw new PidRawReadNotSupportedError(mode, pid)
-
-    switch (pid.toUpperCase()) {
-      case PID_RPM:
-        return toTwoBytes(Math.round(value * RPM_SCALE))
-      case PID_COOLANT_TEMP:
-      case PID_INTAKE_TEMP:
-      case PID_AMBIENT_AIR_TEMP:
-      case PID_ENGINE_OIL_TEMP:
-        return [Math.round(value + TEMP_OFFSET)]
-      case PID_SPEED:
-      case PID_MANIFOLD_ABS_PRESSURE:
-        return [Math.round(value)]
-      case PID_ENGINE_LOAD:
-      case PID_THROTTLE_POSITION:
-      case PID_FUEL_TANK_LEVEL:
-        return [Math.round((value * PERCENT_SCALE) / 100)]
-      case PID_SHORT_TERM_FUEL_TRIM:
-      case PID_LONG_TERM_FUEL_TRIM:
-        return [Math.round(((value + FUEL_TRIM_OFFSET) * FUEL_TRIM_SCALE) / 100)]
-      case PID_TIMING_ADVANCE:
-        return [Math.round((value + TIMING_OFFSET) * TIMING_SCALE)]
-      case PID_MASS_AIR_FLOW:
-        return toTwoBytes(Math.round(value * MAF_SCALE))
-      case PID_DISTANCE_SINCE_CLEARED:
-        return toTwoBytes(Math.round(value))
-      case PID_CONTROL_MODULE_VOLTAGE:
-        return toTwoBytes(Math.round(value * VOLTAGE_SCALE))
-      default:
-        throw new PidRawReadNotSupportedError(mode, pid)
+    const encode = PID_ENCODERS[pid.toUpperCase()]
+    if (value === undefined || encode === undefined) {
+      throw new PidRawReadNotSupportedError(mode, pid)
     }
+    return encode(value)
   }
 
   /** Service 02 — Devuelve los datos de freeze frame simulados como instancia de FreezeFrame. */
