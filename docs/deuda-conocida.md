@@ -4,11 +4,10 @@
 > de editar aqui**: este fichero se ha desincronizado dos veces por actualizarlo
 > de memoria.
 >
-> Estado general: 2403 tests en verde (1748 core-api + 655 ui), 0 errores de lint, 77 avisos (70 + 7).
-> `pnpm test:coverage` vuelve a pasar (exit 0) tras 31 tests nuevos en `TwoFactorController`
-> y `nullLogger`. Remedido el 2026-08-26 al cerrar la deuda de coverage. Antes de las dos tareas de
-> seguridad de ese dia, `develop` estaba en 1554 + 617 tests y 71 + 7 avisos; las cifras que
-> figuraban aqui (2131 tests, 76 avisos) ya se habian quedado atras por su cuenta.
+> Estado general, remedido el 2026-08-27: **2451 tests en verde** (1751 core-api + 700 ui),
+> 0 errores de lint, **72 avisos** (65 + 7). El coverage de **las dos apps** pasa (exit 0) y
+> entra en `pnpm verify` y en el CI; el e2e cubre las cuatro suites, `dashboard` incluida.
+> Venia de 2403 tests (1748 + 655) y 77 avisos (70 + 7) el 26/08.
 > Nada de lo que sigue es bloqueante.
 
 ## Bateria del agente: construida, sin ejecutar
