@@ -134,32 +134,44 @@ vehiculos) vive en codigo, en `domain/catalogs/ecuAddressCatalog.ts`, en vez de 
 
 Dos mecanismos para el mismo concepto. Funciona, pero cuesta explicarlo.
 
-## Funciones que superan las 40 lineas (13)
+## Complejidad y longitud: los picos, resueltos el 2026-08-27
 
-Las marca ESLint (`max-lines-per-function`, warn, solo `src/`). Ver "Excepciones
-al limite de 40 lineas" en `AGENTS.md` antes de marcar ninguna como legitima.
+Medido: **65 avisos** en core-api (eran 70), 0 errores. Lo que cambio no es tanto el numero
+como los extremos — los cuatro picos del repositorio ya no existen:
 
-| Funcion                                       | Lineas  |
-| --------------------------------------------- | ------- |
-| `createReliableTransport`                     | **236** |
-| `tokenize` / `evaluatePostfix` (math-parsers) | 57      |
-| `createAuthService`                           | 54      |
-| `upsertEcuDefinition`                         | 49      |
-| `findSessions`                                | 45      |
-| Constructor (DiagnosisService)                | 42      |
-| `createLanceVectorStore`                      | 41      |
+| Funcion | Antes | Ahora |
+|---|---|---|
+| `pidFormula.toPostfix` | 25 | 7 |
+| `pidFormula.tokenize` | 23 + 57 lineas | sin aviso |
+| `pidFormula.evaluatePostfix` | 20 + 57 lineas | 8 |
+| `simulator.readPidRawBytes` | 18 | sin aviso |
+| `simulator.resolvePidValue` | 8 | sin aviso |
 
-`createReliableTransport` es el peor del repo con diferencia, y **ha crecido**: 182 → 236
-lineas. Es la misma funcion que no se recupera tras agotar la reconexion (ver arriba); las
-dos cosas apuntan al mismo sitio.
+Los tres casos eran **el mismo patron**: una tabla disfrazada de escalera de `if`s o de
+`switch`. `tokenize` pasa a una lista de lectores de token; `readPidRawBytes` y
+`resolvePidValue`, a sendos `Record` de PID a funcion. Anadir un operador o un PID es
+anadir una fila, no otra rama. `simulator.ts` queda sin ningun aviso.
 
-## Complejidad ciclomatica >5
+**Lo que queda es otra cosa, y conviene no confundirlo.** Los 65 avisos restantes se reparten
+en unas 40 funciones que estan en complejidad **6-8**, contra un limite de 5: constructores de
+entidad que son listas de guardas de validacion, `execute` de casos de uso con tres o cuatro
+ramas, controladores que mapean errores a codigos HTTP. No son funciones enredadas: es un
+limite calibrado mas estricto que el estilo del codigo. Partirlas uniformemente daria unas
+cuarenta funciones nuevas sin nombre propio y un diff enorme a cambio de nada funcional.
 
-61 avisos en `src`. Los mayores siguen siendo `wrapSdkError` (8) y un grupo de
-constructores en 6-7.
+La decision pendiente **no es tecnica sino de criterio**, y es la misma que el proyecto ya
+tomo para `max-lines-per-function` (ver "Excepciones al limite de 40 lineas" en `AGENTS.md`):
+o se sube el umbral de `complexity` a 8, o se extiende a `complexity` la doctrina del disable
+razonado para las listas de guardas. Sin esa decision, cada funcion nueva normal nace avisando
+y el aviso deja de significar nada.
 
-**En `DiagnosisService` ya no queda ninguno**: `getVehicleInfo` (12) y `getLiveData` (11)
-—los dos peores del backend— desaparecieron al mover esos metodos a casos de uso.
+### Pendiente aparte: `createReliableTransport`, 236 lineas
+
+Es la funcion mas larga con diferencia —seis veces el limite— y su `processQueue` va a
+complejidad 11. **No se ha tocado a proposito**: es el transporte con estado que habla con el
+coche real por cable, y partirlo justo antes de la sesion con el vehiculo es el peor momento
+posible para arriesgar una regresion ahi. Tiene tests (`reliableTransport.test.ts`), asi que
+es abordable, pero despues de la sesion.
 
 ## Documentacion de la API: generada, no escrita
 
