@@ -482,28 +482,51 @@ describe('Elm327TcpRepository', () => {
     expect(info.vin.value).toBe('WP0ZZZ99ZTS390000')
   })
 
-  it('getSupportedPids: mock responde "41 00 B8 3B A8 13" → bitmask parse', async () => {
+  // `B8 3B A8 13` acaba en bit 1: declara que hay rango 21-40. El bitmask siguiente
+  // (`80 00 00 00`) acaba en 0, asi que la cadena para ahi sin preguntar por 01 40.
+  it('getSupportedPids: encadena 01 20 mientras el coche declare el rango siguiente', async () => {
     const repo = makeRepo()
     const promise = repo.getSupportedPids()
+
     expectSent('01 00')
     respond(RESPONSES['01 00'])
-    await expect(promise).resolves.toEqual([
-      '01 01',
-      '01 03',
-      '01 04',
-      '01 05',
-      '01 0B',
-      '01 0C',
-      '01 0D',
-      '01 0F',
-      '01 10',
-      '01 11',
-      '01 13',
-      '01 15',
-      '01 1C',
-      '01 1F',
-      '01 20',
-    ])
+
+    await vi.waitFor(() => expectSent('01 20'))
+    respond('01 20\r41 20 80 00 00 00\r\r>')
+
+    const pids = await promise
+    expect(pids).toContain('01 0C')
+    expect(pids).toContain('01 21')
+    expect(lastSocket().write).not.toHaveBeenCalledWith('01 40\r\n')
+  })
+
+  it('getSupportedPids: no pregunta por el rango siguiente si el bitmask no lo declara', async () => {
+    const repo = makeRepo()
+    const promise = repo.getSupportedPids()
+
+    expectSent('01 00')
+    // Ultimo bit a 0: no hay 21-40 que pedir.
+    respond('01 00\r41 00 B8 3B A8 12\r\r>')
+
+    await expect(promise).resolves.not.toContain('01 20')
+    expect(lastSocket().write).not.toHaveBeenCalledWith('01 20\r\n')
+  })
+
+  // Los escenarios del emulador declaran soportar 01 60 y no lo implementan: sin esta
+  // parada, la cadena se comeria un NO DATA y tumbaria el descubrimiento entero.
+  it('getSupportedPids: para en NO DATA y conserva lo ya descubierto', async () => {
+    const repo = makeRepo()
+    const promise = repo.getSupportedPids()
+
+    expectSent('01 00')
+    respond(RESPONSES['01 00'])
+
+    await vi.waitFor(() => expectSent('01 20'))
+    respond('01 20\rNO DATA\r\r>')
+
+    const pids = await promise
+    expect(pids).toContain('01 0C')
+    expect(pids).not.toContain('01 21')
   })
 
   it('Timeout: mock nunca emite data → lanza Elm327ConnectionError', async () => {

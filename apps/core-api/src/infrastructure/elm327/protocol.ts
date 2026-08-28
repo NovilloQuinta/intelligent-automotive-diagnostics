@@ -96,6 +96,9 @@ const MODE_01_LINE_RE = /^4[0-9A-F]\s+[0-9A-F]{2}\s+/i
 /** Prefijo de línea VIN Mode 09: "49 02 01" (mode + pid + count). */
 const VIN_LINE_RE = /^49\s+02\s+01\s+/i
 
+/** Fuente compartida: una o mas parejas hex separadas por espacio, capturadas juntas. */
+const HEX_BYTES_GROUP_SRC = '([0-9A-F]{2}(?:\\s+[0-9A-F]{2})*)'
+
 /**
  * Itera las líneas "N: <hex>" de una respuesta multi-frame y concatena los bytes
  * de datos, quitando el prefijo `linePrefix` del inicio de cada línea.
@@ -131,7 +134,7 @@ export function parseModeResponse(raw: string): number[] {
 
   const cleaned = stripEcho(raw)
   if (/^7F\s/i.test(cleaned)) throw new Elm327ParseError(raw)
-  const match = cleaned.match(/4[0-9A-F]\s+[0-9A-F]{2}\s+([0-9A-F]{2}(?:\s+[0-9A-F]{2})*)/i)
+  const match = cleaned.match(new RegExp(`4[0-9A-F]\\s+[0-9A-F]{2}\\s+${HEX_BYTES_GROUP_SRC}`, 'i'))
   if (!match) throw new Elm327ParseError(raw)
   return parseHexBytes(match[1])
 }
@@ -171,7 +174,9 @@ export function parseMode22Response(raw: string, didLen: number): number[] {
   assertNoBusError(raw)
   const cleaned = stripEcho(raw)
   if (/NO DATA/i.test(cleaned)) throw new Elm327NoDataError(raw)
-  const match = cleaned.match(/62\s+[0-9A-F]{2}\s+[0-9A-F]{2}\s+([0-9A-F]{2}(?:\s+[0-9A-F]{2})*)/i)
+  const match = cleaned.match(
+    new RegExp(`62\\s+[0-9A-F]{2}\\s+[0-9A-F]{2}\\s+${HEX_BYTES_GROUP_SRC}`, 'i'),
+  )
   if (!match) throw new Elm327ParseError(raw)
   const bytes = parseHexBytes(match[1])
   return didLen > 0 ? bytes.slice(0, didLen) : bytes
@@ -204,9 +209,7 @@ export function parseDtcResponse(raw: string, mode: DtcMode = '03'): Array<[numb
   assertNoBusError(raw)
   const cleaned = stripEcho(raw)
   if (/NO DATA/i.test(cleaned)) return []
-  const match = cleaned.match(
-    new RegExp(`${dtcResponseByte(mode)}\\s+((?:[0-9A-F]{2}\\s+)*[0-9A-F]{2})`, 'i'),
-  )
+  const match = cleaned.match(buildDtcDataRe(mode))
   if (!match) throw new Elm327ParseError(raw)
   return toDtcPairs(parseHexBytes(match[1]))
 }
@@ -217,6 +220,11 @@ export type DtcMode = '03' | '07' | '0A'
 /** Byte con el que la ECU encabeza su respuesta a un modo de lectura (`03` → `43`). */
 function dtcResponseByte(mode: DtcMode): string {
   return (0x40 + Number.parseInt(mode, 16)).toString(16).toUpperCase()
+}
+
+/** Header de respuesta del modo + los bytes de datos del DTC, compartido por las dos variantes de parseo. */
+function buildDtcDataRe(mode: DtcMode): RegExp {
+  return new RegExp(`${dtcResponseByte(mode)}\\s+${HEX_BYTES_GROUP_SRC}`, 'i')
 }
 
 /** Codigos de averia de una ECU concreta, tal como llegan del bus. */
@@ -236,24 +244,6 @@ function toDtcPairs(bytes: number[]): Array<[number, number]> {
   return pairs
 }
 
-/**
- * Parsea una lectura de DTC agrupando por la ECU que responde.
- *
- * Es la variante de {@link parseDtcResponse} para cuando el modo se emite con
- * `AT H1`: en vez de aplanar todos los codigos en una lista, conserva de quien
- * viene cada uno, que es lo que permite marcar la ECU averiada en el mapa de
- * topologia. Sin headers no se pierde nada — los codigos salen igual, con el
- * origen ausente.
- *
- * Las direcciones se validan con {@link isEcuResponseAddress}, la misma regla que
- * usa el barrido de ECUs, asi que una peticion colada en la traza (`18DB33F1`) no
- * se confunde con una respuesta.
- *
- * @param raw - Respuesta cruda del adaptador ELM327.
- * @param mode - Modo emitido: `03` almacenados, `07` pendientes, `0A` permanentes.
- * @returns Un grupo por ECU que responde, en orden de aparicion.
- * @throws {Elm327ParseError} Si ninguna linea lleva el byte de respuesta del modo.
- */
 /**
  * Separa el header de una linea de respuesta.
  *
@@ -292,6 +282,10 @@ function parseDtcLine(line: string, dataRe: RegExp): EcuDtcGroup | null {
  * topologia. Sin headers no se pierde nada — los codigos salen igual, con el
  * origen ausente.
  *
+ * Las direcciones se validan con {@link isEcuResponseAddress}, la misma regla que
+ * usa el barrido de ECUs, asi que una peticion colada en la traza (`18DB33F1`) no
+ * se confunde con una respuesta.
+ *
  * @param raw - Respuesta cruda del adaptador ELM327.
  * @param mode - Modo emitido: `03` almacenados, `07` pendientes, `0A` permanentes.
  * @returns Un grupo por ECU que responde, en orden de aparicion.
@@ -300,7 +294,7 @@ function parseDtcLine(line: string, dataRe: RegExp): EcuDtcGroup | null {
 export function parseDtcResponseByEcu(raw: string, mode: DtcMode = '03'): EcuDtcGroup[] {
   assertNoBusError(raw)
   if (/NO DATA/i.test(raw)) return []
-  const dataRe = new RegExp(`${dtcResponseByte(mode)}\\s+((?:[0-9A-F]{2}\\s+)*[0-9A-F]{2})`, 'i')
+  const dataRe = buildDtcDataRe(mode)
   const groups = raw
     .split(/\r\n?|\n/)
     .map((line) => parseDtcLine(line, dataRe))
@@ -310,23 +304,39 @@ export function parseDtcResponseByEcu(raw: string, mode: DtcMode = '03'): EcuDtc
 }
 
 /**
- * Parsea el bitmask de PIDs soportados (Mode 01, PID 00).
+ * Parsea un bitmask de PIDs soportados (Mode 01, PID `00`/`20`/`40`/`60`).
  * Cada byte representa 8 PIDs, donde el bit más significativo es el PID más bajo.
  *
  * @param bytes - Los bytes de datos tras el header Mode 01 (ej: [0xB8, 0x3B, 0xA8, 0x13]).
+ * @param offset - PID desde el que numera este bitmask: `0x00` para el rango 01-20,
+ *   `0x20` para 21-40, `0x40` para 41-60. Los cuatro bitmask son identicos en forma y
+ *   solo se distinguen por donde empiezan a contar; sin esto, el de 21-40 renumeraba
+ *   01-20 por segunda vez.
  * @returns Lista de comandos PID formateados (ej: `["01 01", "01 03", ...]`).
  */
-export function parseSupportedPidBitmask(bytes: number[]): string[] {
+export function parseSupportedPidBitmask(bytes: number[], offset = 0): string[] {
   const pids: string[] = []
   for (let i = 0; i < bytes.length; i++) {
     for (let bit = 7; bit >= 0; bit--) {
       if ((bytes[i] >> bit) & 1) {
-        const pid = i * 8 + (7 - bit) + 1
+        const pid = offset + i * 8 + (7 - bit) + 1
         pids.push(`01 ${pid.toString(16).padStart(2, '0').toUpperCase()}`)
       }
     }
   }
   return pids
+}
+
+/**
+ * Indica si un bitmask declara soporte para el rango siguiente.
+ *
+ * El ultimo bit del bitmask (PID `20`, `40`, `60`...) no es un parametro: es la marca
+ * de continuacion que dice si tiene sentido preguntar por el rango de arriba. Leerla es
+ * lo que permite **preguntar en vez de imponer**, en la linea del ADR 009.
+ */
+export function declaresNextPidRange(bytes: number[]): boolean {
+  if (bytes.length === 0) return false
+  return (bytes[bytes.length - 1] & 1) === 1
 }
 
 /**

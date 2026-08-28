@@ -28,14 +28,15 @@ import {
   parseVinResponse,
   parseDtcResponseByEcu,
   parseSupportedPidBitmask,
+  declaresNextPidRange,
   type DtcMode,
   type EcuDtcGroup,
 } from './protocol.js'
 import { discoverEcus } from './ecuDiscovery.js'
 
-/** Re-export de compatibilidad — errores ELM327 desde {@link ./errors.ts}. */
+/** Re-export de compatibilidad — errores ELM327 definidos en `./errors.ts`. */
 export { Elm327BusError, Elm327ConnectionError, Elm327NoDataError, Elm327ParseError }
-/** Re-export de compatibilidad — config TCP desde {@link ./tcpTransport.ts}. */
+/** Re-export de compatibilidad — config TCP definida en `./tcpTransport.ts`. */
 export type { Elm327TcpConfig } from './tcpTransport.js'
 
 const UNKNOWN_FREEZE_FRAME_DTC = 'UNKNOWN'
@@ -46,6 +47,23 @@ const FREEZE_FRAME_PIDS = ['04', '05', '0C', '0D', '11']
 /** Modo 22 (UDS ReadDataByIdentifier): su respuesta se parsea distinto a la de los modos SAE. */
 const MODE_UDS = '22'
 
+/** Modo 01 (mostrar datos actuales): bitmask de PIDs soportados y formulas de decodificacion. */
+const MODE_SAE_01 = '01'
+/** Modo 02 (freeze frame): mismos PIDs y formulas que el modo 01, congelados al disparar un DTC. */
+const MODE_FREEZE_FRAME = '02'
+
+/** Modo 03 (mostrar DTC almacenados). */
+const MODE_DTC_STORED = '03'
+/** Modo 07 (mostrar DTC pendientes). */
+const MODE_DTC_PENDING = '07'
+/** Modo 0A (mostrar DTC permanentes). */
+const MODE_DTC_PERMANENT = '0A'
+
+/** Modo 09 PID 02 (Service 09, VIN). */
+const MODE_VIN = '09 02'
+/** Modo 01 PID 01 (Service 01, estado del monitor de emisiones). */
+const MODE_VEHICLE_STATUS = '01 01'
+
 /** Activa las cabeceras CAN, para saber que ECU responde. */
 const HEADERS_ON = 'AT H1'
 
@@ -55,8 +73,17 @@ const HEADERS_OFF = 'AT H0'
 /** Modo 04 (ClearDiagnosticInformation): unica escritura que el adaptador puede emitir. */
 const MODE_CLEAR_DTC = '04'
 
+/**
+ * Los cuatro bitmask de PIDs soportados de SAE J1979, por el PID desde el que numeran.
+ * `01 60` es el ultimo que el estandar define como inventario.
+ */
+const SUPPORTED_PID_RANGES = [0x00, 0x20, 0x40, 0x60] as const
+
 /** Motivo por defecto del rechazo, cuando la composicion no aporta uno mas concreto. */
 const DEFAULT_READ_ONLY_REASON = 'this adapter is configured as read-only'
+
+/** Byte de respuesta negativa (0x7F) en el mensaje de error: el PID existe pero el ECU lo rechaza. */
+const NEGATIVE_RESPONSE_RE = /7F\s/i
 
 /** Politica de seguridad del adaptador frente al vehiculo. */
 export interface Elm327RepositoryOptions {
@@ -184,10 +211,45 @@ export class Elm327TcpRepository implements ObdRepository {
     return dataBytes > 0 ? bytes.slice(0, dataBytes) : bytes
   }
 
+  /**
+   * PIDs Mode 01 que el vehiculo declara soportar.
+   *
+   * SAE J1979 reparte el inventario en bitmask encadenados: `01 00` describe los PIDs
+   * 01-20 y su ultimo bit dice si existe `01 20`, que describe 21-40, y asi hasta `01 60`.
+   * Antes solo se leia el primero, asi que cinco PIDs que el catalogo **si** sabe
+   * decodificar —nivel de combustible, distancia desde el borrado, voltaje del modulo,
+   * temperatura ambiente y del aceite— no se podian descubrir nunca. Quien lo nota es el
+   * diagnostico cognitivo: `get_available_pids` le pasa esta lista al agente, que razonaba
+   * con un inventario recortado delante de un coche real.
+   *
+   * Se **pregunta**, no se impone: cada rango se pide solo si el bitmask anterior lo
+   * declara, en la linea del ADR 009. Y se corta ante un rango sin respuesta —los
+   * escenarios del emulador declaran `01 60` sin implementarlo—, conservando lo ya
+   * descubierto en vez de tumbar el descubrimiento entero.
+   */
   async getSupportedPids(): Promise<string[]> {
-    const raw = await this.client.sendCommand('01 00')
-    const bytes = parseModeResponse(raw)
-    return parseSupportedPidBitmask(bytes)
+    const pids: string[] = []
+
+    for (const range of SUPPORTED_PID_RANGES) {
+      const bytes = await this.readPidRangeBitmask(range)
+      if (bytes === null) break
+      pids.push(...parseSupportedPidBitmask(bytes, range))
+      if (!declaresNextPidRange(bytes)) break
+    }
+
+    return pids
+  }
+
+  /** Bitmask de un rango, o `null` si el vehiculo no contesta a ese `01 XX`. */
+  private async readPidRangeBitmask(range: number): Promise<number[] | null> {
+    const pid = range.toString(16).padStart(2, '0').toUpperCase()
+    try {
+      return parseModeResponse(await this.client.sendCommand(`${MODE_SAE_01} ${pid}`))
+    } catch (err) {
+      // Un rango que no responde cierra la cadena; los anteriores siguen valiendo.
+      if (err instanceof Elm327NoDataError || err instanceof Elm327ParseError) return null
+      throw err
+    }
   }
 
   /**
@@ -198,11 +260,11 @@ export class Elm327TcpRepository implements ObdRepository {
     const pidValues: Record<string, number> = {}
     for (const pid of FREEZE_FRAME_PIDS) {
       try {
-        const bytes = await this.fetchPidBytes('02', pid, 2)
-        pidValues[pid] = this.pidFormulas.apply('01', pid, bytes)
+        const bytes = await this.fetchPidBytes(MODE_FREEZE_FRAME, pid, 2)
+        pidValues[pid] = this.pidFormulas.apply(MODE_SAE_01, pid, bytes)
       } catch (err) {
         if (err instanceof Elm327NoDataError || err instanceof Elm327ParseError) continue
-        if (err instanceof Error && /7F\s/i.test(err.message)) continue
+        if (err instanceof Error && NEGATIVE_RESPONSE_RE.test(err.message)) continue
         throw err
       }
     }
@@ -270,15 +332,15 @@ export class Elm327TcpRepository implements ObdRepository {
   }
 
   async readDtcCodes(): Promise<DtcCode[]> {
-    return this.fetchDtcCodes('03')
+    return this.fetchDtcCodes(MODE_DTC_STORED)
   }
 
   async readPendingDtcCodes(): Promise<DtcCode[]> {
-    return this.fetchDtcCodes('07')
+    return this.fetchDtcCodes(MODE_DTC_PENDING)
   }
 
   async readPermanentDtcCodes(): Promise<DtcCode[]> {
-    return this.fetchDtcCodes('0A')
+    return this.fetchDtcCodes(MODE_DTC_PERMANENT)
   }
 
   /**
@@ -298,7 +360,7 @@ export class Elm327TcpRepository implements ObdRepository {
   }
 
   async readVin(): Promise<string> {
-    const raw = await this.client.sendCommand('09 02')
+    const raw = await this.client.sendCommand(MODE_VIN)
     return Vin.fromBytes(parseVinResponse(raw)).value
   }
 
@@ -333,7 +395,7 @@ export class Elm327TcpRepository implements ObdRepository {
   }
 
   async getVehicleStatus(): Promise<VehicleStatus> {
-    const raw = await this.client.sendCommand('01 01')
+    const raw = await this.client.sendCommand(MODE_VEHICLE_STATUS)
     const bytes = parseModeResponse(raw)
     return VehicleStatus.parse(bytes)
   }

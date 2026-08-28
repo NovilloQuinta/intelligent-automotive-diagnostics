@@ -8,6 +8,7 @@ import {
   parseVinResponse,
   parseDtcResponse,
   parseSupportedPidBitmask,
+  declaresNextPidRange,
   parseHexBytes,
   parseCanHeaders,
   parseDtcResponseByEcu,
@@ -305,6 +306,40 @@ describe('protocol', () => {
 
     it('should return empty list for all-zero bitmask', () => {
       expect(parseSupportedPidBitmask([0x00, 0x00])).toEqual([])
+    })
+
+    // Los bitmask de 21-40 y 41-60 traen los mismos cuatro bytes; lo unico que
+    // cambia es desde que PID cuentan. Sin el offset se renumeraba 01-20 otra vez.
+    it('numera desde el offset para los rangos altos', () => {
+      // Bit mas significativo del primer byte = primer PID del rango.
+      expect(parseSupportedPidBitmask([0x80, 0x00, 0x00, 0x00], 0x20)).toEqual(['01 21'])
+      expect(parseSupportedPidBitmask([0x80, 0x00, 0x00, 0x00], 0x40)).toEqual(['01 41'])
+    })
+
+    it('sin offset se comporta igual que antes', () => {
+      expect(parseSupportedPidBitmask([0x80, 0x00, 0x00, 0x00])).toEqual(['01 01'])
+    })
+
+    // Bitmask reales del escenario Audi. Sacan a la luz PIDs que el catalogo sabe
+    // decodificar y que hoy no se pueden descubrir: 31 (distancia desde el borrado),
+    // 42 (voltaje del modulo) y 46 (temperatura ambiente).
+    it('descubre los PIDs de los rangos altos del escenario Audi', () => {
+      expect(parseSupportedPidBitmask([0x80, 0x01, 0xa0, 0x01], 0x20)).toContain('01 31')
+
+      const altos = parseSupportedPidBitmask([0x44, 0xcc, 0x00, 0x21], 0x40)
+      expect(altos).toContain('01 42')
+      expect(altos).toContain('01 46')
+    })
+
+    describe('declaresNextPidRange', () => {
+      it('lee la marca de continuacion del ultimo bit', () => {
+        expect(declaresNextPidRange([0xb8, 0x3b, 0xa8, 0x13])).toBe(true)
+        expect(declaresNextPidRange([0xb8, 0x3b, 0xa8, 0x12])).toBe(false)
+      })
+
+      it('sin bytes no declara nada', () => {
+        expect(declaresNextPidRange([])).toBe(false)
+      })
     })
   })
 
