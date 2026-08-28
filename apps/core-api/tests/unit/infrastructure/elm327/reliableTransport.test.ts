@@ -23,6 +23,8 @@ interface FakeIo {
   dropConnection(): void
   /** Comandos que no reciben respuesta, para forzar el timeout. */
   silence(cmds: readonly string[]): void
+  /** Simula el dispositivo ausente: abrir la conexion falla como con el cable fuera. */
+  setDown(down: boolean): void
 }
 
 function createFakeIo(): FakeIo {
@@ -33,9 +35,12 @@ function createFakeIo(): FakeIo {
   >()
   let silenced: readonly string[] = []
   let active: FakeConn | null = null
+  let down = false
+  const dead = new Set<FakeConn>()
 
   const io: TransportIoAdapter<FakeConn> = {
     open: () => {
+      if (down) throw new Error('device unreachable')
       const conn: FakeConn = { id: conns.length, written: [] }
       conns.push(conn)
       active = conn
@@ -45,6 +50,14 @@ function createFakeIo(): FakeIo {
       handlers.set(conn, h)
     },
     write: (conn, payload) => {
+      // Una conexion caida no traga escrituras. Un socket real avisa por `onError`,
+      // que es lo que el transporte traduce a error de CONEXION y dispara la
+      // reconexion; lanzar un Error pelado aqui seria un error de comando y el
+      // transporte lo reintentaria en la misma conexion muerta.
+      if (dead.has(conn)) {
+        handlers.get(conn)?.onError(new Error('write after close'))
+        return
+      }
       conn.written.push(payload)
       const cmd = payload.trim()
       if (silenced.includes(cmd)) return
@@ -64,10 +77,15 @@ function createFakeIo(): FakeIo {
     conns,
     sentOn: (connIndex) => conns[connIndex].written.map((w) => w.trim()),
     dropConnection: () => {
-      if (active !== null) handlers.get(active)?.onClose()
+      if (active === null) return
+      dead.add(active)
+      handlers.get(active)?.onClose()
     },
     silence: (cmds) => {
       silenced = cmds
+    },
+    setDown: (value) => {
+      down = value
     },
   }
 }
@@ -203,6 +221,53 @@ describe('createReliableTransport — secuencia de inicialización', () => {
  * la cola FIFO ordena comandos sueltos, no secuencias, y un `01 0C` colado en
  * medio vuelve con el header puesto o dirigido a la dirección equivocada.
  */
+describe('createReliableTransport — recuperacion tras agotar la reconexion', () => {
+  let fake: FakeIo
+
+  beforeEach(() => {
+    fake = createFakeIo()
+  })
+
+  // El fallo: al vencer la ventana de 30 s, el transporte se quedaba en estado
+  // `reconnecting` con la marca de tiempo vieja, asi que toda peticion posterior
+  // vencia al instante. Un cable de OBD movido medio minuto dejaba la herramienta
+  // inservible hasta reiniciar el proceso, aunque el coche ya hubiera vuelto.
+  //
+  // El reloj se adelanta con un espia sobre `Date.now` en vez de con temporizadores
+  // falsos: la ventana se mide con `Date.now`, pero el backoff encadena `setTimeout`
+  // reales de 100-300 ms, y adelantar los dos a la vez volvia la prueba impredecible.
+  it('vuelve a servir comandos cuando el dispositivo reaparece tras agotar la ventana', async () => {
+    const transport = createReliableTransport(fake.io, BASE_CONFIG)
+    await transport.sendCommand('01 0C')
+
+    const realNow = Date.now.bind(Date)
+    const clock = vi.spyOn(Date, 'now')
+    clock.mockImplementation(realNow)
+
+    try {
+      fake.setDown(true)
+      fake.dropConnection()
+
+      // Al primer reintento el reloj ya marca mas de 30 s: la ventana vence.
+      clock.mockImplementation(() => realNow() + 31_000)
+
+      await expect(transport.sendCommand('01 0D')).rejects.toThrow(/Reconnection failed/)
+
+      // El coche vuelve. El reloj NO retrocede —el tiempo real tampoco—: sigue
+      // adelantado. Ahi esta la prueba, porque con la marca de tiempo vieja sin
+      // resetear el presupuesto seguiria vencido y la peticion moriria al instante
+      // sin intentar abrir nada.
+      clock.mockImplementation(() => realNow() + 32_000)
+      fake.setDown(false)
+
+      await expect(transport.sendCommand('01 0E')).resolves.toContain('01 0E')
+      expect(fake.conns.length).toBeGreaterThan(1)
+    } finally {
+      clock.mockRestore()
+    }
+  })
+})
+
 describe('createReliableTransport — secuencias exclusivas', () => {
   let fake: FakeIo
 

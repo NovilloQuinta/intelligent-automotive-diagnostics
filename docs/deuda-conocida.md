@@ -61,16 +61,33 @@ quien llegue antes por milisegundos, con lo que el mismo fallo sale unas veces c
 servidor y otras como aborto del navegador. Darle aire al cliente es una linea, pero cambia
 que error ve el mecanico.
 
-## El transporte no se recupera tras agotar la reconexion
+## El transporte no se recuperaba tras agotar la reconexion — RESUELTO el 2026-08-27
 
-Detectado el 2026-08-19 grabando trazas, y reproducido dos veces. Si el dispositivo se cae
-mas de 30 s, `createReliableTransport` agota su ventana de reconexion y **se queda muerto
-para siempre**: la API responde `500` con `Reconnection failed after 30s` aunque el
-emulador (o el coche) haya vuelto. Solo se arregla reiniciando el proceso.
+Detectado el 2026-08-19 grabando trazas y reproducido dos veces: si el dispositivo se caia
+mas de 30 s, `createReliableTransport` agotaba su ventana y **se quedaba muerto para
+siempre**, con `500 Reconnection failed after 30s` aunque el emulador —o el coche— hubiera
+vuelto. Solo se arreglaba reiniciando el proceso.
 
-En la demo con el coche real esto es un riesgo concreto: un cable de OBD movido medio
-minuto deja la herramienta inservible hasta reiniciar. Documentado en `docs/guion-demo.md`
-como paso de recuperacion.
+**La causa.** La ventana de 30 s se trataba como presupuesto de la vida del transporte, no de
+un episodio. Al vencerla, `scheduleReconnect` fallaba la cola y volvia **sin resetear nada**:
+el estado se quedaba en `reconnecting` con `reconnectStartedAt` en el pasado, asi que toda
+peticion posterior vencia el presupuesto al instante y se rechazaba sin llegar a intentar
+abrir la conexion. Cerrar el episodio (`endReconnectEpisode`) devuelve el estado a
+`connected` y pone el contador a cero, de modo que la siguiente peticion abre uno nuevo.
+
+**Un segundo defecto, encontrado por el test.** `io.open()` lanza cuando el dispositivo no
+esta —cable fuera, puerto serie inexistente—, y en el temporizador de reconexion esa
+excepcion escapaba como rechazo no capturado: `reconnectPromise` no se limpiaba y la cola se
+quedaba esperando a una promesa muerta. Ahora va con guarda.
+
+El test de regresion adelanta el reloj con un espia sobre `Date.now` y **no lo devuelve
+atras** despues, porque el tiempo real tampoco retrocede: ahi esta la prueba. Un primer
+intento de test si lo devolvia, y por eso pasaba tanto con el arreglo como sin el — no
+probaba nada. Verificado en las dos direcciones: rojo sin la correccion, verde con ella.
+
+Quedan dos cabos del mismo fichero, sin tocar a proposito: `createReliableTransport` sigue en
+236 lineas (y `processQueue` en complejidad 11). Partirlo es cosmetica, y el momento de
+hacerlo es despues de la sesion con el coche, no antes.
 
 ## `cognitive-diagnosis` responde 404 donde el spec dice 503
 
