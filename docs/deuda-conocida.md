@@ -450,21 +450,30 @@ con la respuesta real.
 "Timed out waiting". `pnpm verify` **sigue sin correrlos**: se dejo fuera para no pasar el
 gate local de ~2 min a ~4.
 
-## Los seis e2e de `dashboard` no corren en CI
+## Los seis e2e de `dashboard` ya corren en CI — RESUELTO el 2026-08-27
 
-`dashboard.spec.ts` necesita los tres emuladores ELM327, que en `docker-compose.yml` son
-imagenes a construir desde `docker/elm327/Dockerfile` y publicar en 35000-35002. El job `e2e`
-del CI **no los levanta**, asi que estos seis casos solo se ejercitan en local con el stack de
-Docker arriba:
+`dashboard.spec.ts` necesita los tres emuladores ELM327, y por eso sus seis casos solo se
+ejercitaban en local. El job `e2e` los levanta ahora con `docker compose up -d --build`
+(solo los tres emuladores: el servicio `api` del compose pide secretos que aqui no hacen
+falta, porque el core-api lo arranca Playwright).
 
-- identificar el vehiculo antes de entrar al menu de diagnostico
-- cambiar de Audi a Kawasaki
-- diagnostico sobre el Audi (con DTC) y sobre la Kawasaki (sin DTC)
-- freeze frame al seleccionar un DTC del Audi
-- telemetria en vivo
+El cableado no necesito nada: `configuration/index.ts` ya trae por defecto
+`localhost:35000/35001/35002`, que es exactamente lo que publica el compose.
 
-Cerrarlo pide anadir los tres servicios al job: build de la imagen, `services:` o
-`docker compose up`, y esperar a que los puertos respondan. Es trabajo aparte, no un olvido.
+**Con espera explicita.** `compose up -d` vuelve cuando el contenedor arranca, no cuando el
+emulador escucha —el interprete de Python tarda unos segundos mas—, asi que hay un bucle que
+sondea los tres puertos con `nc -z` hasta 30 s. Sin el, el primer diagnostico del dashboard
+saldria con `ECONNREFUSED` de forma intermitente, que es la peor manera de fallar. Si un
+puerto no abre, el job vuelca los logs de compose y corta.
+
+`test:e2e:ci` **se elimina**: existia solo para excluir `dashboard.spec.ts` de la lista, y sin
+esa exclusion era una segunda lista de suites que se podia quedar atras. El CI corre
+`pnpm test:e2e`, que las coge todas.
+
+Verificado en este entorno con los emuladores levantados de verdad (via Python, porque el
+proxy no deja bajar la imagen base de Docker Hub): **14 casos en verde en 27 s**, los seis de
+dashboard incluidos. El bucle de espera se probo en sus dos ramas — con los puertos abiertos
+y contra uno muerto, donde corta con exit 1.
 
 Nota de entorno: el `@playwright/test` del repo (1.62.1) espera el build 1234 de Chromium; el
 contenedor de desarrollo remoto trae el 1194. `playwright.config.ts` lee

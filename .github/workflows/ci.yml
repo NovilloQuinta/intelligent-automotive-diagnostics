@@ -80,10 +80,11 @@ jobs:
   # `pnpm verify` y el CI entero: el mock del test describia una respuesta que el
   # servidor no manda. Solo lo vio un navegador de verdad.
   #
-  # NO cubre `dashboard.spec.ts` (6 casos): necesita los tres emuladores ELM327,
-  # que hay que construir desde `docker/elm327/Dockerfile` y publicar en
-  # 35000-35002. Esos seis siguen corriendo solo en local con el stack de Docker
-  # levantado (`pnpm test:e2e`). Anotado en `docs/deuda-conocida.md`.
+  # Cubre las cuatro suites, `dashboard.spec.ts` incluida. Esos seis casos pedian
+  # los tres emuladores ELM327, que este job levanta con compose antes de correr:
+  # el `core-api` que arranca Playwright los busca en localhost:35000-35002, que
+  # es justo lo que trae por defecto `configuration/index.ts`, asi que no hace
+  # falta pasarle nada.
   e2e:
     name: e2e
     runs-on: ubuntu-latest
@@ -110,10 +111,42 @@ jobs:
         run: npx playwright install --with-deps chromium
         working-directory: apps/ui
 
+      # Solo los tres emuladores: el servicio `api` del compose pide secretos que
+      # aqui no hacen falta, porque el core-api lo arranca Playwright.
+      - name: Start ELM327 emulators
+        run: docker compose up -d --build elm327-audi elm327-kawasaki elm327-toyota
+
+      # `compose up -d` vuelve cuando el contenedor arranca, no cuando el emulador
+      # escucha: el interprete de Python tarda unos segundos mas. Sin esta espera,
+      # el primer diagnostico del dashboard sale con ECONNREFUSED de forma
+      # intermitente, que es la peor manera de fallar.
+      - name: Wait for emulators
+        run: |
+          for port in 35000 35001 35002; do
+            for attempt in $(seq 1 30); do
+              if nc -z localhost "$port"; then
+                echo "emulador en $port listo"
+                break
+              fi
+              if [ "$attempt" -eq 30 ]; then
+                echo "::error::el emulador de $port no respondio en 30 s"
+                docker compose logs
+                exit 1
+              fi
+              sleep 1
+            done
+          done
+
       # `playwright.config.ts` levanta core-api y Vite por su cuenta (webServer).
       - name: Run e2e
-        run: pnpm test:e2e:ci
+        run: pnpm test:e2e
         working-directory: apps/ui
+
+      # El informe de Playwright dice que fallo en el navegador; si la causa esta
+      # en el bus, esta del lado del emulador y solo se ve aqui.
+      - name: Emulator logs on failure
+        if: failure()
+        run: docker compose logs elm327-audi elm327-kawasaki elm327-toyota
 
       # Sin esto, un fallo en CI deja solo el texto del error: el informe lleva la
       # captura del momento exacto, que es lo que hace falta para diagnosticarlo.
