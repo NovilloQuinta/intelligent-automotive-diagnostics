@@ -19,6 +19,8 @@ export interface AnthropicClientConfig {
   readonly model?: string
   readonly maxIterations?: number
   readonly timeoutMs?: number
+  /** Temperatura 0-1. Sin ella el modelo usa su defecto (1.0). Ver el schema de validacion. */
+  readonly temperature?: number
   readonly logger: LoggerPort
 }
 
@@ -59,6 +61,14 @@ const anthropicClientConfigSchema = z.object({
   model: z.string().optional(),
   maxIterations: z.number().int().positive().max(100).optional(),
   timeoutMs: z.number().int().positive().max(120_000).optional(),
+  /**
+   * Temperatura del muestreo, 0-1 en la Messages API de Anthropic.
+   *
+   * Sin configurar **no se manda**, y el modelo aplica su defecto (1.0). Importa para
+   * evaluar: es la unica palanca de determinismo que da esta API —`seed` no existe—,
+   * y a 1.0 dos ejecuciones de la misma bateria no son comparables.
+   */
+  temperature: z.number().min(0).max(1).optional(),
 })
 
 type AnthropicParsedConfig = z.infer<typeof anthropicClientConfigSchema>
@@ -122,6 +132,8 @@ const createThinAdapter = createLlmAdapter<
     return client.messages.create({
       model: parsedConfig.model ?? DEFAULT_MODEL,
       max_tokens: DEFAULT_MAX_TOKENS,
+      // Se omite si no esta configurada, para no cambiar el comportamiento por defecto.
+      ...(parsedConfig.temperature !== undefined && { temperature: parsedConfig.temperature }),
       system: systemPrompt,
       messages: messages as Anthropic.Messages.MessageParam[],
       tools: tools.map(toAnthropicTool),

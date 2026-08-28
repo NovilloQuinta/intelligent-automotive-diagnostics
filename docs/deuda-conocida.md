@@ -26,8 +26,11 @@ Lo que falta es leer las 30 respuestas y calibrar el prompt con ellas delante:
   si lo puede provocar el codigo es unit test, si solo lo puede provocar el
   modelo es eval.
 
-Pendiente relacionado: no hay `LLM_TEMPERATURE`. Hoy se corre al 1.0 por defecto
-de Anthropic, que es lo peor para evaluar. `seed` no: no existe en su Messages API.
+`LLM_TEMPERATURE` **ya existe** (27/08). Sin definir no se manda y el proveedor aplica su
+defecto —1.0 en Anthropic—, asi que el comportamiento de siempre no cambia; ponerla a 0 es lo
+que hace comparables dos pasadas de la bateria. Es la unica palanca: `seed` no existe en la
+Messages API de Anthropic. Llega a los dos clientes y al propio `eval-agent.ts`, que
+construye el suyo aparte. Rango 0-1 en Anthropic, 0-2 en OpenAI, validado en cada cliente.
 
 ## El bucle de aprendizaje de ECUs: escrito, sin calibrar
 

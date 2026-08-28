@@ -92,6 +92,35 @@ describe('AnthropicClient', () => {
     expect(handler).not.toHaveBeenCalled()
   })
 
+  // La temperatura es la unica palanca de determinismo que da la Messages API de
+  // Anthropic —`seed` no existe ahi—, y sin ella las evals se corren al 1.0 por
+  // defecto, que es lo peor posible para medir el comportamiento del agente.
+  it('manda la temperatura configurada a la API', async () => {
+    mockCreate.mockResolvedValueOnce(
+      anthropicMessage({ content: [textBlock('ok')], stop_reason: 'end_turn', model: 'm' }),
+    )
+    const deterministic = createAnthropicClient({
+      apiKey: 'test-key',
+      logger: testLogger,
+      temperature: 0,
+    })
+
+    await deterministic.sendMessage({ systemPrompt: 's', userMessage: 'u', tools: [] }, handler)
+
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ temperature: 0 }))
+  })
+
+  // Sin configurar no se manda el campo: el comportamiento por defecto no cambia.
+  it('omite la temperatura cuando no se configura', async () => {
+    mockCreate.mockResolvedValueOnce(
+      anthropicMessage({ content: [textBlock('ok')], stop_reason: 'end_turn', model: 'm' }),
+    )
+
+    await client.sendMessage({ systemPrompt: 's', userMessage: 'u', tools: [] }, handler)
+
+    expect(mockCreate.mock.calls[0][0]).not.toHaveProperty('temperature')
+  })
+
   // ── 4.2: Tool calling simple (1 iteracion) ──
 
   it('should execute tool and return final text after tool_use then end_turn', async () => {

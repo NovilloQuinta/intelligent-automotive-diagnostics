@@ -118,6 +118,8 @@ function createLlmClient(): LlmClientPort | undefined {
     return createAnthropicClient({
       apiKey: config.ANTHROPIC_API_KEY,
       model: config.LLM_MODEL,
+      // A 1.0 —el defecto de Anthropic— dos pasadas de la bateria no son comparables.
+      ...(config.LLM_TEMPERATURE !== undefined && { temperature: config.LLM_TEMPERATURE }),
       logger: silentLogger,
     })
   }
@@ -126,6 +128,7 @@ function createLlmClient(): LlmClientPort | undefined {
       apiKey: config.LLM_API_KEY,
       baseURL: config.LLM_BASE_URL,
       model: config.LLM_MODEL ?? 'gpt-4o-mini',
+      ...(config.LLM_TEMPERATURE !== undefined && { temperature: config.LLM_TEMPERATURE }),
       logger: silentLogger,
     })
   }

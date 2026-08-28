@@ -27,6 +27,7 @@ export function createLlmClient(config: AppConfig, logger: LoggerPort): LlmClien
     return createAnthropicClient({
       apiKey: requireConfig(config.ANTHROPIC_API_KEY, 'ANTHROPIC_API_KEY'),
       model: config.LLM_MODEL,
+      ...(config.LLM_TEMPERATURE !== undefined && { temperature: config.LLM_TEMPERATURE }),
       logger,
     })
   }
@@ -35,6 +36,7 @@ export function createLlmClient(config: AppConfig, logger: LoggerPort): LlmClien
       apiKey: requireConfig(config.LLM_API_KEY, 'LLM_API_KEY'),
       baseURL: requireConfig(config.LLM_BASE_URL, 'LLM_BASE_URL'),
       model: requireConfig(config.LLM_MODEL, 'LLM_MODEL'),
+      ...(config.LLM_TEMPERATURE !== undefined && { temperature: config.LLM_TEMPERATURE }),
       logger,
     })
   }

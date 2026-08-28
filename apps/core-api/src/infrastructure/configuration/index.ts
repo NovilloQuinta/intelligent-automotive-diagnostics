@@ -52,6 +52,14 @@ const configSchema = z.object({
   LLM_API_KEY: z.string().optional(),
   LLM_BASE_URL: z.string().optional(),
   LLM_MODEL: z.string().optional(),
+  /**
+   * Temperatura del muestreo del LLM. Sin definir **no se manda** y el proveedor aplica
+   * su defecto (1.0 en Anthropic). Ponerla a 0 es lo que hace comparables dos pasadas de
+   * `pnpm eval:agent`: la Messages API de Anthropic no tiene `seed`, asi que es la unica
+   * palanca de determinismo que hay. El rango se valida en cada cliente —0-1 en Anthropic,
+   * 0-2 en OpenAI—, que es donde se sabe cual aplica.
+   */
+  LLM_TEMPERATURE: z.coerce.number().min(0).max(2).optional(),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_SECURE: z.preprocess((v) => v === 'true' || v === true, z.boolean()).default(false),

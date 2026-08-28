@@ -19,6 +19,8 @@ export interface OpenAiClientConfig {
   readonly model: string
   readonly maxIterations?: number
   readonly timeoutMs?: number
+  /** Temperatura 0-2 (rango de OpenAI). Sin ella el proveedor usa su defecto. */
+  readonly temperature?: number
   readonly logger: LoggerPort
 }
 
@@ -28,6 +30,8 @@ const openAiClientConfigSchema = z.object({
   model: z.string().min(1),
   maxIterations: z.number().int().positive().max(100).optional(),
   timeoutMs: z.number().int().positive().max(120_000).optional(),
+  /** OpenAI admite 0-2, a diferencia del 0-1 de Anthropic. */
+  temperature: z.number().min(0).max(2).optional(),
 })
 
 type OpenAiParsedConfig = z.infer<typeof openAiClientConfigSchema>
@@ -135,6 +139,8 @@ const createThinAdapter = createLlmAdapter<
         messages,
         tools: tools.map(toOpenAiTool),
         stream: false,
+        // Se omite si no esta configurada, para no cambiar el comportamiento por defecto.
+        ...(parsedConfig.temperature !== undefined && { temperature: parsedConfig.temperature }),
       } as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
       { timeout: parsedConfig.timeoutMs ?? DEFAULT_TIMEOUT_MS },
     )
