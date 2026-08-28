@@ -310,23 +310,39 @@ export function parseDtcResponseByEcu(raw: string, mode: DtcMode = '03'): EcuDtc
 }
 
 /**
- * Parsea el bitmask de PIDs soportados (Mode 01, PID 00).
+ * Parsea un bitmask de PIDs soportados (Mode 01, PID `00`/`20`/`40`/`60`).
  * Cada byte representa 8 PIDs, donde el bit más significativo es el PID más bajo.
  *
  * @param bytes - Los bytes de datos tras el header Mode 01 (ej: [0xB8, 0x3B, 0xA8, 0x13]).
+ * @param offset - PID desde el que numera este bitmask: `0x00` para el rango 01-20,
+ *   `0x20` para 21-40, `0x40` para 41-60. Los cuatro bitmask son identicos en forma y
+ *   solo se distinguen por donde empiezan a contar; sin esto, el de 21-40 renumeraba
+ *   01-20 por segunda vez.
  * @returns Lista de comandos PID formateados (ej: `["01 01", "01 03", ...]`).
  */
-export function parseSupportedPidBitmask(bytes: number[]): string[] {
+export function parseSupportedPidBitmask(bytes: number[], offset = 0): string[] {
   const pids: string[] = []
   for (let i = 0; i < bytes.length; i++) {
     for (let bit = 7; bit >= 0; bit--) {
       if ((bytes[i] >> bit) & 1) {
-        const pid = i * 8 + (7 - bit) + 1
+        const pid = offset + i * 8 + (7 - bit) + 1
         pids.push(`01 ${pid.toString(16).padStart(2, '0').toUpperCase()}`)
       }
     }
   }
   return pids
+}
+
+/**
+ * Indica si un bitmask declara soporte para el rango siguiente.
+ *
+ * El ultimo bit del bitmask (PID `20`, `40`, `60`...) no es un parametro: es la marca
+ * de continuacion que dice si tiene sentido preguntar por el rango de arriba. Leerla es
+ * lo que permite **preguntar en vez de imponer**, en la linea del ADR 009.
+ */
+export function declaresNextPidRange(bytes: number[]): boolean {
+  if (bytes.length === 0) return false
+  return (bytes[bytes.length - 1] & 1) === 1
 }
 
 /**

@@ -46,8 +46,9 @@ export const diagnosisOperations: readonly OperationSpec[] = [
     tag: 'Diagnosis',
     summary: 'PIDs soportados por el vehiculo',
     description:
-      'Escanea el bitmask de Mode 01 PID 00 y lo cruza con el catalogo. Hoy solo cubre el ' +
-      'rango 01-20: encadenar `01 20` y `01 40` esta pendiente.',
+      'Catalogo Mode 01 que alimenta el selector de la interfaz, con su ventana operativa. ' +
+      'No interroga al vehiculo: quien pregunta que PIDs soporta el coche de verdad es la ' +
+      'tool MCP `get_available_pids`, que encadena los bitmask 01 00/20/40/60.',
     auth: true,
     responses: {
       '200': { description: 'PIDs', schema: 'AvailablePidsResponse' },

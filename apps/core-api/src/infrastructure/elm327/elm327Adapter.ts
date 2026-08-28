@@ -28,6 +28,7 @@ import {
   parseVinResponse,
   parseDtcResponseByEcu,
   parseSupportedPidBitmask,
+  declaresNextPidRange,
   type DtcMode,
   type EcuDtcGroup,
 } from './protocol.js'
@@ -56,6 +57,12 @@ const HEADERS_OFF = 'AT H0'
 const MODE_CLEAR_DTC = '04'
 
 /** Motivo por defecto del rechazo, cuando la composicion no aporta uno mas concreto. */
+/**
+ * Los cuatro bitmask de PIDs soportados de SAE J1979, por el PID desde el que numeran.
+ * `01 60` es el ultimo que el estandar define como inventario.
+ */
+const SUPPORTED_PID_RANGES = [0x00, 0x20, 0x40, 0x60] as const
+
 const DEFAULT_READ_ONLY_REASON = 'this adapter is configured as read-only'
 
 /** Politica de seguridad del adaptador frente al vehiculo. */
@@ -184,10 +191,45 @@ export class Elm327TcpRepository implements ObdRepository {
     return dataBytes > 0 ? bytes.slice(0, dataBytes) : bytes
   }
 
+  /**
+   * PIDs Mode 01 que el vehiculo declara soportar.
+   *
+   * SAE J1979 reparte el inventario en bitmask encadenados: `01 00` describe los PIDs
+   * 01-20 y su ultimo bit dice si existe `01 20`, que describe 21-40, y asi hasta `01 60`.
+   * Antes solo se leia el primero, asi que cinco PIDs que el catalogo **si** sabe
+   * decodificar —nivel de combustible, distancia desde el borrado, voltaje del modulo,
+   * temperatura ambiente y del aceite— no se podian descubrir nunca. Quien lo nota es el
+   * diagnostico cognitivo: `get_available_pids` le pasa esta lista al agente, que razonaba
+   * con un inventario recortado delante de un coche real.
+   *
+   * Se **pregunta**, no se impone: cada rango se pide solo si el bitmask anterior lo
+   * declara, en la linea del ADR 009. Y se corta ante un rango sin respuesta —los
+   * escenarios del emulador declaran `01 60` sin implementarlo—, conservando lo ya
+   * descubierto en vez de tumbar el descubrimiento entero.
+   */
   async getSupportedPids(): Promise<string[]> {
-    const raw = await this.client.sendCommand('01 00')
-    const bytes = parseModeResponse(raw)
-    return parseSupportedPidBitmask(bytes)
+    const pids: string[] = []
+
+    for (const range of SUPPORTED_PID_RANGES) {
+      const bytes = await this.readPidRangeBitmask(range)
+      if (bytes === null) break
+      pids.push(...parseSupportedPidBitmask(bytes, range))
+      if (!declaresNextPidRange(bytes)) break
+    }
+
+    return pids
+  }
+
+  /** Bitmask de un rango, o `null` si el vehiculo no contesta a ese `01 XX`. */
+  private async readPidRangeBitmask(range: number): Promise<number[] | null> {
+    const pid = range.toString(16).padStart(2, '0').toUpperCase()
+    try {
+      return parseModeResponse(await this.client.sendCommand(`01 ${pid}`))
+    } catch (err) {
+      // Un rango que no responde cierra la cadena; los anteriores siguen valiendo.
+      if (err instanceof Elm327NoDataError || err instanceof Elm327ParseError) return null
+      throw err
+    }
   }
 
   /**
