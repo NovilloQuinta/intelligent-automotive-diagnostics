@@ -5,9 +5,7 @@ describe('stripMetaPreamble', () => {
   it('borra el caso real visto en produccion: anuncio + "here is my analysis"', () => {
     const text =
       'I now have all the data needed to provide a comprehensive diagnostic report. Here is my analysis:\n\n🔧 Informe de Diagnóstico General del Vehículo'
-    expect(stripMetaPreamble(text)).toBe(
-      '🔧 Informe de Diagnóstico General del Vehículo',
-    )
+    expect(stripMetaPreamble(text)).toBe('🔧 Informe de Diagnóstico General del Vehículo')
   })
 
   it('borra un "Let me..." inicial', () => {
