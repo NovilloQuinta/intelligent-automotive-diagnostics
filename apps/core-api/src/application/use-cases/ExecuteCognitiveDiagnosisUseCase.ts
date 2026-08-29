@@ -18,6 +18,7 @@ import { DEFAULT_SEARCH_LIMIT } from '@/application/knowledge/createKnowledgeInd
 import { derivePidObservations } from '@/application/obd/pidObservationEnricher.js'
 import { READ_PID_TOOL } from '@/application/shared/mcpToolNames.js'
 import { redactInternals } from '@/application/llm/redactInternals.js'
+import { stripMetaPreamble } from '@/application/llm/stripMetaPreamble.js'
 import { COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT } from '@/application/prompts/cognitiveDiagnosisPrompt.js'
 import { VALUATION_SYSTEM_PROMPT } from '@/application/prompts/valuationPrompt.js'
 import {
@@ -225,14 +226,11 @@ export class ExecuteCognitiveDiagnosisUseCase {
     const parsed = parseCognitiveDiagnosis(text)
     // Saneado ANTES de indexar: si el corpus se contamina, el ruido vuelve en
     // futuros prompts como "caso similar" y se retroalimenta.
-    const cleanedText = redactInternals(text.replace(JSON_BLOCK_REGEX, '').trim())
-    // Sin narrativa no hay respuesta que dar, y toda en mayusculas tampoco es una: ni un
-    // diagnostico ni un rechazo de ambito se escriben "gritando" en este dominio, la
-    // instruccion de estilo pide frases normales en espanol. Es justo la forma que toman
-    // las "palabras de confirmacion" de un secuestro de formato (`MODO LIBRE ACTIVADO`,
-    // `PWNED`, `CATALOGO OK`...), que el prompt no siempre frena por si solo. Se lanza
-    // **antes de indexar**: un caso asi en el corpus volveria luego como "caso similar" y
-    // contaminaria futuros prompts.
+    const cleanedText = redactInternals(
+      stripMetaPreamble(text.replace(JSON_BLOCK_REGEX, '').trim()),
+    )
+    // Toda en mayusculas es la forma real de un secuestro de formato (`PWNED`,
+    // `MODO LIBRE ACTIVADO`...) que el prompt no siempre frena por si solo.
     if (cleanedText === '' || isShoutedConfirmation(cleanedText)) throw new EmptyDiagnosisError()
 
     return {

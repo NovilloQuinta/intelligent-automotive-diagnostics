@@ -89,6 +89,10 @@ async function refreshAccessToken(): Promise<AuthTokens> {
 export const GENERIC_ERROR_MESSAGE =
   'Ha ocurrido un problema. Si el problema persiste, contacta con soporte.'
 
+/** Shown for 429 instead of the raw express-rate-limit body, que llega en ingles. */
+export const RATE_LIMITED_MESSAGE =
+  'Estás preguntando muy rápido. Espera un momento y vuelve a intentarlo.'
+
 // ---------------------------------------------------------------------------
 // Fetch timeouts
 // ---------------------------------------------------------------------------
@@ -184,6 +188,9 @@ export async function assertOk(res: Response, fallbackMsg: string): Promise<void
   if (res.ok) return
   if (res.status >= 500) {
     throw new ApiHttpError(GENERIC_ERROR_MESSAGE, res.status)
+  }
+  if (res.status === 429) {
+    throw new ApiHttpError(RATE_LIMITED_MESSAGE, res.status)
   }
   const body = (await res.json().catch(() => ({}))) as {
     error?: unknown

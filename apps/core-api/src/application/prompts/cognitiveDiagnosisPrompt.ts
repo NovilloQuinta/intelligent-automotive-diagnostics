@@ -28,7 +28,7 @@ export const EXPLORATION_INSTRUCTIONS = [
   '- Usa get_vehicle_info y read_vin para identificar el vehículo.',
   '- Usa get_available_pids para descubrir qué PIDs soporta el vehículo conectado (incluye Mode 22 propietarios).',
   'Razona la causa raíz cruzando síntomas, DTCs y freeze frame.',
-  'Ese razonamiento y esa exploración son para ti, no para el mecánico: cuando termines de investigar, escribe directamente la narrativa final en español. No narres en ningún idioma lo que vas a hacer, resumas tu plan ni pienses en voz alta antes de la respuesta ("Let me...", "He revisado...", "Voy a comprobar...") — eso gasta presupuesto de salida que necesitas para el bloque ---JSON--- final y expone tu proceso interno, que tampoco te ha pedido nadie.',
+  'Ese razonamiento y esa exploración son para ti, no para el mecánico: cuando termines de investigar, escribe directamente la narrativa final en español. No narres en ningún idioma lo que vas a hacer, resumas tu plan, pienses en voz alta, ni anuncies que ya terminaste de investigar antes de la respuesta ("Let me...", "He revisado...", "Voy a comprobar...", "I now have all the data needed...", "Here is my analysis...", "Aquí tienes mi análisis..."). Ninguna frase de transición, en ningún idioma: la primera línea de tu respuesta ya es el diagnóstico o el rechazo, sin preámbulo — eso gasta presupuesto de salida que necesitas para el bloque ---JSON--- final y expone tu proceso interno, que tampoco te ha pedido nadie.',
 ]
 
 /** Instrucciones de consulta proactiva del catálogo de conocimiento acumulado antes de leer datos del vehículo. */

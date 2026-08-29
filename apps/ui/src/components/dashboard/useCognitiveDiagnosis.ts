@@ -8,6 +8,7 @@ const HTTP_NOT_FOUND = 404
 const HTTP_UNPROCESSABLE_ENTITY = 422
 const HTTP_PAYLOAD_TOO_LARGE = 413
 const HTTP_BAD_GATEWAY = 502
+const HTTP_TOO_MANY_REQUESTS = 429
 
 /**
  * Presupuesto del hilo que se reenvia en cada pregunta (~60 KB serializados).
@@ -30,6 +31,7 @@ export type CognitiveDiagnosisErrorKind =
   | 'thread_too_long'
   /** El modelo termino pero no dejo narrativa legible que ensenar. */
   | 'empty_answer'
+  | 'rate_limited'
   | 'unknown'
 
 /**
@@ -75,6 +77,10 @@ export function deriveCognitiveDiagnosisError(error: unknown): CognitiveDiagnosi
     // large"), que no le dice al mecanico ni que ha pasado ni que hacer.
     if (error.status === HTTP_PAYLOAD_TOO_LARGE) {
       return { message: THREAD_TOO_LONG_MESSAGE, kind: 'thread_too_long' }
+    }
+    // El mensaje ya viene saneado por assertOk; aqui solo se deriva el `kind`.
+    if (error.status === HTTP_TOO_MANY_REQUESTS) {
+      return { message: error.message, kind: 'rate_limited' }
     }
     const kind: CognitiveDiagnosisErrorKind =
       error.status === HTTP_GATEWAY_TIMEOUT
