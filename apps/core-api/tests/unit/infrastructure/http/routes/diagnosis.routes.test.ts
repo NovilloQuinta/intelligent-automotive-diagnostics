@@ -18,7 +18,11 @@ import {
   CognitiveDiagnosisTimeoutError,
   DiagnosisSessionNotFoundError,
 } from '@/infrastructure/services/errors.js'
-import { MaxToolCallIterationsError, EmptyDiagnosisError } from '@/application/llm/llmErrors.js'
+import {
+  MaxToolCallIterationsError,
+  EmptyDiagnosisError,
+  TruncatedLlmResponseError,
+} from '@/application/llm/llmErrors.js'
 import { Vin } from '@/domain/value-objects/Vin.js'
 import { DiagnosisSession } from '@/domain/entities/DiagnosisSession.js'
 import type { SimulationScenario } from '@/infrastructure/simulation/scenario.js'
@@ -1093,6 +1097,22 @@ describe('diagnosisRoutes', () => {
       // que se traga el mensaje y deja al mecanico sin saber que ha pasado.
       expect(res.status).toBe(502)
       expect(res.body.error).toMatch(/respuesta legible/i)
+    })
+
+    it('should return 502 when the model response is cut off by the output token limit', async () => {
+      const service = createServiceStub({
+        cognitiveDiagnosis: vi.fn(async () => {
+          throw new TruncatedLlmResponseError()
+        }),
+      })
+      const { app } = createApp(service)
+
+      const res = await request(app)
+        .post('/api/mcp/cognitive-diagnosis')
+        .send({ scenarioId: 'audi-a3-idle', query: 'x' })
+
+      expect(res.status).toBe(502)
+      expect(res.body.error).toMatch(/se cortó por longitud/i)
     })
   })
 

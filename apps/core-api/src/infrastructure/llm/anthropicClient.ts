@@ -8,15 +8,29 @@ import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.
 import { mcpToolDefinitionSchema } from '@/infrastructure/llm/toolDefinitionSchema.js'
 import { composeLlmClient } from '@/infrastructure/llm/composeLlmClient.js'
 import { createLlmAdapter, buildMessages } from '@/infrastructure/llm/createLlmAdapter.js'
+import { TruncatedLlmResponseError } from '@/application/llm/llmErrors.js'
 
 const DEFAULT_MODEL = 'claude-sonnet-4-20250514'
 const DEFAULT_TIMEOUT_MS = 30_000
-const DEFAULT_MAX_TOKENS = 4096
+/**
+ * 4096 se quedaba corto: la narrativa sola ya ronda las 300-700 palabras y el
+ * bloque `---JSON---` va al final, asi que un narrativa larga se comia el
+ * presupuesto entero antes de llegar a el. Verificado con la bateria de eval:
+ * `stop_reason: 'max_tokens'` en casi todas las 30 respuestas.
+ */
+const DEFAULT_MAX_TOKENS = 8192
+/**
+ * Sin esto el SDK corre a 1.0 (su default), que maximiza variedad — el peor ajuste para
+ * un agente que debe seguir el mismo contrato de formato y ambito consulta tras consulta.
+ * 0.3 deja margen para redactar sin volverlo determinista de mas.
+ */
+const DEFAULT_TEMPERATURE = 0.3
 
 /** Configuracion del cliente Anthropic. */
 export interface AnthropicClientConfig {
   readonly apiKey: string
   readonly model?: string
+  readonly temperature?: number
   readonly maxIterations?: number
   readonly timeoutMs?: number
   readonly logger: LoggerPort
@@ -57,6 +71,7 @@ function toAnthropicTool(tool: McpToolDefinition): Anthropic.Messages.Tool {
 const anthropicClientConfigSchema = z.object({
   apiKey: z.string().min(1),
   model: z.string().optional(),
+  temperature: z.number().min(0).max(1).optional(),
   maxIterations: z.number().int().positive().max(100).optional(),
   timeoutMs: z.number().int().positive().max(120_000).optional(),
 })
@@ -93,6 +108,9 @@ function buildAnthropicMessages(
 }
 
 function parseAnthropicResponse(response: Anthropic.Messages.Message): LlmSingleResponse {
+  if (response.stop_reason === 'max_tokens') {
+    throw new TruncatedLlmResponseError()
+  }
   if (response.stop_reason !== 'tool_use') {
     return { text: extractText(response.content), toolCalls: [], raw: response }
   }
@@ -122,6 +140,7 @@ const createThinAdapter = createLlmAdapter<
     return client.messages.create({
       model: parsedConfig.model ?? DEFAULT_MODEL,
       max_tokens: DEFAULT_MAX_TOKENS,
+      temperature: parsedConfig.temperature ?? DEFAULT_TEMPERATURE,
       system: systemPrompt,
       messages: messages as Anthropic.Messages.MessageParam[],
       tools: tools.map(toAnthropicTool),

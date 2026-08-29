@@ -7,16 +7,20 @@ import type { LlmSingleResponse } from '@/application/dto/llm/LlmSingleResponse.
 import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
 import { mcpToolDefinitionSchema } from '@/infrastructure/llm/toolDefinitionSchema.js'
 import { LlmApiError } from '@/infrastructure/llm/llmErrors.js'
+import { TruncatedLlmResponseError } from '@/application/llm/llmErrors.js'
 import { composeLlmClient } from '@/infrastructure/llm/composeLlmClient.js'
 import { createLlmAdapter, buildMessages } from '@/infrastructure/llm/createLlmAdapter.js'
 
 const DEFAULT_TIMEOUT_MS = 30_000
+/** Ver DEFAULT_TEMPERATURE en anthropicClient.ts: mismo motivo, mismo valor. */
+const DEFAULT_TEMPERATURE = 0.3
 
 /** Configuracion del cliente OpenAI-compatible. */
 export interface OpenAiClientConfig {
   readonly apiKey: string
   readonly baseURL: string
   readonly model: string
+  readonly temperature?: number
   readonly maxIterations?: number
   readonly timeoutMs?: number
   readonly logger: LoggerPort
@@ -26,6 +30,7 @@ const openAiClientConfigSchema = z.object({
   apiKey: z.string().min(1),
   baseURL: z.string().url(),
   model: z.string().min(1),
+  temperature: z.number().min(0).max(2).optional(),
   maxIterations: z.number().int().positive().max(100).optional(),
   timeoutMs: z.number().int().positive().max(120_000).optional(),
 })
@@ -81,17 +86,18 @@ function buildOpenAiMessages(
   )
 }
 
+/** Separado de {@link parseOpenAiResponse} para no sumar otra rama a su complejidad. */
+function assertNotTruncated(finishReason: string | null): void {
+  if (finishReason === 'length') throw new TruncatedLlmResponseError()
+}
+
 function parseOpenAiResponse(response: OpenAI.Chat.Completions.ChatCompletion): LlmSingleResponse {
   const choice = response.choices[0]
   if (!choice) throw new LlmApiError('No response choices from OpenAI API')
 
   const { finish_reason: finishReason, message } = choice
-  if (
-    finishReason === 'stop' ||
-    finishReason === 'length' ||
-    !message.tool_calls ||
-    message.tool_calls.length === 0
-  ) {
+  assertNotTruncated(finishReason)
+  if (finishReason === 'stop' || !message.tool_calls || message.tool_calls.length === 0) {
     return { text: message.content ?? '', toolCalls: [], raw: response }
   }
 
@@ -134,6 +140,7 @@ const createThinAdapter = createLlmAdapter<
         model: parsedConfig.model,
         messages,
         tools: tools.map(toOpenAiTool),
+        temperature: parsedConfig.temperature ?? DEFAULT_TEMPERATURE,
         stream: false,
       } as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
       { timeout: parsedConfig.timeoutMs ?? DEFAULT_TIMEOUT_MS },

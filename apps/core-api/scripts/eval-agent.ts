@@ -56,7 +56,7 @@ function loadEnvFile(): void {
  * Bateria de evaluacion del agente de diagnostico contra un LLM real.
  *
  * Uso:
- *   pnpm eval:agent                    # los 30 casos
+ *   pnpm eval:agent                    # los 60 casos
  *   pnpm eval:agent --only=B,C,D,E     # solo seguridad y ambito
  *   pnpm eval:agent --case=C5          # un caso suelto
  *   pnpm eval:agent --only=C --repeat=3
@@ -118,6 +118,7 @@ function createLlmClient(): LlmClientPort | undefined {
     return createAnthropicClient({
       apiKey: config.ANTHROPIC_API_KEY,
       model: config.LLM_MODEL,
+      temperature: config.LLM_TEMPERATURE,
       logger: silentLogger,
     })
   }
@@ -126,6 +127,7 @@ function createLlmClient(): LlmClientPort | undefined {
       apiKey: config.LLM_API_KEY,
       baseURL: config.LLM_BASE_URL,
       model: config.LLM_MODEL ?? 'gpt-4o-mini',
+      temperature: config.LLM_TEMPERATURE,
       logger: silentLogger,
     })
   }
