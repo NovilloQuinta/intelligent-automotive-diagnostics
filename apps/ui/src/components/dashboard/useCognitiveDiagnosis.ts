@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { api, GENERIC_ERROR_MESSAGE, type ConversationItem } from '@/lib/api'
+import { api, GENERIC_ERROR_MESSAGE, type ConversationItem, type CognitiveOutput } from '@/lib/api'
 import { ApiHttpError } from '@/lib/api-errors'
 import { pidObservationToRow, type PidRow } from './pidCatalog'
 
@@ -33,6 +33,14 @@ export type CognitiveDiagnosisErrorKind =
   | 'empty_answer'
   | 'rate_limited'
   | 'unknown'
+
+/** Mapea el status HTTP a `kind` para los casos que no llevan mensaje curado propio (413/429 se resuelven antes). */
+const STATUS_TO_KIND = new Map<number, CognitiveDiagnosisErrorKind>([
+  [HTTP_GATEWAY_TIMEOUT, 'timeout'],
+  [HTTP_NOT_FOUND, 'unavailable'],
+  [HTTP_UNPROCESSABLE_ENTITY, 'too_many_steps'],
+  [HTTP_BAD_GATEWAY, 'empty_answer'],
+])
 
 /**
  * Recorta el hilo que viaja al servidor, descartando los turnos mas antiguos
@@ -82,16 +90,7 @@ export function deriveCognitiveDiagnosisError(error: unknown): CognitiveDiagnosi
     if (error.status === HTTP_TOO_MANY_REQUESTS) {
       return { message: error.message, kind: 'rate_limited' }
     }
-    const kind: CognitiveDiagnosisErrorKind =
-      error.status === HTTP_GATEWAY_TIMEOUT
-        ? 'timeout'
-        : error.status === HTTP_NOT_FOUND
-          ? 'unavailable'
-          : error.status === HTTP_UNPROCESSABLE_ENTITY
-            ? 'too_many_steps'
-            : error.status === HTTP_BAD_GATEWAY
-              ? 'empty_answer'
-              : 'unknown'
+    const kind = STATUS_TO_KIND.get(error.status) ?? 'unknown'
     return { message: error.message, kind }
   }
   const message = error instanceof Error && error.message ? error.message : GENERIC_ERROR_MESSAGE
@@ -118,6 +117,42 @@ interface CognitiveState {
 }
 
 const EMPTY_HISTORY: ConversationItem[] = []
+
+/** Un diagnóstico nuevo solo aporta el turno del asistente; un follow-up añade pregunta + respuesta. */
+function buildTurn(query: string | undefined, diagnosis: string): ConversationItem[] {
+  const assistantTurn: ConversationItem = { __type: 'raw_response', data: { text: diagnosis } }
+  return query ? [{ __type: 'user_message', content: query }, assistantTurn] : [assistantTurn]
+}
+
+function buildSuccessState(
+  output: CognitiveOutput,
+  history: ConversationItem[],
+  query: string | undefined,
+): CognitiveState {
+  return {
+    pidRows: output.pidObservations.map(pidObservationToRow),
+    diagnosisText: output.diagnosis,
+    severity: output.severity,
+    confidence: output.confidence,
+    recommendations: output.recommendations,
+    sessionId: output.sessionId ?? null,
+    conversationHistory: [...history, ...buildTurn(query, output.diagnosis)],
+    error: null,
+  }
+}
+
+/** Estado vacio que conserva lo que ya hubiera en pantalla, para pegarle un `error` encima. */
+function emptyState(s: CognitiveState | null): Omit<CognitiveState, 'error'> {
+  return {
+    pidRows: s?.pidRows ?? null,
+    diagnosisText: s?.diagnosisText ?? null,
+    severity: s?.severity ?? null,
+    confidence: s?.confidence ?? null,
+    recommendations: s?.recommendations ?? null,
+    sessionId: s?.sessionId ?? null,
+    conversationHistory: s?.conversationHistory ?? EMPTY_HISTORY,
+  }
+}
 
 /**
  * Runs the LLM cognitive diagnosis for the selected scenario and exposes the
@@ -174,38 +209,10 @@ export function useCognitiveDiagnosis(selectedId: string) {
         historyToSend.length > 0 ? [...historyToSend] : undefined,
         sessionId ?? undefined,
       )
-
-      // Un diagnóstico nuevo solo aporta el primer turno del asistente;
-      // un follow-up añade pregunta + respuesta.
-      const turn: ConversationItem[] = query
-        ? [
-            { __type: 'user_message', content: query },
-            { __type: 'raw_response', data: { text: output.diagnosis } },
-          ]
-        : [{ __type: 'raw_response', data: { text: output.diagnosis } }]
-
-      setState({
-        pidRows: output.pidObservations.map(pidObservationToRow),
-        diagnosisText: output.diagnosis,
-        severity: output.severity,
-        confidence: output.confidence,
-        recommendations: output.recommendations,
-        sessionId: output.sessionId ?? null,
-        conversationHistory: [...history, ...turn],
-        error: null,
-      })
+      setState(buildSuccessState(output, history, query))
     } catch (err) {
       const error = deriveCognitiveDiagnosisError(err)
-      setState((s) => ({
-        pidRows: s?.pidRows ?? null,
-        diagnosisText: s?.diagnosisText ?? null,
-        severity: s?.severity ?? null,
-        confidence: s?.confidence ?? null,
-        recommendations: s?.recommendations ?? null,
-        sessionId: s?.sessionId ?? null,
-        conversationHistory: s?.conversationHistory ?? EMPTY_HISTORY,
-        error,
-      }))
+      setState((s) => ({ ...emptyState(s), error }))
     } finally {
       setLoading(false)
     }

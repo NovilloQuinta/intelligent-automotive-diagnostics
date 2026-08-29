@@ -53,8 +53,10 @@ function buildUserMessage(
  * para no atrapar un titular corto pero real. Case-sensitive a proposito: una frase
  * normal en espanol mezcla mayusculas y minusculas.
  */
+const MAX_SHOUT_LENGTH = 60
+
 function isShoutedConfirmation(text: string): boolean {
-  return text.length <= 60 && /[A-ZÁÉÍÓÚÑ]/.test(text) && text === text.toUpperCase()
+  return text.length <= MAX_SHOUT_LENGTH && /[A-ZÁÉÍÓÚÑ]/.test(text) && text === text.toUpperCase()
 }
 
 /** Umbrales de la etiqueta de parecido (distancia vectorial: menor es mas parecido). */
@@ -166,35 +168,14 @@ export class ExecuteCognitiveDiagnosisUseCase {
   async execute(input: ExecuteCognitiveDiagnosisInput): Promise<ExecuteCognitiveDiagnosisOutput> {
     const { userQuery, vehicleContext, conversationHistory } = input
 
-    // Filtro de ambito ANTES de nada: una llamada minima, sin tools, que decide si
-    // seguir. Dejarselo al prompt grande (que ya explora y razona a la vez) resulto
-    // poco fiable en la bateria de eval — el modelo llamaba tools o completaba la
-    // parte fuera de ambito "de propina" pese a la instruccion. Fuera de ambito no
-    // llega a explorar el vehiculo ni a gastar el prompt grande.
+    // Filtro de ambito ANTES de nada, sin tools: dejarselo al prompt grande resulto
+    // poco fiable en la bateria de eval.
     const scope = await classifyDiagnosisScope(userQuery, this.options.llmClient)
     if (scope === DIAGNOSIS_SCOPE.Salud || scope === DIAGNOSIS_SCOPE.FueraDeAmbito) {
-      return {
-        diagnosis: scope === DIAGNOSIS_SCOPE.Salud ? HEALTH_REDIRECT_RESPONSE : OFF_TOPIC_RESPONSE,
-        severity: Severity.Low,
-        confidence: 0,
-        recommendations: [],
-        toolCalls: [],
-        pidObservations: [],
-      }
+      return this.offTopicOutput(scope)
     }
-
     if (scope === DIAGNOSIS_SCOPE.Valoracion) {
-      // Prompt corto y de una sola tarea, sin catalogo ni aprendizaje de PID/DTC/ECU:
-      // eso es ruido irrelevante aqui, y diluirlo en el prompt grande es justo lo que
-      // fallaba antes (ver docs/deuda-conocida.md). Tampoco se indexa: no es un
-      // diagnostico, y una valoracion en el catalogo de "casos similares" solo
-      // contaminaria futuros prompts.
-      const userMessage = buildUserMessage(userQuery, vehicleContext)
-      const response = await this.options.llmClient.sendMessage(
-        { systemPrompt: VALUATION_SYSTEM_PROMPT, userMessage, tools: this.options.tools },
-        this.options.handler,
-      )
-      return this.buildOutput(response)
+      return this.executeValuation(userQuery, vehicleContext)
     }
 
     const similarCases = await this.retrieveSimilarCases(userQuery, vehicleContext)
@@ -213,6 +194,33 @@ export class ExecuteCognitiveDiagnosisUseCase {
     const output = this.buildOutput(response)
     await this.indexResolvedCase(output.diagnosis, response.toolCalls, userQuery, vehicleContext)
     return output
+  }
+
+  /** Respuesta fija, sin llamar al LLM grande, para salud/fuera de ambito. */
+  private offTopicOutput(
+    scope: typeof DIAGNOSIS_SCOPE.Salud | typeof DIAGNOSIS_SCOPE.FueraDeAmbito,
+  ): ExecuteCognitiveDiagnosisOutput {
+    return {
+      diagnosis: scope === DIAGNOSIS_SCOPE.Salud ? HEALTH_REDIRECT_RESPONSE : OFF_TOPIC_RESPONSE,
+      severity: Severity.Low,
+      confidence: 0,
+      recommendations: [],
+      toolCalls: [],
+      pidObservations: [],
+    }
+  }
+
+  /** Prompt corto dedicado a valoraciones; no se indexa, no es un diagnostico. */
+  private async executeValuation(
+    userQuery: string | undefined,
+    vehicleContext: VehicleInfo | undefined,
+  ): Promise<ExecuteCognitiveDiagnosisOutput> {
+    const userMessage = buildUserMessage(userQuery, vehicleContext)
+    const response = await this.options.llmClient.sendMessage(
+      { systemPrompt: VALUATION_SYSTEM_PROMPT, userMessage, tools: this.options.tools },
+      this.options.handler,
+    )
+    return this.buildOutput(response)
   }
 
   /**

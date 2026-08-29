@@ -1,6 +1,10 @@
 import { ApiHttpError } from '@/lib/api-errors'
 import type { AuthTokens } from '@/components/dashboard/types'
 
+const HTTP_UNAUTHORIZED = 401
+const HTTP_SERVER_ERROR_MIN = 500
+const HTTP_TOO_MANY_REQUESTS = 429
+
 // ---------------------------------------------------------------------------
 // Token storage (localStorage)
 // ---------------------------------------------------------------------------
@@ -151,7 +155,7 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
     throw new Error(GENERIC_ERROR_MESSAGE)
   }
 
-  if (res.status === 401 && tokens?.refreshToken) {
+  if (res.status === HTTP_UNAUTHORIZED && tokens?.refreshToken) {
     // Single-flight: all concurrent 401s share one refresh
     if (!refreshPromise) {
       refreshPromise = refreshAccessToken().finally(() => {
@@ -184,30 +188,30 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
  * {@link GENERIC_ERROR_MESSAGE} — server internals are never shown to the
  * user, regardless of what the body contains.
  */
+type ErrorBody = { error?: unknown; details?: unknown }
+
+/** Extrae el mensaje curado del cuerpo de error: `details` (string o array) antes que `error`. */
+function extractErrorMessage(body: ErrorBody, fallbackMsg: string): string {
+  if (typeof body.details === 'string') return body.details
+  if (Array.isArray(body.details)) {
+    return body.details
+      .map((d) => (d as { message?: string }).message)
+      .filter((m): m is string => typeof m === 'string')
+      .join(', ')
+  }
+  return typeof body.error === 'string' ? body.error : fallbackMsg
+}
+
 export async function assertOk(res: Response, fallbackMsg: string): Promise<void> {
   if (res.ok) return
-  if (res.status >= 500) {
+  if (res.status >= HTTP_SERVER_ERROR_MIN) {
     throw new ApiHttpError(GENERIC_ERROR_MESSAGE, res.status)
   }
-  if (res.status === 429) {
+  if (res.status === HTTP_TOO_MANY_REQUESTS) {
     throw new ApiHttpError(RATE_LIMITED_MESSAGE, res.status)
   }
-  const body = (await res.json().catch(() => ({}))) as {
-    error?: unknown
-    details?: unknown
-  }
-  const msg =
-    typeof body.details === 'string'
-      ? body.details
-      : Array.isArray(body.details)
-        ? body.details
-            .map((d) => (d as { message?: string }).message)
-            .filter((m): m is string => typeof m === 'string')
-            .join(', ')
-        : typeof body.error === 'string'
-          ? body.error
-          : fallbackMsg
-  throw new ApiHttpError(msg, res.status)
+  const body = (await res.json().catch(() => ({}))) as ErrorBody
+  throw new ApiHttpError(extractErrorMessage(body, fallbackMsg), res.status)
 }
 
 // ---------------------------------------------------------------------------

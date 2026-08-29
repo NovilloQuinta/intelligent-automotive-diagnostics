@@ -37,6 +37,11 @@ const COGNITIVE_BODY_LIMIT = '1mb'
 /** Codigo de estado del cuerpo demasiado grande (RFC 9110). */
 const HTTP_PAYLOAD_TOO_LARGE = 413
 
+const HTTP_INTERNAL_SERVER_ERROR = 500
+
+/** Un año en segundos, para la cabecera HSTS. */
+const HSTS_MAX_AGE_SECONDS = 31536000
+
 /** Dependencias del servidor Express. */
 export interface ServerDependencies {
   readonly rateLimit?: Partial<RateLimiterConfig>
@@ -67,7 +72,7 @@ function applyBaseMiddleware(app: express.Application, deps: ServerDependencies)
         },
       },
       hsts: {
-        maxAge: 31536000,
+        maxAge: HSTS_MAX_AGE_SECONDS,
         includeSubDomains: true,
       },
       frameguard: { action: 'deny' },
@@ -162,7 +167,7 @@ function mountErrorHandler(app: express.Application, logger: LoggerPort): void {
         res.status(HTTP_PAYLOAD_TOO_LARGE).json({ error: 'Request body is too large' })
         return
       }
-      res.status(500).json({ error: 'Internal server error' })
+      res.status(HTTP_INTERNAL_SERVER_ERROR).json({ error: 'Internal server error' })
     },
   )
 }
@@ -236,7 +241,6 @@ function applyDiagnosisRateLimits(app: express.Application): void {
   const cognitiveLimiter = createRateLimiter({
     namespace: 'diagnosis:cognitive',
     windowMinutes: 1,
-    // 5/min cortaba una conversacion normal a los dos o tres mensajes.
     maxRequests: 15,
   })
   const clearDtcLimiter = createRateLimiter({
@@ -284,6 +288,32 @@ function mountAdminRoutes(app: express.Application, deps: ServerDependencies): v
   app.use('/api/admin', createAdminRoutes(deps.adminController))
 }
 
+function mountProfileRoutes(app: express.Application, deps: ServerDependencies): void {
+  if (!deps.profileController) return
+  // Rate limit dedicado para change-password: protege contra fuerza bruta con un access token robado
+  const changePasswordLimiter = createRateLimiter({
+    namespace: 'profile:change-password',
+    windowMinutes: 15,
+    maxRequests: 5,
+  })
+  app.use('/api/profile', createProfileRoutes(deps.profileController, changePasswordLimiter))
+}
+
+function mountTwoFactorProfileRoutes(app: express.Application, deps: ServerDependencies): void {
+  if (!deps.twoFactorController) return
+  // Desactivar el segundo factor merece el mismo freno que cambiar la contrasena:
+  // las dos cosas se hacen con contrasena y las dos son irreversibles de facto.
+  const disableLimiter = createRateLimiter({
+    namespace: 'profile:2fa-disable',
+    windowMinutes: 15,
+    maxRequests: 5,
+  })
+  app.use(
+    '/api/profile/2fa',
+    createTwoFactorProfileRoutes(deps.twoFactorController, disableLimiter),
+  )
+}
+
 /** Crea y devuelve la instancia de Express con todas las rutas montadas. */
 export function createServer(deps: ServerDependencies): express.Application {
   const app = express()
@@ -312,30 +342,8 @@ export function createServer(deps: ServerDependencies): express.Application {
   applyDiagnosisRateLimits(app)
   app.use('/api', createDiagnosisRoutes(deps.diagnosisController))
 
-  if (deps.profileController) {
-    // Rate limit dedicado para change-password: protege contra fuerza bruta con un access token robado
-    const changePasswordLimiter = createRateLimiter({
-      namespace: 'profile:change-password',
-      windowMinutes: 15,
-      maxRequests: 5,
-    })
-    app.use('/api/profile', createProfileRoutes(deps.profileController, changePasswordLimiter))
-  }
-
-  if (deps.twoFactorController) {
-    // Desactivar el segundo factor merece el mismo freno que cambiar la contrasena:
-    // las dos cosas se hacen con contrasena y las dos son irreversibles de facto.
-    const disableLimiter = createRateLimiter({
-      namespace: 'profile:2fa-disable',
-      windowMinutes: 15,
-      maxRequests: 5,
-    })
-    app.use(
-      '/api/profile/2fa',
-      createTwoFactorProfileRoutes(deps.twoFactorController, disableLimiter),
-    )
-  }
-
+  mountProfileRoutes(app, deps)
+  mountTwoFactorProfileRoutes(app, deps)
   mountAdminRoutes(app, deps)
 
   mountErrorHandler(app, deps.logger)
