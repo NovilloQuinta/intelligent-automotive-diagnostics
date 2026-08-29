@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createOpenAiClient } from '@/infrastructure/llm/openAiClient.js'
 import { LlmTimeoutError, LlmApiError } from '@/infrastructure/llm/llmErrors.js'
+import { TruncatedLlmResponseError } from '@/application/llm/llmErrors.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPort.js'
 import type OpenAI from 'openai'
@@ -266,11 +267,48 @@ describe('OpenAiClient', () => {
 
   // ── Escenario: Limite de iteraciones alcanzado (10 por defecto) ──
 
-  it('should throw MaxToolCallIterationsError after default max iterations without stop', async () => {
-    const toolResponses = Array.from({ length: 10 }, (_, i) =>
+  it('should force a final tools-less answer after default max iterations, instead of throwing, when there is real progress', async () => {
+    const toolResponses = Array.from({ length: 20 }, (_, i) =>
       openAiToolCallResponse([
         {
-          id: `call_00${i}`,
+          id: `call_${i}`,
+          name: 'read_pid',
+          arguments: `{"mode":"01","pid":"pid-${i}"}`,
+        },
+      ]),
+    )
+    for (const msg of toolResponses) {
+      mockCreate.mockResolvedValueOnce(msg)
+    }
+    mockCreate.mockResolvedValueOnce(openAiTextResponse('Diagnóstico con lo reunido.'))
+
+    const mockHandler = vi.fn().mockResolvedValue('RPM: 800')
+
+    const result = await client.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Diagnostico',
+        tools: [sampleToolDef],
+      },
+      mockHandler,
+    )
+
+    expect(result.text).toBe('Diagnóstico con lo reunido.')
+    expect(result.toolCalls).toHaveLength(20)
+    expect(mockCreate).toHaveBeenCalledTimes(21)
+    expect(mockHandler).toHaveBeenCalledTimes(20)
+    const finalCallArgs = mockCreate.mock.calls[20][0] as { tools: unknown[] }
+    expect(finalCallArgs.tools).toEqual([])
+  })
+
+  it('should tolerate the model repeating the exact same tool call more than twice, without throwing early', async () => {
+    // Visto contra un modelo real en la bateria de eval: releer el mismo PID no
+    // siempre es un atasco. Una version anterior cortaba al tercer repetido y eso
+    // rompia sesiones que iban bien.
+    const toolResponses = Array.from({ length: 3 }, (_, i) =>
+      openAiToolCallResponse([
+        {
+          id: `call_${i}`,
           name: 'read_pid',
           arguments: '{"mode":"01","pid":"0C"}',
         },
@@ -279,27 +317,27 @@ describe('OpenAiClient', () => {
     for (const msg of toolResponses) {
       mockCreate.mockResolvedValueOnce(msg)
     }
+    mockCreate.mockResolvedValueOnce(openAiTextResponse('Diagnóstico con lo reunido.'))
 
     const mockHandler = vi.fn().mockResolvedValue('RPM: 800')
 
-    await expect(
-      client.sendMessage(
-        {
-          systemPrompt: 'Eres un mecanico.',
-          userMessage: 'Diagnostico',
-          tools: [sampleToolDef],
-        },
-        mockHandler,
-      ),
-    ).rejects.toThrow('Exceeded maximum tool call iterations')
+    const result = await client.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Diagnostico',
+        tools: [sampleToolDef],
+      },
+      mockHandler,
+    )
 
-    expect(mockCreate).toHaveBeenCalledTimes(10)
-    expect(mockHandler).toHaveBeenCalledTimes(10)
+    expect(result.text).toBe('Diagnóstico con lo reunido.')
+    expect(result.toolCalls).toHaveLength(3)
+    expect(mockHandler).toHaveBeenCalledTimes(3)
   })
 
   // ── Escenario: Limite configurable ──
 
-  it('should respect configurable maxIterations', async () => {
+  it('should respect configurable maxIterations, forcing a final answer instead of throwing', async () => {
     const customClient = createOpenAiClient({
       apiKey: 'test-key',
       logger: testLogger,
@@ -308,33 +346,34 @@ describe('OpenAiClient', () => {
       maxIterations: 3,
     })
 
-    const toolResponses = Array.from({ length: 3 }, (_, i) =>
+    const pids = ['0C', '0D', '05']
+    const toolResponses = pids.map((pid, i) =>
       openAiToolCallResponse([
         {
           id: `call_00${i}`,
           name: 'read_pid',
-          arguments: '{"mode":"01","pid":"0C"}',
+          arguments: `{"mode":"01","pid":"${pid}"}`,
         },
       ]),
     )
     for (const msg of toolResponses) {
       mockCreate.mockResolvedValueOnce(msg)
     }
+    mockCreate.mockResolvedValueOnce(openAiTextResponse('Diagnóstico con lo reunido.'))
 
     const mockHandler = vi.fn().mockResolvedValue('RPM: 800')
 
-    await expect(
-      customClient.sendMessage(
-        {
-          systemPrompt: 'Eres un mecanico.',
-          userMessage: 'Diagnostico',
-          tools: [sampleToolDef],
-        },
-        mockHandler,
-      ),
-    ).rejects.toThrow('maximum tool call iterations (3)')
+    const result = await customClient.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Diagnostico',
+        tools: [sampleToolDef],
+      },
+      mockHandler,
+    )
 
-    expect(mockCreate).toHaveBeenCalledTimes(3)
+    expect(result.text).toBe('Diagnóstico con lo reunido.')
+    expect(mockCreate).toHaveBeenCalledTimes(4)
     expect(mockHandler).toHaveBeenCalledTimes(3)
   })
 
@@ -421,9 +460,9 @@ describe('OpenAiClient', () => {
     }
   })
 
-  // ── Escenario: finish_reason "length" → devuelve el texto parcial ──
+  // ── Escenario: finish_reason "length" → truncamiento, no texto parcial silencioso ──
 
-  it('should return partial text when finish_reason is "length"', async () => {
+  it('should throw TruncatedLlmResponseError when finish_reason is "length"', async () => {
     const lengthResponse: OpenAI.Chat.Completions.ChatCompletion = {
       id: 'chatcmpl-abc',
       object: 'chat.completion',
@@ -446,17 +485,16 @@ describe('OpenAiClient', () => {
 
     mockCreate.mockResolvedValueOnce(lengthResponse)
 
-    const result = await client.sendMessage(
-      {
-        systemPrompt: 'Eres un mecanico.',
-        userMessage: 'Diagnostico',
-        tools: [],
-      },
-      handler,
-    )
-
-    expect(result.text).toBe('Diagnostico truncado...')
-    expect(result.toolCalls).toEqual([])
+    await expect(
+      client.sendMessage(
+        {
+          systemPrompt: 'Eres un mecanico.',
+          userMessage: 'Diagnostico',
+          tools: [],
+        },
+        handler,
+      ),
+    ).rejects.toThrow(TruncatedLlmResponseError)
   })
 
   // ── Escenario: Tool calls paralelas en una sola respuesta ──

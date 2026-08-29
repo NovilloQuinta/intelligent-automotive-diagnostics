@@ -3,6 +3,7 @@ import {
   ExecuteLlmToolCalling,
   type LlmSingleMessageSender,
 } from '@/application/use-cases/ExecuteLlmToolCalling.js'
+import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
 import type { LlmSingleResponse } from '@/application/dto/llm/LlmSingleResponse.js'
 import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
@@ -245,64 +246,97 @@ describe('ExecuteLlmToolCalling', () => {
     expect(result.toolCalls[0].result).toContain('Unknown tool')
   })
 
-  // ── Limite de iteraciones (por defecto 10) ──
+  // ── Limite de iteraciones (por defecto 20): degradacion, no error, si hay progreso ──
 
-  it('should throw MaxToolCallIterationsError after default max iterations without text', async () => {
+  it('should force a final answer without tools after exhausting max iterations, instead of throwing, when the model keeps making progress', async () => {
     const mockSendSingle = vi.fn<LlmSingleMessageSender>()
-    // 10 respuestas tool_use consecutivas
-    for (let i = 0; i < 10; i++) {
+    // 3 tool calls con argumentos distintos: progreso real, no un bucle.
+    const pids = ['0C', '0D', '05']
+    for (const pid of pids) {
       mockSendSingle.mockResolvedValueOnce(
-        toolCallsSingleResponse([
-          { name: 'read_pid', args: { mode: '01', pid: '0C' }, id: `c${i}` },
-        ]),
+        toolCallsSingleResponse([{ name: 'read_pid', args: { mode: '01', pid }, id: pid }]),
       )
     }
-    const mockHandler = vi.fn<ToolCallHandlerPort>().mockResolvedValue('RPM: 800')
-    const mockLogger = createMockLogger()
-    const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 10)
-
-    await expect(
-      useCase.execute(
-        {
-          systemPrompt: 'Eres un mecanico.',
-          userMessage: 'Diagnostico',
-          tools: [sampleToolDef],
-        },
-        mockHandler,
-      ),
-    ).rejects.toThrow('Exceeded maximum tool call iterations')
-
-    expect(mockSendSingle).toHaveBeenCalledTimes(10)
-    expect(mockHandler).toHaveBeenCalledTimes(10)
-  })
-
-  // ── Limite configurable ──
-
-  it('should respect configurable maxIterations', async () => {
-    const mockSendSingle = vi.fn<LlmSingleMessageSender>()
-    for (let i = 0; i < 3; i++) {
-      mockSendSingle.mockResolvedValueOnce(
-        toolCallsSingleResponse([
-          { name: 'read_pid', args: { mode: '01', pid: '0C' }, id: `c${i}` },
-        ]),
-      )
-    }
-    const mockHandler = vi.fn<ToolCallHandlerPort>().mockResolvedValue('RPM: 800')
+    // La llamada forzada final, sin tools, es la que por fin trae texto.
+    mockSendSingle.mockResolvedValueOnce(textSingleResponse('Diagnóstico con lo reunido.'))
+    const mockHandler = vi.fn<ToolCallHandlerPort>().mockResolvedValue('valor')
     const mockLogger = createMockLogger()
     const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 3)
 
+    const result = await useCase.execute(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Diagnostico',
+        tools: [sampleToolDef],
+      },
+      mockHandler,
+    )
+
+    expect(result.text).toBe('Diagnóstico con lo reunido.')
+    expect(result.toolCalls).toHaveLength(3)
+    // 3 iteraciones normales + 1 llamada forzada final = 4.
+    expect(mockSendSingle).toHaveBeenCalledTimes(4)
+    const finalCallInput = mockSendSingle.mock.calls[3][0]
+    expect(finalCallInput.tools).toEqual([])
+  })
+
+  it('should still throw MaxToolCallIterationsError if the forced final call also comes back without text', async () => {
+    const mockSendSingle = vi.fn<LlmSingleMessageSender>()
+    const pids = ['0C', '0D', '05']
+    for (const pid of pids) {
+      mockSendSingle.mockResolvedValueOnce(
+        toolCallsSingleResponse([{ name: 'read_pid', args: { mode: '01', pid }, id: pid }]),
+      )
+    }
+    // La llamada forzada final tambien viene sin texto: caso limite, no debe pasar en la
+    // practica (sin tools el proveedor no puede devolver tool_use), pero hay que cubrirlo.
+    mockSendSingle.mockResolvedValueOnce(
+      toolCallsSingleResponse([
+        { name: 'read_pid', args: { mode: '01', pid: 'no-tools' }, id: 'x' },
+      ]),
+    )
+    const mockHandler = vi.fn<ToolCallHandlerPort>().mockResolvedValue('valor')
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, createMockLogger(), 3)
+
     await expect(
       useCase.execute(
-        {
-          systemPrompt: 'Eres un mecanico.',
-          userMessage: 'Diagnostico',
-          tools: [sampleToolDef],
-        },
+        { systemPrompt: 'Eres un mecanico.', userMessage: 'Diagnostico', tools: [sampleToolDef] },
         mockHandler,
       ),
-    ).rejects.toThrow('maximum tool call iterations (3)')
+    ).rejects.toThrow(MaxToolCallIterationsError)
+  })
 
-    expect(mockSendSingle).toHaveBeenCalledTimes(3)
-    expect(mockHandler).toHaveBeenCalledTimes(3)
+  // ── La misma tool con los mismos argumentos, repetida: se tolera ──
+
+  it('should tolerate the model repeating the exact same tool call more than twice, without throwing early', async () => {
+    // Visto contra un modelo real en la bateria de eval: releer el mismo PID no
+    // siempre es un atasco. Una version anterior cortaba aqui al tercer repetido y
+    // eso rompia sesiones que iban bien — se quito esa deteccion (ver el comentario
+    // en `ExecuteLlmToolCalling.execute`).
+    const mockSendSingle = vi.fn<LlmSingleMessageSender>()
+    for (let i = 0; i < 5; i++) {
+      mockSendSingle.mockResolvedValueOnce(
+        toolCallsSingleResponse([
+          { name: 'read_pid', args: { mode: '01', pid: '0C' }, id: `c${i}` },
+        ]),
+      )
+    }
+    mockSendSingle.mockResolvedValueOnce(textSingleResponse('Diagnóstico con lo reunido.'))
+    const mockHandler = vi.fn<ToolCallHandlerPort>().mockResolvedValue('RPM: 800')
+    const mockLogger = createMockLogger()
+    const useCase = new ExecuteLlmToolCalling(mockSendSingle, mockLogger, 5)
+
+    const result = await useCase.execute(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Diagnostico',
+        tools: [sampleToolDef],
+      },
+      mockHandler,
+    )
+
+    expect(result.text).toBe('Diagnóstico con lo reunido.')
+    expect(result.toolCalls).toHaveLength(5)
+    expect(mockHandler).toHaveBeenCalledTimes(5)
   })
 })

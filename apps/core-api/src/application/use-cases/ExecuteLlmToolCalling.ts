@@ -6,7 +6,11 @@ import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPor
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import { MaxToolCallIterationsError } from '@/application/llm/llmErrors.js'
 
-const DEFAULT_MAX_ITERATIONS = 10
+/**
+ * Un diagnostico a fondo (varios PID, DTC, freeze frame, catalogo, web) ronda
+ * facilmente las 15-25 tool calls repartidas en varias idas-vueltas.
+ */
+const DEFAULT_MAX_ITERATIONS = 20
 
 /** Funcion que realiza una sola llamada a la API del LLM. */
 export type LlmSingleMessageSender = (input: LlmMessageInput) => Promise<LlmSingleResponse>
@@ -54,7 +58,18 @@ export class ExecuteLlmToolCalling {
   /**
    * Ejecuta el bucle de tool calling hasta obtener texto final del LLM.
    *
-   * @throws {MaxToolCallIterationsError} Si se agotan las iteraciones sin respuesta final.
+   * Agotar el presupuesto de idas-vueltas NO deja al mecanico sin respuesta: se fuerza
+   * una ultima llamada sin herramientas para que el modelo conteste con lo que ya ha
+   * reunido, en vez de lanzar un error y no devolver nada.
+   *
+   * Hubo una version que cortaba antes si el modelo repetia la misma tool con los
+   * mismos argumentos 3 veces, pensada como bucle real. Se quito: contra un modelo que
+   * a veces relee el mismo PID sin que eso sea un atasco (visto en la bateria de eval),
+   * cortaba sesiones que iban bien. El presupuesto de iteraciones ya acota el coste
+   * igual, y la respuesta forzada ya cierra bien pase lo que pase.
+   *
+   * @throws {MaxToolCallIterationsError} Si, tras forzar la respuesta final sin
+   *   herramientas, el modelo aun asi no devuelve texto (caso limite).
    */
   async execute(input: LlmMessageInput, handler: ToolCallHandlerPort): Promise<LlmResponse> {
     const { systemPrompt, userMessage, tools } = input
@@ -91,8 +106,34 @@ export class ExecuteLlmToolCalling {
       conversationHistory.push({ __type: 'raw_response', data: response.raw }, ...toolResults)
     }
 
+    return this.forceFinalAnswer(systemPrompt, userMessage, conversationHistory, toolTrace)
+  }
+
+  /**
+   * Ultimo intento tras agotar el presupuesto de idas-vueltas: la misma llamada pero
+   * sin `tools`, asi el modelo no puede seguir pidiendo herramientas y tiene que
+   * resumir con lo que ya sabe. Si aun asi no llega texto (raro, pero posible), se
+   * lanza el error de siempre en vez de devolver una respuesta vacia.
+   */
+  private async forceFinalAnswer(
+    systemPrompt: string,
+    userMessage: string,
+    conversationHistory: readonly LlmConversationItem[],
+    toolTrace: readonly ToolCallTrace[],
+  ): Promise<LlmResponse> {
+    const response = await this.sendSingleMessage({
+      systemPrompt,
+      userMessage,
+      tools: [],
+      conversationHistory: [...conversationHistory],
+    })
+
+    if (response.text !== null) {
+      return { text: response.text, toolCalls: toolTrace }
+    }
+
     throw new MaxToolCallIterationsError(
-      `Exceeded maximum tool call iterations (${this.maxIterations}).`,
+      `Exceeded maximum tool call iterations (${this.maxIterations}) and the model still requested tools.`,
       toolTrace,
     )
   }

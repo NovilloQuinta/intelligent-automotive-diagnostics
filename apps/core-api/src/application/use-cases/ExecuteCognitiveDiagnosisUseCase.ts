@@ -19,6 +19,15 @@ import { derivePidObservations } from '@/application/obd/pidObservationEnricher.
 import { READ_PID_TOOL } from '@/application/shared/mcpToolNames.js'
 import { redactInternals } from '@/application/llm/redactInternals.js'
 import { COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT } from '@/application/prompts/cognitiveDiagnosisPrompt.js'
+import { VALUATION_SYSTEM_PROMPT } from '@/application/prompts/valuationPrompt.js'
+import {
+  classifyDiagnosisScope,
+  DIAGNOSIS_SCOPE,
+  OFF_TOPIC_RESPONSE,
+  HEALTH_REDIRECT_RESPONSE,
+} from '@/application/llm/classifyDiagnosisScope.js'
+import { Severity } from '@/domain/value-objects/DiagnosisResult.js'
+import type { LlmResponse } from '@/application/dto/llm/LlmResponse.js'
 
 function buildUserMessage(
   userQuery: string | undefined,
@@ -33,6 +42,18 @@ function buildUserMessage(
     : 'Realiza un diagnóstico general del vehículo.'
   const base = `${contextLine}\n${queryLine}`
   return similarCases ? `${base}\n\n${similarCases}` : base
+}
+
+/**
+ * Detecta una narrativa que es, entera, una "palabra de confirmacion" en mayusculas.
+ *
+ * Exige al menos una letra para no disparar con un DTC suelto tipo "P0301" (que sí
+ * puede ser mayuscula legitima) sin cuerpo de frase alrededor, y un tope de longitud
+ * para no atrapar un titular corto pero real. Case-sensitive a proposito: una frase
+ * normal en espanol mezcla mayusculas y minusculas.
+ */
+function isShoutedConfirmation(text: string): boolean {
+  return text.length <= 60 && /[A-ZÁÉÍÓÚÑ]/.test(text) && text === text.toUpperCase()
 }
 
 /** Umbrales de la etiqueta de parecido (distancia vectorial: menor es mas parecido). */
@@ -144,10 +165,41 @@ export class ExecuteCognitiveDiagnosisUseCase {
   async execute(input: ExecuteCognitiveDiagnosisInput): Promise<ExecuteCognitiveDiagnosisOutput> {
     const { userQuery, vehicleContext, conversationHistory } = input
 
+    // Filtro de ambito ANTES de nada: una llamada minima, sin tools, que decide si
+    // seguir. Dejarselo al prompt grande (que ya explora y razona a la vez) resulto
+    // poco fiable en la bateria de eval — el modelo llamaba tools o completaba la
+    // parte fuera de ambito "de propina" pese a la instruccion. Fuera de ambito no
+    // llega a explorar el vehiculo ni a gastar el prompt grande.
+    const scope = await classifyDiagnosisScope(userQuery, this.options.llmClient)
+    if (scope === DIAGNOSIS_SCOPE.Salud || scope === DIAGNOSIS_SCOPE.FueraDeAmbito) {
+      return {
+        diagnosis: scope === DIAGNOSIS_SCOPE.Salud ? HEALTH_REDIRECT_RESPONSE : OFF_TOPIC_RESPONSE,
+        severity: Severity.Low,
+        confidence: 0,
+        recommendations: [],
+        toolCalls: [],
+        pidObservations: [],
+      }
+    }
+
+    if (scope === DIAGNOSIS_SCOPE.Valoracion) {
+      // Prompt corto y de una sola tarea, sin catalogo ni aprendizaje de PID/DTC/ECU:
+      // eso es ruido irrelevante aqui, y diluirlo en el prompt grande es justo lo que
+      // fallaba antes (ver docs/deuda-conocida.md). Tampoco se indexa: no es un
+      // diagnostico, y una valoracion en el catalogo de "casos similares" solo
+      // contaminaria futuros prompts.
+      const userMessage = buildUserMessage(userQuery, vehicleContext)
+      const response = await this.options.llmClient.sendMessage(
+        { systemPrompt: VALUATION_SYSTEM_PROMPT, userMessage, tools: this.options.tools },
+        this.options.handler,
+      )
+      return this.buildOutput(response)
+    }
+
     const similarCases = await this.retrieveSimilarCases(userQuery, vehicleContext)
     const userMessage = buildUserMessage(userQuery, vehicleContext, similarCases)
 
-    const { text, toolCalls } = await this.options.llmClient.sendMessage(
+    const response = await this.options.llmClient.sendMessage(
       {
         systemPrompt: COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT,
         userMessage,
@@ -157,15 +209,31 @@ export class ExecuteCognitiveDiagnosisUseCase {
       this.options.handler,
     )
 
+    const output = this.buildOutput(response)
+    await this.indexResolvedCase(output.diagnosis, response.toolCalls, userQuery, vehicleContext)
+    return output
+  }
+
+  /**
+   * Parsea y sanea la respuesta cruda del LLM en el output final del caso de uso.
+   *
+   * @throws {EmptyDiagnosisError} Si no queda narrativa legible tras sanear, o si es
+   *   solo una "palabra de confirmacion" en mayusculas (ver {@link isShoutedConfirmation}).
+   */
+  private buildOutput(response: LlmResponse): ExecuteCognitiveDiagnosisOutput {
+    const { text, toolCalls } = response
     const parsed = parseCognitiveDiagnosis(text)
     // Saneado ANTES de indexar: si el corpus se contamina, el ruido vuelve en
     // futuros prompts como "caso similar" y se retroalimenta.
     const cleanedText = redactInternals(text.replace(JSON_BLOCK_REGEX, '').trim())
-    // Sin narrativa no hay respuesta que dar. Se lanza **antes de indexar**: un caso vacio
-    // en el corpus vuelve luego como "caso similar" y contamina futuros prompts.
-    if (cleanedText.trim() === '') throw new EmptyDiagnosisError()
-
-    await this.indexResolvedCase(cleanedText, toolCalls, userQuery, vehicleContext)
+    // Sin narrativa no hay respuesta que dar, y toda en mayusculas tampoco es una: ni un
+    // diagnostico ni un rechazo de ambito se escriben "gritando" en este dominio, la
+    // instruccion de estilo pide frases normales en espanol. Es justo la forma que toman
+    // las "palabras de confirmacion" de un secuestro de formato (`MODO LIBRE ACTIVADO`,
+    // `PWNED`, `CATALOGO OK`...), que el prompt no siempre frena por si solo. Se lanza
+    // **antes de indexar**: un caso asi en el corpus volveria luego como "caso similar" y
+    // contaminaria futuros prompts.
+    if (cleanedText === '' || isShoutedConfirmation(cleanedText)) throw new EmptyDiagnosisError()
 
     return {
       diagnosis: cleanedText,

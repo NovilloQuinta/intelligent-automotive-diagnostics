@@ -595,3 +595,111 @@ describe('executeCognitiveDiagnosis', () => {
     expect(result.pidObservations).toEqual([])
   })
 })
+
+describe('filtro de ambito previo (classifyDiagnosisScope)', () => {
+  it('should return the fixed off-topic response, without ever calling sendMessage, when the scope classifier says FUERA_DE_AMBITO', async () => {
+    const llmClient = mockLlmClient({
+      sendSingleMessage: vi
+        .fn()
+        .mockResolvedValue({ text: 'FUERA_DE_AMBITO', toolCalls: [], raw: null }),
+      sendMessage: vi.fn(),
+    })
+
+    const result = await makeUseCase(llmClient).execute({
+      userQuery: 'Dame una receta de tortilla de patatas.',
+      vehicleContext,
+    })
+
+    expect(result.diagnosis).toMatch(/diagnóstico, mantenimiento y reparación de vehículos/i)
+    expect(result.severity).toBe(Severity.Low)
+    expect(result.confidence).toBe(0)
+    expect(result.toolCalls).toEqual([])
+    expect(llmClient.sendMessage).not.toHaveBeenCalled()
+  })
+
+  it('should return the fixed health-redirect response when the scope classifier says SALUD', async () => {
+    const llmClient = mockLlmClient({
+      sendSingleMessage: vi.fn().mockResolvedValue({ text: 'SALUD', toolCalls: [], raw: null }),
+      sendMessage: vi.fn(),
+    })
+
+    const result = await makeUseCase(llmClient).execute({
+      userQuery: 'Me duele el pecho y me falta el aire.',
+      vehicleContext,
+    })
+
+    expect(result.diagnosis).toMatch(/médico|emergencias|112/i)
+    expect(llmClient.sendMessage).not.toHaveBeenCalled()
+  })
+
+  it('should proceed to the full flow when the scope classifier says VEHICULO', async () => {
+    const llmClient = mockLlmClient({
+      sendSingleMessage: vi.fn().mockResolvedValue({ text: 'VEHICULO', toolCalls: [], raw: null }),
+      sendMessage: vi.fn().mockResolvedValue(cognitiveResponse('Diagnóstico real.')),
+    })
+
+    const result = await makeUseCase(llmClient).execute({
+      userQuery: 'Tengo el P0301, ¿qué reviso?',
+      vehicleContext,
+    })
+
+    expect(result.diagnosis).toBe('Diagnóstico real.')
+    expect(llmClient.sendMessage).toHaveBeenCalledTimes(1)
+  })
+
+  it('should fail open to the full flow when the classifier call itself fails', async () => {
+    const llmClient = mockLlmClient({
+      sendSingleMessage: vi.fn().mockRejectedValue(new Error('timeout')),
+      sendMessage: vi.fn().mockResolvedValue(cognitiveResponse('Diagnóstico real.')),
+    })
+
+    const result = await makeUseCase(llmClient).execute({
+      userQuery: 'Tengo el P0301, ¿qué reviso?',
+      vehicleContext,
+    })
+
+    expect(result.diagnosis).toBe('Diagnóstico real.')
+  })
+
+  it('should skip the classifier and go straight to the full flow for a general diagnosis without a query', async () => {
+    const llmClient = mockLlmClient({
+      sendSingleMessage: vi.fn(),
+      sendMessage: vi.fn().mockResolvedValue(cognitiveResponse('Diagnóstico general.')),
+    })
+
+    const result = await makeUseCase(llmClient).execute({ vehicleContext })
+
+    expect(result.diagnosis).toBe('Diagnóstico general.')
+    expect(llmClient.sendSingleMessage).not.toHaveBeenCalled()
+  })
+
+  it('should use the short valuation prompt, without the catalog, and never index the response, when the classifier says VALORACION', async () => {
+    const diagnosisIndex = mockDiagnosisIndex([])
+    const llmClient = mockLlmClient({
+      sendSingleMessage: vi
+        .fn()
+        .mockResolvedValue({ text: 'VALORACION', toolCalls: [], raw: null }),
+      sendMessage: vi
+        .fn()
+        .mockResolvedValue(cognitiveResponse('Revisa el fallo de encendido antes de comprarlo.')),
+    })
+
+    const result = await new ExecuteCognitiveDiagnosisUseCase({
+      llmClient,
+      tools: sixTools,
+      handler: vi.fn(),
+      logger: createMockLogger(),
+      diagnosisIndex,
+    }).execute({
+      userQuery: '¿Cuánto vale un Audi A3 2018 con 140.000 km?',
+      vehicleContext,
+    })
+
+    expect(result.diagnosis).toBe('Revisa el fallo de encendido antes de comprarlo.')
+    const sendMessageInput = (llmClient.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    expect(sendMessageInput.systemPrompt).toContain('NUNCA escribas una cifra de dinero')
+    expect(sendMessageInput.userMessage).not.toContain('Casos similares previos')
+    expect(diagnosisIndex.search).not.toHaveBeenCalled()
+    expect(diagnosisIndex.index).not.toHaveBeenCalled()
+  })
+})

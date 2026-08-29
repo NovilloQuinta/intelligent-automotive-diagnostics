@@ -38,4 +38,21 @@ describe('redactInternals · recomposicion del texto', () => {
 
     expect(redactInternals(original)).toBe(original)
   })
+
+  it('borra nombres literales de tools aunque el modelo desobedezca la instrucción blanda', () => {
+    const result = redactInternals(
+      'Las herramientas que tengo son read_pid, get_dtc_codes y search_similar_diagnoses.',
+    )
+
+    expect(result).not.toMatch(/\bread_pid\b/)
+    expect(result).not.toMatch(/\bget_dtc_codes\b/)
+    expect(result).not.toMatch(/\bsearch_similar_diagnoses\b/)
+  })
+
+  it('no deja backticks ni negrita vacíos al borrar un nombre de tool entrecomillado en markdown', () => {
+    const result = redactInternals('1. **`read_pid`** — lee un PID OBD-II.')
+
+    expect(result).not.toContain('``')
+    expect(result).not.toContain('****')
+  })
 })
