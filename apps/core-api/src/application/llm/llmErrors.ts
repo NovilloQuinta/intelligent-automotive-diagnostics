@@ -29,3 +29,18 @@ export class EmptyDiagnosisError extends Error {
     this.name = 'EmptyDiagnosisError'
   }
 }
+
+/**
+ * Error lanzado cuando el proveedor corta la respuesta por el limite de tokens de salida.
+ *
+ * Sin esto, un texto a medias (narrativa cortada a mitad de frase, sin el bloque
+ * `---JSON---` final porque nunca se llego a escribir) se trataba como respuesta
+ * final valida: `severity`/`confidence` caian al fallback en silencio y el mecanico
+ * veia una respuesta inacabada sin ningun aviso de que lo era.
+ */
+export class TruncatedLlmResponseError extends Error {
+  constructor(message = 'The model response was truncated by the output token limit.') {
+    super(message)
+    this.name = 'TruncatedLlmResponseError'
+  }
+}

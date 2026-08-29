@@ -1,3 +1,5 @@
+import { MCP_TOOL_NAMES } from '@/application/shared/mcpToolNames.js'
+
 /**
  * Borra de la narrativa del LLM la fontaneria interna del sistema.
  *
@@ -37,12 +39,26 @@ const VECTOR_DISTANCE_PATTERN =
 /** Confirmacion de indexado tal cual la devuelven las tools (`formatIndexedMessage`). */
 const INDEXED_LINE_PATTERN = /^.*\bIndexed\s+\w+\b.*$/gim
 
+/**
+ * Nombres reales de las tools MCP registradas.
+ *
+ * El prompt ya pide no nombrarlas (`INTERNALS_INSTRUCTIONS`); esto es la capa dura
+ * para cuando el modelo lo hace igual, sobre todo si se le pregunta sin rodeos
+ * ("que tools tienes"). La lista sale de `MCP_TOOL_NAMES`, fuente unica compartida
+ * con `scripts/eval/invariants.ts` (INV-5).
+ */
+const TOOL_NAME_PATTERN = new RegExp(`\\b(${MCP_TOOL_NAMES.join('|')})\\b`, 'gi')
+
 /** Credenciales de proveedor que el modelo pudiera haber verbalizado. */
 const SECRET_PATTERN = /\bsk-[A-Za-z0-9_-]{8,}/g
 
 /** Puntuacion o parentesis que quedan huerfanos al borrar un fragmento intermedio. */
 const DANGLING_PUNCTUATION = /[ \t]*,\s*([.;)])/g
 const EMPTY_PARENS = /\(\s*\)/g
+
+/** Marcado markdown que se queda vacio al borrar el nombre de tool que envolvia. */
+const EMPTY_BACKTICKS = /`\s*`/g
+const EMPTY_BOLD = /\*\*\s*\*\*/g
 
 /** Coma duplicada al borrar un inciso entero ("el caso previo, distancia 0.31, encaja"). */
 const REPEATED_COMMAS = /,(\s*,)+/g
@@ -71,6 +87,9 @@ export function redactInternals(text: string): string {
     .replace(BASE36_ID_PATTERN, '')
     .replace(VECTOR_DISTANCE_PATTERN, '')
     .replace(SECRET_PATTERN, '')
+    .replace(TOOL_NAME_PATTERN, '')
+    .replace(EMPTY_BACKTICKS, '')
+    .replace(EMPTY_BOLD, '')
     .replace(EMPTY_PARENS, '')
     .replace(DANGLING_PUNCTUATION, '$1')
     .replace(REPEATED_COMMAS, ',')

@@ -52,6 +52,10 @@ const configSchema = z.object({
   LLM_API_KEY: z.string().optional(),
   LLM_BASE_URL: z.string().optional(),
   LLM_MODEL: z.string().optional(),
+  // Sin esto se corria al 1.0 por defecto del SDK — bueno para charla libre, el peor
+  // valor posible para un agente que debe seguir un contrato de formato y de ambito de
+  // forma consistente. El cliente aplica su propio default mas bajo si esto no esta.
+  LLM_TEMPERATURE: z.coerce.number().min(0).max(1).optional(),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
   SMTP_SECURE: z.preprocess((v) => v === 'true' || v === true, z.boolean()).default(false),

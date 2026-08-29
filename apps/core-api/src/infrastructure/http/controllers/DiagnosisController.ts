@@ -15,7 +15,11 @@ import {
   DiagnosisSessionNotFoundError,
   VehicleIdentificationUnavailableError,
 } from '@/infrastructure/services/errors.js'
-import { MaxToolCallIterationsError, EmptyDiagnosisError } from '@/application/llm/llmErrors.js'
+import {
+  MaxToolCallIterationsError,
+  EmptyDiagnosisError,
+  TruncatedLlmResponseError,
+} from '@/application/llm/llmErrors.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { LlmConversationItem } from '@/application/dto/llm/LlmMessageInput.js'
 import {
@@ -47,6 +51,15 @@ import {
   DiagnosisSessionIdSchema,
 } from '@/application/dto/diagnosis/DiagnosisRequestSchemas.js'
 
+/** Parametros de {@link DiagnosisController.runDiagnosisHandler}, agrupados para no superar el umbral de 4 params. */
+interface DiagnosisHandlerOptions<TData, TResult> {
+  readonly schema: z.ZodType<TData, z.ZodTypeDef, unknown>
+  readonly source: 'query' | 'body'
+  readonly context: string
+  readonly call: (data: TData) => Promise<TResult>
+  readonly respond: (result: TResult) => void
+}
+
 const ERROR_MESSAGES = {
   scenarioNotFound: 'Scenario not found',
   invalidBody: 'Invalid request body',
@@ -62,6 +75,8 @@ const ERROR_MESSAGES = {
     'El diagnóstico necesitó demasiados pasos. Prueba con una pregunta más concreta.',
   cognitiveEmptyAnswer:
     'El modelo no devolvió una respuesta legible. Vuelve a preguntar, a ser posible reformulando.',
+  cognitiveTruncated:
+    'La respuesta del modelo se cortó por longitud. Prueba con una pregunta más concreta.',
   internalError: 'Internal server error',
   invalidDateRange: 'from must be before to',
   sessionNotFound: 'Diagnosis session not found',
@@ -166,39 +181,33 @@ export class DiagnosisController {
 
   /** GET /api/freeze-frame — freeze frame del DTC seleccionado. 400 query invalida, 404 escenario inexistente. */
   freezeFrame = (req: Request, res: Response): Promise<void> =>
-    this.runDiagnosisHandler(
-      req,
-      res,
-      this.selectSchema(FreezeFrameQuerySchema, FreezeFrameQueryTcpSchema),
-      'query',
-      'Freeze frame fetch failed',
-      (data) => this.service.getFreezeFrame(data.scenarioId, data.dtc),
-      (result) => res.status(200).json({ freezeFrame: result }),
-    )
+    this.runDiagnosisHandler(req, res, {
+      schema: this.selectSchema(FreezeFrameQuerySchema, FreezeFrameQueryTcpSchema),
+      source: 'query',
+      context: 'Freeze frame fetch failed',
+      call: (data) => this.service.getFreezeFrame(data.scenarioId, data.dtc),
+      respond: (result) => res.status(200).json({ freezeFrame: result }),
+    })
 
   /** GET /api/ecu-info — ECUs descubiertas en el vehiculo. 400 query invalida, 404 escenario inexistente. */
   ecuInfo = (req: Request, res: Response): Promise<void> =>
-    this.runDiagnosisHandler(
-      req,
-      res,
-      this.selectSchema(EcuInfoQuerySchema, EcuInfoQueryTcpSchema),
-      'query',
-      'ECU info fetch failed',
-      (data) => this.service.getEcuInfo(data.scenarioId),
-      (result) => res.status(200).json({ ecus: result }),
-    )
+    this.runDiagnosisHandler(req, res, {
+      schema: this.selectSchema(EcuInfoQuerySchema, EcuInfoQueryTcpSchema),
+      source: 'query',
+      context: 'ECU info fetch failed',
+      call: (data) => this.service.getEcuInfo(data.scenarioId),
+      respond: (result) => res.status(200).json({ ecus: result }),
+    })
 
   /** GET /api/vehicle-info — VIN y datos del vehiculo. 400 query invalida, 404 escenario inexistente. */
   vehicleInfo = (req: Request, res: Response): Promise<void> =>
-    this.runDiagnosisHandler(
-      req,
-      res,
-      this.selectSchema(VehicleInfoQuerySchema, VehicleInfoQueryTcpSchema),
-      'query',
-      'Vehicle info fetch failed',
-      (data) => this.service.getVehicleInfo(data.scenarioId),
-      (result) => res.status(200).json(result),
-    )
+    this.runDiagnosisHandler(req, res, {
+      schema: this.selectSchema(VehicleInfoQuerySchema, VehicleInfoQueryTcpSchema),
+      source: 'query',
+      context: 'Vehicle info fetch failed',
+      call: (data) => this.service.getVehicleInfo(data.scenarioId),
+      respond: (result) => res.status(200).json(result),
+    })
 
   /**
    * POST /api/vehicle-identity — el mecanico corrige la identificacion del coche.
@@ -232,63 +241,53 @@ export class DiagnosisController {
 
   /** GET /api/live-data — telemetria en vivo de los 4 PIDs del dashboard. 400 query invalida, 404 escenario inexistente. */
   liveData = (req: Request, res: Response): Promise<void> =>
-    this.runDiagnosisHandler(
-      req,
-      res,
-      this.selectSchema(LiveDataQuerySchema, LiveDataQueryTcpSchema),
-      'query',
-      'Live data fetch failed',
-      (data) => this.service.getLiveData(data.scenarioId, data.pids),
-      (result) => res.status(200).json(result),
-    )
+    this.runDiagnosisHandler(req, res, {
+      schema: this.selectSchema(LiveDataQuerySchema, LiveDataQueryTcpSchema),
+      source: 'query',
+      context: 'Live data fetch failed',
+      call: (data) => this.service.getLiveData(data.scenarioId, data.pids),
+      respond: (result) => res.status(200).json(result),
+    })
 
   /** POST /api/clear-dtc — borra DTCs almacenados (Mode 04). 400 body invalido, 404 escenario inexistente. */
   clearDtc = (req: Request, res: Response): Promise<void> =>
-    this.runDiagnosisHandler(
-      req,
-      res,
-      this.selectSchema(ClearDtcBodySchema, ClearDtcBodyTcpSchema),
-      'body',
-      'Clear DTC failed',
-      (data) => this.service.clearDtcCodes(data.scenarioId),
-      () => res.status(200).json({ cleared: true }),
-    )
+    this.runDiagnosisHandler(req, res, {
+      schema: this.selectSchema(ClearDtcBodySchema, ClearDtcBodyTcpSchema),
+      source: 'body',
+      context: 'Clear DTC failed',
+      call: (data) => this.service.clearDtcCodes(data.scenarioId),
+      respond: () => res.status(200).json({ cleared: true }),
+    })
 
   /** GET /api/pending-dtc — lee DTCs pendientes (Mode 07). 400 query invalida, 404 escenario inexistente. */
   pendingDtc = (req: Request, res: Response): Promise<void> =>
-    this.runDiagnosisHandler(
-      req,
-      res,
-      this.selectSchema(PendingDtcQuerySchema, PendingDtcQueryTcpSchema),
-      'query',
-      'Pending DTC fetch failed',
-      (data) => this.service.readPendingDtcCodes(data.scenarioId),
-      (result) => res.status(200).json({ dtcCodes: result }),
-    )
+    this.runDiagnosisHandler(req, res, {
+      schema: this.selectSchema(PendingDtcQuerySchema, PendingDtcQueryTcpSchema),
+      source: 'query',
+      context: 'Pending DTC fetch failed',
+      call: (data) => this.service.readPendingDtcCodes(data.scenarioId),
+      respond: (result) => res.status(200).json({ dtcCodes: result }),
+    })
 
   /** GET /api/permanent-dtc — lee DTCs permanentes (Mode 0A). 400 query invalida, 404 escenario inexistente. */
   permanentDtc = (req: Request, res: Response): Promise<void> =>
-    this.runDiagnosisHandler(
-      req,
-      res,
-      this.selectSchema(PermanentDtcQuerySchema, PermanentDtcQueryTcpSchema),
-      'query',
-      'Permanent DTC fetch failed',
-      (data) => this.service.readPermanentDtcCodes(data.scenarioId),
-      (result) => res.status(200).json({ dtcCodes: result }),
-    )
+    this.runDiagnosisHandler(req, res, {
+      schema: this.selectSchema(PermanentDtcQuerySchema, PermanentDtcQueryTcpSchema),
+      source: 'query',
+      context: 'Permanent DTC fetch failed',
+      call: (data) => this.service.readPermanentDtcCodes(data.scenarioId),
+      respond: (result) => res.status(200).json({ dtcCodes: result }),
+    })
 
   /** GET /api/vehicle-status — testigo MIL y monitores de emisiones (Mode 01 PID 01). 400 query invalida, 404 escenario inexistente. */
   vehicleStatus = (req: Request, res: Response): Promise<void> =>
-    this.runDiagnosisHandler(
-      req,
-      res,
-      this.selectSchema(VehicleStatusQuerySchema, VehicleStatusQueryTcpSchema),
-      'query',
-      'Vehicle status fetch failed',
-      (data) => this.service.getVehicleStatus(data.scenarioId),
-      (result) => res.status(200).json(result),
-    )
+    this.runDiagnosisHandler(req, res, {
+      schema: this.selectSchema(VehicleStatusQuerySchema, VehicleStatusQueryTcpSchema),
+      source: 'query',
+      context: 'Vehicle status fetch failed',
+      call: (data) => this.service.getVehicleStatus(data.scenarioId),
+      respond: (result) => res.status(200).json(result),
+    })
 
   /** GET /api/diagnosis-history — listado paginado de sesiones del usuario autenticado. */
   listHistory = async (req: Request, res: Response): Promise<void> => {
@@ -394,12 +393,9 @@ export class DiagnosisController {
   private async runDiagnosisHandler<TData, TResult>(
     req: Request,
     res: Response,
-    schema: z.ZodType<TData, z.ZodTypeDef, unknown>,
-    source: 'query' | 'body',
-    context: string,
-    call: (data: TData) => Promise<TResult>,
-    respond: (result: TResult) => void,
+    options: DiagnosisHandlerOptions<TData, TResult>,
   ): Promise<void> {
+    const { schema, source, context, call, respond } = options
     const parsed = schema.safeParse(req[source])
     if (!parsed.success) {
       res.status(400).json({ error: ERROR_MESSAGES.invalidBody, details: parsed.error.issues })
@@ -466,6 +462,12 @@ export class DiagnosisController {
       // presentable. Es un fallo del proveedor de arriba, no del cliente ni nuestro, y por
       // eso no comparte el 422 con `MaxToolCallIterationsError`, que es otra causa.
       res.status(502).json({ error: ERROR_MESSAGES.cognitiveEmptyAnswer })
+      return
+    }
+    if (err instanceof TruncatedLlmResponseError) {
+      // 502 igual que EmptyDiagnosisError: el proveedor termino con contenido a medias,
+      // no un fallo nuestro. Distinto mensaje porque aqui si hubo texto, solo que incompleto.
+      res.status(502).json({ error: ERROR_MESSAGES.cognitiveTruncated })
       return
     }
     if (err instanceof MaxToolCallIterationsError) {

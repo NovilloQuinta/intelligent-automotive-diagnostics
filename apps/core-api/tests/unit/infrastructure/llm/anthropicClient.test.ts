@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createAnthropicClient } from '@/infrastructure/llm/anthropicClient.js'
 import { LlmTimeoutError, LlmApiError } from '@/infrastructure/llm/llmErrors.js'
+import { TruncatedLlmResponseError } from '@/application/llm/llmErrors.js'
 import type { LlmClientPort } from '@/application/ports/LlmClientPort.js'
 import type { ToolCallHandlerPort } from '@/application/ports/ToolCallHandlerPort.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
@@ -270,48 +271,96 @@ describe('AnthropicClient', () => {
 
   // ── 5.1: Limite de iteraciones alcanzado ──
 
-  it('should throw MaxToolCallIterationsError after default max iterations without end_turn', async () => {
-    // Prepara 10 respuestas tool_use consecutivas (maximo por defecto)
-    const toolBlocks = Array.from({ length: 10 }, (_, i) =>
+  it('should force a final tools-less answer after default max iterations, instead of throwing, when there is real progress', async () => {
+    // 20 respuestas tool_use consecutivas con argumentos distintos: progreso real.
+    const pids = Array.from({ length: 20 }, (_, i) => `pid-${i}`)
+    for (const [i, pid] of pids.entries()) {
+      mockCreate.mockResolvedValueOnce(
+        anthropicMessage({
+          content: [toolUseBlock(`toolu_${i}`, 'read_pid', { mode: '01', pid })],
+          stop_reason: 'tool_use',
+          model: 'claude-sonnet-4-20250514',
+        }),
+      )
+    }
+    // La llamada forzada final, sin tools, trae por fin texto.
+    mockCreate.mockResolvedValueOnce(
       anthropicMessage({
-        content: [toolUseBlock(`toolu_00${i}`, 'read_pid', { mode: '01', pid: '0C' })],
-        stop_reason: 'tool_use',
+        content: [textBlock('Diagnóstico con lo reunido.')],
+        stop_reason: 'end_turn',
         model: 'claude-sonnet-4-20250514',
       }),
     )
-    for (const msg of toolBlocks) {
-      mockCreate.mockResolvedValueOnce(msg)
-    }
 
     const mockHandler = vi.fn().mockResolvedValue('RPM: 800')
 
-    await expect(
-      client.sendMessage(
-        {
-          systemPrompt: 'Eres un mecanico.',
-          userMessage: 'Diagnostico',
-          tools: [sampleToolDef],
-        },
-        mockHandler,
-      ),
-    ).rejects.toThrow('Exceeded maximum tool call iterations')
+    const result = await client.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Diagnostico',
+        tools: [sampleToolDef],
+      },
+      mockHandler,
+    )
 
-    expect(mockCreate).toHaveBeenCalledTimes(10)
-    expect(mockHandler).toHaveBeenCalledTimes(10)
+    expect(result.text).toBe('Diagnóstico con lo reunido.')
+    expect(result.toolCalls).toHaveLength(20)
+    expect(mockCreate).toHaveBeenCalledTimes(21)
+    expect(mockHandler).toHaveBeenCalledTimes(20)
+    const finalCallArgs = mockCreate.mock.calls[20][0] as { tools: unknown[] }
+    expect(finalCallArgs.tools).toEqual([])
   })
 
   // ── 5.2: Limite configurable ──
 
-  it('should respect configurable maxIterations', async () => {
+  it('should respect configurable maxIterations, forcing a final answer instead of throwing', async () => {
     const customClient = createAnthropicClient({
       apiKey: 'test-key',
       logger: testLogger,
       maxIterations: 3,
     })
 
+    const pids = ['0C', '0D', '05']
+    for (const [i, pid] of pids.entries()) {
+      mockCreate.mockResolvedValueOnce(
+        anthropicMessage({
+          content: [toolUseBlock(`toolu_00${i}`, 'read_pid', { mode: '01', pid })],
+          stop_reason: 'tool_use',
+          model: 'claude-sonnet-4-20250514',
+        }),
+      )
+    }
+    mockCreate.mockResolvedValueOnce(
+      anthropicMessage({
+        content: [textBlock('Diagnóstico con lo reunido.')],
+        stop_reason: 'end_turn',
+        model: 'claude-sonnet-4-20250514',
+      }),
+    )
+
+    const mockHandler = vi.fn().mockResolvedValue('RPM: 800')
+
+    const result = await customClient.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Diagnostico',
+        tools: [sampleToolDef],
+      },
+      mockHandler,
+    )
+
+    expect(result.text).toBe('Diagnóstico con lo reunido.')
+    expect(mockCreate).toHaveBeenCalledTimes(4)
+    expect(mockHandler).toHaveBeenCalledTimes(3)
+  })
+
+  it('should tolerate the model repeating the exact same tool call more than twice, without throwing early', async () => {
+    // Visto contra un modelo real en la bateria de eval: releer el mismo PID no
+    // siempre es un atasco. Una version anterior cortaba al tercer repetido y eso
+    // rompia sesiones que iban bien.
     const toolBlocks = Array.from({ length: 3 }, (_, i) =>
       anthropicMessage({
-        content: [toolUseBlock(`toolu_00${i}`, 'read_pid', { mode: '01', pid: '0C' })],
+        content: [toolUseBlock(`toolu_${i}`, 'read_pid', { mode: '01', pid: '0C' })],
         stop_reason: 'tool_use',
         model: 'claude-sonnet-4-20250514',
       }),
@@ -319,21 +368,27 @@ describe('AnthropicClient', () => {
     for (const msg of toolBlocks) {
       mockCreate.mockResolvedValueOnce(msg)
     }
+    mockCreate.mockResolvedValueOnce(
+      anthropicMessage({
+        content: [textBlock('Diagnóstico con lo reunido.')],
+        stop_reason: 'end_turn',
+        model: 'claude-sonnet-4-20250514',
+      }),
+    )
 
     const mockHandler = vi.fn().mockResolvedValue('RPM: 800')
 
-    await expect(
-      customClient.sendMessage(
-        {
-          systemPrompt: 'Eres un mecanico.',
-          userMessage: 'Diagnostico',
-          tools: [sampleToolDef],
-        },
-        mockHandler,
-      ),
-    ).rejects.toThrow('maximum tool call iterations (3)')
+    const result = await client.sendMessage(
+      {
+        systemPrompt: 'Eres un mecanico.',
+        userMessage: 'Diagnostico',
+        tools: [sampleToolDef],
+      },
+      mockHandler,
+    )
 
-    expect(mockCreate).toHaveBeenCalledTimes(3)
+    expect(result.text).toBe('Diagnóstico con lo reunido.')
+    expect(result.toolCalls).toHaveLength(3)
     expect(mockHandler).toHaveBeenCalledTimes(3)
   })
 
@@ -383,6 +438,29 @@ describe('AnthropicClient', () => {
     const assistantMsg = callArgs.messages.find((m) => m.role === 'assistant')
     expect(assistantMsg).toBeDefined()
     expect(assistantMsg!.content).toBe('respuesta previa')
+  })
+
+  // ── truncamiento por limite de tokens de salida ──
+
+  it('should throw TruncatedLlmResponseError when stop_reason is max_tokens', async () => {
+    mockCreate.mockResolvedValueOnce(
+      anthropicMessage({
+        content: [textBlock('Narrativa larga cortada a mitad de fra')],
+        stop_reason: 'max_tokens',
+        model: 'claude-sonnet-4-20250514',
+      }),
+    )
+
+    await expect(
+      client.sendMessage(
+        {
+          systemPrompt: 'Eres un mecanico.',
+          userMessage: 'Diagnostico completo',
+          tools: [],
+        },
+        handler,
+      ),
+    ).rejects.toThrow(TruncatedLlmResponseError)
   })
 
   // ── 5.4: Error de API (4xx/5xx) ──
