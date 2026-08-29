@@ -254,5 +254,16 @@ describe('apiClient — fontaneria HTTP', () => {
         'Email already registered',
       )
     })
+
+    it('replaces the raw express-rate-limit body on 429 with a curated Spanish message', async () => {
+      const res = new Response(
+        JSON.stringify({ error: 'Too many requests, please try again later.' }),
+        { status: 429 },
+      )
+
+      await expect(assertOk(res, 'Diagnosis failed (429)')).rejects.toThrow(
+        'Estás preguntando muy rápido. Espera un momento y vuelve a intentarlo.',
+      )
+    })
   })
 })

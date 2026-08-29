@@ -12,6 +12,17 @@ Cada entrada debe corregirse en una rama `fix/gga-*` antes del siguiente milesto
 - **Archivo:linea** — descripcion del error
 -->
 
+### 2026-08-29 — fix(cognitive-diagnosis): rate limit, preambulo, 429 en español
+
+Preexistente en `main`, no tocado por este cambio — GGA re-audita el fichero entero.
+
+- **`apps/core-api/src/infrastructure/http/server.ts:287`** — `createServer` 57 líneas.
+- **`apps/ui/src/components/dashboard/useCognitiveDiagnosis.ts:144`** — `trigger` 63 líneas.
+- **`apps/core-api/src/application/use-cases/ExecuteCognitiveDiagnosisUseCase.ts:165`** —
+  `execute` 51 líneas.
+- **`apps/ui/src/lib/apiClient.ts:203`** / `useCognitiveDiagnosis.ts:86` — ternarios anidados
+  en `assertOk` y `deriveCognitiveDiagnosisError` (4 niveles).
+
 ### 2026-08-09 — merge origin/develop -> pwd-recovery-integration
 
 Preexistente en `origin/develop` (feature `add-diagnosis-history`), no tocado por este merge — GGA

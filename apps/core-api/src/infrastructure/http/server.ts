@@ -236,7 +236,8 @@ function applyDiagnosisRateLimits(app: express.Application): void {
   const cognitiveLimiter = createRateLimiter({
     namespace: 'diagnosis:cognitive',
     windowMinutes: 1,
-    maxRequests: 5,
+    // 5/min cortaba una conversacion normal a los dos o tres mensajes.
+    maxRequests: 15,
   })
   const clearDtcLimiter = createRateLimiter({
     namespace: 'diagnosis:clear-dtc',
