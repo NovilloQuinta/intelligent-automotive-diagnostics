@@ -12,7 +12,7 @@ Documentation lives in the code, is versioned with it, and is validated in CI. T
 
 ### TSDoc syntax — when to write full TSDoc
 
-Every **public export** in `domain/`, `usecases/`, and `infrastructure/` must have a TSDoc block. Use the canonical form:
+Public functions and classes with real logic (not trivial one-liners) in `domain/`, `usecases/`, and `infrastructure/` should have a TSDoc block. Use the canonical form:
 
 ```ts
 /**
@@ -110,7 +110,7 @@ The project uses `eslint-plugin-jsdoc` integrated into `pnpm lint` to check TSDo
 pnpm lint
 ```
 
-The `jsdoc/require-jsdoc` rule checks that every public export in `src/` (`function`, `class`, `interface`, `type`, `enum`, `const`) has a `/** ... */` TSDoc block. Exit code is non-zero on failure.
+The `jsdoc/require-jsdoc` rule (shared config in `eslint.shared.mjs`, root — used by both `core-api` and `ui`) checks public `function`/`class` declarations with a body of 3+ lines. Interfaces, types, consts and one-liners are **not** gated — document them only when they add something the name doesn't already say. Exit code is non-zero on failure.
 
 **What it does NOT check** (intentionally): content quality, tag correctness, or param/return matching. This is a **presence gate**, not a semantic validator. Review accuracy during code review.
 

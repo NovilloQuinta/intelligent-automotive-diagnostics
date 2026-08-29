@@ -11,7 +11,6 @@ import type {
   EcuInfo,
   FreezeFrame,
   LoginInput,
-  PidReading,
   RegisterInput,
   Scenario,
   UpdateProfileInput,
@@ -76,9 +75,7 @@ export type {
   TwoFactorSetup,
 } from '@/lib/apiTypes'
 
-// ---------------------------------------------------------------------------
 // Account lockout (HTTP 423)
-// ---------------------------------------------------------------------------
 
 /**
  * Traduce el 423 del backend a un mensaje en español con los minutos que

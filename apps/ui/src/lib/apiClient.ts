@@ -5,15 +5,12 @@ const HTTP_UNAUTHORIZED = 401
 const HTTP_SERVER_ERROR_MIN = 500
 const HTTP_TOO_MANY_REQUESTS = 429
 
-// ---------------------------------------------------------------------------
-// Token storage (localStorage)
-// ---------------------------------------------------------------------------
-
 const KEYS = {
   accessToken: 'iad.accessToken',
   refreshToken: 'iad.refreshToken',
 } as const
 
+/** Lee ambos tokens de localStorage; null si falta uno o el storage no esta disponible. */
 export function getTokens(): AuthTokens | null {
   try {
     const accessToken = localStorage.getItem(KEYS.accessToken)
@@ -24,20 +21,21 @@ export function getTokens(): AuthTokens | null {
   }
 }
 
+/** Persiste ambos tokens en localStorage (sin fallback si el storage falla). */
 export function setTokens(tokens: AuthTokens): void {
   localStorage.setItem(KEYS.accessToken, tokens.accessToken)
   localStorage.setItem(KEYS.refreshToken, tokens.refreshToken)
 }
 
+/** Borra ambos tokens; se llama en logout y cuando el refresh falla. */
 export function clearTokens(): void {
   localStorage.removeItem(KEYS.accessToken)
   localStorage.removeItem(KEYS.refreshToken)
 }
 
-// ---------------------------------------------------------------------------
 // Auth error — thrown when refresh fails, caught by AuthContext
-// ---------------------------------------------------------------------------
 
+/** Se lanza cuando el refresh token tambien es invalido; AuthContext la usa para forzar logout. */
 export class AuthError extends Error {
   constructor() {
     super('Authentication required')
@@ -45,13 +43,11 @@ export class AuthError extends Error {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Single-flight refresh — concurrent 401s share the same refresh call
-// ---------------------------------------------------------------------------
 
 let refreshPromise: Promise<AuthTokens> | null = null
 
-/** Refreshes the access token using the stored refresh token. */
+/** Pide un access token nuevo; si falla por cualquier motivo, limpia los tokens y no reintenta. */
 async function refreshAccessToken(): Promise<AuthTokens> {
   const tokens = getTokens()
   if (!tokens?.refreshToken) {
@@ -81,10 +77,6 @@ async function refreshAccessToken(): Promise<AuthTokens> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Safe, user-facing error messages
-// ---------------------------------------------------------------------------
-
 /**
  * Shown for unexpected failures (server 5xx, network errors) instead of the
  * raw error. Never surfaces server internals, stack traces, or status codes
@@ -97,19 +89,10 @@ export const GENERIC_ERROR_MESSAGE =
 export const RATE_LIMITED_MESSAGE =
   'Estás preguntando muy rápido. Espera un momento y vuelve a intentarlo.'
 
-// ---------------------------------------------------------------------------
-// Fetch timeouts
-// ---------------------------------------------------------------------------
-
-/** Default timeout for authenticated requests. */
 export const DEFAULT_TIMEOUT_MS = 10_000
 
 /** Timeout for cognitive diagnosis — the backend itself allows 60s. */
 export const COGNITIVE_TIMEOUT_MS = 60_000
-
-// ---------------------------------------------------------------------------
-// Authenticated fetch
-// ---------------------------------------------------------------------------
 
 /** True when fetch rejected because a signal aborted (timeout or caller). */
 function isAbortError(error: unknown): boolean {
@@ -176,10 +159,6 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   return res
 }
 
-// ---------------------------------------------------------------------------
-// Shared response error handling
-// ---------------------------------------------------------------------------
-
 /**
  * Throws when a response is not ok. For 4xx responses, extracts the curated
  * server error message from the body (`details` first for validation
@@ -202,6 +181,7 @@ function extractErrorMessage(body: ErrorBody, fallbackMsg: string): string {
   return typeof body.error === 'string' ? body.error : fallbackMsg
 }
 
+/** Lanza ApiHttpError con mensaje generico en 5xx, mensaje fijo en 429, o el mensaje del backend en el resto. */
 export async function assertOk(res: Response, fallbackMsg: string): Promise<void> {
   if (res.ok) return
   if (res.status >= HTTP_SERVER_ERROR_MIN) {
@@ -214,9 +194,7 @@ export async function assertOk(res: Response, fallbackMsg: string): Promise<void
   throw new ApiHttpError(extractErrorMessage(body, fallbackMsg), res.status)
 }
 
-// ---------------------------------------------------------------------------
 // Server-side logout — best-effort revocation of the refresh token
-// ---------------------------------------------------------------------------
 
 /** POST /api/auth/logout — revokes the refresh token server-side. Never throws. */
 export async function logoutServer(): Promise<void> {
@@ -237,10 +215,6 @@ export async function logoutServer(): Promise<void> {
     // Network failure — ignore; local cleanup happens in api.logout().
   }
 }
-
-// ---------------------------------------------------------------------------
-// Query string builder for admin filters
-// ---------------------------------------------------------------------------
 
 /**
  * Builds a query string from a filter object, omitting undefined/null values.

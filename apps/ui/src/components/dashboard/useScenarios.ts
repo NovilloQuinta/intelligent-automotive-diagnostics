@@ -6,6 +6,7 @@ import type { Scenario } from './types'
 /** Los escenarios de simulación apenas cambian; se refrescan cada 30s. */
 const SCENARIOS_STALE_MS = 30_000
 
+/** Lista de escenarios de simulacion + escenario seleccionado (estado local, no persiste). */
 export function useScenarios() {
   const { data: scenarios = [], error } = useQuery<Scenario[]>({
     queryKey: ['scenarios'],

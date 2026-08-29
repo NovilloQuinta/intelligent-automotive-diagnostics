@@ -15,5 +15,4 @@ export const updateProfileSchema = z
   .strict()
   .describe('Edicion parcial del perfil. `email` queda fuera de alcance y se rechaza con 400')
 
-/** Input del caso de uso UpdateProfile. */
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>

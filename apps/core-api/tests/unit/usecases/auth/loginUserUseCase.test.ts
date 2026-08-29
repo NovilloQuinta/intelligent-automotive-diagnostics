@@ -75,7 +75,12 @@ describe('LoginUserUseCase', () => {
 
   beforeEach(() => {
     mocks = createMocks()
-    useCase = new LoginUserUseCase(mocks.userRepo, mocks.authService, mocks.tokenStore, 604800000)
+    useCase = new LoginUserUseCase({
+      userRepo: mocks.userRepo,
+      authService: mocks.authService,
+      tokenStore: mocks.tokenStore,
+      refreshTokenTtlMs: 604800000,
+    })
   })
 
   it('deberia devolver tokens en login exitoso', async () => {
@@ -181,14 +186,13 @@ describe('LoginUserUseCase — segundo factor', () => {
       markUsed: vi.fn().mockResolvedValue(undefined),
       invalidateAllForUser: vi.fn().mockResolvedValue(undefined),
     }
-    const useCase = new LoginUserUseCase(
-      mocks.userRepo,
-      mocks.authService,
-      mocks.tokenStore,
-      604800000,
-      undefined,
-      { challengeRepo, challengeTtlMs: 5 * 60 * 1000 },
-    )
+    const useCase = new LoginUserUseCase({
+      userRepo: mocks.userRepo,
+      authService: mocks.authService,
+      tokenStore: mocks.tokenStore,
+      refreshTokenTtlMs: 604800000,
+      twoFactor: { challengeRepo, challengeTtlMs: 5 * 60 * 1000 },
+    })
     return { useCase, mocks, challengeRepo }
   }
 
@@ -256,13 +260,12 @@ describe('LoginUserUseCase — segundo factor', () => {
 
   it('el usuario sin segundo factor sigue recibiendo tokens', async () => {
     const mocks = createMocks()
-    const useCase = new LoginUserUseCase(
-      mocks.userRepo,
-      mocks.authService,
-      mocks.tokenStore,
-      604800000,
-      undefined,
-      {
+    const useCase = new LoginUserUseCase({
+      userRepo: mocks.userRepo,
+      authService: mocks.authService,
+      tokenStore: mocks.tokenStore,
+      refreshTokenTtlMs: 604800000,
+      twoFactor: {
         challengeRepo: {
           save: vi.fn(),
           findByTokenHash: vi.fn(),
@@ -271,7 +274,7 @@ describe('LoginUserUseCase — segundo factor', () => {
         },
         challengeTtlMs: 300000,
       },
-    )
+    })
 
     const result = await useCase.execute(credentials)
 
@@ -284,12 +287,12 @@ describe('LoginUserUseCase — segundo factor', () => {
     const mocks = createMocks({
       userRepo: { findByEmail: vi.fn().mockResolvedValue(USER_2FA) },
     })
-    const useCase = new LoginUserUseCase(
-      mocks.userRepo,
-      mocks.authService,
-      mocks.tokenStore,
-      604800000,
-    )
+    const useCase = new LoginUserUseCase({
+      userRepo: mocks.userRepo,
+      authService: mocks.authService,
+      tokenStore: mocks.tokenStore,
+      refreshTokenTtlMs: 604800000,
+    })
 
     await expect(useCase.execute(credentials)).rejects.toThrow(TwoFactorNotConfiguredError)
   })

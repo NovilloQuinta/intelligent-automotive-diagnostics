@@ -4,6 +4,7 @@ import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
+import { requireJsdocConfig } from "../../eslint.shared.mjs";
 
 export default tseslint.config(
   { ignores: ["dist", ".output", ".vinxi"] },
@@ -33,8 +34,12 @@ export default tseslint.config(
         },
       ],
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
-      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
     },
   },
+  requireJsdocConfig,
   eslintPluginPrettier,
 );

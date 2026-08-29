@@ -69,10 +69,21 @@ function buildApp() {
   const twoFactor = createTwoFactorStack(config, repos as never, authService, mockLogger)
 
   const authController = new AuthController({
-    registerUser: new RegisterUserUseCase(userRepo, authService, tokenStore, 604800000),
-    loginUser: new LoginUserUseCase(userRepo, authService, tokenStore, 604800000, undefined, {
-      challengeRepo: repos.twoFactorChallengeRepo,
-      challengeTtlMs: 5 * 60 * 1000,
+    registerUser: new RegisterUserUseCase({
+      userRepo,
+      authService,
+      tokenStore,
+      refreshTokenTtlMs: 604800000,
+    }),
+    loginUser: new LoginUserUseCase({
+      userRepo,
+      authService,
+      tokenStore,
+      refreshTokenTtlMs: 604800000,
+      twoFactor: {
+        challengeRepo: repos.twoFactorChallengeRepo,
+        challengeTtlMs: 5 * 60 * 1000,
+      },
     }),
     refreshToken: new RefreshTokenUseCase(authService),
     getCurrentUser: new GetCurrentUserUseCase(userRepo),
@@ -83,12 +94,12 @@ function buildApp() {
       noopEmail,
       { ttlMinutes: 60, appBaseUrl: 'http://localhost:5173' },
     ),
-    resetPassword: new ResetPasswordUseCase(
-      new SqlitePasswordResetTokenRepository(db),
+    resetPassword: new ResetPasswordUseCase({
+      tokenRepo: new SqlitePasswordResetTokenRepository(db),
       userRepo,
       authService,
-      tokenStore,
-    ),
+      refreshTokenRepo: tokenStore,
+    }),
   })
 
   return createServer({

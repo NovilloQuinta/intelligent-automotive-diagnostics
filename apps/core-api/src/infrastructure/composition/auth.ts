@@ -33,15 +33,21 @@ export interface AuthStack {
   readonly resetPasswordUseCase: ResetPasswordUseCase
 }
 
+/** Wiring que no sale de `PersistenceRepositories`: servicios y soporte opcional de 2FA. */
+export interface CreateAuthStackOptions {
+  readonly emailSender: EmailSenderPort
+  readonly logger: LoggerPort
+  readonly twoFactorLogin?: TwoFactorLoginSupport
+}
+
 /** Crea el servicio de autenticacion y sus casos de uso. */
 // eslint-disable-next-line max-lines-per-function -- lista declarativa de casos de uso
 export function createAuthStack(
   config: AppConfig,
   repos: Pick<PersistenceRepositories, 'userRepo' | 'tokenStore' | 'passwordResetTokenRepo'>,
-  emailSender: EmailSenderPort,
-  logger: LoggerPort,
-  twoFactorLogin?: TwoFactorLoginSupport,
+  options: CreateAuthStackOptions,
 ): AuthStack {
+  const { emailSender, logger, twoFactorLogin } = options
   const authService = createAuthService({
     accessTokenSecret: config.ACCESS_TOKEN_SECRET,
     refreshTokenSecret: config.REFRESH_TOKEN_SECRET,
@@ -52,21 +58,21 @@ export function createAuthStack(
   const refreshTokenTtlMs = config.REFRESH_TOKEN_TTL * 1000
   return {
     authService,
-    registerUseCase: new RegisterUserUseCase(
-      repos.userRepo,
+    registerUseCase: new RegisterUserUseCase({
+      userRepo: repos.userRepo,
       authService,
-      repos.tokenStore,
+      tokenStore: repos.tokenStore,
       refreshTokenTtlMs,
       logger,
-    ),
-    loginUseCase: new LoginUserUseCase(
-      repos.userRepo,
+    }),
+    loginUseCase: new LoginUserUseCase({
+      userRepo: repos.userRepo,
       authService,
-      repos.tokenStore,
+      tokenStore: repos.tokenStore,
       refreshTokenTtlMs,
       logger,
-      twoFactorLogin,
-    ),
+      twoFactor: twoFactorLogin,
+    }),
     refreshUseCase: new RefreshTokenUseCase(authService, logger),
     getCurrentUserUseCase: new GetCurrentUserUseCase(repos.userRepo),
     logoutUseCase: new LogoutUserUseCase(repos.tokenStore, logger),
@@ -77,13 +83,13 @@ export function createAuthStack(
       { ttlMinutes: config.PASSWORD_RESET_TTL_MINUTES, appBaseUrl: config.APP_BASE_URL },
       logger,
     ),
-    resetPasswordUseCase: new ResetPasswordUseCase(
-      repos.passwordResetTokenRepo,
-      repos.userRepo,
+    resetPasswordUseCase: new ResetPasswordUseCase({
+      tokenRepo: repos.passwordResetTokenRepo,
+      userRepo: repos.userRepo,
       authService,
-      repos.tokenStore,
+      refreshTokenRepo: repos.tokenStore,
       logger,
-    ),
+    }),
   }
 }
 

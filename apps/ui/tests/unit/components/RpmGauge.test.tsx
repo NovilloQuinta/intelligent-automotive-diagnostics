@@ -1,7 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { RpmGauge } from '../../../src/components/dashboard/RpmGauge'
-import { GAUGE } from '../../../src/components/dashboard/types'
 
 // Stub the animation driver so useAnimatedNumber never fires frames and the
 // displayed value stays at the initial target (deterministic assertions).

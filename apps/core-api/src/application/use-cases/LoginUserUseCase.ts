@@ -19,66 +19,76 @@ export interface TwoFactorLoginSupport {
   readonly challengeTtlMs: number
 }
 
-/** Caso de uso: inicio de sesion. */
+export interface LoginUserUseCaseOptions {
+  readonly userRepo: UserRepository
+  readonly authService: AuthServicePort
+  readonly tokenStore: RefreshTokenRepository
+  readonly refreshTokenTtlMs: number
+  readonly logger?: LoggerPort
+  readonly twoFactor?: TwoFactorLoginSupport
+}
+
+/** Valida email+contraseña; si el usuario tiene segundo factor configurado devuelve un reto en vez de tokens (ver LoginUserOutput). */
 export class LoginUserUseCase {
-  constructor(
-    private readonly userRepo: UserRepository,
-    private readonly authService: AuthServicePort,
-    private readonly tokenStore: RefreshTokenRepository,
-    private readonly refreshTokenTtlMs: number,
-    private readonly logger?: LoggerPort,
-    private readonly twoFactor?: TwoFactorLoginSupport,
-  ) {}
+  constructor(private readonly options: LoginUserUseCaseOptions) {}
 
   async execute(input: LoginUserInput): Promise<LoginUserOutput> {
+    const { userRepo, authService, tokenStore, refreshTokenTtlMs, logger } = this.options
     const parsed = loginUserSchema.parse(input)
 
-    const user = await this.userRepo.findByEmail(parsed.email)
+    const user = await userRepo.findByEmail(parsed.email)
     if (!user) {
       // Sin el email: es PII y los logs de auth se conservan y se agregan.
-      this.logger?.info('auth.login_failed', { reason: 'user_not_found' })
+      logger?.info('auth.login_failed', { reason: 'user_not_found' })
       throw new InvalidCredentialsError()
     }
 
     if (isAccountLocked(user.lockedUntil)) {
-      this.logger?.warn('auth.locked_out', { userId: user.id, lockedUntil: user.lockedUntil })
+      logger?.warn('auth.locked_out', { userId: user.id, lockedUntil: user.lockedUntil })
       throw new AccountLockedError(user.lockedUntil)
     }
 
-    const valid = await this.authService.comparePassword(parsed.password, user.passwordHash)
+    const valid = await authService.comparePassword(parsed.password, user.passwordHash)
     if (!valid) {
-      const state = await this.userRepo.incrementFailedLogin(user.id)
-      this.logger?.info('auth.login_failed', {
-        userId: user.id,
-        reason: 'wrong_password',
-        failedLoginAttempts: state.failedLoginAttempts,
-      })
-      // El intento que alcanza el umbral ya deja la cuenta bloqueada: se
-      // responde 423 aqui mismo, en vez de un 401 que no explica nada y
-      // dejar el aviso para el intento siguiente.
-      if (isAccountLocked(state.lockedUntil)) {
-        this.logger?.warn('auth.locked_out', { userId: user.id, lockedUntil: state.lockedUntil })
-        throw new AccountLockedError(state.lockedUntil)
-      }
-      throw new InvalidCredentialsError()
+      await this.rejectWrongPassword(user.id)
     }
 
-    await this.userRepo.resetFailedLogins(user.id)
+    await userRepo.resetFailedLogins(user.id)
 
     if (user.twoFactorEnabled) {
       return this.issueChallenge(user.id)
     }
 
-    const tokens = this.authService.generateTokens(user.id)
-    await persistRefreshToken(this.tokenStore, user.id, tokens, this.refreshTokenTtlMs)
+    const tokens = authService.generateTokens(user.id)
+    await persistRefreshToken(tokenStore, user.id, tokens, refreshTokenTtlMs)
 
-    this.logger?.info('auth.login_success', { userId: user.id })
+    logger?.info('auth.login_success', { userId: user.id })
 
     return {
       twoFactorRequired: false,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
     }
+  }
+
+  /**
+   * Registra el intento fallido y lanza el error correspondiente: 423 si ese
+   * intento deja la cuenta bloqueada (en vez de un 401 que no explica nada y
+   * dejar el aviso para el intento siguiente), 401 en caso contrario.
+   */
+  private async rejectWrongPassword(userId: number): Promise<never> {
+    const { userRepo, logger } = this.options
+    const state = await userRepo.incrementFailedLogin(userId)
+    logger?.info('auth.login_failed', {
+      userId,
+      reason: 'wrong_password',
+      failedLoginAttempts: state.failedLoginAttempts,
+    })
+    if (isAccountLocked(state.lockedUntil)) {
+      logger?.warn('auth.locked_out', { userId, lockedUntil: state.lockedUntil })
+      throw new AccountLockedError(state.lockedUntil)
+    }
+    throw new InvalidCredentialsError()
   }
 
   /**
@@ -89,21 +99,22 @@ export class LoginUserUseCase {
    * intentos de login no dejen una coleccion de vales vivos a la vez.
    */
   private async issueChallenge(userId: number): Promise<LoginUserOutput> {
-    if (!this.twoFactor) {
+    const { logger, twoFactor } = this.options
+    if (!twoFactor) {
       // Fallar cerrado: la alternativa seria entregar tokens saltandose el segundo
       // factor porque el cableado esta incompleto, que es peor que no dejar entrar.
-      this.logger?.error('auth.two_factor_not_configured', { userId })
+      logger?.error('auth.two_factor_not_configured', { userId })
       throw new TwoFactorNotConfiguredError()
     }
 
-    const { challengeRepo, challengeTtlMs } = this.twoFactor
+    const { challengeRepo, challengeTtlMs } = twoFactor
     await challengeRepo.invalidateAllForUser(userId)
 
     const challengeToken = randomBytes(CHALLENGE_TOKEN_BYTES).toString('base64url')
     const expiresAt = new Date(Date.now() + challengeTtlMs).toISOString()
     await challengeRepo.save(userId, hashToken(challengeToken), expiresAt)
 
-    this.logger?.info('auth.two_factor_challenge_issued', { userId })
+    logger?.info('auth.two_factor_challenge_issued', { userId })
 
     return { twoFactorRequired: true, challengeToken, expiresAt }
   }

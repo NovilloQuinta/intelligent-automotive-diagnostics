@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { EcuInfo } from './types'
 
+/** ECUs del vehiculo activo; query deshabilitada hasta que hay `selectedId`. */
 export function useEcuInfo(selectedId: string | null) {
   const {
     data: ecus = [],

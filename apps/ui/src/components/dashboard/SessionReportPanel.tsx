@@ -5,7 +5,6 @@ import { EcuTable } from './EcuInfoPanel'
 import { FrameTable } from './FreezeFramePanel'
 import { useAvailablePids } from './useAvailablePids'
 import { buildPidLabelMap, type PidLabel } from './pidCatalog'
-import { COLORS } from './types'
 import { Badge } from '@/components/ui/badge'
 import {
   Accordion,
@@ -24,16 +23,8 @@ import {
 import type { CognitiveOutput } from '@/lib/api'
 import type { Scenario } from './types'
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const ANIM_DELAY_TABLE_MS = 60
 const ANIM_DELAY_LIST_MS = 50
-
-// ---------------------------------------------------------------------------
-// Props
-// ---------------------------------------------------------------------------
 
 interface SessionReportPanelProps {
   readonly scenarioId?: string
@@ -43,10 +34,6 @@ interface SessionReportPanelProps {
   /** ISO timestamp of when the report was originally generated. Displayed in the header. */
   readonly generatedAt?: string
 }
-
-// ---------------------------------------------------------------------------
-// Severity display mapping
-// ---------------------------------------------------------------------------
 
 /**
  * Traduce la severidad que llega del backend, que es `string` en el DTO.
@@ -59,10 +46,6 @@ function cognitiveSeverityBadge(sev: string): { label: string; color: string } {
   const { label, color } = severityMeta(isSeverity(sev) ? sev : 'low')
   return { label, color }
 }
-
-// ---------------------------------------------------------------------------
-// Section: Header (vehicle info)
-// ---------------------------------------------------------------------------
 
 function ReportHeader({
   vehicleInfo,
@@ -114,10 +97,6 @@ function ReportHeader({
     </div>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Section: Deterministic Diagnosis
-// ---------------------------------------------------------------------------
 
 function DtcTable({ dtcCodes }: { readonly dtcCodes: { code: string; description: string }[] }) {
   return (
@@ -209,10 +188,6 @@ function DeterministicSection({ state }: { readonly state: SessionReportState })
   )
 }
 
-// ---------------------------------------------------------------------------
-// Section: ECU info
-// ---------------------------------------------------------------------------
-
 function EcuSection({ state }: { readonly state: SessionReportState }) {
   const { ecus, ecusLoading } = state
 
@@ -226,10 +201,6 @@ function EcuSection({ state }: { readonly state: SessionReportState }) {
     </SectionCard>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Section: Freeze frame
-// ---------------------------------------------------------------------------
 
 function FreezeFrameSection({
   state,
@@ -259,10 +230,6 @@ function FreezeFrameSection({
     </SectionCard>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Section: Cognitive diagnosis
-// ---------------------------------------------------------------------------
 
 function RecommendationsList({ recommendations }: { readonly recommendations: string[] }) {
   return (
@@ -367,10 +334,6 @@ function CognitiveSection({ state }: { readonly state: SessionReportState }) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Shared sub-components
-// ---------------------------------------------------------------------------
-
 function SectionCard({
   icon: Icon,
   title,
@@ -416,9 +379,7 @@ function SectionEmpty({ text }: { readonly text: string }) {
   )
 }
 
-// ---------------------------------------------------------------------------
 // Internal: renders the report from a given state (live or snapshot)
-// ---------------------------------------------------------------------------
 
 interface SessionReportContentProps {
   readonly state: SessionReportState
@@ -449,9 +410,7 @@ function SessionReportContent({
   )
 }
 
-// ---------------------------------------------------------------------------
 // Main component — decides between live fetching and snapshot rendering
-// ---------------------------------------------------------------------------
 
 /**
  * Full-session report panel that aggregates deterministic OBD-II diagnosis,

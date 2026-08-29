@@ -6,7 +6,7 @@ import {
 } from '@/application/dto/auth/RefreshTokenInput.js'
 import type { RefreshTokenOutput } from '@/application/dto/auth/RefreshTokenOutput.js'
 
-/** Caso de uso: rotacion de refresh token. */
+/** Cambia el refresh token por un access token nuevo; loguea exito/fallo sin ocultar el error real al llamante. */
 export class RefreshTokenUseCase {
   constructor(
     private readonly authService: AuthServicePort,

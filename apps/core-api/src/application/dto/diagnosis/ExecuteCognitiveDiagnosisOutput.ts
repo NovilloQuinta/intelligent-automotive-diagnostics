@@ -2,7 +2,6 @@ import type { Severity } from '@/domain/value-objects/DiagnosisResult.js'
 import type { ToolCallTrace } from '@/application/dto/llm/ToolCallTrace.js'
 import type { PidObservation } from '@/application/dto/diagnosis/PidObservation.js'
 
-/** Output del caso de uso de diagnostico cognitivo. */
 export interface ExecuteCognitiveDiagnosisOutput {
   readonly diagnosis: string
   readonly severity: Severity

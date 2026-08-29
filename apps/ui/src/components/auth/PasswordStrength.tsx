@@ -1,7 +1,5 @@
-// ---------------------------------------------------------------------------
 // Shared password strength UI — used by register, reset-password, and
 // change-password forms.
-// ---------------------------------------------------------------------------
 
 /** Password complexity requirement: 1 uppercase, 1 digit, 1 special char. */
 export const PASSWORD_REGEX = /^(?=.*[A-Z])(?=.*[0-9])(?=.*[^A-Za-z0-9]).*$/

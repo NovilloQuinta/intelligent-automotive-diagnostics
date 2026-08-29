@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { VehicleStatusOutput } from './types'
 
+/** Estado de monitores de emisiones del vehiculo; query deshabilitada sin escenario seleccionado. */
 export function useVehicleStatus(scenarioId: string | null) {
   const {
     data: status = null,

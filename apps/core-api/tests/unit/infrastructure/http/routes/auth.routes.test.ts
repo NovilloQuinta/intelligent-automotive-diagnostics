@@ -101,8 +101,18 @@ function createTestApp(
 ) {
   const { userRepo, authService, tokenStore, tokenRepo, emailSender } = createMocks(overrides)
 
-  const registerUseCase = new RegisterUserUseCase(userRepo, authService, tokenStore, 604800000)
-  const loginUseCase = new LoginUserUseCase(userRepo, authService, tokenStore, 604800000)
+  const registerUseCase = new RegisterUserUseCase({
+    userRepo,
+    authService,
+    tokenStore,
+    refreshTokenTtlMs: 604800000,
+  })
+  const loginUseCase = new LoginUserUseCase({
+    userRepo,
+    authService,
+    tokenStore,
+    refreshTokenTtlMs: 604800000,
+  })
   const refreshUseCase = new RefreshTokenUseCase(authService)
   const getCurrentUserUseCase = new GetCurrentUserUseCase(userRepo)
   const logoutUseCase = new LogoutUserUseCase(tokenStore)
@@ -110,12 +120,12 @@ function createTestApp(
     ttlMinutes: 60,
     appBaseUrl: 'http://localhost:5173',
   })
-  const resetPasswordUseCase = new ResetPasswordUseCase(
+  const resetPasswordUseCase = new ResetPasswordUseCase({
     tokenRepo,
     userRepo,
     authService,
-    tokenStore,
-  )
+    refreshTokenRepo: tokenStore,
+  })
   const controller = new AuthController({
     registerUser: registerUseCase,
     loginUser: loginUseCase,

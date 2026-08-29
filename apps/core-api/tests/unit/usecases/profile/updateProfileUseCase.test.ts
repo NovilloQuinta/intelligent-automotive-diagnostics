@@ -3,7 +3,7 @@ import {
   UpdateProfileUseCase,
   UsernameAlreadyTakenError,
 } from '@/application/use-cases/UpdateProfileUseCase.js'
-import { UserNotFoundError } from '@/application/use-cases/GetCurrentUserUseCase.js'
+import { UserNotFoundError } from '@/application/shared/UserNotFoundError.js'
 import type { UserRepository } from '@/application/ports/UserRepository.js'
 import type { User } from '@/domain/entities/User.js'
 import { Email } from '@/domain/value-objects/Email.js'

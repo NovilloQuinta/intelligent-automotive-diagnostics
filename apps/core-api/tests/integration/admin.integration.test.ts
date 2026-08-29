@@ -112,8 +112,18 @@ describe('Admin integration', () => {
     })
 
     const authController = new AuthController({
-      registerUser: new RegisterUserUseCase(userRepo, authService, tokenStore, 604800000),
-      loginUser: new LoginUserUseCase(userRepo, authService, tokenStore, 604800000),
+      registerUser: new RegisterUserUseCase({
+        userRepo,
+        authService,
+        tokenStore,
+        refreshTokenTtlMs: 604800000,
+      }),
+      loginUser: new LoginUserUseCase({
+        userRepo,
+        authService,
+        tokenStore,
+        refreshTokenTtlMs: 604800000,
+      }),
       refreshToken: new RefreshTokenUseCase(authService),
       getCurrentUser: new GetCurrentUserUseCase(userRepo),
       logoutUser: new LogoutUserUseCase(tokenStore),

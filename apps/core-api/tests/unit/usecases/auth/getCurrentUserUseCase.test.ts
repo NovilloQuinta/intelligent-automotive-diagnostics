@@ -1,8 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
-import {
-  GetCurrentUserUseCase,
-  UserNotFoundError,
-} from '@/application/use-cases/GetCurrentUserUseCase.js'
+import { GetCurrentUserUseCase } from '@/application/use-cases/GetCurrentUserUseCase.js'
+import { UserNotFoundError } from '@/application/shared/UserNotFoundError.js'
 import type { UserRepository } from '@/application/ports/UserRepository.js'
 
 const USER = {

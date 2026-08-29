@@ -53,6 +53,7 @@ interface TopBarProps {
   onLogout: () => void
 }
 
+/** Cabecera del dashboard: branding, selector de escenario/vehiculo, estado de conexion y logout. */
 export function TopBar({
   scenarios,
   selectedId,

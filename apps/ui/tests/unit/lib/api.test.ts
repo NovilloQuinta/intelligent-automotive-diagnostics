@@ -3,15 +3,11 @@ import { MOCK_TOKENS, MOCK_USER, freshApiModule, setStoredTokens } from './apiTe
 
 describe('api — endpoints', () => {
   let api: typeof import('../../../src/lib/api').api
-  let apiFetch: typeof import('../../../src/lib/api').apiFetch
-  let assertOk: typeof import('../../../src/lib/api').assertOk
   let GENERIC_ERROR_MESSAGE: typeof import('../../../src/lib/api').GENERIC_ERROR_MESSAGE
 
   beforeEach(async () => {
     const mod = await freshApiModule()
     api = mod.api
-    apiFetch = mod.apiFetch
-    assertOk = mod.assertOk
     GENERIC_ERROR_MESSAGE = mod.GENERIC_ERROR_MESSAGE
   })
   describe('login', () => {
@@ -574,7 +570,7 @@ describe('api — endpoints', () => {
       }
       await api.getCognitiveDiagnosis('audi-a3-idle', '¿Y eso por qué?', [historyItem])
 
-      const [url, init] = mockFetch.mock.calls[0] as [string, RequestInit]
+      const [, init] = mockFetch.mock.calls[0] as [string, RequestInit]
       expect(JSON.parse(init.body as string)).toEqual({
         scenarioId: 'audi-a3-idle',
         query: '¿Y eso por qué?',

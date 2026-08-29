@@ -1,6 +1,7 @@
 import { Link } from '@tanstack/react-router'
 import { ScanLine } from 'lucide-react'
 
+/** Bloque final de landing con llamada a crear cuenta / iniciar sesion. */
 export function CTASection() {
   return (
     <section id="cta" className="border-b border-border">

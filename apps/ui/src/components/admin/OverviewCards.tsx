@@ -3,6 +3,7 @@ import { api } from '@/lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
+/** Tarjetas resumen del dashboard admin (usuarios, sesiones, errores...), con skeleton mientras carga. */
 export function OverviewCards() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['admin', 'overview'],

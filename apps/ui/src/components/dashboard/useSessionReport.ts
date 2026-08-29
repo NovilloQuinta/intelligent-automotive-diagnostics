@@ -4,18 +4,10 @@ import { ApiHttpError } from '@/lib/api-errors'
 import { extractErrorMessage } from '@/lib/errors'
 import type { DiagnosisResponse, EcuInfo, FreezeFrame } from './types'
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const HTTP_NOT_FOUND = 404
 
 const COGNITIVE_UNAVAILABLE = 'unavailable' as const
 type CognitiveSentinel = typeof COGNITIVE_UNAVAILABLE
-
-// ---------------------------------------------------------------------------
-// Public facing state shape
-// ---------------------------------------------------------------------------
 
 export interface SessionReportState {
   readonly capabilities: { cognitiveDiagnosis: boolean } | null
@@ -30,10 +22,6 @@ export interface SessionReportState {
   readonly cognitiveLoading: boolean
   readonly cognitiveError: string | null
 }
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 const INITIAL_STATE: SessionReportState = {
   capabilities: null,
@@ -91,9 +79,7 @@ function runSection<T>(options: RunSectionOptions<T>, ctx: SectionContext): void
     })
 }
 
-// ---------------------------------------------------------------------------
 // Section loaders (extracted from the large useEffect body)
-// ---------------------------------------------------------------------------
 
 function loadCapabilitiesAndCognitive(scenarioId: string, ctx: SectionContext): void {
   const { setState, cancelled } = ctx
@@ -163,10 +149,6 @@ function loadFreezeFrame(scenarioId: string, ctx: SectionContext): void {
     ctx,
   )
 }
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
 
 /**
  * Orchestrates the parallel fetching of all sections that compose a diagnosis

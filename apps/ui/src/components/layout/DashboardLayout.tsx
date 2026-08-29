@@ -22,6 +22,7 @@ interface DashboardLayoutProps {
   readonly onLogout: () => void
 }
 
+/** Shell del dashboard: sidebar + topbar + contenido de la seccion activa. */
 export function DashboardLayout({
   children,
   activeSection,

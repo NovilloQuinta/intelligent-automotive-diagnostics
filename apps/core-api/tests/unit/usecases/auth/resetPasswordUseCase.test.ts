@@ -96,12 +96,12 @@ describe('ResetPasswordUseCase', () => {
 
   beforeEach(() => {
     mocks = createMocks()
-    useCase = new ResetPasswordUseCase(
-      mocks.tokenRepo,
-      mocks.userRepo,
-      mocks.authService,
-      mocks.refreshTokenRepo,
-    )
+    useCase = new ResetPasswordUseCase({
+      tokenRepo: mocks.tokenRepo,
+      userRepo: mocks.userRepo,
+      authService: mocks.authService,
+      refreshTokenRepo: mocks.refreshTokenRepo,
+    })
   })
 
   it('deberia actualizar la contraseña, marcar el token usado y revocar refresh tokens', async () => {
@@ -116,12 +116,12 @@ describe('ResetPasswordUseCase', () => {
 
   it('deberia lanzar InvalidOrExpiredTokenError si el token no existe', async () => {
     mocks = createMocks({ tokenRepo: { findByTokenHash: vi.fn().mockResolvedValue(null) } })
-    useCase = new ResetPasswordUseCase(
-      mocks.tokenRepo,
-      mocks.userRepo,
-      mocks.authService,
-      mocks.refreshTokenRepo,
-    )
+    useCase = new ResetPasswordUseCase({
+      tokenRepo: mocks.tokenRepo,
+      userRepo: mocks.userRepo,
+      authService: mocks.authService,
+      refreshTokenRepo: mocks.refreshTokenRepo,
+    })
 
     await expect(
       useCase.execute({ token: RAW_TOKEN, newPassword: 'NewPass1!' }),
@@ -136,12 +136,12 @@ describe('ResetPasswordUseCase', () => {
           .mockResolvedValue(validRecord({ expiresAt: new Date(Date.now() - 1000).toISOString() })),
       },
     })
-    useCase = new ResetPasswordUseCase(
-      mocks.tokenRepo,
-      mocks.userRepo,
-      mocks.authService,
-      mocks.refreshTokenRepo,
-    )
+    useCase = new ResetPasswordUseCase({
+      tokenRepo: mocks.tokenRepo,
+      userRepo: mocks.userRepo,
+      authService: mocks.authService,
+      refreshTokenRepo: mocks.refreshTokenRepo,
+    })
 
     await expect(
       useCase.execute({ token: RAW_TOKEN, newPassword: 'NewPass1!' }),
@@ -156,12 +156,12 @@ describe('ResetPasswordUseCase', () => {
           .mockResolvedValue(validRecord({ usedAt: new Date().toISOString() })),
       },
     })
-    useCase = new ResetPasswordUseCase(
-      mocks.tokenRepo,
-      mocks.userRepo,
-      mocks.authService,
-      mocks.refreshTokenRepo,
-    )
+    useCase = new ResetPasswordUseCase({
+      tokenRepo: mocks.tokenRepo,
+      userRepo: mocks.userRepo,
+      authService: mocks.authService,
+      refreshTokenRepo: mocks.refreshTokenRepo,
+    })
 
     await expect(
       useCase.execute({ token: RAW_TOKEN, newPassword: 'NewPass1!' }),

@@ -2,10 +2,6 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { DiagnosisSession } from '@/components/dashboard/types'
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export interface DiagnosisHistoryFilters {
   readonly from?: string
   readonly to?: string
@@ -21,10 +17,6 @@ export interface DiagnosisHistoryState {
   readonly isError: boolean
   readonly error: Error | null
 }
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
 
 /**
  * Fetches the paginated diagnosis history list for the authenticated user.

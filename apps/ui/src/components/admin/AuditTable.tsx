@@ -51,6 +51,7 @@ const STATUS_OPTIONS = [
   { value: '500', label: '500' },
 ]
 
+/** Tabla admin de audit logs: filtros server-side (status, usuario, fecha) + paginacion. */
 export function AuditTable() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
@@ -122,7 +123,6 @@ export function AuditTable() {
           setTo(range.to)
           setPage(1)
         }}
-        dateRange={{ from, to }}
         dateShortcuts={['today', '7d', '30d']}
         pagination={{
           page,

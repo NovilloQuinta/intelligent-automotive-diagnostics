@@ -18,6 +18,7 @@ type Props = {
   selectedId: string | null
 }
 
+/** Tabla de ECUs detectadas: nombre, tipo, direcciones req/res y protocolo. */
 export function EcuTable({ ecus }: { ecus: EcuInfo[] }) {
   return (
     <Table>
@@ -59,6 +60,7 @@ export function EcuTable({ ecus }: { ecus: EcuInfo[] }) {
   )
 }
 
+/** Panel de unidades de control: envuelve EcuTable con los estados de carga/error/vacio. */
 export function EcuInfoPanel({ ecus, loading, error, selectedId }: Props) {
   return (
     <div className="panel flex min-h-0 flex-col p-4">

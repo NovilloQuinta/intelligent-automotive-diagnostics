@@ -17,6 +17,7 @@ import { DataTableFilters } from '@/components/admin/DataTableFilters'
 
 const PAGE_SIZE = 20
 
+/** Tabla admin de usuarios registrados: filtro por texto/fecha + paginacion server-side. */
 export function UsersTable() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
@@ -50,7 +51,6 @@ export function UsersTable() {
           setTo(range.to)
           setPage(1)
         }}
-        dateRange={{ from, to }}
         dateShortcuts={['today', '7d', '30d']}
         pagination={{
           page,

@@ -66,12 +66,10 @@ export class User {
     this.twoFactorEnabled = params.twoFactorEnabled ?? false
   }
 
-  /** Indica si el usuario es un taller. */
   get isWorkshop(): boolean {
     return this.userType === 'workshop'
   }
 
-  /** Indica si el usuario tiene privilegios de administrador. */
   get isAdmin(): boolean {
     return this.role === 'admin'
   }

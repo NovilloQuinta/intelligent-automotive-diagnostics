@@ -1,5 +1,6 @@
 import { Gauge } from 'lucide-react'
 
+/** Pie de pagina publico y del historial: version en runtime (new Date().getFullYear()) + enlaces legales. */
 export function FooterSection() {
   return (
     <footer className="border-t border-border">

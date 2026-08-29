@@ -9,23 +9,24 @@ import {
   AccountLockedError,
 } from '@/application/use-cases/LoginUserUseCase.js'
 import { RefreshTokenUseCase } from '@/application/use-cases/RefreshTokenUseCase.js'
-import {
-  GetCurrentUserUseCase,
-  UserNotFoundError,
-} from '@/application/use-cases/GetCurrentUserUseCase.js'
+import { GetCurrentUserUseCase } from '@/application/use-cases/GetCurrentUserUseCase.js'
+import { UserNotFoundError } from '@/application/shared/UserNotFoundError.js'
 import { LogoutUserUseCase } from '@/application/use-cases/LogoutUserUseCase.js'
 import { ForgotPasswordUseCase } from '@/application/use-cases/ForgotPasswordUseCase.js'
 import {
   ResetPasswordUseCase,
   InvalidOrExpiredTokenError,
 } from '@/application/use-cases/ResetPasswordUseCase.js'
-import { respondIfValidationError, respondInternalError } from './httpErrors.js'
+import {
+  respondIfValidationError,
+  respondInternalError,
+  requireAuthenticatedUser,
+} from './httpErrors.js'
 
 const GENERIC_FORGOT_PASSWORD_MESSAGE = 'If that email exists, a reset link has been sent.'
 
 const ERROR_MESSAGES = {
   invalidRefreshToken: 'Invalid refresh token',
-  accessTokenRequired: 'Access token required',
 } as const
 
 /** Casos de uso que consume {@link AuthController}. */
@@ -114,12 +115,10 @@ export class AuthController {
 
   /** GET /api/auth/me — 401 sin token valido, 404 usuario inexistente. */
   me = async (req: Request, res: Response): Promise<void> => {
+    const userId = requireAuthenticatedUser(req, res)
+    if (userId === null) return
     try {
-      if (typeof req.userId !== 'number') {
-        res.status(401).json({ error: ERROR_MESSAGES.accessTokenRequired })
-        return
-      }
-      const user = await this.getCurrentUser.execute(req.userId)
+      const user = await this.getCurrentUser.execute(userId)
       res.status(200).json(user)
     } catch (err) {
       if (err instanceof UserNotFoundError) {

@@ -3,10 +3,6 @@ import { api } from '@/lib/api'
 import type { DiagnosisSessionDetail } from '@/components/dashboard/types'
 import type { SessionReportState } from '@/components/dashboard/useSessionReport'
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export interface DiagnosisHistoryDetailState {
   readonly session: DiagnosisSessionDetail | null
   readonly reportState: SessionReportState | null
@@ -14,10 +10,6 @@ export interface DiagnosisHistoryDetailState {
   readonly isError: boolean
   readonly error: Error | null
 }
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
 
 /**
  * Fetches the full detail of a diagnosis session by its ID, including the

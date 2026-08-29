@@ -20,9 +20,7 @@ import type {
 import type { PidRow } from './pidCatalog'
 import type { ConversationItem } from '@/lib/api'
 
-// ---------------------------------------------------------------------------
 // Props sub-interfaces — grouped by domain to reduce flat-prop count
-// ---------------------------------------------------------------------------
 
 export interface TelemetryConfig {
   readonly rpm: number | null
@@ -80,6 +78,7 @@ export interface DashboardSectionProps {
   readonly canLaunch: boolean
 }
 
+/** Renderiza el panel correspondiente a `activeSection` (telemetria, DTCs, ECUs o chat cognitivo). */
 export function DashboardSection({
   activeSection,
   selectedId,

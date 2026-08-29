@@ -35,6 +35,7 @@ const INDEX_LABELS: Record<KnowledgeIndexName, string> = {
   diagnoses: 'Diagnoses',
 }
 
+/** Panel admin de la base de conocimiento (PIDs/DTCs/diagnosis): stats + busqueda semantica por indice. */
 export function KnowledgePanel() {
   const [searchText, setSearchText] = useState('')
   const [searchIndex, setSearchIndex] = useState<KnowledgeIndexName>('pids')

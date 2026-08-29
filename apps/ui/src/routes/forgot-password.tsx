@@ -10,10 +10,6 @@ import { Input } from '@/components/ui/input'
 import { RequiredLabel } from '@/components/auth/RequiredLabel'
 import { Car, MailCheck } from 'lucide-react'
 
-// ---------------------------------------------------------------------------
-// Zod schema
-// ---------------------------------------------------------------------------
-
 const forgotPasswordSchema = z.object({
   email: z.string().email('Email inválido'),
 })
@@ -27,17 +23,9 @@ type ForgotPasswordFormData = z.infer<typeof forgotPasswordSchema>
  */
 const GENERIC_SUCCESS_MESSAGE = 'Si el email existe, te hemos enviado un enlace de recuperación.'
 
-// ---------------------------------------------------------------------------
-// Route
-// ---------------------------------------------------------------------------
-
 export const Route = createFileRoute('/forgot-password')({
   component: ForgotPasswordPage,
 })
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 function ForgotPasswordPage() {
   const [submitted, setSubmitted] = useState(false)

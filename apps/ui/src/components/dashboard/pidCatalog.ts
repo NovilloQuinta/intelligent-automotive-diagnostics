@@ -35,7 +35,7 @@ export const FIXED_PID_SHORT_CODES: readonly string[] = [
   PID_INTAKE,
 ]
 
-/** Builds the full `"01 XX"` code from a short Mode 01 PID code. */
+/** Antepone el prefijo de modo `"01 "` a un codigo corto (ej. `"0C"` -> `"01 0C"`). */
 export function mode01Code(shortCode: string): string {
   return `01 ${shortCode}`
 }
@@ -60,7 +60,7 @@ export function isMode01PidCode(code: string): boolean {
   return code.startsWith('01 ')
 }
 
-/** Extracts the short PID code from a full `"01 0C"` code (drops the mode prefix). */
+/** Inverso de {@link mode01Code}: quita el prefijo de modo, si lo tiene. */
 export function shortPidCode(code: string): string {
   return code.split(' ')[1] ?? code
 }
@@ -155,7 +155,7 @@ export function pidWindows(
   return byCode
 }
 
-/** Builds the fixed PID rows read during a diagnosis session from its parsed OBD-II values. */
+/** Filas de los 4 PIDs fijos (rpm/coolant/speed/intake); el status de cada uno sale de compararlo con su operating window. */
 export function buildPidRows(
   parsedValues: DiagnosisResponse['parsedValues'],
   windows: ReadonlyMap<string, PidOperatingWindow>,

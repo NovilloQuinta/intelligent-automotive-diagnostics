@@ -11,26 +11,29 @@ import {
 } from '@/application/dto/auth/RegisterUserInput.js'
 import type { RegisterUserOutput } from '@/application/dto/auth/RegisterUserOutput.js'
 
-/** Caso de uso: registro de usuario nuevo. */
+export interface RegisterUserUseCaseOptions {
+  readonly userRepo: UserRepository
+  readonly authService: AuthServicePort
+  readonly tokenStore: RefreshTokenRepository
+  readonly refreshTokenTtlMs: number
+  readonly logger?: LoggerPort
+}
+
+/** Crea la cuenta y devuelve sesion ya iniciada (tokens); falla si el email ya esta registrado. */
 export class RegisterUserUseCase {
-  constructor(
-    private readonly userRepo: UserRepository,
-    private readonly authService: AuthServicePort,
-    private readonly tokenStore: RefreshTokenRepository,
-    private readonly refreshTokenTtlMs: number,
-    private readonly logger?: LoggerPort,
-  ) {}
+  constructor(private readonly options: RegisterUserUseCaseOptions) {}
 
   async execute(input: RegisterUserInput): Promise<RegisterUserOutput> {
+    const { userRepo, authService, tokenStore, refreshTokenTtlMs, logger } = this.options
     const parsed = registerUserSchema.parse(input)
 
-    const existing = await this.userRepo.findByEmail(parsed.email)
+    const existing = await userRepo.findByEmail(parsed.email)
     if (existing) {
       throw new EmailAlreadyRegisteredError()
     }
 
-    const passwordHash = await this.authService.hashPassword(parsed.password)
-    const user = await this.userRepo.create({
+    const passwordHash = await authService.hashPassword(parsed.password)
+    const user = await userRepo.create({
       username: parsed.username,
       email: new Email(parsed.email),
       passwordHash,
@@ -40,11 +43,11 @@ export class RegisterUserUseCase {
       address: parsed.address ?? null,
     })
 
-    const tokens = this.authService.generateTokens(user.id)
-    await persistRefreshToken(this.tokenStore, user.id, tokens, this.refreshTokenTtlMs)
+    const tokens = authService.generateTokens(user.id)
+    await persistRefreshToken(tokenStore, user.id, tokens, refreshTokenTtlMs)
 
     // El userId ya identifica la cuenta; el email es PII y sobra en el log.
-    this.logger?.info('auth.register', {
+    logger?.info('auth.register', {
       userId: user.id,
       userType: parsed.userType,
     })

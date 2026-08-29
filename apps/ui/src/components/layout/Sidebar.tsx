@@ -36,6 +36,7 @@ interface SidebarProps {
   readonly hasDiagnosis?: boolean
 }
 
+/** Navegacion lateral del dashboard; muestra badges de `dtcCount` y disponibilidad de diagnostico. */
 export function Sidebar({ active, onChange, dtcCount, hasDiagnosis }: SidebarProps) {
   return (
     <aside className="flex w-16 flex-col border-r border-white/5 bg-black/40 py-3">

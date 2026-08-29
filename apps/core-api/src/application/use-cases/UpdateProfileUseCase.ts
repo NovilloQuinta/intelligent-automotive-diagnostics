@@ -1,7 +1,7 @@
 import type { UserRepository } from '@/application/ports/UserRepository.js'
 import type { User } from '@/domain/entities/User.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
-import { UserNotFoundError } from '@/application/use-cases/GetCurrentUserUseCase.js'
+import { UserNotFoundError } from '@/application/shared/UserNotFoundError.js'
 import { toSafeUser } from '@/application/shared/safeUser.js'
 import {
   updateProfileSchema,

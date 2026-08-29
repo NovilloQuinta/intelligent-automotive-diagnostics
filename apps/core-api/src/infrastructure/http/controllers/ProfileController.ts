@@ -1,5 +1,4 @@
 import type { Request, Response } from 'express'
-import { ZodError } from 'zod'
 import {
   ChangePasswordUseCase,
   IncorrectCurrentPasswordError,
@@ -9,7 +8,12 @@ import {
   UpdateProfileUseCase,
   UsernameAlreadyTakenError,
 } from '@/application/use-cases/UpdateProfileUseCase.js'
-import { UserNotFoundError } from '@/application/use-cases/GetCurrentUserUseCase.js'
+import { UserNotFoundError } from '@/application/shared/UserNotFoundError.js'
+import {
+  respondIfValidationError,
+  respondInternalError,
+  requireAuthenticatedUser,
+} from './httpErrors.js'
 
 /** Controlador HTTP para los endpoints de perfil autenticado (edicion y cambio de contraseña). */
 export class ProfileController {
@@ -19,18 +23,13 @@ export class ProfileController {
   ) {}
 
   changePassword = async (req: Request, res: Response): Promise<void> => {
+    const userId = requireAuthenticatedUser(req, res)
+    if (userId === null) return
     try {
-      if (typeof req.userId !== 'number') {
-        res.status(401).json({ error: 'Access token required' })
-        return
-      }
-      await this.changePasswordUseCase.execute(req.userId, req.body)
+      await this.changePasswordUseCase.execute(userId, req.body)
       res.status(200).json({ success: true })
     } catch (err) {
-      if (err instanceof ZodError) {
-        res.status(400).json({ error: 'Validation failed', details: err.issues })
-        return
-      }
+      if (respondIfValidationError(err, res)) return
       if (err instanceof IncorrectCurrentPasswordError) {
         res.status(401).json({ error: err.message })
         return
@@ -43,23 +42,18 @@ export class ProfileController {
         res.status(404).json({ error: err.message })
         return
       }
-      res.status(500).json({ error: 'Internal server error' })
+      respondInternalError(res)
     }
   }
 
   updateProfile = async (req: Request, res: Response): Promise<void> => {
+    const userId = requireAuthenticatedUser(req, res)
+    if (userId === null) return
     try {
-      if (typeof req.userId !== 'number') {
-        res.status(401).json({ error: 'Access token required' })
-        return
-      }
-      const result = await this.updateProfileUseCase.execute(req.userId, req.body)
+      const result = await this.updateProfileUseCase.execute(userId, req.body)
       res.status(200).json(result)
     } catch (err) {
-      if (err instanceof ZodError) {
-        res.status(400).json({ error: 'Validation failed', details: err.issues })
-        return
-      }
+      if (respondIfValidationError(err, res)) return
       if (err instanceof UsernameAlreadyTakenError) {
         res.status(409).json({ error: err.message })
         return
@@ -68,7 +62,7 @@ export class ProfileController {
         res.status(404).json({ error: err.message })
         return
       }
-      res.status(500).json({ error: 'Internal server error' })
+      respondInternalError(res)
     }
   }
 }

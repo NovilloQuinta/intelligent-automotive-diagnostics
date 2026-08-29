@@ -4,7 +4,7 @@ import {
   IncorrectCurrentPasswordError,
   SamePasswordError,
 } from '@/application/use-cases/ChangePasswordUseCase.js'
-import { UserNotFoundError } from '@/application/use-cases/GetCurrentUserUseCase.js'
+import { UserNotFoundError } from '@/application/shared/UserNotFoundError.js'
 import type { UserRepository } from '@/application/ports/UserRepository.js'
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'

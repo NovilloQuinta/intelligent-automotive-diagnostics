@@ -1,7 +1,5 @@
-// ---------------------------------------------------------------------------
 // API contracts for /api/admin/* — keep in sync with
 // openspec/changes/add-admin-management-panel/api-contract.md
-// ---------------------------------------------------------------------------
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
@@ -92,9 +90,7 @@ export type KnowledgeSearchResponse = {
   results: KnowledgeSearchResult[]
 }
 
-// ---------------------------------------------------------------------------
 // Filters — query params sent to the server (never filtered client-side)
-// ---------------------------------------------------------------------------
 
 export type DateRangeFilter = {
   from?: string
