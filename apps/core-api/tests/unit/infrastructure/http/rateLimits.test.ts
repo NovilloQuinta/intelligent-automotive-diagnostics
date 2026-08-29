@@ -240,12 +240,12 @@ describe('HTTP server rate limits', () => {
     }
   })
 
-  it('should allow 5 POST /api/mcp/cognitive-diagnosis requests and return 429 on the 6th', async () => {
+  it('should allow 15 POST /api/mcp/cognitive-diagnosis requests and return 429 on the 16th', async () => {
     const { baseUrl, close } = await bootApp()
     try {
       const body = { scenarioId: 'audi-a3-idle', query: '¿Por qué tiembla el motor?' }
 
-      for (let i = 0; i < 5; i += 1) {
+      for (let i = 0; i < 15; i += 1) {
         const res = await postJson(baseUrl, '/api/mcp/cognitive-diagnosis', body)
         expect(res.status).toBe(200)
       }
@@ -350,13 +350,14 @@ describe('HTTP server rate limits', () => {
     }
   })
 
-  // Cognitivo y clear-dtc comparten ventana y limite (1 min / 5). Es el par que
-  // un namespace derivado de la configuracion no sabria distinguir.
+  // Comparten la misma ventana (1 min); solo el limite difiere (cognitivo 15,
+  // clear-dtc 5). Sin namespace propio por ruta, una implementacion que derive
+  // la clave del bucket solo de la ventana los confundiria.
   it('should not let cognitive-diagnosis exhaustion affect clear-dtc', async () => {
     const { baseUrl, close } = await bootApp()
     try {
       const cognitiveBody = { scenarioId: 'audi-a3-idle', query: '¿Por que tiembla?' }
-      for (let i = 0; i < 5; i += 1) {
+      for (let i = 0; i < 15; i += 1) {
         await postJson(baseUrl, '/api/mcp/cognitive-diagnosis', cognitiveBody)
       }
       const exhausted = await postJson(baseUrl, '/api/mcp/cognitive-diagnosis', cognitiveBody)
