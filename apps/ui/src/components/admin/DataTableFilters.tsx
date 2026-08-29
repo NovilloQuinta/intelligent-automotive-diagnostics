@@ -30,12 +30,12 @@ type DataTableFiltersProps = {
   searchPlaceholder?: string
   onSearchChange: (q: string) => void
   onDateRangeChange: (range: { from?: string; to?: string }) => void
-  dateRange?: { from?: string; to?: string }
   dateShortcuts?: DateShortcut[]
   levelFilter?: LevelFilter
   pagination: PaginationConfig
 }
 
+/** Barra de filtros + paginador compartida por las tablas admin (audit/logs/users). */
 export function DataTableFilters(props: DataTableFiltersProps) {
   const {
     searchPlaceholder = 'Buscar...',

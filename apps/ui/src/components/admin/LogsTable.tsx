@@ -36,6 +36,7 @@ function truncate(text: string, maxLen = 80): string {
   return text.slice(0, maxLen) + '...'
 }
 
+/** Tabla admin de logs de aplicacion: filtro por nivel/fecha/texto + paginacion server-side. */
 export function LogsTable() {
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(PAGE_SIZE)
@@ -71,7 +72,6 @@ export function LogsTable() {
           setTo(range.to)
           setPage(1)
         }}
-        dateRange={{ from, to }}
         dateShortcuts={['today', '7d', '30d']}
         levelFilter={{
           value: level,

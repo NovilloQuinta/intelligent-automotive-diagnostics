@@ -3,17 +3,9 @@ import { useVehicleStatus } from './useVehicleStatus'
 import type { MonitorStatus } from './types'
 import { PanelState } from './PanelState'
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 type Props = {
   readonly scenarioId: string | null
 }
-
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
 
 /** Renderiza una fila de un monitor de emisiones. */
 function MonitorRow({ monitor }: { readonly monitor: MonitorStatus }) {
@@ -44,10 +36,7 @@ function MonitorRow({ monitor }: { readonly monitor: MonitorStatus }) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Main component
-// ---------------------------------------------------------------------------
-
+/** Panel de estado del vehiculo: monitores de emisiones (completado/pendiente/no soportado). */
 export function VehicleStatusPanel({ scenarioId }: Props) {
   const { status, loading, error } = useVehicleStatus(scenarioId)
 

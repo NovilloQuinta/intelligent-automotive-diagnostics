@@ -1,14 +1,7 @@
 import type { UserRepository } from '@/application/ports/UserRepository.js'
 import type { User } from '@/domain/entities/User.js'
 import { toSafeUser } from '@/application/shared/safeUser.js'
-
-/** Error lanzado cuando el usuario autenticado no existe en el sistema. */
-export class UserNotFoundError extends Error {
-  constructor() {
-    super('User not found')
-    this.name = 'UserNotFoundError'
-  }
-}
+import { UserNotFoundError } from '@/application/shared/UserNotFoundError.js'
 
 /** Caso de uso: devuelve el usuario autenticado sin datos sensibles. */
 export class GetCurrentUserUseCase {

@@ -41,10 +41,6 @@ export function computePageWindow(
   return items
 }
 
-// ---------------------------------------------------------------------------
-// Paginator component
-// ---------------------------------------------------------------------------
-
 interface PaginatorProps {
   /** Current active page (1-based). */
   readonly page: number

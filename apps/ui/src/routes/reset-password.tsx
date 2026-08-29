@@ -12,10 +12,6 @@ import { Label } from '@/components/ui/label'
 import { Car, ShieldAlert } from 'lucide-react'
 import { PASSWORD_REGEX, PasswordStrengthIndicator } from '@/components/auth/PasswordStrength'
 
-// ---------------------------------------------------------------------------
-// Zod schema
-// ---------------------------------------------------------------------------
-
 const resetPasswordSchema = z
   .object({
     newPassword: z
@@ -32,26 +28,14 @@ const resetPasswordSchema = z
 
 type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>
 
-// ---------------------------------------------------------------------------
-// Search params
-// ---------------------------------------------------------------------------
-
 const searchSchema = z.object({
   token: z.string().optional(),
 })
-
-// ---------------------------------------------------------------------------
-// Route
-// ---------------------------------------------------------------------------
 
 export const Route = createFileRoute('/reset-password')({
   validateSearch: searchSchema,
   component: ResetPasswordPage,
 })
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 function ResetPasswordPage() {
   const { token } = Route.useSearch()

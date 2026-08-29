@@ -83,6 +83,7 @@ function Mockup() {
   )
 }
 
+/** Hero de la landing: titular + CTA principal. Contenido estático hardcodeado. */
 export function HeroSection() {
   return (
     <section className="border-b border-border">

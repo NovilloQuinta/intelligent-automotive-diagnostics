@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { DtcCode } from './types'
 
+/** DTCs pendientes (no confirmados) del escenario; expone `refetch` para refrescar tras borrar averías. */
 export function usePendingDtc(scenarioId: string) {
   const {
     data = { dtcCodes: [] },

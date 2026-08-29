@@ -21,6 +21,7 @@ const testimonials = [
   },
 ]
 
+/** Testimonios de talleres en la landing. Contenido estático hardcodeado, no viene del backend. */
 export function TestimonialsSection() {
   return (
     <section className="border-b border-border">

@@ -41,7 +41,6 @@ export class DiagnosisResult {
     return DiagnosisResult.computeSeverity(this.dtcCodes.length, this.freezeFrame)
   }
 
-  /** Número de códigos DTC del diagnóstico. */
   get dtcCount(): number {
     return this.dtcCodes.length
   }

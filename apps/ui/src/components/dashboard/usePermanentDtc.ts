@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import type { DtcCode } from './types'
 
+/** DTCs permanentes (no se borran con el reset de averías) del escenario activo. */
 export function usePermanentDtc(scenarioId: string) {
   const {
     data = { dtcCodes: [] },

@@ -5,10 +5,8 @@ import type { ComponentType, ReactNode } from 'react'
 const routerMock = vi.hoisted(() => ({ invalidate: vi.fn() }))
 
 vi.mock('@tanstack/react-router', () => {
-  let routeConfig: unknown = null
   return {
     createRootRouteWithContext: () => (config: unknown) => {
-      routeConfig = config
       return {
         options: config,
         useRouteContext: () => ({

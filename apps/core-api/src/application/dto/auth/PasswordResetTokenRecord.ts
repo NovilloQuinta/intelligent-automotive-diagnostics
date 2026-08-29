@@ -1,4 +1,3 @@
-/** Registro de token de reseteo de contraseña devuelto por el repositorio. */
 export interface PasswordResetTokenRecord {
   readonly id: number
   readonly userId: number

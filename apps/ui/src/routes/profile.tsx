@@ -18,10 +18,6 @@ import { PASSWORD_REGEX, PasswordStrengthIndicator } from '@/components/auth/Pas
 import { Header } from '@/components/layout/Header'
 import { FooterSection } from '@/components/landing/FooterSection'
 
-// ---------------------------------------------------------------------------
-// Zod schemas
-// ---------------------------------------------------------------------------
-
 const profileDataSchema = z.object({
   username: z.string().min(3, 'Mínimo 3 caracteres').max(50),
   address: z.string().max(500).optional(),
@@ -47,17 +43,11 @@ const changePasswordSchema = z
 type ProfileDataFormData = z.infer<typeof profileDataSchema>
 type ChangePasswordFormData = z.infer<typeof changePasswordSchema>
 
-// ---------------------------------------------------------------------------
-// Route
-// ---------------------------------------------------------------------------
-
 export const Route = createFileRoute('/profile')({
   component: ProfilePage,
 })
 
-// ---------------------------------------------------------------------------
 // Page — auth gating (mirrors DashboardPage's in-component pattern)
-// ---------------------------------------------------------------------------
 
 function ProfilePage() {
   const auth = useAuth()
@@ -77,9 +67,7 @@ function ProfilePage() {
   return <ProfileContent user={auth.user} onRefreshUser={auth.refreshUser} onLogout={auth.logout} />
 }
 
-// ---------------------------------------------------------------------------
 // Content — mounted only once the user is known
-// ---------------------------------------------------------------------------
 
 function ProfileContent({
   user,
@@ -129,10 +117,6 @@ function ProfileContent({
     </div>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Data form
-// ---------------------------------------------------------------------------
 
 function ProfileDataForm({
   user,
@@ -205,10 +189,6 @@ function ProfileDataForm({
     </form>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Change password form
-// ---------------------------------------------------------------------------
 
 function ChangePasswordForm({ onLogout }: { onLogout: () => Promise<void> }) {
   const navigate = useNavigate()
@@ -289,10 +269,6 @@ function ChangePasswordForm({ onLogout }: { onLogout: () => Promise<void> }) {
     </form>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Two-factor section
-// ---------------------------------------------------------------------------
 
 /** Paso del alta del segundo factor que se esta mostrando. */
 type TwoFactorStep =

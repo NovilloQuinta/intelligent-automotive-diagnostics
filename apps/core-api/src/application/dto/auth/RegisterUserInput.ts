@@ -1,7 +1,6 @@
 import { z } from 'zod'
 import { strongPasswordSchema } from '@/application/shared/passwordPolicy.js'
 
-/** Esquema de validacion Zod para el input de registro. */
 export const registerUserSchema = z
   .object({
     username: z
@@ -22,5 +21,4 @@ export const registerUserSchema = z
   })
   .describe('Alta de una cuenta nueva')
 
-/** Input del caso de uso RegisterUser. */
 export type RegisterUserInput = z.infer<typeof registerUserSchema>

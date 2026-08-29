@@ -9,34 +9,37 @@ import {
   type ResetPasswordInput,
 } from '@/application/dto/auth/ResetPasswordInput.js'
 
-/** Caso de uso: reseteo de contraseña mediante un token de un solo uso. */
+export interface ResetPasswordUseCaseOptions {
+  readonly tokenRepo: PasswordResetTokenRepository
+  readonly userRepo: UserRepository
+  readonly authService: AuthServicePort
+  readonly refreshTokenRepo: RefreshTokenRepository
+  readonly logger?: LoggerPort
+}
+
+/** Valida el token de un solo uso (caducidad/uso previo), fija la contraseña nueva y revoca todas las sesiones activas del usuario. */
 export class ResetPasswordUseCase {
-  constructor(
-    private readonly tokenRepo: PasswordResetTokenRepository,
-    private readonly userRepo: UserRepository,
-    private readonly authService: AuthServicePort,
-    private readonly refreshTokenRepo: RefreshTokenRepository,
-    private readonly logger?: LoggerPort,
-  ) {}
+  constructor(private readonly options: ResetPasswordUseCaseOptions) {}
 
   async execute(input: ResetPasswordInput): Promise<void> {
+    const { tokenRepo, userRepo, authService, refreshTokenRepo, logger } = this.options
     const parsed = resetPasswordSchema.parse(input)
 
     const tokenHash = hashToken(parsed.token)
-    const record = await this.tokenRepo.findByTokenHash(tokenHash)
+    const record = await tokenRepo.findByTokenHash(tokenHash)
 
     if (!record || record.usedAt !== null || new Date(record.expiresAt) < new Date()) {
-      this.logger?.info('auth.reset_password_failed')
+      logger?.info('auth.reset_password_failed')
       throw new InvalidOrExpiredTokenError()
     }
 
-    const passwordHash = await this.authService.hashPassword(parsed.newPassword)
-    await this.userRepo.updatePassword(record.userId, passwordHash)
-    await this.tokenRepo.markUsed(tokenHash)
-    await this.refreshTokenRepo.revokeAllForUser(record.userId)
-    await this.userRepo.resetFailedLogins(record.userId)
+    const passwordHash = await authService.hashPassword(parsed.newPassword)
+    await userRepo.updatePassword(record.userId, passwordHash)
+    await tokenRepo.markUsed(tokenHash)
+    await refreshTokenRepo.revokeAllForUser(record.userId)
+    await userRepo.resetFailedLogins(record.userId)
 
-    this.logger?.info('auth.reset_password_success', { userId: record.userId })
+    logger?.info('auth.reset_password_success', { userId: record.userId })
   }
 }
 

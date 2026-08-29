@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { MOCK_TOKENS, MOCK_USER, freshApiModule, setStoredTokens } from './apiTestSetup'
+import { MOCK_USER, freshApiModule, setStoredTokens } from './apiTestSetup'
 
 describe('apiClient — fontaneria HTTP', () => {
   let api: typeof import('../../../src/lib/api').api

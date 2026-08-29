@@ -1,8 +1,6 @@
 import type { AlertTriangle, CheckCircle2, Info, ShieldAlert } from 'lucide-react'
 
-// ---------------------------------------------------------------------------
 // API contracts — keep in sync with apps/core-api/src/application/dto/
-// ---------------------------------------------------------------------------
 
 /** Vehicle scenario as returned by GET /api/scenarios. */
 export type Scenario = {
@@ -138,10 +136,6 @@ export type VehicleIdentityConfirmation = {
   warnings: string[]
 }
 
-// ---------------------------------------------------------------------------
-// Auth types
-// ---------------------------------------------------------------------------
-
 export type AuthTokens = {
   accessToken: string
   refreshToken: string
@@ -203,10 +197,6 @@ export type UpdateProfileInput = Partial<{
   taxId: string
 }>
 
-// ---------------------------------------------------------------------------
-// DTC / vehicle status types
-// ---------------------------------------------------------------------------
-
 /** OBD-II Diagnostic Trouble Code. */
 export type DtcCode = {
   code: string
@@ -234,10 +224,6 @@ export type VehicleStatusOutput = {
   engineType: 'spark' | 'compression'
   monitors: MonitorStatus[]
 }
-
-// ---------------------------------------------------------------------------
-// Visual constants
-// ---------------------------------------------------------------------------
 
 export const COLORS = {
   destructive: '#ff3333',
@@ -306,9 +292,7 @@ export type SeverityMeta = {
   icon: typeof AlertTriangle | typeof CheckCircle2 | typeof Info | typeof ShieldAlert
 }
 
-// ---------------------------------------------------------------------------
 // Diagnosis history types — keep in sync with GET /api/diagnosis-history
-// ---------------------------------------------------------------------------
 
 /** Session summary as returned by the diagnosis history list endpoint. */
 export type DiagnosisSession = {

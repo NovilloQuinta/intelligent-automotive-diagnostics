@@ -77,9 +77,11 @@ export async function buildApp(config: AppConfig): Promise<Application> {
   const auth = createAuthStack(
     config,
     { userRepo, tokenStore, passwordResetTokenRepo },
-    emailSender,
-    logger,
-    createTwoFactorLoginSupport(repos),
+    {
+      emailSender,
+      logger,
+      twoFactorLogin: createTwoFactorLoginSupport(repos),
+    },
   )
   const twoFactor = createTwoFactorStack(config, repos, auth.authService, logger)
   await seedAdminUser(config, userRepo, auth.authService, logger)

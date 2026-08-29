@@ -358,18 +358,20 @@ la entrada pero no la salida.
 | Modulo                                                   | Estado                                                                                                                                                                                          |
 | -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `infrastructure/mcp/mcpServer.ts`                        | ~~848 L~~ → 98 L — **RESUELTO** (Fases A y B)                                                                                                                                                   |
-| `infrastructure/services/diagnosisService.ts`            | ~~969 L~~ → ~~786 L~~ → ~~586 L~~ → **484 L** — la orquestacion salio a cuatro casos de uso (`GetEcuInfo`, `GetLiveData`, `GetVehicleInfo`, `IdentifyVehicle`); lo que queda resuelve el adaptador y delega |
+| `infrastructure/services/diagnosisService.ts`            | ~~969 L~~ → ~~786 L~~ → ~~586 L~~ → ~~484 L~~ → **518 L** (remedido 29/08, ha vuelto a crecer) — la orquestacion salio a cuatro casos de uso (`GetEcuInfo`, `GetLiveData`, `GetVehicleInfo`, `IdentifyVehicle`); lo que queda resuelve el adaptador y delega |
 | `infrastructure/persistence/sqlite/vehicleRepository.ts` | ~~632 L~~ → **181 L** — **RESUELTO**: un store por agregado en `sqlite/vehicle/`                                                                                                                |
-| `infrastructure/composition/composition.ts`              | ~~579 L~~ → **100 L** — **RESUELTO**: repartido por areas en `composition/`                                                                                                                     |
-| `infrastructure/http/controllers/DiagnosisController.ts` | ~~578 L~~ → **479 L** — **REDUCIDO, no resuelto**: los schemas Zod viven ya en `application/dto/diagnosis/`, pero partir el controlador obligaria a tocar `diagnosis.routes.test.ts` (1241 L)   |
-| `apps/ui/src/lib/api.ts`                                 | ~~658 L~~ → **438 L** (test 1582 L) — el fichero bajo; el test sigue siendo el mas grande del repo                                                                                              |
+| `infrastructure/composition/composition.ts`              | ~~579 L~~ → **110 L** (remedido 29/08) — **RESUELTO**: repartido por areas en `composition/`                                                                                                                     |
+| `infrastructure/http/controllers/DiagnosisController.ts` | ~~578 L~~ → ~~479 L~~ → **490 L** (remedido 29/08, ha vuelto a crecer) — los schemas Zod viven ya en `application/dto/diagnosis/`, pero partir el controlador obligaria a tocar `diagnosis.routes.test.ts` (1241 L)   |
+| `apps/ui/src/lib/api.ts`                                 | ~~658 L~~ → ~~438 L~~ → **526 L** (remedido 29/08, ha vuelto a crecer) — sigue creciendo pese a que `apiClient.ts` (264 L) se separo aparte para tokens/fetch base                                                                                              |
+| `infrastructure/mcp/mcpServer.ts`                        | ~~848 L~~ → **112 L** (remedido 29/08) — **RESUELTO**, se mantiene bajo 200 L                                                                                                                    |
 
-> Cifras remedidas el 2026-08-19. `seedManufacturerCatalog.ts` (645 L) **no** cuenta:
+> Cifras remedidas el 2026-08-29. `seedManufacturerCatalog.ts` (645 L) **no** cuenta:
 > son 73 entradas de datos sembrados, no logica.
 >
-> **Ojo con el "RESUELTO"**: solo lo son los tres que bajaron de 200 lineas
-> (`mcpServer`, `vehicleRepository`, `composition`). Los dos marcados _reducido_ siguen
-> siendo los ficheros mas grandes del backend y siguen contando como deuda.
+> **Ojo con el "RESUELTO"**: solo lo son los que bajaron de 200 lineas
+> (`mcpServer`, `vehicleRepository`, `composition`) y se mantienen ahi. `DiagnosisController`
+> y `diagnosisService` no solo siguen sin resolver: **han vuelto a crecer** desde la ultima
+> medida. `apps/ui/src/lib/api.ts` igual, pese a haberse extraido `apiClient.ts` aparte.
 
 ## Tests sin factories compartidas
 

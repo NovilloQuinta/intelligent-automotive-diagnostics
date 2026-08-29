@@ -15,6 +15,7 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { DashboardSection } from './DashboardSection'
 import type { SidebarSection } from '@/components/layout/Sidebar'
 
+/** Compone todos los hooks del dashboard (telemetria, DTCs, diagnosis, ECUs) y los pasa a DashboardSection. */
 export function DashboardPage() {
   const auth = useAuth()
 

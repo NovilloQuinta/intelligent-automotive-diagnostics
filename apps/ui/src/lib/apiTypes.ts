@@ -43,10 +43,6 @@ export type ConversationItem = {
 /** Register response from backend. */
 export type RegisterResponse = AuthTokens & { user: AuthUser }
 
-// ---------------------------------------------------------------------------
-// Segundo factor (TOTP)
-// ---------------------------------------------------------------------------
-
 /**
  * Resultado de `POST /api/auth/login`.
  *

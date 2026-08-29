@@ -18,6 +18,7 @@ const steps = [
   },
 ]
 
+/** Los 3 pasos de uso (conectar/leer/diagnosticar) mostrados en la landing. Contenido estático hardcodeado. */
 export function StepsSection() {
   return (
     <section className="border-b border-border">

@@ -1,6 +1,5 @@
 import { z } from 'zod'
 
-/** Schema de entrada de la verificacion del segundo factor. */
 export const verifyTwoFactorSchema = z
   .object({
     challengeToken: z
@@ -15,5 +14,4 @@ export const verifyTwoFactorSchema = z
   })
   .describe('Segundo paso del inicio de sesion')
 
-/** Input del caso de uso VerifyTwoFactor. */
 export type VerifyTwoFactorInput = z.infer<typeof verifyTwoFactorSchema>

@@ -7,13 +7,9 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { api, AuthError } from '@/lib/api'
+import { api } from '@/lib/api'
 import type { AuthUser, LoginInput, RegisterInput } from '@/components/dashboard/types'
 import type { LoginResult } from '@/lib/api'
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
 
 type AuthStatus = 'loading' | 'authed' | 'anonymous'
 
@@ -33,10 +29,6 @@ type AuthState = {
   refreshUser: () => Promise<void>
 }
 
-// ---------------------------------------------------------------------------
-// Context
-// ---------------------------------------------------------------------------
-
 const AuthContext = createContext<AuthState | null>(null)
 
 /** Hook to access the current auth state. Must be used inside AuthProvider. */
@@ -45,10 +37,6 @@ export function useAuth(): AuthState {
   if (!ctx) throw new Error('useAuth() must be used inside <AuthProvider>')
   return ctx
 }
-
-// ---------------------------------------------------------------------------
-// Provider
-// ---------------------------------------------------------------------------
 
 /**
  * Provides JWT auth state to the entire app.

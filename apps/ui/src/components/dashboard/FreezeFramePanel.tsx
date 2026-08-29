@@ -20,6 +20,7 @@ type Props = {
 
 const EMPTY_PID_LABELS: ReadonlyMap<string, PidLabel> = new Map()
 
+/** Tabla del freeze frame de un DTC: valores de PID en el instante del fallo, con fallback a hex si falta el catalogo. */
 export function FrameTable({
   pidValues,
   pidInfo = EMPTY_PID_LABELS,

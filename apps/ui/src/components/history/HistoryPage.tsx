@@ -30,10 +30,6 @@ import type { Severity } from '@/components/dashboard/types'
 import { Header } from '@/components/layout/Header'
 import { FooterSection } from '@/components/landing/FooterSection'
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
 const DEFAULT_LIMIT = 25
 
 const SEVERITY_OPTIONS: { value: string; label: string }[] = [
@@ -42,10 +38,6 @@ const SEVERITY_OPTIONS: { value: string; label: string }[] = [
   { value: 'high', label: 'Alta' },
   { value: 'critical', label: 'Crítica' },
 ]
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString('es-ES', {
@@ -61,10 +53,7 @@ function hasActiveFilters(from: string, to: string, severity: string): boolean {
   return from !== '' || to !== '' || severity !== 'all'
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
+/** Historial de diagnosticos: filtros por fecha/severidad + paginacion, con URL sin sincronizar (estado local). */
 export function HistoryPage() {
   // Filter state
   const [from, setFrom] = useState('')
@@ -101,10 +90,6 @@ export function HistoryPage() {
     setSeverity(value)
     setPage(1)
   }, [])
-
-  // -----------------------------------------------------------------------
-  // Rendering
-  // -----------------------------------------------------------------------
 
   return (
     <div className="flex min-h-screen flex-col">

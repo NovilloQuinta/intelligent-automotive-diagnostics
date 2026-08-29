@@ -1,11 +1,25 @@
-import type { Response } from 'express'
+import type { Request, Response } from 'express'
 import { ZodError } from 'zod'
 
 /** Mensajes de error HTTP genéricos, comunes a los controladores REST. */
 export const COMMON_ERROR_MESSAGES = {
   validationFailed: 'Validation failed',
   internalError: 'Internal server error',
+  accessTokenRequired: 'Access token required',
 } as const
+
+/**
+ * Exige el `userId` que deja el middleware de auth en el request.
+ *
+ * @returns El userId, o `null` tras responder 401 — el llamante corta con `if (userId === null) return`.
+ */
+export function requireAuthenticatedUser(req: Request, res: Response): number | null {
+  if (typeof req.userId !== 'number') {
+    res.status(401).json({ error: COMMON_ERROR_MESSAGES.accessTokenRequired })
+    return null
+  }
+  return req.userId
+}
 
 /**
  * Responde 400 si el error es de validación Zod.

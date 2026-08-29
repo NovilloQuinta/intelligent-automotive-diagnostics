@@ -1,4 +1,3 @@
-/** Registro de refresh token devuelto por el repositorio. */
 export interface RefreshTokenRecord {
   readonly userId: number
   /** Fecha de expiracion en formato ISO-8601. */

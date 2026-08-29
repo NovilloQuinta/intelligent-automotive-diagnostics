@@ -17,6 +17,7 @@ interface ConnectionTypeIconProps {
   readonly connectionType: Scenario['connectionType']
 }
 
+/** Icono del tipo de conexion del escenario (wifi/usb/bluetooth) con tooltip. */
 export function ConnectionTypeIcon({ connectionType }: ConnectionTypeIconProps) {
   return (
     <span

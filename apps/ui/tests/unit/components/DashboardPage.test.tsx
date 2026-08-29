@@ -123,7 +123,6 @@ vi.mock('../../../src/components/dashboard/useFreezeFrame', () => ({
 
 import { api } from '../../../src/lib/api'
 import { DashboardPage } from '../../../src/components/dashboard/DashboardPage'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
 const scenario: Scenario = {
   id: 'audi-a3',

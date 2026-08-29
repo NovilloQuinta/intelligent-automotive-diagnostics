@@ -1,4 +1,3 @@
-/** Registro de reto de segundo factor devuelto por el repositorio. */
 export interface TwoFactorChallengeRecord {
   readonly id: number
   readonly userId: number

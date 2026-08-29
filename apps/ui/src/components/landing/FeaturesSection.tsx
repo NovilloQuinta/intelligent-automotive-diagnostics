@@ -21,6 +21,7 @@ const features = [
 
 const flow = ['Conectar', 'Escanear', 'Diagnosticar', 'Reparar']
 
+/** Sección de landing con las 3 capacidades principales (escaneo, IA, historial). Contenido estático hardcodeado. */
 export function FeaturesSection() {
   return (
     <section className="border-b border-border">

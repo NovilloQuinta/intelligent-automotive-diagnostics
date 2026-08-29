@@ -23,10 +23,6 @@ import { RequiredLabel } from '@/components/auth/RequiredLabel'
 import { Header } from '@/components/layout/Header'
 import { FooterSection } from '@/components/landing/FooterSection'
 
-// ---------------------------------------------------------------------------
-// Zod schemas
-// ---------------------------------------------------------------------------
-
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(1, 'La contraseña es obligatoria'),
@@ -49,17 +45,9 @@ const registerSchema = z.object({
 type LoginFormData = z.infer<typeof loginSchema>
 type RegisterFormData = z.infer<typeof registerSchema>
 
-// ---------------------------------------------------------------------------
-// Route
-// ---------------------------------------------------------------------------
-
 export const Route = createFileRoute('/login')({
   component: AuthPage,
 })
-
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
 
 function AuthPage() {
   const navigate = useNavigate()
@@ -173,10 +161,6 @@ function AuthPage() {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Two-factor step
-// ---------------------------------------------------------------------------
-
 /**
  * Segundo paso del inicio de sesion.
  *
@@ -241,10 +225,6 @@ function TwoFactorForm({
   )
 }
 
-// ---------------------------------------------------------------------------
-// Login form
-// ---------------------------------------------------------------------------
-
 function LoginForm({
   onSubmit,
   serverError,
@@ -302,10 +282,6 @@ function LoginForm({
     </form>
   )
 }
-
-// ---------------------------------------------------------------------------
-// Register form
-// ---------------------------------------------------------------------------
 
 function RegisterForm({
   onSubmit,

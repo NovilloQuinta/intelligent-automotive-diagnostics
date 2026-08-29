@@ -3,6 +3,7 @@ import { SectionLabel } from './landing-utils'
 
 const protocols = ['OBD-II', 'CAN BUS', 'ISO 9141-2', 'KWP2000', 'SAE J1850 PWM', 'SAE J1850 VPW']
 
+/** Lista de protocolos OBD-II soportados. Contenido estático hardcodeado, no viene del backend. */
 export function ProtocolsSection() {
   return (
     <section className="border-b border-border">

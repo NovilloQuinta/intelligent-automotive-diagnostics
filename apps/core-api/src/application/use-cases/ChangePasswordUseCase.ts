@@ -2,13 +2,13 @@ import type { UserRepository } from '@/application/ports/UserRepository.js'
 import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
-import { UserNotFoundError } from '@/application/use-cases/GetCurrentUserUseCase.js'
+import { UserNotFoundError } from '@/application/shared/UserNotFoundError.js'
 import {
   changePasswordSchema,
   type ChangePasswordInput,
 } from '@/application/dto/profile/ChangePasswordInput.js'
 
-/** Caso de uso: cambio de contraseña autenticado. */
+/** Requiere la contraseña actual, rechaza si es igual a la nueva, y revoca todas las sesiones activas tras el cambio. */
 export class ChangePasswordUseCase {
   constructor(
     private readonly userRepo: UserRepository,

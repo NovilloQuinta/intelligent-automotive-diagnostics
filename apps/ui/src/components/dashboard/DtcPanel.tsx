@@ -158,6 +158,7 @@ function ClearDtcDialog({ scenarioId, onCleared }: { scenarioId: string; onClear
   )
 }
 
+/** Lista de codigos DTC con severidad y dialogo de confirmacion para borrarlos (freeze frames incluidos). */
 export function DtcPanel({
   codes,
   severity,
