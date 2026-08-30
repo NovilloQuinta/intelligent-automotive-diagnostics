@@ -8,11 +8,14 @@ interface SidebarItem {
   readonly icon: typeof Car
 }
 
+// "Datos Vivo" trae el boton que lanza el diagnostico determinista (DTCs,
+// freeze frame, ECUs): tiene que ir antes de las secciones que dependen de
+// ese resultado, no despues.
 const SECTIONS: SidebarItem[] = [
   { id: 'vehicle', label: 'Vehículo', icon: Car },
+  { id: 'live-data', label: 'Datos Vivo', icon: Activity },
   { id: 'diagnosis', label: 'Diagnóstico', icon: Stethoscope },
   { id: 'dtc', label: 'Códigos DTC', icon: AlertTriangle },
-  { id: 'live-data', label: 'Datos Vivo', icon: Activity },
   { id: 'ecu', label: 'Unidades Control', icon: Cpu },
   { id: 'report', label: 'Informe', icon: FileText },
 ]
