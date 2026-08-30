@@ -10,6 +10,7 @@ import {
 import type { EcuInfo } from './types'
 import { PanelState } from './PanelState'
 import { ECU_PANEL_MESSAGES } from './ecuMessages'
+import { AiOriginBadge } from './AiOriginBadge'
 
 type Props = {
   ecus: EcuInfo[]
@@ -45,7 +46,12 @@ export function EcuTable({ ecus }: { ecus: EcuInfo[] }) {
             className="fade-up border-white/5 hover:bg-white/[0.02]"
             style={{ animationDelay: `${i * 60}ms` }}
           >
-            <TableCell className="text-xs font-bold text-foreground/90">{ecu.name}</TableCell>
+            <TableCell className="text-xs font-bold text-foreground/90">
+              {ecu.name}
+              {ecu.source === 'ai' && (
+                <AiOriginBadge title="Centralita identificada por el diagnóstico cognitivo" />
+              )}
+            </TableCell>
             <TableCell className="text-xs text-foreground/70">{ecu.type}</TableCell>
             <TableCell className="mono text-xs text-foreground/80">
               {ecu.requestAddr} → {ecu.responseAddr}

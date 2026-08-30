@@ -49,4 +49,19 @@ describe('EcuInfoPanel', () => {
 
     expect(screen.getByText('Sin ECUs descubiertas')).toBeDefined()
   })
+
+  it('should show the AI badge for ECUs the cognitive diagnosis named', () => {
+    const aiEcu = { ...sampleEcus[0], name: 'Transmission Control Module', source: 'ai' as const }
+    render(<EcuInfoPanel ecus={[aiEcu]} loading={false} error={null} selectedId={'audi-a3-idle'} />)
+
+    expect(screen.getByText('IA')).toBeDefined()
+  })
+
+  it('should not show the AI badge for ECUs the standard already names', () => {
+    render(
+      <EcuInfoPanel ecus={sampleEcus} loading={false} error={null} selectedId={'audi-a3-idle'} />,
+    )
+
+    expect(screen.queryByText('IA')).toBeNull()
+  })
 })
