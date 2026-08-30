@@ -91,8 +91,8 @@ export const RATE_LIMITED_MESSAGE =
 
 export const DEFAULT_TIMEOUT_MS = 10_000
 
-/** Timeout for cognitive diagnosis — the backend itself allows 60s. */
-export const COGNITIVE_TIMEOUT_MS = 60_000
+/** Timeout for cognitive diagnosis — the backend itself allows 120s. */
+export const COGNITIVE_TIMEOUT_MS = 120_000
 
 /** True when fetch rejected because a signal aborted (timeout or caller). */
 function isAbortError(error: unknown): boolean {

@@ -12,8 +12,8 @@ import { VehicleInfo } from '@/domain/value-objects/VehicleInfo.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/Vin.js'
 import { DiagnosisSession } from '@/domain/entities/DiagnosisSession.js'
 
-/** Timeout por defecto del diagnostico cognitivo (60 s). */
-export const COGNITIVE_DIAGNOSIS_TIMEOUT_MS = 60_000
+/** Timeout por defecto del diagnostico cognitivo (120 s). */
+export const COGNITIVE_DIAGNOSIS_TIMEOUT_MS = 120_000
 
 /**
  * Metadatos de los PIDs Mode 01, re-exportados desde el dominio.
