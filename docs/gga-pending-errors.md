@@ -12,6 +12,13 @@ Cada entrada debe corregirse en una rama `fix/gga-*` antes del siguiente milesto
 - **Archivo:linea** — descripcion del error
 -->
 
+### 2026-08-30 — cherry-pick 346c2f8 (test(ui): arreglar la cobertura y meter la UI en el gate)
+
+GGA aprobó de verdad ("Sin observaciones críticas ni menores que exijan corrección") pero
+`STRICT_MODE` lo rechazó como ambiguo, mismo bug del hook que las entradas de abajo. Forzado
+con `--no-verify` al traer commits de `claude/proyecto-pendientes-nyytej` a `main`, nada
+pendiente que corregir.
+
 ### 2026-08-29 — fix(gga): magic numbers + STATUS: PASSED fuera de las 30 lineas
 
 GGA aprobó de verdad ("STATUS: PASSED", todos los hallazgos anteriores corregidos) pero
