@@ -37,6 +37,11 @@ export function useLiveTelemetry(selectedId: string, pids?: readonly string[]) {
     queryFn: () => (hasPids ? api.getLiveData(selectedId, pids) : api.getLiveData(selectedId)),
     enabled: selectedId.length > 0,
     refetchInterval: LIVE_TELEMETRY_INTERVAL_MS,
+    // Sin esto, React Query reintenta cada fallo (3 veces, backoff exponencial)
+    // por encima del propio polling de 1 Hz: un 429 o un corte de red puntual
+    // se convertia en una rafaga de peticiones que agotaba el rate limit y lo
+    // mantenia agotado. El siguiente ciclo del intervalo ya es el reintento.
+    retry: false,
   })
 
   if (!selectedId || !data || isLoading) {
