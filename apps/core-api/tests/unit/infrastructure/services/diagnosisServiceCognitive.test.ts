@@ -233,6 +233,74 @@ describe('DiagnosisService — diagnostico cognitivo y persistencia', () => {
       expect(profileArg.vin.value).toBe('WAUZZZ8V5JA123456')
     })
 
+    it('persists the identified make/model in the snapshot, not the raw "unknown" from the adapter', async () => {
+      // El vehiculo real (coche fisico via ELM327) solo trae el VIN: make/model
+      // llegan "unknown" hasta que la cascada de identificacion los resuelve.
+      const unknownVehicleRepoOverride = createMockObdRepo()
+      unknownVehicleRepoOverride.getVehicleInfo = vi.fn(async () => ({
+        make: 'unknown',
+        model: 'unknown',
+        year: 0,
+        engineType: 'unknown',
+        vin: TEST_VIN,
+      }))
+      const obdRepos = new Map([['tcp-real-car', unknownVehicleRepoOverride]])
+
+      const upsertedProfile = new VehicleProfile({
+        id: 42,
+        make: 'Audi',
+        model: 'A3',
+        year: 2018,
+        engineType: 'unknown',
+        vin: TEST_VIN,
+      })
+      const endSessionSpy = vi.fn().mockResolvedValue(undefined)
+      const vehicleRepo = createMockVehicleRepo({
+        // Paso "vehiculo conocido" de la cascada de identificacion: mismo VIN visto antes.
+        findVehicleByVin: vi.fn().mockResolvedValue({
+          make: 'Audi',
+          model: 'A3',
+          year: 2018,
+          engineType: 'unknown',
+        }),
+        upsertVehicle: vi.fn().mockResolvedValue(upsertedProfile),
+        createSession: vi.fn().mockResolvedValue(
+          new DiagnosisSession({
+            id: 11,
+            vehicleId: 42,
+            scenarioId: 'tcp-real-car',
+            startedAt: new Date().toISOString(),
+          }),
+        ),
+        endSession: endSessionSpy,
+      })
+      const llmClient = mockLlmClient({
+        sendMessage: vi
+          .fn()
+          .mockResolvedValue({ text: cognitiveText, toolCalls: cognitiveToolCalls }),
+      })
+      const service = new DiagnosisService({
+        scenarios: mockScenarios,
+        obdRepos,
+        llmClient,
+        logger: createMockLogger(),
+        vehicleRepo,
+      })
+
+      await service.cognitiveDiagnosis({
+        scenarioId: 'tcp-real-car',
+        userQuery: '¿Por qué tiembla?',
+      })
+
+      expect(endSessionSpy).toHaveBeenCalledTimes(1)
+      const snapshot = endSessionSpy.mock.calls[0][1] as { resultJson: string }
+      const parsed = JSON.parse(snapshot.resultJson) as {
+        vehicle: { make: string; model: string }
+      }
+      expect(parsed.vehicle.make).toBe('Audi')
+      expect(parsed.vehicle.model).toBe('A3')
+    })
+
     it('does not call upsert when vehicleRepo is absent', async () => {
       // No vehicleRepo passed — diagnosis debe completarse sin error
       const result = await createService(undefined).cognitiveDiagnosis({

@@ -72,6 +72,10 @@ function ReportHeader({
   }
 
   const isHistorical = !!generatedAt
+  // El backend usa 'unknown' como centinela interno cuando el WMI del VIN da
+  // la marca pero no el modelo (ver VehicleAutoDetectWizard). Ahi se resuelve
+  // con un formulario; aqui, de solo lectura, se muestra como dato ausente.
+  const display = (value: string) => (value === 'unknown' ? '—' : value)
 
   const dateStr = isHistorical
     ? new Date(generatedAt!).toLocaleDateString('es-ES', {
@@ -91,10 +95,11 @@ function ReportHeader({
     <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
         <h2 className="text-xl font-bold tracking-tight">
-          {vehicleInfo.make} <span className="text-primary">{vehicleInfo.model}</span>
+          {display(vehicleInfo.make)}{' '}
+          <span className="text-primary">{display(vehicleInfo.model)}</span>
         </h2>
         <p className="text-sm text-muted-foreground">
-          {vehicleInfo.year} &middot; {vehicleInfo.engineType}
+          {vehicleInfo.year || '—'} &middot; {display(vehicleInfo.engineType)}
         </p>
       </div>
       <div className="flex flex-col items-end gap-1">

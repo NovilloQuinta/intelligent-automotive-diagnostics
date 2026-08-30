@@ -157,6 +157,12 @@ export interface ResolvedDiagnosisSession {
   readonly followUpSession: DiagnosisSession | undefined
   readonly sessionId: number | undefined
   readonly vehicleId: number | undefined
+  /**
+   * Vehiculo con marca/modelo ya resueltos (VIN decode/RAG), si se pudo identificar
+   * en un diagnostico nuevo. `undefined` en follow-ups o si la identificacion fallo:
+   * en ambos casos el llamador debe usar el `VehicleInfo` crudo como fallback.
+   */
+  readonly identifiedVehicleInfo: VehicleInfo | undefined
 }
 
 /** Dependencias de {@link DiagnosisService}. */

@@ -109,7 +109,11 @@ export class CognitiveDiagnosisRunner {
       followUpSession,
       sessionId: resolvedSessionId,
       vehicleId,
+      identifiedVehicleInfo,
     } = await this.resolveDiagnosisSession(sessionId, userId, vehicleInfo)
+    // La identificacion (VIN decode/RAG) resuelve marca/modelo reales; sin esto el
+    // informe guardado queda con "unknown/unknown" aunque el LLM sepa el vehiculo real.
+    const resolvedVehicleInfo = identifiedVehicleInfo ?? vehicleInfo
 
     const llmClient = this.requireLlmClient()
 
@@ -118,7 +122,7 @@ export class CognitiveDiagnosisRunner {
       ? resolvedSessionId
       : await this.createDiagnosisSession(vehicleId, scenarioId, userId)
 
-    const session = this.buildSessionContext(persistedSessionId, vehicleId, vehicleInfo)
+    const session = this.buildSessionContext(persistedSessionId, vehicleId, resolvedVehicleInfo)
 
     let diagnosisResult: ExecuteCognitiveDiagnosisOutput | undefined
     try {
@@ -135,7 +139,7 @@ export class CognitiveDiagnosisRunner {
       throw err
     } finally {
       this.persistDiagnosisSnapshot(persistedSessionId, followUpSession, {
-        vehicleInfo,
+        vehicleInfo: resolvedVehicleInfo,
         userQuery,
         diagnosisResult,
       })
@@ -152,11 +156,9 @@ export class CognitiveDiagnosisRunner {
     vehicleInfo: VehicleInfo,
   ): Promise<ResolvedDiagnosisSession> {
     if (sessionId === undefined) {
-      return {
-        followUpSession: undefined,
-        sessionId: undefined,
-        vehicleId: await this.upsertVehicleForDiagnosis(vehicleInfo),
-      }
+      const { id: vehicleId, identified: identifiedVehicleInfo } =
+        await this.upsertVehicleForDiagnosis(vehicleInfo)
+      return { followUpSession: undefined, sessionId: undefined, vehicleId, identifiedVehicleInfo }
     }
     if (!this.vehicleRepo || typeof userId !== 'number') {
       throw new DiagnosisSessionNotFoundError()
@@ -169,30 +171,37 @@ export class CognitiveDiagnosisRunner {
       followUpSession: existing,
       sessionId: existing.id,
       vehicleId: existing.vehicleId ?? undefined,
+      identifiedVehicleInfo: undefined,
     }
   }
 
   /**
    * Persiste el vehículo activo al inicio de un diagnóstico nuevo (D2).
-   * Devuelve su id, o `undefined` si no hay repositorio o la escritura falla.
+   * Devuelve su id y el `VehicleInfo` ya identificado, o `undefined` si no hay
+   * repositorio o la escritura falla.
    *
    * Resuelve la identidad **antes** de persistir: marca y modelo son la clave con
    * la que el catálogo RAG archiva y recupera lo aprendido, así que un `unknown`
    * aquí no es cosmético — condena todo lo que el agente aprenda de este coche a
-   * quedar bajo `unknown/unknown` y a no recuperarse nunca.
+   * quedar bajo `unknown/unknown` y a no recuperarse nunca. Devolver tambien el
+   * `VehicleInfo` identificado evita que el snapshot persistido en `result_json`
+   * se quede con la marca/modelo crudos (sin decodificar) que trajo el vehiculo.
    */
-  private async upsertVehicleForDiagnosis(vehicleInfo: VehicleInfo): Promise<number | undefined> {
-    if (!this.vehicleRepo) return undefined
+  private async upsertVehicleForDiagnosis(
+    vehicleInfo: VehicleInfo,
+  ): Promise<{ id: number | undefined; identified: VehicleInfo | undefined }> {
+    const failed = { id: undefined, identified: undefined }
+    if (!this.vehicleRepo) return failed
     try {
       const identified = await this.host.identify(vehicleInfo)
       const profile = this.host.toVehicleProfile(identified)
       const result = await this.vehicleRepo.upsertVehicle(profile)
-      return result.id
+      return { id: result.id, identified }
     } catch (e) {
       this.logger.warn('Failed to upsert vehicle in diagnosis session', {
         err: e instanceof Error ? e : String(e),
       })
-      return undefined
+      return failed
     }
   }
 
