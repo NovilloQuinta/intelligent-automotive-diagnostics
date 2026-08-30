@@ -246,9 +246,7 @@ export function createReliableTransport<TConn>(
     if (Date.now() - reconnectStartedAt >= RECONNECT_MAX_TOTAL_MS) {
       endReconnectEpisode()
       failQueue(
-        new Elm327ConnectionError(
-          `Reconnection failed after ${RECONNECT_MAX_TOTAL_MS / 1000}s`,
-        ),
+        new Elm327ConnectionError(`Reconnection failed after ${RECONNECT_MAX_TOTAL_MS / 1000}s`),
       )
       return
     }
