@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import type { Request, Response } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 import { TwoFactorController } from '@/infrastructure/http/controllers/TwoFactorController.js'
 import { AccountLockedError } from '@/application/use-cases/LoginUserUseCase.js'
 import { TwoFactorAlreadyEnabledError } from '@/application/use-cases/SetupTwoFactorUseCase.js'
@@ -50,6 +50,11 @@ function fakeReq(userId?: number, body: unknown = {}): Request {
   return { userId, body } as unknown as Request
 }
 
+/** `next` de mentira: los errores inesperados ya no se responden en el controlador, se delegan. */
+function fakeNext(): NextFunction {
+  return vi.fn() as unknown as NextFunction
+}
+
 /** Controlador con los cuatro casos de uso mockeados; se pisan por test. */
 function buildController(overrides: Record<string, unknown> = {}) {
   const rejects = (err: unknown) => ({ execute: vi.fn().mockRejectedValue(err) })
@@ -70,7 +75,7 @@ describe('TwoFactorController — respuestas de error', () => {
         const controller = buildController()
         const res = fakeRes()
 
-        await controller[method](fakeReq(undefined), res as unknown as Response)
+        await controller[method](fakeReq(undefined), res as unknown as Response, fakeNext())
 
         expect(res.statusCode).toBe(401)
         expect(res.body).toEqual({ error: 'Access token required' })
@@ -85,21 +90,23 @@ describe('TwoFactorController — respuestas de error', () => {
       })
       const res = fakeRes()
 
-      await controller.setup(fakeReq(1), res as unknown as Response)
+      await controller.setup(fakeReq(1), res as unknown as Response, fakeNext())
 
       expect(res.statusCode).toBe(409)
     })
 
-    it('responde 500 ante un error inesperado, sin filtrar el mensaje', async () => {
+    it('delega en next() ante un error inesperado, sin responder ni filtrar el mensaje', async () => {
+      const err = new Error('la base ardio')
       const controller = buildController({
-        setupTwoFactor: { execute: vi.fn().mockRejectedValue(new Error('la base ardio')) },
+        setupTwoFactor: { execute: vi.fn().mockRejectedValue(err) },
       })
       const res = fakeRes()
+      const next = fakeNext()
 
-      await controller.setup(fakeReq(1), res as unknown as Response)
+      await controller.setup(fakeReq(1), res as unknown as Response, next)
 
-      expect(res.statusCode).toBe(500)
-      expect(JSON.stringify(res.body)).not.toContain('la base ardio')
+      expect(res.statusCode).toBe(0)
+      expect(next).toHaveBeenCalledWith(err)
     })
 
     it('marca la respuesta como no cacheable, porque lleva el secreto en claro', async () => {
@@ -108,7 +115,7 @@ describe('TwoFactorController — respuestas de error', () => {
       })
       const res = fakeRes()
 
-      await controller.setup(fakeReq(1), res as unknown as Response)
+      await controller.setup(fakeReq(1), res as unknown as Response, fakeNext())
 
       expect(res.statusCode).toBe(200)
       expect(res.headers['Cache-Control']).toBe('no-store')
@@ -120,7 +127,7 @@ describe('TwoFactorController — respuestas de error', () => {
       const controller = buildController()
       const res = fakeRes()
 
-      await controller.activate(fakeReq(1, {}), res as unknown as Response)
+      await controller.activate(fakeReq(1, {}), res as unknown as Response, fakeNext())
 
       expect(res.statusCode).toBe(400)
     })
@@ -129,7 +136,11 @@ describe('TwoFactorController — respuestas de error', () => {
       const controller = buildController()
       const res = fakeRes()
 
-      await controller.activate(fakeReq(1, { code: 123456 }), res as unknown as Response)
+      await controller.activate(
+        fakeReq(1, { code: 123456 }),
+        res as unknown as Response,
+        fakeNext(),
+      )
 
       expect(res.statusCode).toBe(400)
     })
@@ -140,7 +151,11 @@ describe('TwoFactorController — respuestas de error', () => {
       })
       const res = fakeRes()
 
-      await controller.activate(fakeReq(1, { code: '123456' }), res as unknown as Response)
+      await controller.activate(
+        fakeReq(1, { code: '123456' }),
+        res as unknown as Response,
+        fakeNext(),
+      )
 
       expect(res.statusCode).toBe(409)
     })
@@ -151,20 +166,27 @@ describe('TwoFactorController — respuestas de error', () => {
       })
       const res = fakeRes()
 
-      await controller.activate(fakeReq(1, { code: '000000' }), res as unknown as Response)
+      await controller.activate(
+        fakeReq(1, { code: '000000' }),
+        res as unknown as Response,
+        fakeNext(),
+      )
 
       expect(res.statusCode).toBe(401)
     })
 
-    it('responde 500 ante un error inesperado', async () => {
+    it('delega en next() ante un error inesperado', async () => {
+      const err = new Error('vaya')
       const controller = buildController({
-        activateTwoFactor: { execute: vi.fn().mockRejectedValue(new Error('vaya')) },
+        activateTwoFactor: { execute: vi.fn().mockRejectedValue(err) },
       })
       const res = fakeRes()
+      const next = fakeNext()
 
-      await controller.activate(fakeReq(1, { code: '123456' }), res as unknown as Response)
+      await controller.activate(fakeReq(1, { code: '123456' }), res as unknown as Response, next)
 
-      expect(res.statusCode).toBe(500)
+      expect(res.statusCode).toBe(0)
+      expect(next).toHaveBeenCalledWith(err)
     })
   })
 
@@ -178,7 +200,7 @@ describe('TwoFactorController — respuestas de error', () => {
       })
       const res = fakeRes()
 
-      await controller.verify(fakeReq(undefined, {}), res as unknown as Response)
+      await controller.verify(fakeReq(undefined, {}), res as unknown as Response, fakeNext())
 
       expect(res.statusCode).toBe(423)
       expect(res.headers['Retry-After']).toBe('90')
@@ -191,7 +213,7 @@ describe('TwoFactorController — respuestas de error', () => {
       })
       const res = fakeRes()
 
-      await controller.disable(fakeReq(1, {}), res as unknown as Response)
+      await controller.disable(fakeReq(1, {}), res as unknown as Response, fakeNext())
 
       expect(res.statusCode).toBe(423)
       expect(res.headers['Retry-After']).toBeUndefined()
@@ -207,20 +229,23 @@ describe('TwoFactorController — respuestas de error', () => {
       })
       const res = fakeRes()
 
-      await controller.verify(fakeReq(undefined, {}), res as unknown as Response)
+      await controller.verify(fakeReq(undefined, {}), res as unknown as Response, fakeNext())
 
       expect(res.statusCode).toBe(401)
     })
 
-    it('responde 500 ante un error inesperado', async () => {
+    it('delega en next() ante un error inesperado', async () => {
+      const err = new Error('vaya')
       const controller = buildController({
-        verifyTwoFactor: { execute: vi.fn().mockRejectedValue(new Error('vaya')) },
+        verifyTwoFactor: { execute: vi.fn().mockRejectedValue(err) },
       })
       const res = fakeRes()
+      const next = fakeNext()
 
-      await controller.verify(fakeReq(undefined, {}), res as unknown as Response)
+      await controller.verify(fakeReq(undefined, {}), res as unknown as Response, next)
 
-      expect(res.statusCode).toBe(500)
+      expect(res.statusCode).toBe(0)
+      expect(next).toHaveBeenCalledWith(err)
     })
   })
 
@@ -231,20 +256,27 @@ describe('TwoFactorController — respuestas de error', () => {
       })
       const res = fakeRes()
 
-      await controller.disable(fakeReq(1, { password: 'x', code: '1' }), res as unknown as Response)
+      await controller.disable(
+        fakeReq(1, { password: 'x', code: '1' }),
+        res as unknown as Response,
+        fakeNext(),
+      )
 
       expect(res.statusCode).toBe(401)
     })
 
-    it('responde 500 ante un error inesperado', async () => {
+    it('delega en next() ante un error inesperado', async () => {
+      const err = new Error('vaya')
       const controller = buildController({
-        disableTwoFactor: { execute: vi.fn().mockRejectedValue(new Error('vaya')) },
+        disableTwoFactor: { execute: vi.fn().mockRejectedValue(err) },
       })
       const res = fakeRes()
+      const next = fakeNext()
 
-      await controller.disable(fakeReq(1, {}), res as unknown as Response)
+      await controller.disable(fakeReq(1, {}), res as unknown as Response, next)
 
-      expect(res.statusCode).toBe(500)
+      expect(res.statusCode).toBe(0)
+      expect(next).toHaveBeenCalledWith(err)
     })
 
     it('devuelve success cuando todo va bien', async () => {
@@ -255,6 +287,7 @@ describe('TwoFactorController — respuestas de error', () => {
       await controller.disable(
         fakeReq(7, { password: 'Secreta1!', code: '123456' }),
         res as unknown as Response,
+        fakeNext(),
       )
 
       expect(res.statusCode).toBe(200)

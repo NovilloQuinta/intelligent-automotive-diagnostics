@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 import type { SetupTwoFactorUseCase } from '@/application/use-cases/SetupTwoFactorUseCase.js'
 import { TwoFactorAlreadyEnabledError } from '@/application/use-cases/SetupTwoFactorUseCase.js'
 import type { ActivateTwoFactorUseCase } from '@/application/use-cases/ActivateTwoFactorUseCase.js'
@@ -11,7 +11,7 @@ import {
   InvalidTwoFactorCodeError,
 } from '@/application/use-cases/VerifyTwoFactorUseCase.js'
 import { AccountLockedError } from '@/application/use-cases/LoginUserUseCase.js'
-import { respondIfValidationError, respondInternalError } from './httpErrors.js'
+import { respondIfValidationError } from './httpErrors.js'
 
 const ERROR_MESSAGES = {
   accessTokenRequired: 'Access token required',
@@ -95,13 +95,14 @@ export class TwoFactorController {
    * 401 tanto si el reto no vale como si el codigo es incorrecto; 423 si la cuenta
    * quedo bloqueada por acumular fallos.
    */
-  verify = async (req: Request, res: Response): Promise<void> => {
+  verify = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      res.status(200).json(await this.verifyTwoFactor.execute(req.body))
+      const result = await this.verifyTwoFactor.execute(req.body)
+      res.status(200).json(result)
     } catch (err) {
       if (respondIfValidationError(err, res)) return
       if (respondIfTwoFactorError(err, res)) return
-      respondInternalError(res)
+      next(err)
     }
   }
 
@@ -111,7 +112,7 @@ export class TwoFactorController {
    * `Cache-Control: no-store`: el cuerpo lleva el secreto en claro —es lo unico
    * que permite registrar la app— y no debe quedarse en ninguna cache intermedia.
    */
-  setup = async (req: Request, res: Response): Promise<void> => {
+  setup = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = requireUserId(req, res)
     if (userId === null) return
 
@@ -124,12 +125,12 @@ export class TwoFactorController {
         res.status(409).json({ error: err.message })
         return
       }
-      respondInternalError(res)
+      next(err)
     }
   }
 
   /** POST /api/profile/2fa/activate — enciende el segundo factor y entrega los codigos. */
-  activate = async (req: Request, res: Response): Promise<void> => {
+  activate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = requireUserId(req, res)
     if (userId === null) return
 
@@ -144,22 +145,22 @@ export class TwoFactorController {
       res.setHeader('Cache-Control', 'no-store')
       res.status(200).json(result)
     } catch (err) {
-      this.respondActivateError(err, res)
+      this.respondActivateError(err, res, next)
     }
   }
 
   /** Cola de errores de `activate`, separada para que el handler quede en un vistazo. */
-  private respondActivateError(err: unknown, res: Response): void {
+  private respondActivateError(err: unknown, res: Response, next: NextFunction): void {
     if (err instanceof TwoFactorSetupMissingError) {
       res.status(409).json({ error: err.message })
       return
     }
     if (respondIfTwoFactorError(err, res)) return
-    respondInternalError(res)
+    next(err)
   }
 
   /** POST /api/profile/2fa/disable — exige contrasena **y** codigo vigente. */
-  disable = async (req: Request, res: Response): Promise<void> => {
+  disable = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = requireUserId(req, res)
     if (userId === null) return
 
@@ -173,7 +174,7 @@ export class TwoFactorController {
     } catch (err) {
       if (respondIfValidationError(err, res)) return
       if (respondIfTwoFactorError(err, res)) return
-      respondInternalError(res)
+      next(err)
     }
   }
 }

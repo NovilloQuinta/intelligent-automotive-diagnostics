@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 import {
   ChangePasswordUseCase,
   IncorrectCurrentPasswordError,
@@ -9,11 +9,7 @@ import {
   UsernameAlreadyTakenError,
 } from '@/application/use-cases/UpdateProfileUseCase.js'
 import { UserNotFoundError } from '@/application/shared/UserNotFoundError.js'
-import {
-  respondIfValidationError,
-  respondInternalError,
-  requireAuthenticatedUser,
-} from './httpErrors.js'
+import { respondIfValidationError, requireAuthenticatedUser } from './httpErrors.js'
 
 /** Controlador HTTP para los endpoints de perfil autenticado (edicion y cambio de contraseña). */
 export class ProfileController {
@@ -22,7 +18,7 @@ export class ProfileController {
     private readonly updateProfileUseCase: UpdateProfileUseCase,
   ) {}
 
-  changePassword = async (req: Request, res: Response): Promise<void> => {
+  changePassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = requireAuthenticatedUser(req, res)
     if (userId === null) return
     try {
@@ -42,11 +38,11 @@ export class ProfileController {
         res.status(404).json({ error: err.message })
         return
       }
-      respondInternalError(res)
+      next(err)
     }
   }
 
-  updateProfile = async (req: Request, res: Response): Promise<void> => {
+  updateProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = requireAuthenticatedUser(req, res)
     if (userId === null) return
     try {
@@ -62,7 +58,7 @@ export class ProfileController {
         res.status(404).json({ error: err.message })
         return
       }
-      respondInternalError(res)
+      next(err)
     }
   }
 }

@@ -1,4 +1,4 @@
-import type { Request, Response } from 'express'
+import type { NextFunction, Request, Response } from 'express'
 import {
   RegisterUserUseCase,
   EmailAlreadyRegisteredError,
@@ -17,11 +17,7 @@ import {
   ResetPasswordUseCase,
   InvalidOrExpiredTokenError,
 } from '@/application/use-cases/ResetPasswordUseCase.js'
-import {
-  respondIfValidationError,
-  respondInternalError,
-  requireAuthenticatedUser,
-} from './httpErrors.js'
+import { respondIfValidationError, requireAuthenticatedUser } from './httpErrors.js'
 
 const GENERIC_FORGOT_PASSWORD_MESSAGE = 'If that email exists, a reset link has been sent.'
 
@@ -61,7 +57,7 @@ export class AuthController {
   }
 
   /** POST /api/auth/register — alta de usuario. 400 validacion, 409 email ya registrado. */
-  register = async (req: Request, res: Response): Promise<void> => {
+  register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const result = await this.registerUser.execute(req.body)
       res.status(201).json(result)
@@ -71,12 +67,12 @@ export class AuthController {
         res.status(409).json({ error: err.message })
         return
       }
-      respondInternalError(res)
+      next(err)
     }
   }
 
   /** POST /api/auth/login — 400 validacion, 401 credenciales invalidas. */
-  login = async (req: Request, res: Response): Promise<void> => {
+  login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const result = await this.loginUser.execute(req.body)
       res.status(200).json(result)
@@ -98,7 +94,7 @@ export class AuthController {
         })
         return
       }
-      respondInternalError(res)
+      next(err)
     }
   }
 
@@ -114,7 +110,7 @@ export class AuthController {
   }
 
   /** GET /api/auth/me — 401 sin token valido, 404 usuario inexistente. */
-  me = async (req: Request, res: Response): Promise<void> => {
+  me = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     const userId = requireAuthenticatedUser(req, res)
     if (userId === null) return
     try {
@@ -125,18 +121,18 @@ export class AuthController {
         res.status(404).json({ error: err.message })
         return
       }
-      respondInternalError(res)
+      next(err)
     }
   }
 
   /** POST /api/auth/logout — revoca el refresh token. 400 validacion. */
-  logout = async (req: Request, res: Response): Promise<void> => {
+  logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       await this.logoutUser.execute(req.body)
       res.status(200).json({ success: true })
     } catch (err) {
       if (respondIfValidationError(err, res)) return
-      respondInternalError(res)
+      next(err)
     }
   }
 
@@ -144,17 +140,17 @@ export class AuthController {
    * Solicita un reseteo de contraseña. Responde siempre con el mismo mensaje generico
    * (anti-enumeracion de usuarios), independientemente de si el email existe o no.
    */
-  forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  forgotPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       await this.forgotPasswordUseCase.execute(req.body)
       res.status(200).json({ message: GENERIC_FORGOT_PASSWORD_MESSAGE })
     } catch (err) {
       if (respondIfValidationError(err, res)) return
-      respondInternalError(res)
+      next(err)
     }
   }
 
-  resetPassword = async (req: Request, res: Response): Promise<void> => {
+  resetPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       await this.resetPasswordUseCase.execute(req.body)
       res.status(200).json({ success: true })
@@ -164,7 +160,7 @@ export class AuthController {
         res.status(400).json({ error: err.message })
         return
       }
-      respondInternalError(res)
+      next(err)
     }
   }
 }
