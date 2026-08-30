@@ -553,7 +553,7 @@ describe('DashboardPage', () => {
     expect(screen.queryByText('Informe de Sesión de Diagnóstico')).toBeNull()
   })
 
-  it('does not auto-run deterministic or cognitive diagnosis when a vehicle is selected', () => {
+  it('auto-runs the cognitive diagnosis, but not the deterministic one, when a vehicle is selected', () => {
     mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
@@ -584,10 +584,11 @@ describe('DashboardPage', () => {
 
     render(<DashboardPage />)
 
-    // Solo se limpia el estado cognitivo del vehículo anterior (reset).
+    // Se limpia el estado cognitivo del vehículo anterior y se lanza uno nuevo de fondo.
     expect(reset).toHaveBeenCalledTimes(1)
+    expect(trigger).toHaveBeenCalledTimes(1)
+    expect(trigger).toHaveBeenCalledWith()
     expect(runDiagnosis).not.toHaveBeenCalled()
-    expect(trigger).not.toHaveBeenCalled()
   })
 
   it("runs only the deterministic diagnosis when 'Iniciar diagnóstico' is clicked", () => {
@@ -619,6 +620,7 @@ describe('DashboardPage', () => {
     })
 
     render(<DashboardPage />)
+    trigger.mockClear() // descarta el trigger automático del efecto de selección de vehículo
     fireEvent.click(screen.getByText('Iniciar diagnóstico'))
 
     expect(runDiagnosis).toHaveBeenCalledTimes(1)
@@ -659,6 +661,7 @@ describe('DashboardPage', () => {
     })
 
     render(<DashboardPage />)
+    trigger.mockClear() // descarta el trigger automático del efecto de selección de vehículo
 
     fireEvent.click(screen.getByTitle('Diagnóstico'))
     fireEvent.click(screen.getByText('Lanzar diagnóstico IA'))

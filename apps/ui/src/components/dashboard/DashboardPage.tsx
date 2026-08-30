@@ -5,7 +5,6 @@ import { useScenarios } from './useScenarios'
 import { useAvailablePids } from './useAvailablePids'
 import { DEFAULT_LIVE_PIDS } from './pidCatalog'
 import { useVehicleAutoDetect } from './useVehicleAutoDetect'
-import { VehicleAutoDetectWizard } from './VehicleAutoDetectWizard'
 import { useLiveTelemetry } from './useLiveTelemetry'
 import { useDiagnosis } from './useDiagnosis'
 import { useCapabilities } from './useCapabilities'
@@ -13,6 +12,8 @@ import { useCognitiveDiagnosis } from './useCognitiveDiagnosis'
 import { useEcuInfo } from './useEcuInfo'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { DashboardSection } from './DashboardSection'
+import { VehicleIdentificationScreen } from './VehicleIdentificationScreen'
+import { ScenariosErrorBanner } from './ScenariosErrorBanner'
 import type { SidebarSection } from '@/components/layout/Sidebar'
 
 /** Compone todos los hooks del dashboard (telemetria, DTCs, diagnosis, ECUs) y los pasa a DashboardSection. */
@@ -33,18 +34,22 @@ export function DashboardPage() {
   const wizard = useVehicleAutoDetect()
 
   const resetCognitiveRef = useRef(cognitive.reset)
+  const triggerCognitiveRef = useRef(cognitive.trigger)
 
-  // Mantiene el ref sincronizado con el último reset() sin mutar durante el render.
+  // Mantiene los refs sincronizados con el último reset()/trigger() sin mutar durante el render.
   useEffect(() => {
     resetCognitiveRef.current = cognitive.reset
+    triggerCognitiveRef.current = cognitive.trigger
   })
 
   useEffect(() => {
     setSelectedDtc(null)
     setSelectedPids(DEFAULT_LIVE_PIDS)
-    // Al cambiar de vehículo solo se limpia el hilo cognitivo anterior: ni el
-    // diagnóstico determinista ni el LLM se disparan automáticamente.
-    if (selectedId) resetCognitiveRef.current()
+    // Al confirmar vehículo se limpia el hilo cognitivo anterior y se lanza uno nuevo de fondo.
+    if (selectedId) {
+      resetCognitiveRef.current()
+      void triggerCognitiveRef.current()
+    }
   }, [selectedId])
 
   /** Recoge los fallos crudos (DTCs, datos en vivo) sin lanzar la IA. */
@@ -89,33 +94,15 @@ export function DashboardPage() {
 
   if (!vehicleReady) {
     return (
-      <DashboardLayout
-        activeSection="vehicle"
-        onSectionChange={() => {}}
+      <VehicleIdentificationScreen
         scenarios={scenarios}
         selectedId={selectedId}
-        onSelectVehicle={wizard.detect}
-        telemetry={{ loading, streamOk: false }}
+        scenariosError={scenariosError}
+        loading={loading}
+        wizard={wizard}
+        onVehicleConfirmed={handleVehicleConfirmed}
         onLogout={() => auth.logout()}
-      >
-        {scenariosError && (
-          <div className="mb-4 border-b border-destructive/30 bg-destructive/10 px-6 py-2 text-sm text-destructive">
-            {scenariosError}
-          </div>
-        )}
-        <VehicleAutoDetectWizard
-          scenarios={scenarios}
-          step={wizard.step}
-          scenarioId={wizard.scenarioId}
-          vehicle={wizard.vehicle}
-          error={wizard.error}
-          onSelect={wizard.detect}
-          onRetry={wizard.retry}
-          onBack={wizard.restart}
-          onConfirm={handleVehicleConfirmed}
-          onSaveIdentity={wizard.saveIdentity}
-        />
-      </DashboardLayout>
+      />
     )
   }
 
@@ -131,11 +118,7 @@ export function DashboardPage() {
       telemetry={{ loading, streamOk }}
       onLogout={() => auth.logout()}
     >
-      {scenariosError && (
-        <div className="mb-4 border-b border-destructive/30 bg-destructive/10 px-6 py-2 text-sm text-destructive">
-          {scenariosError}
-        </div>
-      )}
+      <ScenariosErrorBanner message={scenariosError} />
       <DashboardSection
         activeSection={activeSection}
         selectedId={selectedId}

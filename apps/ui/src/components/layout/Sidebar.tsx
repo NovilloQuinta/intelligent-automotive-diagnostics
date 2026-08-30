@@ -20,12 +20,12 @@ interface SidebarItem {
 
 const SECTIONS: SidebarItem[] = [
   { id: 'vehicle', label: 'Vehículo', icon: Car },
-  { id: 'live-data', label: 'Datos Vivo', icon: Activity },
+  { id: 'diagnosis', label: 'Diagnóstico', icon: Stethoscope },
   { id: 'dtc', label: 'Códigos DTC', icon: AlertTriangle },
+  { id: 'live-data', label: 'Datos Vivo', icon: Activity },
   { id: 'freeze-frame', label: 'Freeze Frame', icon: Snowflake },
   { id: 'ecu', label: 'Unidades Control', icon: Cpu },
   { id: 'topology', label: 'Topología', icon: Network },
-  { id: 'diagnosis', label: 'Diagnóstico', icon: Stethoscope },
   { id: 'report', label: 'Informe', icon: FileText },
 ]
 
