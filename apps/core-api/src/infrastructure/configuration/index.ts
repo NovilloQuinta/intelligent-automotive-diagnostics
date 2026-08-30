@@ -3,6 +3,14 @@ import { z } from 'zod'
 /** Clave de desarrollo, publica a proposito: 32 bytes de relleno en base64. */
 const DEV_TOTP_ENCRYPTION_KEY = Buffer.alloc(32, 0).toString('base64')
 
+/** Boolean desde env: acepta 'true' (string) o true (boolean, por si ya viene parseado). */
+const booleanFromEnv = (v: unknown): boolean => v === 'true' || v === true
+
+/** Defaults de desarrollo para secretos, compartidos con la guardia de produccion. */
+const DEV_ACCESS_SECRET_DEFAULT = 'dev-access-secret'
+const DEV_REFRESH_SECRET_DEFAULT = 'dev-refresh-secret'
+const DEV_SECRET_SENTINEL = 'change-me-in-production'
+
 const configSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(4000),
@@ -11,7 +19,7 @@ const configSchema = z.object({
   OBD_MODE: z.enum(['docker', 'tcp', 'serial']).default('docker'),
   // Bloquea el borrado de DTC (Mode 04) frente a un vehiculo real. Los modos de
   // control UDS estan siempre bloqueados por la allowlist del dominio.
-  OBD_READ_ONLY: z.preprocess((v) => v === 'true' || v === true, z.boolean()).default(false),
+  OBD_READ_ONLY: z.preprocess(booleanFromEnv, z.boolean()).default(false),
   ELM327_HOST: z.string().default('localhost'),
   ELM327_PORT: z.coerce.number().int().positive().default(35000),
   ELM327_AUDI_HOST: z.string().default('localhost'),
@@ -21,7 +29,7 @@ const configSchema = z.object({
   ELM327_TOYOTA_HOST: z.string().default('localhost'),
   ELM327_TOYOTA_PORT: z.coerce.number().int().positive().default(35002),
   /** Traza cada intercambio con el adaptador por consola. Solo para seguimiento en vivo. */
-  OBD_TRACE: z.preprocess((v) => v === 'true' || v === true, z.boolean()).default(false),
+  OBD_TRACE: z.preprocess(booleanFromEnv, z.boolean()).default(false),
   SERIAL_PORT_PATH: z.string().default('/dev/ttyUSB0'),
   SERIAL_BAUD_RATE: z.coerce.number().int().positive().default(38400),
   ALLOWED_ORIGINS: z.string().default('http://localhost:5173,http://localhost:4173'),
@@ -43,8 +51,8 @@ const configSchema = z.object({
    * repositorio, cifrar el secreto no protegeria de nada.
    */
   TOTP_ENCRYPTION_KEY: z.string().min(1).default(DEV_TOTP_ENCRYPTION_KEY),
-  ACCESS_TOKEN_SECRET: z.string().min(1).default('dev-access-secret'),
-  REFRESH_TOKEN_SECRET: z.string().min(1).default('dev-refresh-secret'),
+  ACCESS_TOKEN_SECRET: z.string().min(1).default(DEV_ACCESS_SECRET_DEFAULT),
+  REFRESH_TOKEN_SECRET: z.string().min(1).default(DEV_REFRESH_SECRET_DEFAULT),
   ACCESS_TOKEN_TTL: z.coerce.number().int().positive().default(900),
   REFRESH_TOKEN_TTL: z.coerce.number().int().positive().default(604800),
   LLM_PROVIDER: z.string().optional(),
@@ -66,7 +74,7 @@ const configSchema = z.object({
   LLM_TEMPERATURE: z.coerce.number().min(0).max(2).optional(),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
-  SMTP_SECURE: z.preprocess((v) => v === 'true' || v === true, z.boolean()).default(false),
+  SMTP_SECURE: z.preprocess(booleanFromEnv, z.boolean()).default(false),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().default('no-reply@localhost'),
@@ -89,14 +97,14 @@ export function loadConfig(): AppConfig {
 export function assertProductionSecrets(config: AppConfig): void {
   if (config.NODE_ENV !== 'production') return
   if (
-    config.ACCESS_TOKEN_SECRET === 'dev-access-secret' ||
-    config.ACCESS_TOKEN_SECRET === 'change-me-in-production'
+    config.ACCESS_TOKEN_SECRET === DEV_ACCESS_SECRET_DEFAULT ||
+    config.ACCESS_TOKEN_SECRET === DEV_SECRET_SENTINEL
   ) {
     throw new Error('ACCESS_TOKEN_SECRET must be set in production')
   }
   if (
-    config.REFRESH_TOKEN_SECRET === 'dev-refresh-secret' ||
-    config.REFRESH_TOKEN_SECRET === 'change-me-in-production'
+    config.REFRESH_TOKEN_SECRET === DEV_REFRESH_SECRET_DEFAULT ||
+    config.REFRESH_TOKEN_SECRET === DEV_SECRET_SENTINEL
   ) {
     throw new Error('REFRESH_TOKEN_SECRET must be set in production')
   }
