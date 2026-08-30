@@ -69,10 +69,24 @@ describe('useDiagnosisHistoryDetail', () => {
     expect(api.getDiagnosisHistoryDetail).toHaveBeenCalledWith(7)
   })
 
-  it('parsea `resultJson` y lo expone como `reportState`', async () => {
-    const report = { severity: 'high', dtcCodes: [{ code: 'P0301' }] }
+  it('traduce el snapshot persistido (vehicle/diagnosis/conversation) a SessionReportState', async () => {
+    // Forma real de result_json — ver diagnosisSnapshots.ts en el backend, no
+    // es un SessionReportState: un cast directo dejaba `cognitive` siempre
+    // undefined y el informe historico se quedaba "esperando" para siempre.
+    const snapshot = {
+      vehicle: { vin: 'WAUZZZ8V5JA123456', make: 'Audi', model: 'A3' },
+      diagnosis: {
+        severity: 'high',
+        confidence: 0.8,
+        narrative: 'Fallo de encendido en cilindro 1.',
+        recommendations: ['Revisar bujías'],
+        toolCalls: [],
+      },
+      conversation: [],
+      timestamp: '2026-08-09T10:31:00.000Z',
+    }
     vi.mocked(api.getDiagnosisHistoryDetail).mockResolvedValue(
-      sessionWithReport(JSON.stringify(report)),
+      sessionWithReport(JSON.stringify(snapshot)),
     )
 
     const { result } = renderHook(() => useDiagnosisHistoryDetail(7), {
@@ -83,7 +97,42 @@ describe('useDiagnosisHistoryDetail', () => {
       expect(result.current.reportState).not.toBeNull()
     })
 
-    expect(result.current.reportState).toEqual(report)
+    expect(result.current.reportState).toEqual({
+      capabilities: { cognitiveDiagnosis: true },
+      deterministic: null,
+      deterministicLoading: false,
+      deterministicError: null,
+      ecus: null,
+      ecusLoading: false,
+      freezeFrame: null,
+      freezeFrameLoading: false,
+      cognitive: {
+        diagnosis: 'Fallo de encendido en cilindro 1.',
+        severity: 'high',
+        confidence: 0.8,
+        recommendations: ['Revisar bujías'],
+        toolCalls: [],
+        pidObservations: [],
+      },
+      cognitiveLoading: false,
+      cognitiveError: null,
+    })
+  })
+
+  it('deja `reportState` en null cuando el snapshot no trae diagnostico cognitivo', async () => {
+    vi.mocked(api.getDiagnosisHistoryDetail).mockResolvedValue(
+      sessionWithReport(JSON.stringify({ vehicle: { make: 'Audi' } })),
+    )
+
+    const { result } = renderHook(() => useDiagnosisHistoryDetail(7), {
+      wrapper: createWrapper(),
+    })
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false)
+    })
+
+    expect(result.current.reportState).toBeNull()
   })
 
   // Es la rama que documenta el TSDoc del hook: un snapshot corrupto no debe

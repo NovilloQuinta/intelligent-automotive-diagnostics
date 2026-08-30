@@ -18,7 +18,7 @@ function vehicleInfoFromSnapshot(resultJson: string | null): Scenario['vehicleIn
   }
 }
 
-export const Route = createFileRoute('/history/$sessionId')({
+export const Route = createFileRoute('/history_/$sessionId')({
   component: HistoryDetailRoute,
 })
 

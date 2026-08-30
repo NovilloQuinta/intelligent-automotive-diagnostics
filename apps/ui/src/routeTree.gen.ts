@@ -21,7 +21,7 @@ import { Route as AdminAuditRouteImport } from './routes/admin.audit'
 import { Route as AdminKnowledgeRouteImport } from './routes/admin.knowledge'
 import { Route as AdminLogsRouteImport } from './routes/admin.logs'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
-import { Route as HistorySessionIdRouteImport } from './routes/history.$sessionId'
+import { Route as HistorySessionIdRouteImport } from './routes/history_.$sessionId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -84,16 +84,16 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   getParentRoute: () => AdminRoute,
 } as any)
 const HistorySessionIdRoute = HistorySessionIdRouteImport.update({
-  id: '/$sessionId',
-  path: '/$sessionId',
-  getParentRoute: () => HistoryRoute,
+  id: '/history_/$sessionId',
+  path: '/history/$sessionId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
-  '/history': typeof HistoryRouteWithChildren
+  '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -107,7 +107,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
-  '/history': typeof HistoryRouteWithChildren
+  '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -123,7 +123,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
-  '/history': typeof HistoryRouteWithChildren
+  '/history': typeof HistoryRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -131,7 +131,7 @@ export interface FileRoutesById {
   '/admin/knowledge': typeof AdminKnowledgeRoute
   '/admin/logs': typeof AdminLogsRoute
   '/admin/users': typeof AdminUsersRoute
-  '/history/$sessionId': typeof HistorySessionIdRoute
+  '/history_/$sessionId': typeof HistorySessionIdRoute
   '/admin/': typeof AdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -177,7 +177,7 @@ export interface FileRouteTypes {
     | '/admin/knowledge'
     | '/admin/logs'
     | '/admin/users'
-    | '/history/$sessionId'
+    | '/history_/$sessionId'
     | '/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -185,10 +185,11 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
-  HistoryRoute: typeof HistoryRouteWithChildren
+  HistoryRoute: typeof HistoryRoute
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  HistorySessionIdRoute: typeof HistorySessionIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -277,12 +278,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/history/$sessionId': {
-      id: '/history/$sessionId'
-      path: '/$sessionId'
+    '/history_/$sessionId': {
+      id: '/history_/$sessionId'
+      path: '/history/$sessionId'
       fullPath: '/history/$sessionId'
       preLoaderRoute: typeof HistorySessionIdRouteImport
-      parentRoute: typeof HistoryRoute
+      parentRoute: typeof rootRouteImport
     }
   }
 }
@@ -305,25 +306,15 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
-interface HistoryRouteChildren {
-  HistorySessionIdRoute: typeof HistorySessionIdRoute
-}
-
-const HistoryRouteChildren: HistoryRouteChildren = {
-  HistorySessionIdRoute: HistorySessionIdRoute,
-}
-
-const HistoryRouteWithChildren =
-  HistoryRoute._addFileChildren(HistoryRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
-  HistoryRoute: HistoryRouteWithChildren,
+  HistoryRoute: HistoryRoute,
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  HistorySessionIdRoute: HistorySessionIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

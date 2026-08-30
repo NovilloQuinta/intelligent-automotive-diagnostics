@@ -144,7 +144,13 @@ function DtcTable({ dtcCodes }: { readonly dtcCodes: { code: string; description
   )
 }
 
-function DeterministicSection({ state }: { readonly state: SessionReportState }) {
+function DeterministicSection({
+  state,
+  isHistorical,
+}: {
+  readonly state: SessionReportState
+  readonly isHistorical: boolean
+}) {
   const { deterministic, deterministicLoading, deterministicError } = state
   const sevMeta = deterministic ? severityMeta(deterministic.severity) : null
 
@@ -192,7 +198,13 @@ function DeterministicSection({ state }: { readonly state: SessionReportState })
         </div>
       )}
       {!deterministic && !deterministicLoading && !deterministicError && (
-        <SectionEmpty text="Esperando datos del diagnóstico…" />
+        <SectionEmpty
+          text={
+            isHistorical
+              ? 'Esta sesión no guardó el escaneo determinista de DTCs'
+              : 'Esperando datos del diagnóstico…'
+          }
+        />
       )}
     </SectionCard>
   )
@@ -412,7 +424,7 @@ function SessionReportContent({
       <div className="panel p-5">
         <ReportHeader vehicleInfo={vehicleInfo} generatedAt={generatedAt} />
       </div>
-      <DeterministicSection state={state} />
+      <DeterministicSection state={state} isHistorical={!!generatedAt} />
       <EcuSection state={state} />
       <FreezeFrameSection state={state} pidInfo={pidInfo} />
       <CognitiveSection state={state} />

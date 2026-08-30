@@ -40,7 +40,7 @@ vi.mock('../../../src/lib/auth-context', () => ({
   }),
 }))
 
-import { Route } from '../../../src/routes/history.$sessionId'
+import { Route } from '../../../src/routes/history_.$sessionId'
 const HistoryDetailRoute = (Route as unknown as { options: { component: React.ComponentType } })
   .options.component
 
