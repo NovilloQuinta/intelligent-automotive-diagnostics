@@ -31,11 +31,14 @@ interface PersistedDiagnosisSnapshot {
   }
 }
 
-/** Traduce el snapshot persistido al `SessionReportState` que ya sabe pintar `SessionReportPanel`. */
-function snapshotToReportState(raw: unknown): SessionReportState | null {
-  const snapshot = raw as PersistedDiagnosisSnapshot
-  if (!snapshot.diagnosis?.narrative) return null
-
+/** Construye el `SessionReportState` mínimo que `SessionReportPanel` sabe pintar, a partir de un diagnóstico ya narrado. */
+function reportStateFromCognitive(cognitive: {
+  readonly narrative: string
+  readonly severity?: string
+  readonly confidence?: number
+  readonly recommendations?: string[]
+  readonly toolCalls?: CognitiveOutput['toolCalls']
+}): SessionReportState {
   return {
     capabilities: { cognitiveDiagnosis: true },
     deterministic: null,
@@ -46,16 +49,43 @@ function snapshotToReportState(raw: unknown): SessionReportState | null {
     freezeFrame: null,
     freezeFrameLoading: false,
     cognitive: {
-      diagnosis: snapshot.diagnosis.narrative,
-      severity: snapshot.diagnosis.severity ?? 'low',
-      confidence: snapshot.diagnosis.confidence ?? 0,
-      recommendations: snapshot.diagnosis.recommendations ?? [],
-      toolCalls: snapshot.diagnosis.toolCalls ?? [],
+      diagnosis: cognitive.narrative,
+      severity: cognitive.severity ?? 'low',
+      confidence: cognitive.confidence ?? 0,
+      recommendations: cognitive.recommendations ?? [],
+      toolCalls: cognitive.toolCalls ?? [],
       pidObservations: [],
     },
     cognitiveLoading: false,
     cognitiveError: null,
   }
+}
+
+/** Traduce el snapshot persistido al `SessionReportState` que ya sabe pintar `SessionReportPanel`. */
+function snapshotToReportState(raw: unknown): SessionReportState | null {
+  const snapshot = raw as PersistedDiagnosisSnapshot
+  const narrative = snapshot.diagnosis?.narrative
+  if (!narrative) return null
+  return reportStateFromCognitive({ ...snapshot.diagnosis, narrative })
+}
+
+/**
+ * Traduce el resultado de un diagnóstico cognitivo lanzado a demanda (botón
+ * "Generar diagnóstico IA" en una sesión histórica sin narrativa guardada) al
+ * mismo `SessionReportState` que ya sabe pintar `SessionReportPanel`.
+ */
+export function reportStateFromOnDemandCognitive(cognitive: {
+  readonly diagnosisText: string
+  readonly severity: string | null
+  readonly confidence: number | null
+  readonly recommendations: string[] | null
+}): SessionReportState {
+  return reportStateFromCognitive({
+    narrative: cognitive.diagnosisText,
+    severity: cognitive.severity ?? undefined,
+    confidence: cognitive.confidence ?? undefined,
+    recommendations: cognitive.recommendations ?? undefined,
+  })
 }
 
 /**

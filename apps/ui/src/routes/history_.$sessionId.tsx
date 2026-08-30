@@ -1,8 +1,13 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import type { ReactNode } from 'react'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Sparkles } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { SessionReportPanel } from '@/components/dashboard/SessionReportPanel'
-import { useDiagnosisHistoryDetail } from '@/components/history/useDiagnosisHistoryDetail'
+import { useCognitiveDiagnosis } from '@/components/dashboard/useCognitiveDiagnosis'
+import {
+  useDiagnosisHistoryDetail,
+  reportStateFromOnDemandCognitive,
+} from '@/components/history/useDiagnosisHistoryDetail'
 import { Header } from '@/components/layout/Header'
 import { FooterSection } from '@/components/landing/FooterSection'
 import type { Scenario } from '@/components/dashboard/types'
@@ -28,6 +33,7 @@ function HistoryDetailRoute() {
   const { session, reportState, isLoading, isError, error } = useDiagnosisHistoryDetail(
     Number.isNaN(id) ? 0 : id,
   )
+  const onDemand = useCognitiveDiagnosis(session?.scenarioId ?? '')
 
   if (Number.isNaN(id)) {
     return (
@@ -63,13 +69,21 @@ function HistoryDetailRoute() {
     )
   }
 
-  if (!reportState) {
+  const onDemandState = onDemand.diagnosisText
+    ? reportStateFromOnDemandCognitive({
+        diagnosisText: onDemand.diagnosisText,
+        severity: onDemand.severity,
+        confidence: onDemand.confidence,
+        recommendations: onDemand.recommendations,
+      })
+    : null
+  const finalReportState = reportState ?? onDemandState
+
+  if (!finalReportState) {
     return (
       <PageShell>
         <BackLink />
-        <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          Los datos del informe no están disponibles o están dañados.
-        </div>
+        <MissingDiagnosisNotice session={session} onDemand={onDemand} />
       </PageShell>
     )
   }
@@ -80,11 +94,57 @@ function HistoryDetailRoute() {
     <PageShell>
       <BackLink />
       <SessionReportPanel
-        snapshot={reportState}
+        snapshot={finalReportState}
         vehicleInfo={vehicleInfo}
         generatedAt={session.startedAt}
       />
     </PageShell>
+  )
+}
+
+/**
+ * Sesión sin narrativa guardada (habitual en sesiones antiguas, previas al
+ * cambio que persiste el diagnóstico cognitivo). Si la sesión guardó a qué
+ * escenario pertenecía, se puede volver a lanzar el mismo diagnóstico que usa
+ * el panel en vivo — no hace falta reabrir una conexión al vehículo, el
+ * escenario ya identifica de qué coche se trata.
+ */
+function MissingDiagnosisNotice({
+  session,
+  onDemand,
+}: {
+  readonly session: NonNullable<ReturnType<typeof useDiagnosisHistoryDetail>['session']>
+  readonly onDemand: ReturnType<typeof useCognitiveDiagnosis>
+}) {
+  if (!session.scenarioId) {
+    return (
+      <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        Los datos del informe no están disponibles o están dañados.
+      </div>
+    )
+  }
+
+  return (
+    <div className="panel space-y-3 p-5 text-sm">
+      <p className="text-muted-foreground">
+        Esta sesión no guardó un diagnóstico de la IA. Puedes generarlo ahora sobre el mismo
+        vehículo.
+      </p>
+      {onDemand.error && <p className="text-destructive">{onDemand.error.message}</p>}
+      <Button onClick={() => onDemand.trigger()} disabled={onDemand.loading}>
+        {onDemand.loading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Generando diagnóstico…
+          </>
+        ) : (
+          <>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Generar diagnóstico IA
+          </>
+        )}
+      </Button>
+    </div>
   )
 }
 
