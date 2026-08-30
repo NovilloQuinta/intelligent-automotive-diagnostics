@@ -37,24 +37,30 @@ export function DashboardLayout({
 }: DashboardLayoutProps) {
   return (
     <div className="relative z-10 flex min-h-screen flex-col">
-      <TopBar
-        scenarios={scenarios}
-        selectedId={selectedId}
-        onSelect={onSelectVehicle}
-        loading={telemetry.loading}
-        streamOk={telemetry.streamOk}
-        onLogout={onLogout}
-      />
-      <div className="flex flex-1">
-        <Sidebar
-          active={activeSection}
-          onChange={onSectionChange}
-          dtcCount={dtcCount}
-          hasDiagnosis={hasDiagnosis}
+      <div className="print:hidden">
+        <TopBar
+          scenarios={scenarios}
+          selectedId={selectedId}
+          onSelect={onSelectVehicle}
+          loading={telemetry.loading}
+          streamOk={telemetry.streamOk}
+          onLogout={onLogout}
         />
-        <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
       </div>
-      <footer className="relative z-10 border-t border-white/5 bg-black/40 px-6 py-2">
+      <div className="flex flex-1">
+        <div className="print:hidden">
+          <Sidebar
+            active={activeSection}
+            onChange={onSectionChange}
+            dtcCount={dtcCount}
+            hasDiagnosis={hasDiagnosis}
+          />
+        </div>
+        <main className="flex-1 overflow-auto p-4 md:p-6 print:overflow-visible print:p-0">
+          {children}
+        </main>
+      </div>
+      <footer className="relative z-10 border-t border-white/5 bg-black/40 px-6 py-2 print:hidden">
         <div className="mono flex flex-wrap items-center justify-between gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
           <span>Intelligent Automotive Diagnostics</span>
           <span className="flex items-center gap-3">

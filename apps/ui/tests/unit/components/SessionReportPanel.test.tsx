@@ -396,6 +396,43 @@ describe('SessionReportPanel', () => {
   })
 
   // ------------------------------------------------------------------
+  // 13b. Download button (print) — live mode only
+  // ------------------------------------------------------------------
+
+  it('should show a download button in live mode once deterministic data is ready and trigger window.print', () => {
+    mockUseSessionReport.mockReturnValue(
+      setState({ deterministic: sampleDeterministic, deterministicLoading: false }),
+    )
+    const printSpy = vi.spyOn(window, 'print').mockImplementation(() => {})
+
+    render(<SessionReportPanel scenarioId="audi-a3-idle" vehicleInfo={sampleVehicleInfo} />)
+
+    const button = screen.getByRole('button', { name: /descargar informe/i })
+    fireEvent.click(button)
+
+    expect(printSpy).toHaveBeenCalledTimes(1)
+    printSpy.mockRestore()
+  })
+
+  it('should not show the download button while the report is still loading', () => {
+    mockUseSessionReport.mockReturnValue(
+      setState({ deterministic: null, deterministicLoading: true }),
+    )
+
+    render(<SessionReportPanel scenarioId="audi-a3-idle" vehicleInfo={sampleVehicleInfo} />)
+
+    expect(screen.queryByRole('button', { name: /descargar informe/i })).toBeNull()
+  })
+
+  it('should not show the download button in snapshot/history mode', () => {
+    const snapshot: SessionReportState = setState({ deterministic: sampleDeterministic })
+
+    render(<SessionReportPanel snapshot={snapshot} vehicleInfo={sampleVehicleInfo} />)
+
+    expect(screen.queryByRole('button', { name: /descargar informe/i })).toBeNull()
+  })
+
+  // ------------------------------------------------------------------
   // 14. Historical report shows generation date (6.4)
   // ------------------------------------------------------------------
 

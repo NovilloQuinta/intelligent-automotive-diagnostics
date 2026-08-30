@@ -1,4 +1,4 @@
-import { Activity, Brain, Cpu, FileText, Loader2, Snowflake, Wrench } from 'lucide-react'
+import { Activity, Brain, Cpu, Download, FileText, Loader2, Snowflake, Wrench } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import {
@@ -12,6 +12,7 @@ import { FrameTable } from './FreezeFramePanel'
 import { useAvailablePids } from './useAvailablePids'
 import { buildPidLabelMap, type PidLabel } from './pidCatalog'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Accordion,
   AccordionContent,
@@ -473,6 +474,23 @@ export function SessionReportPanel(props: SessionReportPanelProps) {
   )
 }
 
+/**
+ * Descarga el informe abriendo el diálogo de impresión del navegador: los
+ * estilos `print:hidden` de `DashboardLayout` dejan solo el contenido del
+ * informe, y el usuario elige "Guardar como PDF" para entregarlo. Evita
+ * añadir una librería de generación de PDF solo para esto.
+ */
+function DownloadReportButton() {
+  return (
+    <div className="flex justify-end print:hidden">
+      <Button variant="outline" size="sm" onClick={() => window.print()}>
+        <Download className="mr-2 h-4 w-4" />
+        Descargar informe
+      </Button>
+    </div>
+  )
+}
+
 function SessionReportPanelLive({
   scenarioId,
   vehicleInfo,
@@ -487,6 +505,12 @@ function SessionReportPanelLive({
   readonly dtcCode?: string
 }) {
   const state = useSessionReport(scenarioId, precomputedCognitive, dtcCode)
+  const isReady = !state.deterministicLoading
 
-  return <SessionReportContent state={state} vehicleInfo={vehicleInfo} pidInfo={pidInfo} />
+  return (
+    <div className="space-y-4">
+      {isReady && <DownloadReportButton />}
+      <SessionReportContent state={state} vehicleInfo={vehicleInfo} pidInfo={pidInfo} />
+    </div>
+  )
 }
