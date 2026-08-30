@@ -2,8 +2,7 @@ import { TelemetrySection } from './TelemetrySection'
 import { PidsTable } from './PidsTable'
 import { DtcPanel } from './DtcPanel'
 import { FreezeFramePanel } from './FreezeFramePanel'
-import { EcuInfoPanel } from './EcuInfoPanel'
-import { TopologyMapPanel } from './TopologyMapPanel'
+import { EcuOverviewPanel } from './EcuOverviewPanel'
 import { DiagnosisChat } from './DiagnosisChat'
 import { SessionReportPanel } from './SessionReportPanel'
 import { VehicleStatusPanel } from './VehicleStatusPanel'
@@ -148,16 +147,7 @@ export function DashboardSection({
       return <FreezeFramePanel scenarioId={selectedId!} dtc={selectedDtc} />
     case 'ecu':
       return (
-        <EcuInfoPanel
-          ecus={ecus ?? []}
-          loading={ecusLoading}
-          error={ecusError}
-          selectedId={selectedId!}
-        />
-      )
-    case 'topology':
-      return (
-        <TopologyMapPanel
+        <EcuOverviewPanel
           ecus={ecus ?? []}
           loading={ecusLoading}
           error={ecusError}

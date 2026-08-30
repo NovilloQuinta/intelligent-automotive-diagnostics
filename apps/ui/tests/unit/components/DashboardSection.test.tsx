@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { DashboardSection } from '../../../src/components/dashboard/DashboardSection'
 import type { SidebarSection } from '../../../src/components/layout/Sidebar'
 
@@ -99,7 +100,7 @@ describe('DashboardSection — diagnosis', () => {
   })
 })
 
-describe('DashboardSection — topology', () => {
+describe('DashboardSection — ecu overview', () => {
   const ECUS = [
     {
       id: 1,
@@ -112,25 +113,42 @@ describe('DashboardSection — topology', () => {
     },
   ]
 
-  it('renders the topology map with the ECUs already held in `ecu`', () => {
+  it('renders the ECU table by default', () => {
     render(
       <DashboardSection
         {...baseProps({
-          activeSection: 'topology' as SidebarSection,
+          activeSection: 'ecu' as SidebarSection,
           ecu: { ecus: ECUS, loading: false, error: null },
         })}
       />,
     )
 
+    expect(screen.getByText('Unidades de Control')).toBeDefined()
+    expect(screen.getByText('Motor')).toBeDefined()
+  })
+
+  it('switches to the topology map with the ECUs already held in `ecu`', async () => {
+    const user = userEvent.setup()
+    render(
+      <DashboardSection
+        {...baseProps({
+          activeSection: 'ecu' as SidebarSection,
+          ecu: { ecus: ECUS, loading: false, error: null },
+        })}
+      />,
+    )
+
+    await user.click(screen.getByRole('tab', { name: 'Mapa' }))
+
     expect(screen.getByText('Topología del Bus')).toBeDefined()
     expect(screen.getByRole('button', { name: /motor/i })).toBeDefined()
   })
 
-  it('propagates the ECU loading state to the topology panel', () => {
+  it('propagates the ECU loading state to both table and map tabs', () => {
     render(
       <DashboardSection
         {...baseProps({
-          activeSection: 'topology' as SidebarSection,
+          activeSection: 'ecu' as SidebarSection,
           ecu: { ecus: null, loading: true, error: null },
         })}
       />,
