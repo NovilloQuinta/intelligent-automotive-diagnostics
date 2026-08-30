@@ -14,6 +14,10 @@ import { createLlmAdapter, buildMessages } from '@/infrastructure/llm/createLlmA
 const DEFAULT_TIMEOUT_MS = 30_000
 /** Ver DEFAULT_TEMPERATURE en anthropicClient.ts: mismo motivo, mismo valor. */
 const DEFAULT_TEMPERATURE = 0.3
+/** finish_reason de OpenAI cuando la respuesta se corta por max_tokens. */
+const FINISH_REASON_LENGTH = 'length'
+/** finish_reason de OpenAI cuando el modelo termina normalmente sin tool calls. */
+const FINISH_REASON_STOP = 'stop'
 
 /** Configuracion del cliente OpenAI-compatible. */
 export interface OpenAiClientConfig {
@@ -89,7 +93,7 @@ function buildOpenAiMessages(
 
 /** Separado de {@link parseOpenAiResponse} para no sumar otra rama a su complejidad. */
 function assertNotTruncated(finishReason: string | null): void {
-  if (finishReason === 'length') throw new TruncatedLlmResponseError()
+  if (finishReason === FINISH_REASON_LENGTH) throw new TruncatedLlmResponseError()
 }
 
 function parseOpenAiResponse(response: OpenAI.Chat.Completions.ChatCompletion): LlmSingleResponse {
@@ -98,7 +102,11 @@ function parseOpenAiResponse(response: OpenAI.Chat.Completions.ChatCompletion): 
 
   const { finish_reason: finishReason, message } = choice
   assertNotTruncated(finishReason)
-  if (finishReason === 'stop' || !message.tool_calls || message.tool_calls.length === 0) {
+  if (
+    finishReason === FINISH_REASON_STOP ||
+    !message.tool_calls ||
+    message.tool_calls.length === 0
+  ) {
     return { text: message.content ?? '', toolCalls: [], raw: response }
   }
 
@@ -136,14 +144,18 @@ const createThinAdapter = createLlmAdapter<
       timeout: parsedConfig.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     }),
   callSdkApi: async (client, messages, tools, _systemPrompt, parsedConfig) => {
+    // `messages` llega como `unknown[]` porque `callSdkApi` es generico entre providers
+    // (ver CreateLlmAdapterParams en createLlmAdapter.ts). Sabemos que en runtime es el
+    // resultado de `buildOpenAiMessages`, asi que el cast se acota solo a este parametro.
+    const openAiMessages = messages as OpenAI.Chat.Completions.ChatCompletionMessageParam[]
     return client.chat.completions.create(
       {
         model: parsedConfig.model,
-        messages,
+        messages: openAiMessages,
         tools: tools.map(toOpenAiTool),
         temperature: parsedConfig.temperature ?? DEFAULT_TEMPERATURE,
         stream: false,
-      } as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming,
+      },
       { timeout: parsedConfig.timeoutMs ?? DEFAULT_TIMEOUT_MS },
     )
   },

@@ -12,6 +12,14 @@ Cada entrada debe corregirse en una rama `fix/gga-*` antes del siguiente milesto
 - **Archivo:linea** — descripcion del error
 -->
 
+### 2026-08-30 — refactor(llm): nombrar finish reasons y acotar el cast de tools
+
+`STATUS: FAILED` por los 2 warnings de complejidad de `buildRawResponse`/`parseOpenAiResponse`
+en `openAiClient.ts` — confirmado con `git stash` antes y despues del cambio que son
+identicos (complejidad 6 en ambos casos), no introducidos por este refactor. Fuera de alcance
+de esta tarea (arreglar el cast/magic strings), no la complejidad preexistente de esas dos
+funciones. Forzado con `--no-verify`.
+
 ### 2026-08-30 — cherry-pick c7a895e (feat(llm): permitir fijar la temperatura del muestreo)
 
 `STATUS: FAILED` real: 4 hallazgos de deuda preexistente en `configuration/index.ts` y
