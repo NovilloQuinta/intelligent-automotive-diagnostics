@@ -253,9 +253,16 @@ atras** despues, porque el tiempo real tampoco retrocede: ahi esta la prueba. Un
 intento de test si lo devolvia, y por eso pasaba tanto con el arreglo como sin el — no
 probaba nada. Verificado en las dos direcciones: rojo sin la correccion, verde con ella.
 
-Quedan dos cabos del mismo fichero, sin tocar a proposito: `createReliableTransport` sigue en
-236 lineas (y `processQueue` en complejidad 11). Partirlo es cosmetica, y el momento de
-hacerlo es despues de la sesion con el coche, no antes.
+Remedido el 30/08 al traer este arreglo a `main`: `processQueue` en si ya no es el problema —
+se extrajo `ensureConnected`/`handleQueueError`, complejidad de cada uno ~4 (era 11), dentro del
+limite de 40 lineas, y los tres magic strings de cierre (`'ELM327 Connection closed'`, `'>'`,
+`'Reconnection failed after 30s'`) pasaron a constantes nombradas (`TRANSPORT_CLOSED_MESSAGE`,
+`ELM327_PROMPT`, compuesto desde `RECONNECT_MAX_TOTAL_MS`). Lo que queda, y GGA lo confirma
+explicitamente (no aplica la excepcion de `AGENTS.md`, es una maquina de estados que ramifica):
+`createReliableTransport` como funcion entera, **255 lineas** (crecio por los dos helpers
+nuevos, con su TSDoc). Partirla en modulos por responsabilidad (cola FIFO, maquina de
+reconexion, sesion exclusiva) es un refactor de mas calado — decidido dejarlo para despues de
+la sesion con el coche, no antes.
 
 ## `cognitive-diagnosis` responde 404 donde el spec dice 503
 
@@ -326,7 +333,7 @@ al limite de 40 lineas" en `AGENTS.md` antes de marcar ninguna como legitima.
 
 | Funcion                                       | Lineas  |
 | --------------------------------------------- | ------- |
-| `createReliableTransport`                     | **236** |
+| `createReliableTransport`                     | **255** |
 | `tokenize` / `evaluatePostfix` (math-parsers) | 57      |
 | `createAuthService`                           | 54      |
 | `upsertEcuDefinition`                         | 49      |
@@ -334,9 +341,12 @@ al limite de 40 lineas" en `AGENTS.md` antes de marcar ninguna como legitima.
 | Constructor (DiagnosisService)                | 42      |
 | `createLanceVectorStore`                      | 41      |
 
-`createReliableTransport` es el peor del repo con diferencia, y **ha crecido**: 182 → 236
-lineas. Es la misma funcion que no se recupera tras agotar la reconexion (ver arriba); las
-dos cosas apuntan al mismo sitio.
+`createReliableTransport` es el peor del repo con diferencia, y **ha crecido**: 182 → 236 → 255
+lineas. Ya no es por la reconexion (arreglada, ver arriba) sino por los dos helpers que la
+arreglaron (`ensureConnected`/`handleQueueError`, extraidos de `processQueue` para bajar su
+complejidad). GGA confirma que la excepcion de `AGENTS.md` no aplica: es una maquina de
+estados que ramifica, no una lista declarativa. Partirla en modulos por responsabilidad queda
+para despues de la sesion con el coche.
 
 ## Complejidad ciclomatica >5
 

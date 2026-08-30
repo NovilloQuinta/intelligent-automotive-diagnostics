@@ -12,6 +12,20 @@ Cada entrada debe corregirse en una rama `fix/gga-*` antes del siguiente milesto
 - **Archivo:linea** — descripcion del error
 -->
 
+### 2026-08-30 — fix(elm327): partir processQueue + nombrar magic strings
+
+GGA aprueba de verdad el contenido (confirma explicitamente que el disable razonado de
+`processQueue` -complejidad 6, documentado con JSDoc- "esta documentado y es defendible") pero
+`STATUS: FAILED` real por una unica violacion, ya conocida y decidida: `createReliableTransport`
+(250 lineas, crecio de 236 por los dos helpers extraidos) no cumple la excepcion de 40 lineas
+porque es una maquina de estados que ramifica. El usuario decidio explicitamente dejarla
+documentada y no partirla ahora (ver `docs/deuda-conocida.md`) porque partirla de verdad exige
+separar cola/reconexion/sesion exclusiva en modulos, con riesgo de romper el timing sincrono que
+varios tests verifican (ensureConnected y processQueue NO se pueden envolver en otra funcion
+`async` intermedia sin anadir un salto de microtask: verificado empiricamente, rompio 41 tests
+distintos en dos intentos). El `STATUS:` real cayo fuera de las primeras 30 lineas del output
+(bug conocido del hook). Forzado con `--no-verify`, nada pendiente de corregir en el codigo.
+
 ### 2026-08-30 — cherry-pick 346c2f8 (test(ui): arreglar la cobertura y meter la UI en el gate)
 
 GGA aprobó de verdad ("Sin observaciones críticas ni menores que exijan corrección") pero

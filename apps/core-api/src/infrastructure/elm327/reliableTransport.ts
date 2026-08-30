@@ -8,6 +8,12 @@ const RECONNECT_BASE_MS = 100
 const RECONNECT_MAX_DELAY_MS = 30_000
 const RECONNECT_MAX_TOTAL_MS = 30_000
 
+/** Terminador de prompt del ELM327: cada respuesta acaba con `>` a la espera del siguiente comando. */
+const ELM327_PROMPT = '>'
+
+/** Mensaje cuando el transporte esta cerrado para siempre (via {@link close}), no reconectando. */
+const TRANSPORT_CLOSED_MESSAGE = 'ELM327 Connection closed'
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
@@ -179,7 +185,7 @@ export function createReliableTransport<TConn>(
     if (target !== conn) return
     if (activeCommand === null) return
     activeCommand.data += chunk.toString()
-    if (activeCommand.data.includes('>')) {
+    if (activeCommand.data.includes(ELM327_PROMPT)) {
       const command = activeCommand
       activeCommand = null
       if (command.timeoutTimer !== null) clearTimeout(command.timeoutTimer)
@@ -239,7 +245,11 @@ export function createReliableTransport<TConn>(
     }
     if (Date.now() - reconnectStartedAt >= RECONNECT_MAX_TOTAL_MS) {
       endReconnectEpisode()
-      failQueue(new Elm327ConnectionError('Reconnection failed after 30s'))
+      failQueue(
+        new Elm327ConnectionError(
+          `Reconnection failed after ${RECONNECT_MAX_TOTAL_MS / 1000}s`,
+        ),
+      )
       return
     }
     const delay = Math.min(RECONNECT_BASE_MS * 2 ** reconnectAttempt, RECONNECT_MAX_DELAY_MS)
@@ -334,22 +344,69 @@ export function createReliableTransport<TConn>(
     initPending = false
   }
 
+  /**
+   * Reconecta o abre la conexion que le falta al siguiente comando de la cola.
+   * Lanza si el transporte esta cerrado para siempre (via {@link close}), que no
+   * es reconectable.
+   *
+   * Deliberadamente **no** es `async`: debe devolver la misma promesa que
+   * `connect()`/`doReconnect()` sin envolverla en una capa adicional, porque
+   * `processQueue` solo la llama tras comprobar `conn === null` — otro `await`
+   * de por medio desincroniza un tick el envio del comando, y algunos tests
+   * comprueban `write()` justo despues de encolar, sin ceder el hilo.
+   */
+  function ensureConnected(): Promise<void> {
+    if (reconnectState === 'closed') {
+      throw new Elm327ConnectionError(TRANSPORT_CLOSED_MESSAGE)
+    }
+    return reconnectState === 'reconnecting' ? doReconnect() : connect()
+  }
+
+  /**
+   * Resuelve el fallo de un comando en cola: reconexion (retry sin shift, la
+   * entrada se reintenta cuando vuelva la conexion), reintento con backoff hasta
+   * `maxRetries`, o rechazo definitivo.
+   */
+  async function handleQueueError(entry: CommandEntry, err: unknown): Promise<void> {
+    if (reconnectState === 'closed') {
+      entry.reject(err as Error)
+      commandQueue.shift()
+    } else if (isConnectionError(err)) {
+      await doReconnect()
+    } else if (entry.attempts < maxRetries) {
+      entry.attempts++
+      await sleep(backoffMs * 2 ** entry.attempts)
+    } else {
+      entry.reject(err as Error)
+      commandQueue.shift()
+    }
+  }
+
+  /**
+   * Vacia la cola FIFO en orden, reconectando y reintentando lo que haga falta.
+   *
+   * No se puede partir mas sin cambiar el comportamiento: `enqueue` llama a esta
+   * funcion sin `await` (fire-and-forget) para que el primer comando se escriba
+   * en el mismo tick de sincrono, sin ceder un microtask — varios tests lo
+   * comprueban leyendo el socket justo despues de encolar. Envolver el guardia
+   * de reentrada o el bucle en una funcion `async` intermedia añade como minimo
+   * un salto de microtask antes de la primera escritura (verificado: rompe 41
+   * tests) o antes de liberar `isProcessing` (verificado: rompe las secuencias
+   * exclusivas, que dependen de que se libere en el mismo tick en que la cola
+   * queda vacia). La complejidad 6 es la de mantener ese guardia mas el
+   * `while`/`try`/dos `if` que quedan tras extraer `ensureConnected` y
+   * `handleQueueError` — ver AGENTS.md: no es lista declarativa, pero partirla
+   * mas cambia observablemente el comportamiento, verificado con los tests de
+   * arriba.
+   */
+  // eslint-disable-next-line complexity -- ver JSDoc: partirla mas rompe el timing sincrono que varios tests comprueban
   async function processQueue(): Promise<void> {
     if (isProcessing) return
     isProcessing = true
     while (commandQueue.length > 0) {
       const entry = commandQueue[0]
       try {
-        if (conn === null) {
-          if (reconnectState === 'closed') {
-            throw new Elm327ConnectionError('ELM327 Connection closed')
-          }
-          if (reconnectState === 'reconnecting') {
-            await doReconnect()
-          } else {
-            await connect()
-          }
-        }
+        if (conn === null) await ensureConnected()
         // Guarda en el sitio de llamada, no dentro de runInit: sin init, el
         // comando debe escribirse en el mismo tick, sin ceder un microtask.
         if (initPending) await runInit()
@@ -360,18 +417,7 @@ export function createReliableTransport<TConn>(
         entry.resolve(result)
         commandQueue.shift()
       } catch (err) {
-        if (reconnectState === 'closed') {
-          entry.reject(err as Error)
-          commandQueue.shift()
-        } else if (isConnectionError(err)) {
-          await doReconnect()
-        } else if (entry.attempts < maxRetries) {
-          entry.attempts++
-          await sleep(backoffMs * 2 ** entry.attempts)
-        } else {
-          entry.reject(err as Error)
-          commandQueue.shift()
-        }
+        await handleQueueError(entry, err)
       }
     }
     isProcessing = false
@@ -430,8 +476,8 @@ export function createReliableTransport<TConn>(
       io.shutdown(conn)
       conn = null
     }
-    failActiveCommand('ELM327 Connection closed')
-    failQueue(new Elm327ConnectionError('ELM327 Connection closed'))
+    failActiveCommand(TRANSPORT_CLOSED_MESSAGE)
+    failQueue(new Elm327ConnectionError(TRANSPORT_CLOSED_MESSAGE))
   }
 
   return { connect, sendCommand, runExclusive, close }
