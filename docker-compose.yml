@@ -40,6 +40,8 @@ services:
       - PORT=4000
       - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       # La API se niega a arrancar en produccion sin esta clave (cifra el
       # secreto TOTP del 2FA, AES-256-GCM): openssl rand -base64 32.
       - TOTP_ENCRYPTION_KEY=${TOTP_ENCRYPTION_KEY}

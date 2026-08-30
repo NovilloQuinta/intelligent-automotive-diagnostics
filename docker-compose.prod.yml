@@ -53,6 +53,8 @@ services:
       - LLM_MODEL=${LLM_MODEL:-}
       - ACCESS_TOKEN_SECRET=${ACCESS_TOKEN_SECRET:?ACCESS_TOKEN_SECRET is required}
       - REFRESH_TOKEN_SECRET=${REFRESH_TOKEN_SECRET:?REFRESH_TOKEN_SECRET is required}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
       # Cifra el secreto TOTP en la base (AES-256-GCM). La API se niega a
       # arrancar en produccion sin ella, porque el valor por defecto es de
       # desarrollo y dejaria los secretos cifrados con una clave publica.
