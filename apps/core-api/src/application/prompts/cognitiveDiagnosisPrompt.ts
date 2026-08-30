@@ -69,7 +69,7 @@ export const DTC_LEARNING_INSTRUCTIONS = [
  * ahi se queda si nadie lo aprende. Este bloque es el que cierra ese bucle.
  */
 export const ECU_LEARNING_INSTRUCTIONS = [
-  'Cuando get_ecu_info devuelva una ECU desconocida (nombre tipo "ECU 7E9" y tipo "UNKNOWN"), persiste el descubrimiento: solo la dirección 7E8 está estandarizada, el resto las asigna cada fabricante.',
+  'SIEMPRE que get_ecu_info devuelva una o más ECU desconocidas (nombre tipo "ECU 7E9" y tipo "UNKNOWN"), identifícalas antes de cerrar tu respuesta: solo la dirección 7E8 está estandarizada, el resto las asigna cada fabricante y quedan sin nombre si no las investigas tú. No es un paso opcional ni secundario frente al resto del diagnóstico — trátalo con la misma prioridad que leer un DTC.',
   '- Busca primero en el catálogo con search_similar_ecus, con el fabricante/modelo y la dirección, para ver si esa centralita ya se aprendió en otro vehículo de la marca.',
   '- Si no existe, regístrala con index_ecu: usa source: "web", y embeddedText describiendo qué centralita crees que es y en qué te basas.',
   '- index_ecu exige responseAddr, requestAddr, name y type además de manufacturer: copia las dos direcciones tal cual las devolvió get_ecu_info, y propón un name legible y un type corto (p.ej. TCM, ABS, SRS, BCM, HVAC).',
