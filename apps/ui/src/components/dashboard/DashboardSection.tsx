@@ -47,8 +47,10 @@ export interface DiagnosisState {
 }
 
 export interface CognitiveState {
+  readonly diagnosisText: string | null
   readonly severity: string | null
   readonly confidence: number | null
+  readonly recommendations: string[] | null
   readonly conversationHistory: ConversationItem[]
   readonly loading: boolean
   readonly error: CognitiveDiagnosisError | null
@@ -185,7 +187,19 @@ export function DashboardSection({
       )
     case 'report':
       return (
-        <SessionReportPanel scenarioId={selectedId!} vehicleInfo={selectedScenario?.vehicleInfo} />
+        <SessionReportPanel
+          scenarioId={selectedId!}
+          vehicleInfo={selectedScenario?.vehicleInfo}
+          dtcCode={dtcCodes?.[0]?.code}
+          precomputedCognitive={{
+            diagnosisText: cognitive.diagnosisText,
+            severity: cognitive.severity,
+            confidence: cognitive.confidence,
+            recommendations: cognitive.recommendations,
+            loading: cognitive.loading,
+            error: cognitive.error,
+          }}
+        />
       )
     default:
       return null

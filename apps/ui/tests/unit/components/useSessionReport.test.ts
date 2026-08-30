@@ -88,7 +88,7 @@ describe('useSessionReport', () => {
     await waitFor(() => {
       expect(api.runDiagnosis).toHaveBeenCalledWith('scenario-1')
       expect(api.getEcuInfo).toHaveBeenCalledWith('scenario-1')
-      expect(api.getFreezeFrame).toHaveBeenCalledWith('scenario-1')
+      expect(api.getFreezeFrame).toHaveBeenCalledWith('scenario-1', undefined)
       expect(api.getCognitiveDiagnosis).toHaveBeenCalledWith('scenario-1')
     })
   })

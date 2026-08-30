@@ -127,8 +127,10 @@ export function DashboardPage() {
         pidSelection={{ selectedPids, onPidsChange: setSelectedPids, availablePids }}
         diagnosis={{ loading, streamOk, result, dtcCodes, selectedDtc }}
         cognitive={{
+          diagnosisText: cognitive.diagnosisText,
           severity: cognitive.severity,
           confidence: cognitive.confidence,
+          recommendations: cognitive.recommendations,
           conversationHistory: cognitive.conversationHistory,
           loading: cognitive.loading,
           error: cognitive.error,

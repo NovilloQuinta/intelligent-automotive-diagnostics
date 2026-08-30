@@ -391,7 +391,7 @@ describe('SessionReportPanel', () => {
 
     render(<SessionReportPanel scenarioId="audi-a3-idle" vehicleInfo={sampleVehicleInfo} />)
 
-    expect(mockUseSessionReport).toHaveBeenCalledWith('audi-a3-idle')
+    expect(mockUseSessionReport).toHaveBeenCalledWith('audi-a3-idle', undefined, undefined)
     expect(screen.getByText('Diagnóstico Determinista')).toBeDefined()
   })
 

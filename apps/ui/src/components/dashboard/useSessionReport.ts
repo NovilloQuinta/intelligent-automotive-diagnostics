@@ -42,6 +42,46 @@ function isNotFoundError(error: unknown): boolean {
 }
 
 /**
+ * Diagnóstico cognitivo ya calculado por `useCognitiveDiagnosis` en el dashboard.
+ *
+ * El informe lo reusa en vez de volver a pedirlo: `getCognitiveDiagnosis` tarda
+ * hasta 60s y gasta tokens reales, así que repetirlo cada vez que el mecánico
+ * abre esta pestaña —aunque ya se hubiera lanzado antes— es tiempo y dinero
+ * tirados, además de comerse la cuota del rate limit para nada.
+ */
+export interface PrecomputedCognitive {
+  readonly diagnosisText: string | null
+  readonly severity: string | null
+  readonly confidence: number | null
+  readonly recommendations: string[] | null
+  readonly loading: boolean
+  readonly error: { message: string } | null
+}
+
+function cognitiveStateFromPrecomputed(
+  precomputed: PrecomputedCognitive,
+): Pick<SessionReportState, 'cognitive' | 'cognitiveLoading' | 'cognitiveError'> {
+  if (precomputed.error) {
+    return { cognitive: null, cognitiveLoading: false, cognitiveError: precomputed.error.message }
+  }
+  if (precomputed.diagnosisText === null) {
+    return { cognitive: null, cognitiveLoading: precomputed.loading, cognitiveError: null }
+  }
+  return {
+    cognitive: {
+      diagnosis: precomputed.diagnosisText,
+      severity: precomputed.severity ?? 'low',
+      confidence: precomputed.confidence ?? 0,
+      recommendations: precomputed.recommendations ?? [],
+      toolCalls: [],
+      pidObservations: [],
+    },
+    cognitiveLoading: precomputed.loading,
+    cognitiveError: null,
+  }
+}
+
+/**
  * Runs a single fetch section inside the lifecycle of the report effect.
  * Handles the common `.then(guard).catch(guard).finally(guard)` pattern
  * that was repeated 4 times verbatim.
@@ -138,10 +178,14 @@ function loadEcuInfo(scenarioId: string, ctx: SectionContext): void {
   )
 }
 
-function loadFreezeFrame(scenarioId: string, ctx: SectionContext): void {
+function loadFreezeFrame(
+  scenarioId: string,
+  dtcCode: string | undefined,
+  ctx: SectionContext,
+): void {
   runSection(
     {
-      fetchFn: () => api.getFreezeFrame(scenarioId),
+      fetchFn: () => api.getFreezeFrame(scenarioId, dtcCode),
       onData: (data) => ({ freezeFrame: data }),
       onError: (e) => (isNotFoundError(e) ? { freezeFrame: null } : {}),
       onFinally: () => ({ freezeFrameLoading: false }),
@@ -163,7 +207,11 @@ function loadFreezeFrame(scenarioId: string, ctx: SectionContext): void {
  * section to `null` — they are expected when a scenario has no ECUs or no
  * freeze-frame snapshot.
  */
-export function useSessionReport(scenarioId: string): SessionReportState {
+export function useSessionReport(
+  scenarioId: string,
+  precomputedCognitive?: PrecomputedCognitive,
+  dtcCode?: string,
+): SessionReportState {
   const [state, setState] = useState<SessionReportState>(INITIAL_STATE)
   const cancelled = useRef(false)
 
@@ -177,19 +225,34 @@ export function useSessionReport(scenarioId: string): SessionReportState {
       deterministicLoading: true,
       ecusLoading: true,
       freezeFrameLoading: true,
-      cognitiveLoading: true,
+      cognitiveLoading: !precomputedCognitive || precomputedCognitive.loading,
     })
 
     const ctx: SectionContext = { setState, cancelled }
-    loadCapabilitiesAndCognitive(scenarioId, ctx)
+    if (precomputedCognitive) {
+      setState((prev) => ({
+        ...prev,
+        capabilities: { cognitiveDiagnosis: true },
+        ...cognitiveStateFromPrecomputed(precomputedCognitive),
+      }))
+    } else {
+      loadCapabilitiesAndCognitive(scenarioId, ctx)
+    }
     loadDeterministic(scenarioId, ctx)
     loadEcuInfo(scenarioId, ctx)
-    loadFreezeFrame(scenarioId, ctx)
+    loadFreezeFrame(scenarioId, dtcCode, ctx)
 
     return () => {
       cancelled.current = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- precomputedCognitive/dtcCode se releen via closure a proposito: solo scenarioId debe reiniciar el efecto entero.
   }, [scenarioId])
+
+  // Mantiene la seccion cognitiva sincronizada con el hook de arriba sin relanzar el resto del informe.
+  useEffect(() => {
+    if (!precomputedCognitive) return
+    setState((prev) => ({ ...prev, ...cognitiveStateFromPrecomputed(precomputedCognitive) }))
+  }, [precomputedCognitive])
 
   return state
 }

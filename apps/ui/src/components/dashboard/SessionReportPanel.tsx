@@ -1,5 +1,11 @@
 import { Activity, Brain, Cpu, FileText, Loader2, Snowflake, Wrench } from 'lucide-react'
-import { useSessionReport, type SessionReportState } from './useSessionReport'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import {
+  useSessionReport,
+  type SessionReportState,
+  type PrecomputedCognitive,
+} from './useSessionReport'
 import { severityMeta, isSeverity } from './severityMeta'
 import { EcuTable } from './EcuInfoPanel'
 import { FrameTable } from './FreezeFramePanel'
@@ -33,6 +39,10 @@ interface SessionReportPanelProps {
   readonly snapshot?: SessionReportState
   /** ISO timestamp of when the report was originally generated. Displayed in the header. */
   readonly generatedAt?: string
+  /** Diagnóstico cognitivo ya calculado en el dashboard; evita relanzarlo (ver `useSessionReport`). */
+  readonly precomputedCognitive?: PrecomputedCognitive
+  /** Código del primer DTC almacenado; sin él, el backend etiqueta el freeze frame como "UNKNOWN". */
+  readonly dtcCode?: string
 }
 
 /**
@@ -316,9 +326,9 @@ function CognitiveSection({ state }: { readonly state: SessionReportState }) {
                     Confianza: {Math.round(cognitive.confidence * 100)} %
                   </Badge>
                 </div>
-                <p className="text-sm leading-relaxed whitespace-pre-line text-foreground/90">
-                  {cognitive.diagnosis}
-                </p>
+                <div className="text-sm leading-relaxed text-foreground/90 [&_p]:my-1 [&_p:first-child]:mt-0 [&_p:last-child]:mb-0 [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-4 [&_li]:my-0.5 [&_strong]:font-semibold [&_strong]:text-foreground [&_code]:rounded [&_code]:bg-white/10 [&_code]:px-1 [&_code]:py-0.5 [&_code]:text-xs [&_table]:my-2 [&_table]:w-full [&_table]:border-collapse [&_table]:text-xs [&_th]:border [&_th]:border-white/10 [&_th]:px-2 [&_th]:py-1 [&_th]:text-left [&_th]:font-semibold [&_td]:border [&_td]:border-white/10 [&_td]:px-2 [&_td]:py-1">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{cognitive.diagnosis}</ReactMarkdown>
+                </div>
               </div>
               {cognitive.recommendations.length > 0 && (
                 <RecommendationsList recommendations={cognitive.recommendations} />
@@ -423,7 +433,7 @@ function SessionReportContent({
  * pre-saved state without making any network requests.
  */
 export function SessionReportPanel(props: SessionReportPanelProps) {
-  const { scenarioId, vehicleInfo, snapshot, generatedAt } = props
+  const { scenarioId, vehicleInfo, snapshot, generatedAt, precomputedCognitive, dtcCode } = props
 
   const pidInfo = buildPidLabelMap(useAvailablePids())
 
@@ -441,7 +451,13 @@ export function SessionReportPanel(props: SessionReportPanelProps) {
 
   // Live mode — fetch data via hook
   return (
-    <SessionReportPanelLive scenarioId={scenarioId!} vehicleInfo={vehicleInfo} pidInfo={pidInfo} />
+    <SessionReportPanelLive
+      scenarioId={scenarioId!}
+      vehicleInfo={vehicleInfo}
+      pidInfo={pidInfo}
+      precomputedCognitive={precomputedCognitive}
+      dtcCode={dtcCode}
+    />
   )
 }
 
@@ -449,12 +465,16 @@ function SessionReportPanelLive({
   scenarioId,
   vehicleInfo,
   pidInfo,
+  precomputedCognitive,
+  dtcCode,
 }: {
   readonly scenarioId: string
   readonly vehicleInfo?: Scenario['vehicleInfo']
   readonly pidInfo: ReadonlyMap<string, PidLabel>
+  readonly precomputedCognitive?: PrecomputedCognitive
+  readonly dtcCode?: string
 }) {
-  const state = useSessionReport(scenarioId)
+  const state = useSessionReport(scenarioId, precomputedCognitive, dtcCode)
 
   return <SessionReportContent state={state} vehicleInfo={vehicleInfo} pidInfo={pidInfo} />
 }
