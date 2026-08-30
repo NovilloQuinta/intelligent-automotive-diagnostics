@@ -446,7 +446,7 @@ export class DiagnosisController {
   private handleCognitiveError(err: unknown, res: Response): void {
     if (this.respondIfCommonError(err, res)) return
     if (err instanceof CognitiveDiagnosisUnavailableError) {
-      res.status(404).json({ error: ERROR_MESSAGES.cognitiveUnavailable })
+      res.status(503).json({ error: ERROR_MESSAGES.cognitiveUnavailable })
       return
     }
     if (err instanceof CognitiveDiagnosisTimeoutError) {

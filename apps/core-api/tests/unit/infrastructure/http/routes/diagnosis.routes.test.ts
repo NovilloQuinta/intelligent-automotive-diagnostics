@@ -929,7 +929,7 @@ describe('diagnosisRoutes', () => {
       expect(res.body.error).toBe('Scenario not found')
     })
 
-    it('should return 404 when cognitive diagnosis is unavailable', async () => {
+    it('should return 503 when cognitive diagnosis is unavailable', async () => {
       const service = createServiceStub({
         cognitiveDiagnosis: vi.fn(async () => {
           throw new CognitiveDiagnosisUnavailableError()
@@ -941,7 +941,7 @@ describe('diagnosisRoutes', () => {
         .post('/api/mcp/cognitive-diagnosis')
         .send({ scenarioId: 'audi-a3-idle' })
 
-      expect(res.status).toBe(404)
+      expect(res.status).toBe(503)
       expect(res.body.error).toBe('Cognitive diagnosis is not available')
     })
 
