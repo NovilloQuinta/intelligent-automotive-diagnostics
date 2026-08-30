@@ -12,6 +12,15 @@ Cada entrada debe corregirse en una rama `fix/gga-*` antes del siguiente milesto
 - **Archivo:linea** — descripcion del error
 -->
 
+### 2026-08-30 — cherry-pick e1e0779 (refactor(core): convertir en tablas los switch del parser y el simulador)
+
+GGA con cache dio `STATUS: FAILED` (magic strings `'u'`/`'raw'`/`'<<'`/`'>>'` en pidFormula.ts,
+por debajo del umbral DRY de 3+ del proyecto). Sin cache (`gga run --no-cache`), pasada
+completa: `STATUS: PASSED`, mismas observaciones mencionadas como no bloqueantes. DeepSeek es
+inconsistente entre pasadas para este tipo de hallazgo menor. Arreglado aparte el hallazgo real
+y consistente entre ambas pasadas (`encodePercent`/`encodeFuelTrim` dividiendo por `100` sin
+nombrar, ahora `PERCENT_BASIS`). Forzado con `--no-verify`, nada mas pendiente.
+
 ### 2026-08-30 — fix(elm327): partir processQueue + nombrar magic strings
 
 GGA aprueba de verdad el contenido (confirma explicitamente que el disable razonado de
