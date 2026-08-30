@@ -211,7 +211,8 @@ export function DtcPanel({
               </TabsList>
               <TabsContent value="stored">
                 <p className="mb-3 text-[10px] leading-relaxed text-muted-foreground">
-                  Averías confirmadas detectadas por la ECU (Modo 03)
+                  Fallo confirmado: se repitió en más de un ciclo de conducción y por eso enciende
+                  el testigo. Se borra con «Borrar averías».
                 </p>
                 {storedCodes.length === 0 ? (
                   <NoCodesMessage />
@@ -226,7 +227,8 @@ export function DtcPanel({
               </TabsContent>
               <TabsContent value="pending">
                 <p className="mb-3 text-[10px] leading-relaxed text-muted-foreground">
-                  Averías detectadas durante el ciclo de conducción actual (Modo 07)
+                  Fallo detectado en el ciclo de conducción actual. Si no vuelve a fallar desaparece
+                  solo; si se repite, pasa a Almacenadas.
                 </p>
                 {pendingCodes.length === 0 ? (
                   <p className="py-4 text-center text-xs text-muted-foreground/60">Ninguna</p>
@@ -241,7 +243,8 @@ export function DtcPanel({
               </TabsContent>
               <TabsContent value="permanent">
                 <p className="mb-3 text-[10px] leading-relaxed text-muted-foreground">
-                  Averías que requieren reparación y no pueden borrarse con escáner (Modo 0A)
+                  El propio fabricante lo bloquea hasta comprobar, en varios ciclos, que el fallo ya
+                  no ocurre. No se borra con «Borrar averías».
                 </p>
                 {permanentCodes.length === 0 ? (
                   <p className="py-4 text-center text-xs text-muted-foreground/60">Ninguna</p>

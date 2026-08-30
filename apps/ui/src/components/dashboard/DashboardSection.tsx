@@ -1,7 +1,6 @@
 import { TelemetrySection } from './TelemetrySection'
 import { PidsTable } from './PidsTable'
-import { DtcPanel } from './DtcPanel'
-import { FreezeFramePanel } from './FreezeFramePanel'
+import { DtcOverviewPanel } from './DtcOverviewPanel'
 import { EcuOverviewPanel } from './EcuOverviewPanel'
 import { DiagnosisChat } from './DiagnosisChat'
 import { SessionReportPanel } from './SessionReportPanel'
@@ -133,7 +132,7 @@ export function DashboardSection({
       )
     case 'dtc':
       return (
-        <DtcPanel
+        <DtcOverviewPanel
           codes={dtcCodes}
           severity={result?.severity ?? null}
           empty={!result && !loading}
@@ -143,8 +142,6 @@ export function DashboardSection({
           onDiagnose={onDiagnose}
         />
       )
-    case 'freeze-frame':
-      return <FreezeFramePanel scenarioId={selectedId!} dtc={selectedDtc} />
     case 'ecu':
       return (
         <EcuOverviewPanel

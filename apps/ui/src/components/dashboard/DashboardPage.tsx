@@ -73,7 +73,7 @@ export function DashboardPage() {
 
   const handleDtcSelect = (code: string) => {
     setSelectedDtc(code)
-    setActiveSection('freeze-frame')
+    setActiveSection('dtc')
   }
 
   if (auth.status === 'anonymous') {

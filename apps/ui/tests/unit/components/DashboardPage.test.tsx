@@ -482,7 +482,7 @@ describe('DashboardPage', () => {
     expect(screen.getAllByText('OK')).toHaveLength(3)
   })
 
-  it('should navigate to freeze-frame when DTC row is selected', async () => {
+  it('should show the freeze frame for the selected DTC in the same DTC section', async () => {
     mockAuthStatus.value = 'authed'
     mockUseScenarios.mockReturnValue({
       scenarios: [scenario],
