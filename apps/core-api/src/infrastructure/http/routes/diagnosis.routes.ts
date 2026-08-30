@@ -1,23 +1,25 @@
 import { Router } from 'express'
-import { rateLimit } from 'express-rate-limit'
+import { createRateLimiter } from '@/infrastructure/http/middleware/rate-limiter.middleware.js'
 import type { DiagnosisController } from '@/infrastructure/http/controllers/DiagnosisController.js'
 
-/** 1 peticion/s por cliente para el endpoint de telemetria en vivo. */
-const liveDataRateLimit = rateLimit({
-  windowMs: 1000,
-  limit: 1,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many live-data requests, please wait.' },
+/**
+ * Telemetria en vivo: el poller del front pide cada 1000ms exactos
+ * (`LIVE_TELEMETRY_INTERVAL_MS`). Un limite de 1 peticion/s no deja margen —
+ * el jitter normal del event loop o una pestaña en segundo plano lo revientan
+ * solos, sin que haga falta un segundo cliente. Ventana de 5s con 8 peticiones
+ * absorbe ese jitter sin dejar de frenar un abuso real.
+ */
+const liveDataRateLimit = createRateLimiter({
+  namespace: 'live-data',
+  windowMinutes: 5 / 60,
+  maxRequests: 8,
 })
 
 /** 30 peticiones/min para el historial: listado + detalle (misma ventana, mismo limite). */
-const historyRateLimit = rateLimit({
-  windowMs: 60_000,
-  limit: 30,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: 'Too many history requests, please wait.' },
+const historyRateLimit = createRateLimiter({
+  namespace: 'diagnosis-history',
+  windowMinutes: 1,
+  maxRequests: 30,
 })
 
 /** Crea un Express Router con las rutas de diagnostico OBD. */
