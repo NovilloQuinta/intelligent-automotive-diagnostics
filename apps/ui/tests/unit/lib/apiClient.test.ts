@@ -152,7 +152,7 @@ describe('apiClient — fontaneria HTTP', () => {
       expect(init.signal).toBe(controller.signal)
     })
 
-    it('getCognitiveDiagnosis uses a 60s timeout', async () => {
+    it('getCognitiveDiagnosis uses a 120s timeout', async () => {
       setStoredTokens()
       const timeoutSpy = vi
         .spyOn(AbortSignal, 'timeout')
@@ -174,7 +174,7 @@ describe('apiClient — fontaneria HTTP', () => {
       await api.getCognitiveDiagnosis('scenario-1', 'why?')
 
       expect(timeoutSpy).toHaveBeenCalledTimes(1)
-      expect(timeoutSpy).toHaveBeenCalledWith(60_000)
+      expect(timeoutSpy).toHaveBeenCalledWith(120_000)
     })
   })
 
