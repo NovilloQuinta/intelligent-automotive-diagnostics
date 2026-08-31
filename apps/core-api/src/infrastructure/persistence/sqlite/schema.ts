@@ -270,7 +270,9 @@ export const vehicleIdentities = sqliteTable('vehicle_identities', {
 })
 
 /** Catalogo auto-expansivo de definiciones de ECU por fabricante, modelo y
- *  direccion CAN. Nace vacio y se llena por aprendizaje (web / mecanico). */
+ *  direccion CAN. Nace con un seed minimo de direcciones con evidencia real
+ *  verificada (ver `MANUFACTURER_ECU_SEEDS`) y se completa por aprendizaje
+ *  (web / mecanico). */
 export const ecuDefinitions = sqliteTable(
   'ecu_definitions',
   {

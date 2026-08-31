@@ -10,6 +10,7 @@ import { SCOPE_CLASSIFIER_SYSTEM_PROMPT } from '@/application/prompts/scopeClass
 export const DIAGNOSIS_SCOPE = {
   Vehiculo: 'vehiculo',
   Valoracion: 'valoracion',
+  IdentificacionEcu: 'identificacion_ecu',
   Salud: 'salud',
   FueraDeAmbito: 'fuera_de_ambito',
 } as const
@@ -43,6 +44,7 @@ const LABEL_PREFIXES: ReadonlyArray<readonly [prefix: string, scope: DiagnosisSc
   ['FUERA', DIAGNOSIS_SCOPE.FueraDeAmbito],
   ['SALUD', DIAGNOSIS_SCOPE.Salud],
   ['VALORACION', DIAGNOSIS_SCOPE.Valoracion],
+  ['ECU', DIAGNOSIS_SCOPE.IdentificacionEcu],
 ]
 
 /** Traduce la etiqueta cruda del clasificador al scope; sin match, `vehiculo`. */

@@ -57,3 +57,21 @@
       el catalogo de PID y el de ECU.
 - [x] 4.2 Actualizado `docs/estado-actual.md`.
 - [ ] 4.3 Archivar el change y sincronizar la spec.
+
+## 5. Corrección del 31/08/2026 — direcciones sin evidencia real retiradas
+
+> Al probar el flujo de identificación de ECU en vivo se detectó que `7EA`/`7EB`/`7ED`
+> (etiquetadas "control híbrido"/"batería de tracción"/"powertrain" en la propuesta
+> original) no tenían ninguna fuente real y eran incoherentes con el vehículo emulado
+> (Audi A3 2.0 TDI, 100% diésel). Investigado a fondo (`WebSearch`), solo `7E9`
+> (transmisión) tiene evidencia real verificable — ver `docs/deuda-conocida.md`.
+
+- [x] 5.1 Retiradas `7EA`/`7EB`/`7ED` del escenario `audi_a3_tdi.py` (broadcast e
+      imports) — el emulador Audi responde solo desde `7E8` y `7E9`.
+- [x] 5.2 Sembrada `7E9` = "Caja de cambios" (TCM) en `ecu_definitions` con
+      `source: 'seed'`, confianza 0.9 — nueva fuente `'seed'` añadida al dominio
+      (`EcuDefinition`), con guarda de "nunca degradar" en `upsertEcuDefinition`.
+- [x] 5.3 Corregidas las etiquetas y la tabla de direcciones en `proposal.md`/`design.md`
+      de este change, y la tabla de `docs/infrastructure/elm327-emulator.md`.
+- [x] 5.4 `docs/deuda-conocida.md` documenta el hallazgo, la fuente real y la razón
+      técnica de por qué esas 3 direcciones no deberían responder en un coche real.

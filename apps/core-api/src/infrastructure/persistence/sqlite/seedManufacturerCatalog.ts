@@ -11,12 +11,16 @@ import {
   SYSTEM_VEHICLE,
 } from '@/domain/systemVocabulary.js'
 import { PidCode } from '@/domain/value-objects/PidCode.js'
+import type { EcuDefinition } from '@/domain/entities/EcuDefinition.js'
 
 /** Confianza asignada a los DTCs manufacturer-specific del seed (fuente documentada VAG/Ross-Tech). */
 const SEED_DTC_CONFIDENCE = 0.9
 
 /** Confianza de la asignacion WMI: es registro oficial ISO 3779, no una conjetura. */
 const SEED_WMI_CONFIDENCE = 0.9
+
+/** Confianza de las ECU sembradas: direccion verificada contra una fuente real, no una conjetura. */
+const SEED_ECU_CONFIDENCE = 0.9
 
 /**
  * Asignacion WMI → fabricante, seed de BD.
@@ -590,6 +594,62 @@ const MANUFACTURER_DTC_SEEDS: Array<Omit<DtcDefinition, 'id' | 'createdAt'>> = [
 ]
 
 /**
+ * Seed de ECUs con evidencia real verificada, deliberadamente minimo.
+ *
+ * `7E8` (motor) no hace falta sembrarla: `ecuAddressCatalog.ts` ya la estandariza por
+ * ISO 15765-4. El resto de direcciones no estandarizadas del rango legislado
+ * (`7E9`-`7EF`) las asigna cada fabricante y no hay convencion universal — por eso
+ * `ecu_definitions` nace vacia por diseño. La unica excepcion es esta: `7E1→7E9` como
+ * caja de cambios (TCM/DSG) esta confirmado con trafico CAN real capturado en un VW
+ * Golf MK7 2.0TDI+DSG (misma plataforma MQB que el Audi A3 8V), fuente
+ * `github.com/mrfixpl/MQB-sniffer`. `model: ''` porque la evidencia es de plataforma,
+ * no de un modelo concreto — vale para toda la marca, como el resto de definiciones
+ * "de marca" del catalogo (ver PID_SEEDS con manufacturer sin model).
+ *
+ * No se siembra ninguna otra direccion (`7EA`/`7EB`/`7ED`, etc.) a proposito: no hay
+ * fuente real que las respalde, y en un VAG real esos modulos (ABS, airbag...) no
+ * responden al broadcast generico de 11 bits que usa este proyecto — viven detras de
+ * la pasarela propietaria (VCDS). Inventar una definicion sin evidencia violaria el
+ * mismo principio de "nunca inventes" que ya rige el resto del catalogo (ADR-007).
+ */
+export const MANUFACTURER_ECU_SEEDS: ReadonlyArray<
+  Omit<EcuDefinition, 'id' | 'createdAt' | 'confidence'>
+> = [
+  {
+    manufacturer: 'Audi',
+    model: '',
+    responseAddr: '7E9',
+    requestAddr: '7E1',
+    name: 'Caja de cambios',
+    type: 'TCM',
+    system: 'Transmisión',
+    source: 'seed',
+  },
+]
+
+/**
+ * Inserta los PIDs Mode 22 que no existan ya. Extraida para no sumar el `if/continue`
+ * a la complejidad de {@link seedManufacturerCatalog}.
+ *
+ * @returns Cuantos PIDs se insertaron de verdad (para el log final).
+ */
+async function seedPidDefinitions(vehicleRepo: VehicleRepository): Promise<number> {
+  let pidsInserted = 0
+  for (const pid of MANUFACTURER_PID_SEEDS) {
+    const existing = await vehicleRepo.findPidDefinition(
+      pid.pidCode.mode,
+      pid.pidCode.pid,
+      pid.manufacturer,
+      pid.model,
+    )
+    if (existing) continue
+    await vehicleRepo.insertPidDefinition(pid)
+    pidsInserted += 1
+  }
+  return pidsInserted
+}
+
+/**
  * Seed idempotente del catálogo de fabricante en BD.
  *
  * Inserta los PIDs Mode 22 (propietarios) y los DTCs manufacturer-specific que
@@ -606,18 +666,7 @@ export async function seedManufacturerCatalog(
   vehicleRepo: VehicleRepository,
   logger: LoggerPort,
 ): Promise<void> {
-  let pidsInserted = 0
-  for (const pid of MANUFACTURER_PID_SEEDS) {
-    const existing = await vehicleRepo.findPidDefinition(
-      pid.pidCode.mode,
-      pid.pidCode.pid,
-      pid.manufacturer,
-      pid.model,
-    )
-    if (existing) continue
-    await vehicleRepo.insertPidDefinition(pid)
-    pidsInserted += 1
-  }
+  const pidsInserted = await seedPidDefinitions(vehicleRepo)
 
   for (const dtc of MANUFACTURER_DTC_SEEDS) {
     await vehicleRepo.upsertDtcDefinition(dtc)
@@ -637,9 +686,17 @@ export async function seedManufacturerCatalog(
     })
   }
 
+  // `upsertEcuDefinition` nunca degrada una entrada existente (misma logica que
+  // `upsertVehicleIdentity` para WMI): re-sembrar no pisa una correccion posterior
+  // del mecanico si esta ya supero la confianza del seed.
+  for (const ecu of MANUFACTURER_ECU_SEEDS) {
+    await vehicleRepo.upsertEcuDefinition({ ...ecu, confidence: SEED_ECU_CONFIDENCE })
+  }
+
   logger.info('Manufacturer catalog seeded', {
     pidsInserted,
     dtcsSeeded: MANUFACTURER_DTC_SEEDS.length,
     wmisSeeded: WMI_IDENTITY_SEEDS.length,
+    ecusSeeded: MANUFACTURER_ECU_SEEDS.length,
   })
 }

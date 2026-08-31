@@ -168,6 +168,26 @@ export class EcuStore {
     return rows.length === 0 ? null : toEcuDefinition(rows[0])
   }
 
+  /** Sobrescribe la fila existente con los datos de `definition`. Extraido para no sumar a la complejidad de `upsertEcuDefinition`. */
+  private async updateExistingEcuDefinition(
+    existingId: number,
+    definition: EcuDefinition,
+  ): Promise<EcuDefinition> {
+    const updated = await this.db
+      .update(schema.ecuDefinitions)
+      .set({
+        requestAddr: definition.requestAddr,
+        name: definition.name,
+        type: definition.type,
+        system: definition.system ?? null,
+        confidence: definition.confidence,
+        source: definition.source,
+      })
+      .where(eq(schema.ecuDefinitions.id, existingId))
+      .returning()
+    return toEcuDefinition(updated[0])
+  }
+
   async upsertEcuDefinition(def: Omit<EcuDefinition, 'id' | 'createdAt'>): Promise<EcuDefinition> {
     const definition = new EcuDefinition({ id: 0, ...def })
     const existing = await this.findExactEcuDefinition(
@@ -175,21 +195,10 @@ export class EcuStore {
       definition.model,
       definition.responseAddr,
     )
-    if (existing) {
-      const updated = await this.db
-        .update(schema.ecuDefinitions)
-        .set({
-          requestAddr: definition.requestAddr,
-          name: definition.name,
-          type: definition.type,
-          system: definition.system ?? null,
-          confidence: definition.confidence,
-          source: definition.source,
-        })
-        .where(eq(schema.ecuDefinitions.id, existing.id))
-        .returning()
-      return toEcuDefinition(updated[0])
-    }
+    // Nunca degradar: una definicion mejor (p.ej. un seed verificado) no la pisa una
+    // peor (p.ej. una suposicion de la web). Mismo criterio que `upsertVehicleIdentity`.
+    if (existing && existing.confidence >= definition.confidence) return existing
+    if (existing) return this.updateExistingEcuDefinition(existing.id, definition)
 
     try {
       const result = await this.db

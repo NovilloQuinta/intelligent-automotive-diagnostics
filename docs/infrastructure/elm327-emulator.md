@@ -184,18 +184,23 @@ Definidas en `.env` (raíz del proyecto).
 ## Descubrimiento de ECUs (functional addressing, 7DF)
 
 **Funciona.** Verificado el 19/08 contra el emulador: `GET /api/ecu-info` del Audi
-devuelve cinco ECUs y la pantalla de topologia las pinta.
+devuelve las ECUs que responden y la pantalla de topologia las pinta.
 
-| Respuesta | Peticion |
-|---|---|
-| `7E8` | `7E0` — Engine Control Module (la unica que estandariza ISO 15765-4) |
-| `7E9` | `7E1` |
-| `7EA` | `7E2` |
-| `7EB` | `7E3` |
-| `7ED` | `7E5` |
+**Reducido a 2 el 31/08/2026** (antes eran 5). El escenario respondia tambien desde
+`7EA`/`7EB`/`7ED`, sin ninguna direccion real detras — se retiraron porque, en un
+Audi/VAG real, esos modulos (ABS, airbag, confort...) no contestan al broadcast
+generico de 11 bits que usa un ELM327: viven detras de la pasarela propietaria (VCDS).
+Detalle completo en `docs/deuda-conocida.md`.
 
-Cuatro de las cinco salen en la UI como `ECU 7E9`, tipo `UNKNOWN`: `ecuAddressCatalog`
-solo estandariza `7E8` y el proyecto no inventa nombres.
+| Respuesta | Peticion | ECU | Fuente |
+|---|---|---|---|
+| `7E8` | `7E0` | Engine Control Module | ISO 15765-4 / SAE J1979 (estandar) |
+| `7E9` | `7E1` | Caja de cambios (TCM) | Trafico CAN real, plataforma MQB (`github.com/mrfixpl/MQB-sniffer`) — sembrada en `ecu_definitions` con `source: 'seed'`, confianza 0.9 |
+
+`7E8` sale del catalogo de codigo (`ecuAddressCatalog`, ISO 15765-4); `7E9` sale del
+catalogo de BD (`ecu_definitions`, sembrado). Ninguna ECU sale como `UNKNOWN` en este
+escenario ahora mismo — si en el futuro se descubre una tercera direccion real, se
+sembraria siguiendo el mismo patron, no se inventaria.
 
 ### Como responde el emulador a los dos caminos
 

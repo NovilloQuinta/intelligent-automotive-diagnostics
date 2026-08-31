@@ -63,6 +63,17 @@ describe('classifyDiagnosisScope', () => {
     expect(scope).toBe('valoracion')
   })
 
+  it('returns "identificacion_ecu" on that label', async () => {
+    const llmClient = llmClientWith('ECU')
+
+    const scope = await classifyDiagnosisScope(
+      'Qué centralita es la que tiene dirección 7E9?',
+      llmClient,
+    )
+
+    expect(scope).toBe('identificacion_ecu')
+  })
+
   it('fails open to "vehiculo" on an unrecognized or empty label', async () => {
     const llmClient = llmClientWith('  ')
 

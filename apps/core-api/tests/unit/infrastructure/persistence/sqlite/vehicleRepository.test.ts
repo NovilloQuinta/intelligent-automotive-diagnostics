@@ -740,6 +740,27 @@ describe('SqliteVehicleRepository', () => {
       expect(second.confidence).toBe(0.9)
     })
 
+    it('upsertEcuDefinition never degrades an existing definition with a lower confidence', async () => {
+      const first = await repo.upsertEcuDefinition({
+        ...sampleEcu,
+        responseAddr: '7F4',
+        confidence: 0.9,
+      })
+
+      const second = await repo.upsertEcuDefinition({
+        ...sampleEcu,
+        responseAddr: '7F4',
+        name: 'Wrong guess from the web',
+        confidence: 0.3,
+        source: 'web',
+      })
+
+      expect(second.id).toBe(first.id)
+      expect(second.name).toBe(first.name)
+      expect(second.confidence).toBe(0.9)
+      expect(second.source).toBe(first.source)
+    })
+
     // La busqueda de resolucion ensancha a la marca para poder heredar entre modelos, pero
     // el upsert **no** puede usar esa consulta: decidir si inserta o actualiza exige la
     // clave unica exacta, o una definicion de marca machacaria la de un modelo concreto.
@@ -769,9 +790,11 @@ describe('SqliteVehicleRepository', () => {
     })
 
     it('findEcuDefinitionByAddress returns the matching definition', async () => {
-      await repo.upsertEcuDefinition(sampleEcu)
+      // Direccion propia (no '7E9' de sampleEcu): otros tests de este describe ya
+      // suben la confianza de esa clave, y `upsertEcuDefinition` ya no degrada.
+      await repo.upsertEcuDefinition({ ...sampleEcu, responseAddr: '7F5' })
 
-      const result = await repo.findEcuDefinitionByAddress('Audi', 'A3', '7E9')
+      const result = await repo.findEcuDefinitionByAddress('Audi', 'A3', '7F5')
 
       expect(result).not.toBeNull()
       expect(result!.name).toBe('Transmission Control Module')

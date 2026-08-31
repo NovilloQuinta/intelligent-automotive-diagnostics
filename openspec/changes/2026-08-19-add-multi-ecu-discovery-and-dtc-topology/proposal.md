@@ -31,17 +31,24 @@ Hay dos huecos más, del mismo hilo:
 
 ## What Changes
 
-- **El escenario Audi responde al broadcast desde cinco ECUs.** Se **añade** una entrada
+- **El escenario Audi responde al broadcast desde dos ECUs.** Se **añade** una entrada
   nueva para `01 00` con `Header: "7DF"`; la existente (`Header: ECU_ADDR_E`, la que sirve
   a `getSupportedPids()`) no se toca. Su `Response` encadena bloques
   `HD(dirección) + SZ + DT` de direcciones distintas, como hace el escenario `car` del
-  propio emulador. Son las cinco que caen en el rango legislado ISO 15765-4 que
-  `protocol.ts` acepta: motor (7E8), transmisión (7E9), control híbrido (7EA), batería de
-  tracción (7EB) y powertrain (7ED).
-- **Las ECUs nuevas se quedan sin nombre a propósito.** `ecuAddressCatalog` solo tiene
-  estandarizada `7E8` = Engine Control Module; el resto sale como "ECU 7E9", tipo
-  desconocido. Sembrar los nombres cortocircuitaría justo lo que el proyecto quiere
-  demostrar: que el catálogo aprende.
+  propio emulador. Son las dos únicas con evidencia real: motor (7E8, estandarizada por
+  ISO 15765-4/SAE J1979) y transmisión (7E9, confirmada con tráfico CAN real de la
+  plataforma MQB — ver `docs/deuda-conocida.md`, revisión del 31/08/2026).
+  **Corrección del 31/08/2026**: esta propuesta listaba originalmente cinco direcciones
+  (motor, transmisión, "control híbrido" 7EA, "batería de tracción" 7EB y "powertrain"
+  7ED). Las tres últimas no tenían ninguna fuente real detrás y eran además incoherentes
+  con el vehículo emulado (un Audi A3 2.0 TDI 100% diésel, sin componente híbrido). Se
+  retiraron del escenario: en un VAG real esos módulos no responden al broadcast
+  genérico de 11 bits, viven detrás de la pasarela propietaria (VCDS).
+- **`7E9` sale con nombre real, no sin nombre.** `ecuAddressCatalog` (código) sigue
+  estandarizando solo `7E8`, pero `ecu_definitions` (BD) ahora nace con un seed mínimo
+  para `7E9` = "Caja de cambios" (fuente real verificada, no una suposición). El resto
+  de direcciones no estandarizadas sigue sin sembrar a propósito — sembrar sin evidencia
+  cortocircuitaría lo que el proyecto quiere demostrar: que el catálogo aprende.
 - **Bloque de aprendizaje de ECUs en el system prompt**, simétrico a los de PID y DTC,
   para que la cadena `get_ecu_info` → `search_similar_ecus` → `index_ecu` se ejercite y
   `ecu_definitions` se llene con lo que el agente resuelve.

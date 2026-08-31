@@ -21,6 +21,7 @@ import { redactInternals } from '@/application/llm/redactInternals.js'
 import { stripMetaPreamble } from '@/application/llm/stripMetaPreamble.js'
 import { COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT } from '@/application/prompts/cognitiveDiagnosisPrompt.js'
 import { VALUATION_SYSTEM_PROMPT } from '@/application/prompts/valuationPrompt.js'
+import { ECU_IDENTIFICATION_SYSTEM_PROMPT } from '@/application/prompts/ecuIdentificationPrompt.js'
 import {
   classifyDiagnosisScope,
   DIAGNOSIS_SCOPE,
@@ -177,6 +178,9 @@ export class ExecuteCognitiveDiagnosisUseCase {
     if (scope === DIAGNOSIS_SCOPE.Valoracion) {
       return this.executeValuation(userQuery, vehicleContext)
     }
+    if (scope === DIAGNOSIS_SCOPE.IdentificacionEcu) {
+      return this.executeEcuIdentification(userQuery, vehicleContext)
+    }
 
     const similarCases = await this.retrieveSimilarCases(userQuery, vehicleContext)
     const userMessage = buildUserMessage(userQuery, vehicleContext, similarCases)
@@ -218,6 +222,22 @@ export class ExecuteCognitiveDiagnosisUseCase {
     const userMessage = buildUserMessage(userQuery, vehicleContext)
     const response = await this.options.llmClient.sendMessage(
       { systemPrompt: VALUATION_SYSTEM_PROMPT, userMessage, tools: this.options.tools },
+      this.options.handler,
+    )
+    return this.buildOutput(response)
+  }
+
+  /**
+   * Prompt corto dedicado a identificar ECU concretas; no se indexa como diagnostico
+   * (el propio `index_ecu` que llame el modelo persiste el catalogo por su cuenta).
+   */
+  private async executeEcuIdentification(
+    userQuery: string | undefined,
+    vehicleContext: VehicleInfo | undefined,
+  ): Promise<ExecuteCognitiveDiagnosisOutput> {
+    const userMessage = buildUserMessage(userQuery, vehicleContext)
+    const response = await this.options.llmClient.sendMessage(
+      { systemPrompt: ECU_IDENTIFICATION_SYSTEM_PROMPT, userMessage, tools: this.options.tools },
       this.options.handler,
     )
     return this.buildOutput(response)

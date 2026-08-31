@@ -52,6 +52,21 @@ const DDL = `
     source TEXT NOT NULL DEFAULT 'web',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+
+  CREATE TABLE IF NOT EXISTS ecu_definitions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    manufacturer TEXT NOT NULL,
+    model TEXT NOT NULL,
+    response_addr TEXT NOT NULL,
+    request_addr TEXT NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    system TEXT,
+    confidence REAL NOT NULL DEFAULT 0.3,
+    source TEXT NOT NULL DEFAULT 'web',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(manufacturer, model, response_addr)
+  );
 `
 
 describe('seedManufacturerCatalog', () => {
@@ -215,6 +230,50 @@ describe('seedManufacturerCatalog', () => {
       const learned = await repo.findVehicleIdentityByWmi('VR3')
       expect(learned!.manufacturer).toBe('Peugeot')
       expect(learned!.source).toBe('web')
+    })
+  })
+
+  describe('definiciones de ECU', () => {
+    // Unica direccion con evidencia real verificada (mrfixpl/MQB-sniffer, plataforma
+    // MQB): el resto de direcciones no estandarizadas se queda sin sembrar a proposito.
+    it('siembra la caja de cambios de Audi (7E9) con fuente "seed" y confianza 0.9', async () => {
+      await seedManufacturerCatalog(repo, logger)
+
+      const def = await repo.findEcuDefinitionByAddress('Audi', '', '7E9')
+
+      expect(def).not.toBeNull()
+      expect(def!.name).toBe('Caja de cambios')
+      expect(def!.type).toBe('TCM')
+      expect(def!.source).toBe('seed')
+      expect(def!.confidence).toBe(0.9)
+    })
+
+    it('no siembra ninguna otra ECU: las direcciones sin evidencia real se quedan sin definicion', async () => {
+      await seedManufacturerCatalog(repo, logger)
+
+      expect(await repo.findEcuDefinitionByAddress('Audi', '', '7EA')).toBeNull()
+      expect(await repo.findEcuDefinitionByAddress('Audi', '', '7EB')).toBeNull()
+      expect(await repo.findEcuDefinitionByAddress('Audi', '', '7ED')).toBeNull()
+    })
+
+    it('re-sembrar no pisa una correccion del mecanico con mas confianza', async () => {
+      await seedManufacturerCatalog(repo, logger)
+      await repo.upsertEcuDefinition({
+        manufacturer: 'Audi',
+        model: '',
+        responseAddr: '7E9',
+        requestAddr: '7E1',
+        name: 'Corregido por el mecanico',
+        type: 'TCM',
+        confidence: 0.95,
+        source: 'mechanic',
+      })
+
+      await seedManufacturerCatalog(repo, logger)
+
+      const def = await repo.findEcuDefinitionByAddress('Audi', '', '7E9')
+      expect(def!.name).toBe('Corregido por el mecanico')
+      expect(def!.source).toBe('mechanic')
     })
   })
 })

@@ -44,6 +44,19 @@ function zodPrimitiveType(schema: z.ZodTypeAny): string | undefined {
   return undefined
 }
 
+/**
+ * JSON Schema de un `z.enum(...)`, o `undefined` si el campo no lo es.
+ *
+ * Separado de {@link zodPrimitiveType} porque un enum necesita ademas los valores
+ * permitidos, no solo el tipo: sin esto el modelo no ve restriccion alguna en el
+ * propio schema de la tool y puede inventar un valor fuera de la union (visto en
+ * vivo con `index_ecu.source`, que solo admite 'web'/'mechanic').
+ */
+function zodEnumSchema(schema: z.ZodTypeAny): { type: 'string'; enum: string[] } | undefined {
+  const inner = schema instanceof z.ZodOptional ? schema.unwrap() : schema
+  return inner instanceof z.ZodEnum ? { type: 'string', enum: inner.options } : undefined
+}
+
 /** Convierte un ZodRawShape a JSON Schema de objeto (subconjunto mínimo: primitivos + opcional). */
 export function shapeToJsonSchema(shape: Record<string, z.ZodTypeAny>): Record<string, unknown> {
   /** Tipo no representable en el subconjunto soportado: se deja sin restringir. */
@@ -52,7 +65,7 @@ export function shapeToJsonSchema(shape: Record<string, z.ZodTypeAny>): Record<s
   const required: string[] = []
   for (const [key, field] of Object.entries(shape)) {
     const type = zodPrimitiveType(field)
-    properties[key] = type ? { type } : UNCONSTRAINED
+    properties[key] = zodEnumSchema(field) ?? (type ? { type } : UNCONSTRAINED)
     if (!field.isOptional()) required.push(key)
   }
   return { type: 'object', properties, required }

@@ -372,7 +372,11 @@ export function registerKnowledgeTools(
       manufacturer: z.string(),
       /** Omitir cuando la centralita es comun a toda la marca o plataforma. */
       model: z.string().optional(),
-      source: z.string(),
+      // A diferencia de PID/DTC (donde solo existe 'web'), aqui el modelo elige
+      // entre dos valores reales: declararlo como enum en el propio schema de la
+      // tool es lo que de verdad evita que invente uno nuevo (p.ej. 'user'), mas
+      // fiable que pedirlo solo en el prompt.
+      source: z.enum(['web', 'mechanic']),
       responseAddr: z.string(),
       requestAddr: z.string(),
       name: z.string(),

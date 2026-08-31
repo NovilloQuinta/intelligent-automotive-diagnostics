@@ -38,25 +38,34 @@ pasa la respuesta por `parseModeResponse`, que espera **una sola**. El orden de 
 es irrelevante aquí (`elm.py:505`), porque el filtro de header ya garantiza que solo una
 de las dos entradas puede casar. Ninguna respuesta existente cambia.
 
-**Direcciones elegidas**, las cinco del rango legislado que `protocol.ts` acepta:
+**Direcciones elegidas — corregido el 31/08/2026.** La version original de este
+documento listaba cinco direcciones del rango legislado que `protocol.ts` acepta,
+etiquetando `7EA`/`7EB`/`7ED` como "control hibrido"/"bateria de traccion"/"powertrain"
+sin ninguna fuente real detras, e incoherentes ademas con el vehiculo emulado (un Audi
+A3 2.0 TDI 100% diesel). Investigado en profundidad (ver `docs/deuda-conocida.md`), solo
+quedan dos direcciones con evidencia real:
 
-| Constante | Resp. | ECU |
-|---|---|---|
-| `ECU_R_ADDR_E` | 7E8 | Motor (ya existe) |
-| `ECU_R_ADDR_T` | 7E9 | Transmisión |
-| `ECU_R_ADDR_U` | 7EA | Control híbrido |
-| `ECU_R_ADDR_B` | 7EB | Batería de tracción |
-| `ECU_R_ADDR_M` | 7ED | Powertrain |
+| Constante | Resp. | ECU | Evidencia |
+|---|---|---|---|
+| `ECU_R_ADDR_E` | 7E8 | Motor (ya existe) | ISO 15765-4 / SAE J1979 |
+| `ECU_R_ADDR_T` | 7E9 | Transmision (Caja de cambios, TCM) | Trafico CAN real, plataforma MQB (`github.com/mrfixpl/MQB-sniffer`) |
+
+Las otras tres se retiraron del escenario, no solo de las etiquetas: en un VAG real,
+ABS/airbag/confort no responden al broadcast generico de 11 bits que usa este proyecto
+— viven detras de la pasarela propietaria (VCDS), inalcanzables por un ELM327 generico.
+No es que les faltara nombre: no deberian responder en absoluto por ese camino.
 
 Quedan fuera ABS (7B0/7B8) y A/C (7C4/7CC): el filtro las descarta con razón, y ampliar
 el rango legislado es otra discusión.
 
-## D2 — Las ECUs desconocidas se quedan desconocidas
+## D2 — La ECU sin catalogar se queda desconocida (o se siembra si hay evidencia real)
 
-Cuatro de las cinco saldrán como `ECU 7E9` con tipo `unknown`, porque el catálogo solo
-estandariza `7E8`. **Es el objetivo, no un defecto**: es lo que da trabajo al bucle de
-aprendizaje de D3 y lo que demuestra la tesis del proyecto. Sembrar los nombres dejaría
-un mapa bonito y una demo vacía.
+Sin evidencia real, una ECU se queda como `UNKNOWN` — es el objetivo, no un defecto: es
+lo que da trabajo al bucle de aprendizaje de D3 y lo que demuestra la tesis del
+proyecto. Sembrar un nombre sin fuente real cortocircuitaria eso. La excepcion es `7E9`:
+al aparecer una fuente real y verificable (ver arriba), se sembro en `ecu_definitions`
+con `source: 'seed'` y confianza 0.9 — sembrar lo que de verdad se sabe no es lo mismo
+que inventar para que el mapa se vea mejor.
 
 ## D3 — Bloque de aprendizaje de ECUs en el prompt
 

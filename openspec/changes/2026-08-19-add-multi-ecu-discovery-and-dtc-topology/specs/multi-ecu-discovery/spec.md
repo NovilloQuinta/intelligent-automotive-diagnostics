@@ -8,11 +8,15 @@ El sistema SHALL descubrir cada ECU que conteste al broadcast de descubrimiento,
 la primera, siempre que su dirección de respuesta caiga en el rango legislado
 ISO 15765-4 (`7E8`–`7EF`).
 
-#### Scenario: Un bus con cinco ECUs devuelve cinco nodos
-- **GIVEN** un vehículo cuyo bus responde al broadcast `01 00` desde 7E8, 7E9, 7EA, 7EB y 7ED
+#### Scenario: Un bus con varias ECUs devuelve varios nodos
+- **GIVEN** un vehículo cuyo bus responde al broadcast `01 00` desde 7E8 y 7E9
 - **WHEN** el mecánico ejecuta el descubrimiento de ECUs
-- **THEN** el sistema devuelve cinco ECUs, una por dirección
+- **THEN** el sistema devuelve dos ECUs, una por dirección
 - **AND** el mapa de topología dibuja un nodo por cada una
+- **NOTA (31/08/2026)**: el escenario Audi del emulador respondía inicialmente con
+  5 direcciones (7E8/7E9/7EA/7EB/7ED); se redujo a las 2 con evidencia real
+  verificada — ver `docs/deuda-conocida.md`. El requisito en sí (descubrir cuantas
+  ECUs respondan, no solo la primera) sigue siendo válido para cualquier número.
 
 #### Scenario: Las direcciones fuera del rango legislado se descartan
 - **GIVEN** un bus donde además responde una ECU en `7B8` (ABS, fuera de ISO 15765-4)

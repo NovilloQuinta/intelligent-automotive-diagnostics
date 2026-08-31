@@ -702,4 +702,36 @@ describe('filtro de ambito previo (classifyDiagnosisScope)', () => {
     expect(diagnosisIndex.search).not.toHaveBeenCalled()
     expect(diagnosisIndex.index).not.toHaveBeenCalled()
   })
+
+  it('should use the short ECU identification prompt, with tools but without the catalog, and never index the response, when the classifier says ECU', async () => {
+    const diagnosisIndex = mockDiagnosisIndex([])
+    const handler = vi.fn()
+    const llmClient = mockLlmClient({
+      sendSingleMessage: vi.fn().mockResolvedValue({ text: 'ECU', toolCalls: [], raw: null }),
+      sendMessage: vi
+        .fn()
+        .mockResolvedValue(
+          cognitiveResponse('La 7E9 es la unidad de transmisión (TCM) de este Audi.'),
+        ),
+    })
+
+    const result = await new ExecuteCognitiveDiagnosisUseCase({
+      llmClient,
+      tools: sixTools,
+      handler,
+      logger: createMockLogger(),
+      diagnosisIndex,
+    }).execute({
+      userQuery: 'Qué centralita es la que tiene dirección 7E9?',
+      vehicleContext,
+    })
+
+    expect(result.diagnosis).toBe('La 7E9 es la unidad de transmisión (TCM) de este Audi.')
+    const sendMessageInput = (llmClient.sendMessage as ReturnType<typeof vi.fn>).mock.calls[0][0]
+    expect(sendMessageInput.systemPrompt).toContain('index_ecu')
+    expect(sendMessageInput.tools).toBe(sixTools)
+    expect(sendMessageInput.userMessage).not.toContain('Casos similares previos')
+    expect(diagnosisIndex.search).not.toHaveBeenCalled()
+    expect(diagnosisIndex.index).not.toHaveBeenCalled()
+  })
 })

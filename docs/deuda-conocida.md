@@ -201,22 +201,103 @@ asesor de compra da una cifra cuando no deberia. Cerrarlo del todo pediria segui
 iterando el prompt especificamente contra DeepSeek, o aceptar el resquicio si el
 proveedor de produccion cambia a uno que sí responda mejor a esta instruccion.
 
-## El bucle de aprendizaje de ECUs: escrito, sin calibrar
+## Identificacion de ECU: flujo dedicado nuevo, con dos limitaciones reales
 
-Actualizado el 2026-08-19. El bloque `ECU_LEARNING_INSTRUCTIONS` **ya existe** en
-`application/prompts/cognitiveDiagnosisPrompt.ts`, simetrico a los de PID y DTC, con cinco
-tests que lo blindan: nombra las tres tools de la cadena (`get_ecu_info`,
-`search_similar_ecus`, `index_ecu`), exige buscar antes de indexar, pide los cuatro campos
-obligatorios del schema de `index_ecu` y prohibe inventar nombres.
+Actualizado el 2026-08-31. Primer intento: reforzar `ECU_LEARNING_INSTRUCTIONS` dentro del
+prompt grande de diagnostico. Probado en vivo contra el emulador Audi (DeepSeek y OpenAI
+gpt-4o-mini): el agente ignoraba una pregunta puntual sobre una ECU y se lanzaba igual al
+diagnostico completo (DTCs, PIDs, freeze frames), sin llamar nunca a `search_similar_ecus`
+ni `index_ecu`. Reforzar el texto del bloque no cambio nada — mismo patron que `B6`.
 
-**Lo que sigue pendiente es medirlo.** Tocar el system prompt cambia el comportamiento del
-agente, y este proyecto calibra esos cambios con `pnpm eval:agent`, que necesita la clave
-del LLM y no se ha corrido nunca (ver la seccion anterior). Hay que correr **el grupo A
-entero**, no solo B-E: un bloque nuevo de instrucciones puede volver al agente mas verboso
-o mas reticente en consultas legitimas.
+**Solucion real: sacar la tarea del prompt grande**, igual que ya funciono para el filtro
+de ambito y para `B6` valoracion. Nueva categoria `identificacion_ecu` en
+`classifyDiagnosisScope`, prompt dedicado y corto en `ecuIdentificationPrompt.ts`
+(`ECU_IDENTIFICATION_SYSTEM_PROMPT`), enrutado en `ExecuteCognitiveDiagnosisUseCase`. Esto
+**si cambio el comportamiento de verdad**: probado en vivo, una pregunta puntual sobre una
+ECU ya no dispara el diagnostico completo, y si el mecanico dice el mismo que centralita es,
+el agente la guarda via `index_ecu` sin desviarse a leer PIDs/DTCs.
+
+**Bug real encontrado y cerrado de paso**: `shapeToJsonSchema` (`infrastructure/mcp/mcpToolkit.ts`)
+no soportaba `z.enum(...)` — lo convertia en "sin restriccion", asi que el schema de
+`index_ecu.source` (que solo admite `'web'`/`'mechanic'`) llegaba al modelo como un string
+libre. El agente inventaba `source: "user"`, que `EcuDefinition` rechaza (`EcuDefinitionError`)
+y obligaba a un reintento. Anadido soporte de enum a `shapeToJsonSchema` con test dedicado
+(`mcpToolkit.test.ts`): ahora el propio schema de la tool declara los valores permitidos, no
+solo el prompt.
+
+**Dos matices que siguen sin cerrar, ninguno bloqueante:**
+
+- El agente sigue sin elegir `source: "mechanic"` cuando es el mecanico quien lo dice (usa
+  `"web"`, que es un valor valido pero infravalora la confianza: 0.3 en vez de 0.8), y sigue
+  sin copiar el fabricante/modelo real del vehiculo conectado en la llamada a `index_ecu`
+  (escribe `"unknown"`) aunque esa informacion ya viaja en el mensaje. Instrucciones
+  explicitas anadidas para las dos cosas, sin cambio observado — misma terquedad que el
+  resto de esta seccion.
+- Cuando el agente tiene que **investigar** el solo una ECU desconocida (nadie le dice que
+  es), se queda en "es desconocida" sin intentar `search_similar_ecus`/`web_search`.
+
+**Ojo con probar esto contra el emulador**: las direcciones `7E9`/`7EA`/`7EB`/`7ED` del
+escenario Audi son inventadas a proposito para la demo (ver
+`openspec/specs/ecu-discovery-and-system-catalog/design.md`, que rechaza explicitamente
+tratarlas como catalogo real) — no corresponden a ninguna documentacion publica. Verificado
+con `WebSearch`: no hay fuente que confirme que `0x7E9` sea la caja de cambios en un Audi/VAG
+real. Asi que aunque el agente completara la busqueda, no habria nada real que encontrar
+contra este escenario. **La prueba de fondo (si el agente identifica bien una ECU
+desconocida de verdad) solo tiene sentido con el coche real conectado**, no con el emulador.
 
 `get_freeze_frame` sigue sin nombrarse en el prompt, y es distinto: no es una cadena de
 aprendizaje y el flujo determinista si lo usa.
+
+## Catalogo de ECUs: sembrado real y parcial, emulador reducido a 2 ECUs — RESUELTO 2026-08-31
+
+Siguiendo del hallazgo de arriba (las direcciones `7E9`/`7EA`/`7EB`/`7ED` eran
+inventadas), se investigo a fondo con `WebSearch` en vez de dejarlo como limitacion.
+Resultado: **una** direccion si tiene fuente real solida —
+`github.com/mrfixpl/MQB-sniffer`, captura de trafico CAN real de un VW Golf MK7 2016
+2.0TDI+DSG (misma plataforma MQB que el Audi A3 8V), confirma `7E1→7E9` = caja de
+cambios (TCM/DSG) con ejemplos de trafico real (`7E1 8 03 22 38 16...` →
+`7E9 8 04 62 38 16...`, lectura de marcha engranada). Para `7EA`/`7EB`/`7ED` no aparecio
+ninguna fuente fiable pese a buscar en foros VAG/Ross-Tech, repositorios de ingenieria
+inversa (`opendbc`/openpilot, `awesome-automotive-can-id`) y un paper academico de
+reverse engineering de CAN — y las etiquetas que tenia el proyecto para ellas ("control
+hibrido", "bateria de traccion") eran ademas incoherentes: el Audi A3 de este proyecto
+es 100% diesel (EA288), sin ningun componente hibrido.
+
+**Mas alla de faltar el nombre, hay una razon tecnica de fondo.** En un Audi/VAG real,
+ABS/airbag/confort no se acceden por el broadcast generico de 11 bits (`7DF`) que usa
+un lector tipo ELM327 — viven detras de la pasarela propietaria (VCDS), con su propio
+esquema de direcciones. No es que a esas 3 ECUs les faltara nombre: **no deberian
+responder en absoluto** a un escaneo generico como el que simulaba este proyecto.
+
+**Accion tomada, en dos frentes:**
+
+- **Emulador**: `docker/elm327/scenarios/audi_a3_tdi.py` se redujo de 5 a 2 ECUs en el
+  broadcast `01 00` — solo `7E8` (motor) y `7E9` (caja de cambios). Sin tests rotos
+  (medido: los `7EA`/`7EB`/`7ED` que aparecian en tests de `ecuDiscovery`,
+  `vehicleRepository` y `TopologyMapPanel` eran fixtures inline desacoplados de este
+  escenario, no derivados de el).
+- **Catalogo**: `ecu_definitions` deja de nacer completamente vacia. Nueva fuente
+  `source: 'seed'` en `EcuDefinition` (confianza 0.9, paralela a `web` 0.3 / `mechanic`
+  0.8 — mismo patron que `WMI_IDENTITY_SEEDS` ya usaba para `VehicleIdentity`).
+  `MANUFACTURER_ECU_SEEDS` en `seedManufacturerCatalog.ts` siembra unicamente
+  `(Audi, '', 7E9)` = "Caja de cambios"/TCM. `model: ''` porque la evidencia es de
+  plataforma (MQB), no de un modelo concreto — vale para toda la marca. De paso,
+  `upsertEcuDefinition` gano la misma guarda "nunca degradar" que ya tenia
+  `upsertVehicleIdentity`: un seed (0.9) no pisa una correccion real que ya la supere.
+
+**Nota de honestidad, no ocultada**: la fuente real capturo el par `7E1→7E9`
+dirigiendose a la ECU de forma directa (`AT SH 7E1`), no respondiendo a un broadcast
+`7DF` sin dirigir. Que el motor (7E8) responda al broadcast generico esta garantizado
+por ley (SAE J1979, emisiones); que la caja de cambios tambien lo haga es una
+inferencia razonable por analogia de plataforma, no una captura de broadcast
+confirmada al 100%.
+
+**Trade-off consciente para la demo**: con solo 2 ECUs reales en el escenario Audi, no
+queda ninguna ECU "por descubrir" ahi — el papel de la IA aprendiendo en directo delante
+del profesor se apoya mejor en PID/DTC (que si tienen casos reales sin sembrar) que en
+ECU. Si en el futuro aparece una tercera direccion real y verificable (para Audi o para
+Kawasaki/Toyota, que hoy no tienen el problema porque no simulan ECUs ficticias), se
+añadiria siguiendo este mismo patron: fuente real primero, seed despues, nunca al reves.
 
 ## Dos cabos del diagnostico cognitivo
 
