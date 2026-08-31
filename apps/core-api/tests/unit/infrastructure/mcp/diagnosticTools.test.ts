@@ -491,7 +491,7 @@ describe('diagnosticTools (via createMcpServer)', () => {
       expect(inserted.model).toBe('A3')
     })
 
-    it('never auto-registers a Mode 22 PID without manufacturer/model: it would pollute every vehicle\'s catalog', async () => {
+    it("never auto-registers a Mode 22 PID without manufacturer/model: it would pollute every vehicle's catalog", async () => {
       const repo = mockObdRepo({ readPid: vi.fn().mockResolvedValue(5) })
       const vRepo = mockVehicleRepo({
         findPidDefinition: vi.fn().mockResolvedValue(null),

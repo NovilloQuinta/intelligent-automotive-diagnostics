@@ -6,6 +6,7 @@ import {
   AUTO_DISCOVERY_PID_DATA_BYTES,
   AUTO_DISCOVERY_PID_FORMULA,
 } from '@/domain/catalogs/pidCatalog.js'
+import { MODE_CURRENT_DATA, MODE_PROPRIETARY } from '@/domain/pids.js'
 import { PidCode } from '@/domain/value-objects/PidCode.js'
 import { PidDefinition } from '@/domain/entities/PidDefinition.js'
 import { PidReading } from '@/domain/entities/PidReading.js'
@@ -44,6 +45,9 @@ export interface SessionContext {
  */
 const AUTO_DISCOVERY_CONFIDENCE = 0.3
 
+/** Confianza con la que se registra un DTC leido en vivo (misma politica, DTC en vez de PID). */
+const AUTO_DISCOVERY_DTC_CONFIDENCE = 0.5
+
 /** Fabricante/modelo ya validados (no `undefined`): ver {@link hasScope}. */
 interface VehicleScope {
   readonly manufacturer: string
@@ -51,9 +55,7 @@ interface VehicleScope {
 }
 
 /** Type guard: solo hay scope util si fabricante Y modelo estan presentes. */
-function hasScope(
-  ctx: { manufacturer?: string; model?: string } | undefined,
-): ctx is VehicleScope {
+function hasScope(ctx: { manufacturer?: string; model?: string } | undefined): ctx is VehicleScope {
   return !!ctx?.manufacturer && !!ctx?.model
 }
 
@@ -185,7 +187,7 @@ function autoRegisterIfProprietary(
   pidStr: string,
   sessionContext: SessionContext | undefined,
 ): void {
-  if (modeStr === '01') return
+  if (modeStr === MODE_CURRENT_DATA) return
   if (!hasScope(sessionContext)) return
   autoRegisterPid(vehicleRepo, modeStr, pidStr, sessionContext)
 }
@@ -226,7 +228,7 @@ function persistDtcs(
         model: sessionContext.model,
         code: dtc.code,
         description: dtc.description,
-        confidence: 0.5,
+        confidence: AUTO_DISCOVERY_DTC_CONFIDENCE,
         source: 'auto',
       }),
     ),
@@ -288,9 +290,11 @@ function handleGetEcuInfo(
 
     const resolved = await resolveDiscoveredEcus(vehicleRepo, sessionContext, ecus)
 
-    // Persistir ECUs descubiertas si hay sesion activa (fire-and-forget)
+    // Fire-and-forget: un fallo de persistencia no debe impedir responder al LLM.
     if (vehicleRepo && sessionContext?.vehicleId !== undefined) {
-      void persistDiscoveredEcus(vehicleRepo, sessionContext.vehicleId, resolved).catch(() => {})
+      void persistDiscoveredEcus(vehicleRepo, sessionContext.vehicleId, resolved).catch(() => {
+        // best-effort
+      })
     }
 
     return text(
@@ -354,7 +358,7 @@ async function catalogPidLines(
 ): Promise<string[]> {
   if (!vehicleRepo) return []
 
-  const lines = (await vehicleRepo.findPidsByMode('22')).map(formatPidLine)
+  const lines = (await vehicleRepo.findPidsByMode(MODE_PROPRIETARY)).map(formatPidLine)
   lines.push(...(await scopedPidLines(vehicleRepo, sessionContext)))
 
   return lines
