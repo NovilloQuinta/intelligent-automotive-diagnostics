@@ -490,6 +490,36 @@ describe('diagnosticTools (via createMcpServer)', () => {
       expect(inserted.manufacturer).toBe('Audi')
       expect(inserted.model).toBe('A3')
     })
+
+    it('never auto-registers a Mode 22 PID without manufacturer/model: it would pollute every vehicle\'s catalog', async () => {
+      const repo = mockObdRepo({ readPid: vi.fn().mockResolvedValue(5) })
+      const vRepo = mockVehicleRepo({
+        findPidDefinition: vi.fn().mockResolvedValue(null),
+      })
+      // Sin sessionContext: read_pid antes de resolver el vehiculo, o callMcpTool directo.
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined, undefined)
+
+      await mcp.callTool('read_pid', { mode: '22', pid: '0300' })
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(vRepo.findPidDefinition).not.toHaveBeenCalled()
+      expect(vRepo.insertPidDefinition).not.toHaveBeenCalled()
+    })
+
+    it('never auto-registers when only manufacturer is known but not the model', async () => {
+      const repo = mockObdRepo({ readPid: vi.fn().mockResolvedValue(5) })
+      const vRepo = mockVehicleRepo({
+        findPidDefinition: vi.fn().mockResolvedValue(null),
+      })
+      // sessionId presente a proposito: dispara tambien persistPidReading (aparte, legitimo).
+      const ctx = { sessionId: 1, vehicleId: 42, manufacturer: 'Audi', model: undefined }
+      const mcp = createMcpServer(repo, vRepo, undefined, undefined, ctx)
+
+      await mcp.callTool('read_pid', { mode: '22', pid: '0300' })
+      await new Promise((resolve) => setTimeout(resolve, 10))
+
+      expect(vRepo.insertPidDefinition).not.toHaveBeenCalled()
+    })
   })
 
   describe('Section 8 — get_ecu_info resolution against ecu_definitions', () => {

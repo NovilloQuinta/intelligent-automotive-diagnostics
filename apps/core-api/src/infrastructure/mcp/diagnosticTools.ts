@@ -44,15 +44,27 @@ export interface SessionContext {
  */
 const AUTO_DISCOVERY_CONFIDENCE = 0.3
 
+/** Fabricante/modelo ya validados (no `undefined`): ver {@link hasScope}. */
+interface VehicleScope {
+  readonly manufacturer: string
+  readonly model: string
+}
+
+/** Type guard: solo hay scope util si fabricante Y modelo estan presentes. */
+function hasScope(
+  ctx: { manufacturer?: string; model?: string } | undefined,
+): ctx is VehicleScope {
+  return !!ctx?.manufacturer && !!ctx?.model
+}
+
 function autoRegisterPid(
   vehicleRepo: VehicleRepository,
   modeStr: string,
   pidStr: string,
-  manufacturer?: string,
-  model?: string,
+  scope: VehicleScope,
 ): void {
   void vehicleRepo
-    .findPidDefinition(modeStr, pidStr, manufacturer, model)
+    .findPidDefinition(modeStr, pidStr, scope.manufacturer, scope.model)
     .then((existing) => {
       if (existing) return
       return vehicleRepo.insertPidDefinition(
@@ -63,8 +75,8 @@ function autoRegisterPid(
           formula: AUTO_DISCOVERY_PID_FORMULA,
           dataBytes: AUTO_DISCOVERY_PID_DATA_BYTES,
           pidType: 'formula',
-          manufacturer,
-          model,
+          manufacturer: scope.manufacturer,
+          model: scope.model,
           confidence: AUTO_DISCOVERY_CONFIDENCE,
           source: 'auto',
         }),
@@ -162,7 +174,11 @@ function recordPidObservation(observation: PidObservation): void {
   persistPidReading({ vehicleRepo, sessionContext, modeStr, pidStr, value, bytes })
 }
 
-/** Auto-registra en el catalogo los PID propietarios (todo lo que no es Mode 01). */
+/**
+ * Auto-registra en el catalogo los PID propietarios (todo lo que no es Mode 01).
+ * Exige fabricante Y modelo: sin ellos se cuela una fila huerfana que contamina
+ * el listado de PIDs de cualquier otro vehiculo.
+ */
 function autoRegisterIfProprietary(
   vehicleRepo: VehicleRepository,
   modeStr: string,
@@ -170,7 +186,8 @@ function autoRegisterIfProprietary(
   sessionContext: SessionContext | undefined,
 ): void {
   if (modeStr === '01') return
-  autoRegisterPid(vehicleRepo, modeStr, pidStr, sessionContext?.manufacturer, sessionContext?.model)
+  if (!hasScope(sessionContext)) return
+  autoRegisterPid(vehicleRepo, modeStr, pidStr, sessionContext)
 }
 
 function handleReadPid(
@@ -201,12 +218,12 @@ function persistDtcs(
   sessionContext: SessionContext,
   dtcs: ReadonlyArray<{ code: string; description?: string }>,
 ): void {
-  if (!sessionContext.manufacturer || !sessionContext.model) return
+  if (!hasScope(sessionContext)) return
   void Promise.all(
     dtcs.map((dtc) =>
       vehicleRepo.upsertDtcDefinition({
-        manufacturer: sessionContext.manufacturer!,
-        model: sessionContext.model!,
+        manufacturer: sessionContext.manufacturer,
+        model: sessionContext.model,
         code: dtc.code,
         description: dtc.description,
         confidence: 0.5,
@@ -297,9 +314,8 @@ async function resolveDiscoveredEcus(
   sessionContext: SessionContext | undefined,
   ecus: readonly EcuInfo[],
 ): Promise<EcuInfo[]> {
-  if (!vehicleRepo || !sessionContext) return [...ecus]
+  if (!vehicleRepo || !hasScope(sessionContext)) return [...ecus]
   const { manufacturer, model } = sessionContext
-  if (!manufacturer || !model) return [...ecus]
 
   const lookup = await loadEcuDefinitionLookup(vehicleRepo, manufacturer, model, ecus)
   return resolveEcuDefinitions(ecus, lookup)
@@ -325,8 +341,7 @@ async function scopedPidLines(
   vehicleRepo: VehicleRepository,
   sessionContext: SessionContext | undefined,
 ): Promise<string[]> {
-  if (sessionContext === undefined) return []
-  if (!sessionContext.manufacturer || !sessionContext.model) return []
+  if (!hasScope(sessionContext)) return []
   return (
     await vehicleRepo.findPidsByManufacturerModel(sessionContext.manufacturer, sessionContext.model)
   ).map(formatPidLine)

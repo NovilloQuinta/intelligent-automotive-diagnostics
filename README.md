@@ -28,7 +28,9 @@
 ```bash
 pnpm install
 
-# 1. Crear el .env en la raiz y rellenar como minimo LLM_API_KEY (ver "Variables de entorno" abajo)
+# 1. Crear el .env en la raiz y rellenar LLM_API_KEY, LLM_BASE_URL y LLM_MODEL
+#    (ver "Variables de entorno" abajo). Con LLM_PROVIDER=openai (el de por defecto)
+#    los tres son obligatorios: si falta cualquiera, la API no arranca en absoluto.
 cp .env.example .env
 
 # 2. Iniciar backend + frontend
