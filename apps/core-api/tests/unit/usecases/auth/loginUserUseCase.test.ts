@@ -297,3 +297,101 @@ describe('LoginUserUseCase — segundo factor', () => {
     await expect(useCase.execute(credentials)).rejects.toThrow(TwoFactorNotConfiguredError)
   })
 })
+
+describe('LoginUserUseCase — sesion recordada', () => {
+  const DAY_MS = 24 * 3600 * 1000
+  const NORMAL_TTL_MS = 7 * DAY_MS
+  const REMEMBERED_TTL_MS = 30 * DAY_MS
+  /** Margen para el tiempo que pasa entre calcular la caducidad y comprobarla. */
+  const TOLERANCE_MS = 60_000
+
+  const credentials = { email: 'juan@mail.com', password: 'correct-password' }
+
+  function createUseCase(overrides: Parameters<typeof createMocks>[0] = {}) {
+    const mocks = createMocks(overrides)
+    const useCase = new LoginUserUseCase({
+      userRepo: mocks.userRepo,
+      authService: mocks.authService,
+      tokenStore: mocks.tokenStore,
+      refreshTokenTtlMs: NORMAL_TTL_MS,
+      rememberMeRefreshTokenTtlMs: REMEMBERED_TTL_MS,
+    })
+    return { useCase, mocks }
+  }
+
+  /** Milisegundos entre ahora y la caducidad con la que se guardo el refresh token. */
+  function savedTtlMs(mocks: ReturnType<typeof createMocks>): number {
+    const [, , expiresAt] = mocks.tokenStore.saveRefreshToken.mock.calls[0] as [
+      number,
+      string,
+      string,
+    ]
+    return new Date(expiresAt).getTime() - Date.now()
+  }
+
+  it('persiste el refresh token con la caducidad larga cuando se recuerda', async () => {
+    const { useCase, mocks } = createUseCase()
+
+    await useCase.execute({ ...credentials, rememberMe: true })
+
+    expect(mocks.authService.generateTokens).toHaveBeenCalledWith(USER.id, true)
+    expect(savedTtlMs(mocks)).toBeGreaterThan(REMEMBERED_TTL_MS - TOLERANCE_MS)
+  })
+
+  it('persiste la caducidad normal cuando no se recuerda', async () => {
+    const { useCase, mocks } = createUseCase()
+
+    await useCase.execute({ ...credentials, rememberMe: false })
+
+    expect(mocks.authService.generateTokens).toHaveBeenCalledWith(USER.id, false)
+    expect(savedTtlMs(mocks)).toBeLessThan(NORMAL_TTL_MS + TOLERANCE_MS)
+  })
+
+  it('sin el campo se comporta como si no se recordara', async () => {
+    const { useCase, mocks } = createUseCase()
+
+    await useCase.execute(credentials)
+
+    expect(mocks.authService.generateTokens).toHaveBeenCalledWith(USER.id, false)
+    expect(savedTtlMs(mocks)).toBeLessThan(NORMAL_TTL_MS + TOLERANCE_MS)
+  })
+
+  it('rechaza un rememberMe que no es booleano', async () => {
+    const { useCase } = createUseCase()
+
+    await expect(
+      useCase.execute({ ...credentials, rememberMe: 'si' } as unknown as {
+        email: string
+        password: string
+      }),
+    ).rejects.toThrow()
+  })
+
+  it('el reto del segundo factor guarda la eleccion del usuario', async () => {
+    const challengeRepo = {
+      save: vi.fn().mockResolvedValue(undefined),
+      findByTokenHash: vi.fn(),
+      markUsed: vi.fn(),
+      invalidateAllForUser: vi.fn().mockResolvedValue(undefined),
+    }
+    const mocks = createMocks({
+      userRepo: {
+        findByEmail: vi.fn().mockResolvedValue({ ...USER, twoFactorEnabled: true } as User),
+      },
+    })
+    const useCase = new LoginUserUseCase({
+      userRepo: mocks.userRepo,
+      authService: mocks.authService,
+      tokenStore: mocks.tokenStore,
+      refreshTokenTtlMs: NORMAL_TTL_MS,
+      rememberMeRefreshTokenTtlMs: REMEMBERED_TTL_MS,
+      twoFactor: { challengeRepo, challengeTtlMs: 5 * 60 * 1000 },
+    })
+
+    await useCase.execute({ ...credentials, rememberMe: true })
+    await useCase.execute({ ...credentials, rememberMe: false })
+
+    expect(challengeRepo.save.mock.calls[0][3]).toBe(true)
+    expect(challengeRepo.save.mock.calls[1][3]).toBe(false)
+  })
+})

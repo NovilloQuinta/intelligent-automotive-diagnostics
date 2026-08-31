@@ -216,3 +216,100 @@ describe('authService', () => {
     })
   })
 })
+
+describe('authService — sesion recordada', () => {
+  const DAY_SECONDS = 24 * 3600
+  const NORMAL_TTL = 7 * DAY_SECONDS
+  const REMEMBERED_TTL = 30 * DAY_SECONDS
+  /** Margen para la deriva entre firmar el token y leerlo. */
+  const TOLERANCE_SECONDS = 60
+
+  const store: RefreshTokenRepository = {
+    saveRefreshToken: vi.fn().mockResolvedValue(undefined),
+    findRefreshToken: vi.fn(),
+    revokeRefreshToken: vi.fn().mockResolvedValue(undefined),
+    revokeAllForUser: vi.fn().mockResolvedValue(undefined),
+  }
+
+  const service = createAuthService({
+    accessTokenSecret: 'access-secret-test',
+    refreshTokenSecret: 'refresh-secret-test',
+    accessTokenExpiresIn: 900,
+    refreshTokenExpiresIn: NORMAL_TTL,
+    rememberMeRefreshTokenExpiresIn: REMEMBERED_TTL,
+    tokenStore: store,
+  })
+
+  /** Segundos de vida que declara el token, leidos de sus claims. */
+  function lifetimeOf(token: string): number {
+    const { iat, exp } = jwt.decode(token) as { iat: number; exp: number }
+    return exp - iat
+  }
+
+  function claimsOf(token: string): Record<string, unknown> {
+    return jwt.decode(token) as Record<string, unknown>
+  }
+
+  /** Segundos entre ahora y la caducidad que se guardo en el almacen. */
+  function savedLifetimeSeconds(): number {
+    const [, , expiresAt] = store.saveRefreshToken.mock.calls.at(-1) as [number, string, string]
+    return (new Date(expiresAt).getTime() - Date.now()) / 1000
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    store.findRefreshToken.mockResolvedValue({
+      userId: 42,
+      expiresAt: new Date(Date.now() + REMEMBERED_TTL * 1000).toISOString(),
+      revokedAt: null,
+    })
+  })
+
+  it('emite el refresh token con 30 dias y el claim rme cuando se recuerda', () => {
+    const { refreshToken } = service.generateTokens(42, true)
+
+    expect(claimsOf(refreshToken).rme).toBe(true)
+    expect(lifetimeOf(refreshToken)).toBe(REMEMBERED_TTL)
+  })
+
+  it('emite el refresh token con 7 dias y sin claim rme cuando no se recuerda', () => {
+    const { refreshToken } = service.generateTokens(42)
+
+    expect(claimsOf(refreshToken).rme).toBeUndefined()
+    expect(lifetimeOf(refreshToken)).toBe(NORMAL_TTL)
+  })
+
+  it('no marca el access token: su vida no depende de la casilla', () => {
+    const { accessToken } = service.generateTokens(42, true)
+
+    expect(claimsOf(accessToken).rme).toBeUndefined()
+    expect(lifetimeOf(accessToken)).toBe(900)
+  })
+
+  it('la rotacion de una sesion recordada devuelve otra recordada de 30 dias', async () => {
+    const { refreshToken } = service.generateTokens(42, true)
+
+    const rotated = await service.refreshAccessToken(refreshToken)
+
+    expect(claimsOf(rotated.refreshToken).rme).toBe(true)
+    expect(lifetimeOf(rotated.refreshToken)).toBe(REMEMBERED_TTL)
+    expect(savedLifetimeSeconds()).toBeGreaterThan(REMEMBERED_TTL - TOLERANCE_SECONDS)
+  })
+
+  it('la rotacion encadenada no encoge la ventana', async () => {
+    const first = await service.refreshAccessToken(service.generateTokens(42, true).refreshToken)
+    const second = await service.refreshAccessToken(first.refreshToken)
+
+    expect(lifetimeOf(second.refreshToken)).toBe(REMEMBERED_TTL)
+  })
+
+  it('la rotacion de una sesion normal no la promueve a recordada', async () => {
+    const { refreshToken } = service.generateTokens(42)
+
+    const rotated = await service.refreshAccessToken(refreshToken)
+
+    expect(claimsOf(rotated.refreshToken).rme).toBeUndefined()
+    expect(lifetimeOf(rotated.refreshToken)).toBe(NORMAL_TTL)
+    expect(savedLifetimeSeconds()).toBeLessThan(NORMAL_TTL + TOLERANCE_SECONDS)
+  })
+})

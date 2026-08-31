@@ -8,4 +8,6 @@ export interface TwoFactorChallengeRecord {
   readonly createdAt: string
   /** Instante de canje en ISO-8601, o `null` si el reto sigue sin usarse. */
   readonly usedAt: string | null
+  /** Eleccion de sesion recordada hecha al superar el primer factor. */
+  readonly rememberMe: boolean
 }

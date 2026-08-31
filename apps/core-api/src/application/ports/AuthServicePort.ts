@@ -4,7 +4,12 @@ import type { TokenPair } from '@/application/dto/auth/TokenPair.js'
 export interface AuthServicePort {
   hashPassword(password: string): Promise<string>
   comparePassword(password: string, hash: string): Promise<boolean>
-  generateTokens(userId: number): TokenPair
+  /**
+   * Emite el par de tokens. Con `rememberMe` el refresh token dura lo que dure
+   * una sesion recordada y queda marcado como tal, para que la rotacion lo
+   * conserve. La contrasena no interviene aqui: no se guarda en ninguna parte.
+   */
+  generateTokens(userId: number, rememberMe?: boolean): TokenPair
   /** Verifica un access token JWT.
    * @returns userId del sujeto del token.
    * @throws {Error} Si el token es invalido o ha expirado.

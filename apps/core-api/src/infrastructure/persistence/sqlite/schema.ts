@@ -160,6 +160,12 @@ export const twoFactorChallenges = sqliteTable('two_factor_challenges', {
   expiresAt: text('expires_at').notNull(),
   createdAt: text('created_at').notNull().default("datetime('now')"),
   usedAt: text('used_at'),
+  /**
+   * Casilla "Recordarme" tal y como la dejo el usuario al dar su contrasena.
+   * Viaja con el reto para que el canje del codigo no vuelva a preguntarla: el
+   * segundo paso no debe poder contradecir al primero.
+   */
+  rememberMe: integer('remember_me', { mode: 'boolean' }).notNull().default(false),
 })
 
 /**

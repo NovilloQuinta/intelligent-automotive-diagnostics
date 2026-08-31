@@ -16,6 +16,7 @@ function toChallengeRecord(row: ChallengeRow): TwoFactorChallengeRecord {
     expiresAt: row.expiresAt,
     createdAt: row.createdAt,
     usedAt: row.usedAt,
+    rememberMe: row.rememberMe,
   }
 }
 
@@ -23,8 +24,15 @@ function toChallengeRecord(row: ChallengeRow): TwoFactorChallengeRecord {
 export class SqliteTwoFactorChallengeRepository implements TwoFactorChallengeRepository {
   constructor(private readonly db: DiagnosticsDb) {}
 
-  async save(userId: number, tokenHash: string, expiresAt: string): Promise<void> {
-    await this.db.insert(schema.twoFactorChallenges).values({ userId, tokenHash, expiresAt })
+  async save(
+    userId: number,
+    tokenHash: string,
+    expiresAt: string,
+    rememberMe: boolean,
+  ): Promise<void> {
+    await this.db
+      .insert(schema.twoFactorChallenges)
+      .values({ userId, tokenHash, expiresAt, rememberMe })
   }
 
   async findByTokenHash(tokenHash: string): Promise<TwoFactorChallengeRecord | null> {

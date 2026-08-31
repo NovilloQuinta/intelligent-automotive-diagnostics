@@ -36,6 +36,7 @@ export function setStoredTokens() {
  */
 export async function freshApiModule() {
   localStorage.clear()
+  sessionStorage.clear()
   vi.restoreAllMocks()
   return await import('../../../src/lib/api')
 }

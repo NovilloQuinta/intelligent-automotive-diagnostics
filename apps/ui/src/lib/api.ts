@@ -44,7 +44,9 @@ import {
   clearTokens,
   getTokens,
   logoutServer,
+  rememberLoginChoice,
   setTokens,
+  wasSessionRemembered,
 } from '@/lib/apiClient'
 import type {
   CognitiveOutput,
@@ -64,7 +66,14 @@ import type {
  * entrada para los 30 consumidores, aunque la fontaneria y los tipos vivan
  * ahora en `apiClient` y `apiTypes`.
  */
-export { AuthError, GENERIC_ERROR_MESSAGE, apiFetch, assertOk } from '@/lib/apiClient'
+export {
+  AuthError,
+  GENERIC_ERROR_MESSAGE,
+  apiFetch,
+  assertOk,
+  getRememberedEmail,
+  wasSessionRemembered,
+} from '@/lib/apiClient'
 export type {
   CognitiveOutput,
   ConversationItem,
@@ -122,14 +131,20 @@ export const api = {
    * dentro con una credencial que no abre ninguna ruta.
    */
   async login(input: LoginInput): Promise<LoginResult> {
+    const rememberMe = input.rememberMe ?? false
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
+      body: JSON.stringify({ ...input, rememberMe }),
       signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
     })
     if (res.status === 423) throw new ApiHttpError(await accountLockedMessage(res), res.status)
     await assertOk(res, GENERIC_ERROR_MESSAGE)
+
+    // La eleccion se guarda aunque falte el segundo factor: la hizo el usuario
+    // en este paso, y el canje del codigo la necesita para saber donde guardar.
+    // Se guarda el email, nunca la contrasena.
+    rememberLoginChoice(input.email, rememberMe)
 
     const body = (await res.json()) as LoginResponseBody
     if (body.twoFactorRequired) {
@@ -140,7 +155,10 @@ export const api = {
       }
     }
 
-    setTokens({ accessToken: body.accessToken, refreshToken: body.refreshToken })
+    setTokens(
+      { accessToken: body.accessToken, refreshToken: body.refreshToken },
+      { persist: rememberMe },
+    )
     return { kind: 'tokens' }
   },
 
@@ -161,7 +179,9 @@ export const api = {
     await assertOk(res, 'El código no es válido o ha caducado')
 
     const tokens = (await res.json()) as AuthTokens
-    setTokens(tokens)
+    // La duracion la decidio el primer factor y el servidor la lee del reto;
+    // aqui solo hace falta saber en que almacen dejar los tokens.
+    setTokens(tokens, { persist: wasSessionRemembered() })
     return tokens
   },
 
@@ -201,10 +221,15 @@ export const api = {
     })
     await assertOk(res, GENERIC_ERROR_MESSAGE)
     const data = (await res.json()) as RegisterResponse
-    setTokens({
-      accessToken: data.accessToken,
-      refreshToken: data.refreshToken,
-    })
+    // Quien acaba de crearse la cuenta esta en su dispositivo: la sesion se
+    // recuerda, igual que si hubiera marcado la casilla en el login.
+    setTokens(
+      {
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+      },
+      { persist: true },
+    )
     return {
       user: data.user,
       tokens: {

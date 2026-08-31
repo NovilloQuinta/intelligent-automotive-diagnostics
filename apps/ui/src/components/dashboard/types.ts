@@ -164,6 +164,11 @@ export type AuthUser = {
 export type LoginInput = {
   email: string
   password: string
+  /**
+   * Casilla "Recordarme". Alarga la sesion y decide donde se guardan los
+   * tokens; la contrasena no se guarda en ningun caso.
+   */
+  rememberMe?: boolean
 }
 
 export type RegisterInput = {

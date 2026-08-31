@@ -4,6 +4,7 @@ import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRep
 import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import { randomBytes } from 'node:crypto'
 import { hashToken, persistRefreshToken } from '@/application/shared/hashToken.js'
+import { resolveRefreshTtl } from '@/application/shared/rememberMeTtl.js'
 import type { TwoFactorChallengeRepository } from '@/application/ports/TwoFactorChallengeRepository.js'
 import { isAccountLocked } from '@/application/shared/accountLock.js'
 import { loginUserSchema, type LoginUserInput } from '@/application/dto/auth/LoginUserInput.js'
@@ -24,6 +25,11 @@ export interface LoginUserUseCaseOptions {
   readonly authService: AuthServicePort
   readonly tokenStore: RefreshTokenRepository
   readonly refreshTokenTtlMs: number
+  /**
+   * Vida del refresh token cuando el usuario marca "Recordarme". Ausente = la
+   * casilla no alarga nada y todas las sesiones duran `refreshTokenTtlMs`.
+   */
+  readonly rememberMeRefreshTokenTtlMs?: number
   readonly logger?: LoggerPort
   readonly twoFactor?: TwoFactorLoginSupport
 }
@@ -33,7 +39,7 @@ export class LoginUserUseCase {
   constructor(private readonly options: LoginUserUseCaseOptions) {}
 
   async execute(input: LoginUserInput): Promise<LoginUserOutput> {
-    const { userRepo, authService, tokenStore, refreshTokenTtlMs, logger } = this.options
+    const { userRepo, authService, tokenStore, logger } = this.options
     const parsed = loginUserSchema.parse(input)
 
     const user = await userRepo.findByEmail(parsed.email)
@@ -56,19 +62,30 @@ export class LoginUserUseCase {
     await userRepo.resetFailedLogins(user.id)
 
     if (user.twoFactorEnabled) {
-      return this.issueChallenge(user.id)
+      return this.issueChallenge(user.id, parsed.rememberMe)
     }
 
-    const tokens = authService.generateTokens(user.id)
-    await persistRefreshToken(tokenStore, user.id, tokens, refreshTokenTtlMs)
+    const tokens = authService.generateTokens(user.id, parsed.rememberMe)
+    await persistRefreshToken(tokenStore, user.id, tokens, this.refreshTtlMsFor(parsed.rememberMe))
 
-    logger?.info('auth.login_success', { userId: user.id })
+    logger?.info('auth.login_success', { userId: user.id, rememberMe: parsed.rememberMe })
 
     return {
       twoFactorRequired: false,
       accessToken: tokens.accessToken,
       refreshToken: tokens.refreshToken,
     }
+  }
+
+  /**
+   * Vida del refresh token segun la casilla "Recordarme" del login.
+   *
+   * El mismo valor viaja firmado dentro del token (claim `rme`), asi que la
+   * rotacion lo conserva sin volver a preguntar por aqui.
+   */
+  private refreshTtlMsFor(rememberMe: boolean): number {
+    const { refreshTokenTtlMs, rememberMeRefreshTokenTtlMs } = this.options
+    return resolveRefreshTtl(rememberMe, refreshTokenTtlMs, rememberMeRefreshTokenTtlMs)
   }
 
   /**
@@ -96,9 +113,10 @@ export class LoginUserUseCase {
    *
    * Se guarda **hasheado**, como los tokens de reseteo: quien lea la base no puede
    * canjear nada. Y se invalidan los retos anteriores del usuario, para que varios
-   * intentos de login no dejen una coleccion de vales vivos a la vez.
+   * intentos de login no dejen una coleccion de vales vivos a la vez. Con el vale
+   * viaja la eleccion de sesion recordada, que se hizo en este paso.
    */
-  private async issueChallenge(userId: number): Promise<LoginUserOutput> {
+  private async issueChallenge(userId: number, rememberMe: boolean): Promise<LoginUserOutput> {
     const { logger, twoFactor } = this.options
     if (!twoFactor) {
       // Fallar cerrado: la alternativa seria entregar tokens saltandose el segundo
@@ -112,7 +130,9 @@ export class LoginUserUseCase {
 
     const challengeToken = randomBytes(CHALLENGE_TOKEN_BYTES).toString('base64url')
     const expiresAt = new Date(Date.now() + challengeTtlMs).toISOString()
-    await challengeRepo.save(userId, hashToken(challengeToken), expiresAt)
+    // La eleccion viaja con el reto: el canje no vuelve a preguntarla, para que
+    // el segundo paso no pueda contradecir al primero.
+    await challengeRepo.save(userId, hashToken(challengeToken), expiresAt, rememberMe)
 
     logger?.info('auth.two_factor_challenge_issued', { userId })
 

@@ -8,8 +8,11 @@ import type { TwoFactorChallengeRecord } from '@/application/dto/auth/TwoFactorC
  * se filtra, lo que hay dentro no sirve para canjear nada.
  */
 export interface TwoFactorChallengeRepository {
-  /** Guarda el hash de un reto con su caducidad. */
-  save(userId: number, tokenHash: string, expiresAt: string): Promise<void>
+  /**
+   * Guarda el hash de un reto con su caducidad y con la eleccion de sesion
+   * recordada que hizo el usuario al dar su contrasena.
+   */
+  save(userId: number, tokenHash: string, expiresAt: string, rememberMe: boolean): Promise<void>
 
   /** Busca un reto por el hash de su token. */
   findByTokenHash(tokenHash: string): Promise<TwoFactorChallengeRecord | null>

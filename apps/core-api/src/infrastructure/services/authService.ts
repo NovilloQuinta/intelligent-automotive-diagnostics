@@ -6,6 +6,7 @@ import type { AuthServicePort } from '@/application/ports/AuthServicePort.js'
 import type { TokenPair } from '@/application/dto/auth/TokenPair.js'
 import type { RefreshTokenRepository } from '@/application/ports/RefreshTokenRepository.js'
 import { hashToken } from '@/application/shared/hashToken.js'
+import { resolveRefreshTtl } from '@/application/shared/rememberMeTtl.js'
 
 /** Configuracion del servicio de autenticacion. */
 interface AuthServiceConfig {
@@ -13,6 +14,11 @@ interface AuthServiceConfig {
   readonly refreshTokenSecret: string
   readonly accessTokenExpiresIn: number
   readonly refreshTokenExpiresIn: number
+  /**
+   * Vida del refresh token de una sesion recordada. Ausente = no hay sesiones
+   * recordadas y todas duran `refreshTokenExpiresIn`.
+   */
+  readonly rememberMeRefreshTokenExpiresIn?: number
   readonly tokenStore: RefreshTokenRepository
 }
 
@@ -26,7 +32,16 @@ const BCRYPT_ROUNDS = 12
  * forma esperada. Un `sub` de tipo string colado con `as unknown as` acababa
  * en `generateTokens(userId: number)` sin que nadie se enterara.
  */
-const jwtPayloadSchema = z.object({ sub: z.number().int().positive() })
+const jwtPayloadSchema = z.object({
+  sub: z.number().int().positive(),
+  /**
+   * Marca de sesion recordada. Solo la llevan los refresh tokens: la vida del
+   * access token no depende de la casilla. Va firmada para que la rotacion sepa
+   * cuanto dura la sesion sin volver a preguntar a la base de datos, y para que
+   * el cliente no pueda alargarsela por su cuenta.
+   */
+  rme: z.boolean().optional(),
+})
 
 /** Error lanzado cuando el refresh token presentado no consta en el almacen. */
 export class RefreshTokenNotFoundError extends Error {
@@ -65,7 +80,7 @@ export class InvalidTokenPayloadError extends Error {
  *
  * @throws {InvalidTokenPayloadError} Si la firma es valida pero el payload no lo es.
  */
-function verifyAndParse(token: string, secret: string): { sub: number } {
+function verifyAndParse(token: string, secret: string): { sub: number; rme?: boolean } {
   const decoded = jwt.verify(token, secret)
   const parsed = jwtPayloadSchema.safeParse(decoded)
   if (!parsed.success) throw new InvalidTokenPayloadError()
@@ -83,8 +98,14 @@ export function createAuthService(config: AuthServiceConfig): AuthServicePort {
     refreshTokenSecret,
     accessTokenExpiresIn,
     refreshTokenExpiresIn,
+    rememberMeRefreshTokenExpiresIn,
     tokenStore,
   } = config
+
+  /** Vida del refresh token segun la casilla "Recordarme" del login. */
+  function refreshTtlFor(rememberMe: boolean): number {
+    return resolveRefreshTtl(rememberMe, refreshTokenExpiresIn, rememberMeRefreshTokenExpiresIn)
+  }
 
   async function hashPassword(password: string): Promise<string> {
     return bcrypt.hash(password, BCRYPT_ROUNDS)
@@ -94,12 +115,15 @@ export function createAuthService(config: AuthServiceConfig): AuthServicePort {
     return bcrypt.compare(password, hash)
   }
 
-  function generateTokens(userId: number): TokenPair {
+  function generateTokens(userId: number, rememberMe: boolean = false): TokenPair {
     const accessToken = jwt.sign({ sub: userId, jti: randomUUID() }, accessTokenSecret, {
       expiresIn: accessTokenExpiresIn as jwt.SignOptions['expiresIn'],
     })
-    const refreshToken = jwt.sign({ sub: userId, jti: randomUUID() }, refreshTokenSecret, {
-      expiresIn: refreshTokenExpiresIn as jwt.SignOptions['expiresIn'],
+    const refreshPayload = rememberMe
+      ? { sub: userId, jti: randomUUID(), rme: true }
+      : { sub: userId, jti: randomUUID() }
+    const refreshToken = jwt.sign(refreshPayload, refreshTokenSecret, {
+      expiresIn: refreshTtlFor(rememberMe) as jwt.SignOptions['expiresIn'],
     })
     return { accessToken, refreshToken }
   }
@@ -125,10 +149,14 @@ export function createAuthService(config: AuthServiceConfig): AuthServicePort {
 
     await tokenStore.revokeRefreshToken(tokenHash)
 
-    const tokens = generateTokens(decoded.sub)
+    // La sesion recordada se propaga al token nuevo. Sin esto, la primera
+    // rotacion —a los 15 minutos— devolveria la sesion a la duracion normal y
+    // el usuario se quedaria fuera antes de tiempo sin ningun error visible.
+    const rememberMe = decoded.rme === true
+    const tokens = generateTokens(decoded.sub, rememberMe)
 
     const newTokenHash = hashToken(tokens.refreshToken)
-    const expiresAt = calculateExpiryDate(refreshTokenExpiresIn)
+    const expiresAt = calculateExpiryDate(refreshTtlFor(rememberMe))
     await tokenStore.saveRefreshToken(decoded.sub, newTokenHash, expiresAt)
 
     return tokens

@@ -9,6 +9,7 @@ import type { LoggerPort } from '@/application/ports/LoggerPort.js'
 import type { TokenPair } from '@/application/dto/auth/TokenPair.js'
 import type { TwoFactorChallengeRecord } from '@/application/dto/auth/TwoFactorChallengeRecord.js'
 import { hashToken, persistRefreshToken } from '@/application/shared/hashToken.js'
+import { resolveRefreshTtl } from '@/application/shared/rememberMeTtl.js'
 import { isAccountLocked } from '@/application/shared/accountLock.js'
 import { isTwoFactorCodeAccepted } from '@/application/shared/twoFactorCode.js'
 import { NULL_LOGGER } from '@/application/shared/nullLogger.js'
@@ -28,6 +29,11 @@ export interface VerifyTwoFactorDeps {
   readonly authService: AuthServicePort
   readonly tokenStore: RefreshTokenRepository
   readonly refreshTokenTtlMs: number
+  /**
+   * Vida del refresh token cuando el reto se emitio con "Recordarme". Ausente =
+   * todas las sesiones duran `refreshTokenTtlMs`.
+   */
+  readonly rememberMeRefreshTokenTtlMs?: number
   readonly logger?: LoggerPort
 }
 
@@ -57,7 +63,7 @@ export class VerifyTwoFactorUseCase {
     const parsed = verifyTwoFactorSchema.parse(input)
     const tokenHash = hashToken(parsed.challengeToken)
 
-    const userId = await this.resolveChallengeUserId(tokenHash)
+    const { userId, rememberMe } = await this.resolveChallenge(tokenHash)
     await this.assertUserEligible(userId)
 
     if (!(await isTwoFactorCodeAccepted(this.deps, userId, parsed.code))) {
@@ -67,22 +73,29 @@ export class VerifyTwoFactorUseCase {
     await this.deps.challengeRepo.markUsed(tokenHash)
     await this.deps.userRepo.resetFailedLogins(userId)
 
-    return this.issueTokens(userId)
+    return this.issueTokens(userId, rememberMe)
   }
 
   /**
-   * Resuelve a quien pertenece el reto, exigiendo que siga siendo canjeable.
+   * Resuelve a quien pertenece el reto y con que duracion de sesion se emitio,
+   * exigiendo que siga siendo canjeable.
    *
    * Un reto invalido NO suma al contador de fallos: lo emite el servidor, asi que
    * fallar aqui no es alguien probando codigos contra una cuenta.
+   *
+   * La duracion sale del reto y no del cuerpo de la peticion: el usuario ya la
+   * eligio al dar su contrasena, y el segundo paso no tiene por que poder
+   * contradecir al primero.
    */
-  private async resolveChallengeUserId(tokenHash: string): Promise<number> {
+  private async resolveChallenge(
+    tokenHash: string,
+  ): Promise<{ userId: number; rememberMe: boolean }> {
     const challenge = await this.deps.challengeRepo.findByTokenHash(tokenHash)
     if (!isChallengeUsable(challenge)) {
       this.log.info('auth.two_factor_challenge_rejected')
       throw new InvalidTwoFactorChallengeError()
     }
-    return challenge.userId
+    return { userId: challenge.userId, rememberMe: challenge.rememberMe }
   }
 
   /** Comprueba que el usuario sigue teniendo el segundo factor y no esta bloqueado. */
@@ -114,12 +127,13 @@ export class VerifyTwoFactorUseCase {
   }
 
   /** Emite el par de tokens y persiste el hash del refresco. */
-  private async issueTokens(userId: number): Promise<TokenPair> {
-    const { authService, tokenStore, refreshTokenTtlMs } = this.deps
-    const tokens = authService.generateTokens(userId)
-    await persistRefreshToken(tokenStore, userId, tokens, refreshTokenTtlMs)
+  private async issueTokens(userId: number, rememberMe: boolean): Promise<TokenPair> {
+    const { authService, tokenStore, refreshTokenTtlMs, rememberMeRefreshTokenTtlMs } = this.deps
+    const ttlMs = resolveRefreshTtl(rememberMe, refreshTokenTtlMs, rememberMeRefreshTokenTtlMs)
+    const tokens = authService.generateTokens(userId, rememberMe)
+    await persistRefreshToken(tokenStore, userId, tokens, ttlMs)
 
-    this.log.info('auth.two_factor_success', { userId })
+    this.log.info('auth.two_factor_success', { userId, rememberMe })
 
     return { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken }
   }

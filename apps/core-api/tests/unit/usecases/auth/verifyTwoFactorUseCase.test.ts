@@ -35,6 +35,7 @@ const liveChallenge = () => ({
   expiresAt: new Date(Date.now() + 60_000).toISOString(),
   createdAt: new Date().toISOString(),
   usedAt: null,
+  rememberMe: false,
 })
 
 function createDeps(overrides: Record<string, unknown> = {}) {
@@ -343,5 +344,64 @@ describe('VerifyTwoFactorUseCase', () => {
       expect(logged).not.toContain(ENCRYPTED)
       expect(logged).not.toContain(TOTP_CODE)
     })
+  })
+})
+
+describe('VerifyTwoFactorUseCase — sesion recordada', () => {
+  const DAY_MS = 24 * 3600 * 1000
+  const NORMAL_TTL_MS = 7 * DAY_MS
+  const REMEMBERED_TTL_MS = 30 * DAY_MS
+  const TOLERANCE_MS = 60_000
+
+  function createDepsWithTtls(rememberMe: boolean) {
+    return createDeps({
+      challengeRepo: {
+        findByTokenHash: vi.fn().mockResolvedValue({ ...liveChallenge(), rememberMe }),
+        markUsed: vi.fn().mockResolvedValue(undefined),
+        save: vi.fn(),
+        invalidateAllForUser: vi.fn(),
+      },
+      rememberMeRefreshTokenTtlMs: REMEMBERED_TTL_MS,
+      refreshTokenTtlMs: NORMAL_TTL_MS,
+    })
+  }
+
+  /** Milisegundos entre ahora y la caducidad con la que se guardo el refresh token. */
+  function savedTtlMs(deps: {
+    tokenStore: { saveRefreshToken: ReturnType<typeof vi.fn> }
+  }): number {
+    const [, , expiresAt] = deps.tokenStore.saveRefreshToken.mock.calls[0] as [
+      number,
+      string,
+      string,
+    ]
+    return new Date(expiresAt).getTime() - Date.now()
+  }
+
+  it('canjear un reto recordado entrega una sesion larga', async () => {
+    const { useCase, deps } = createDepsWithTtls(true)
+
+    await useCase.execute(input)
+
+    expect(deps.authService.generateTokens).toHaveBeenCalledWith(USER.id, true)
+    expect(savedTtlMs(deps)).toBeGreaterThan(REMEMBERED_TTL_MS - TOLERANCE_MS)
+  })
+
+  it('canjear un reto normal entrega una sesion normal', async () => {
+    const { useCase, deps } = createDepsWithTtls(false)
+
+    await useCase.execute(input)
+
+    expect(deps.authService.generateTokens).toHaveBeenCalledWith(USER.id, false)
+    expect(savedTtlMs(deps)).toBeLessThan(NORMAL_TTL_MS + TOLERANCE_MS)
+  })
+
+  it('el cliente no puede alargar la sesion en el canje: manda lo que guardo el reto', async () => {
+    const { useCase, deps } = createDepsWithTtls(false)
+
+    await useCase.execute({ ...input, rememberMe: true } as unknown as typeof input)
+
+    expect(deps.authService.generateTokens).toHaveBeenCalledWith(USER.id, false)
+    expect(savedTtlMs(deps)).toBeLessThan(NORMAL_TTL_MS + TOLERANCE_MS)
   })
 })

@@ -72,6 +72,7 @@ export function createTwoFactorStack(
         authService,
         tokenStore,
         refreshTokenTtlMs: config.REFRESH_TOKEN_TTL * 1000,
+        rememberMeRefreshTokenTtlMs: config.REMEMBER_ME_REFRESH_TOKEN_TTL * 1000,
       }),
     }),
   }

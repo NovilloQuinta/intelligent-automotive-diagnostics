@@ -51,11 +51,19 @@ describe('repositorios del segundo factor', () => {
     })
 
     it('guarda un reto y lo encuentra por su hash', async () => {
-      await repo.save(userId, 'hash-del-reto', future())
+      await repo.save(userId, 'hash-del-reto', future(), false)
 
       const found = await repo.findByTokenHash('hash-del-reto')
 
       expect(found).toMatchObject({ userId, tokenHash: 'hash-del-reto', usedAt: null })
+    })
+
+    it('conserva la eleccion de sesion recordada del login', async () => {
+      await repo.save(userId, 'recordado', future(), true)
+      await repo.save(userId, 'normal', future(), false)
+
+      expect((await repo.findByTokenHash('recordado'))?.rememberMe).toBe(true)
+      expect((await repo.findByTokenHash('normal'))?.rememberMe).toBe(false)
     })
 
     it('devuelve null si el hash no existe', async () => {
@@ -63,7 +71,7 @@ describe('repositorios del segundo factor', () => {
     })
 
     it('marca el reto como usado', async () => {
-      await repo.save(userId, 'hash-del-reto', future())
+      await repo.save(userId, 'hash-del-reto', future(), false)
 
       await repo.markUsed('hash-del-reto')
 
@@ -72,14 +80,14 @@ describe('repositorios del segundo factor', () => {
 
     it('conserva la caducidad tal cual se guardo', async () => {
       const expiresAt = past()
-      await repo.save(userId, 'caducado', expiresAt)
+      await repo.save(userId, 'caducado', expiresAt, false)
 
       expect((await repo.findByTokenHash('caducado'))?.expiresAt).toBe(expiresAt)
     })
 
     it('invalida los retos vivos de un usuario sin tocar los de otro', async () => {
-      await repo.save(userId, 'mio', future())
-      await repo.save(otherUserId, 'ajeno', future())
+      await repo.save(userId, 'mio', future(), false)
+      await repo.save(otherUserId, 'ajeno', future(), false)
 
       await repo.invalidateAllForUser(userId)
 

@@ -1,0 +1,1 @@
+ALTER TABLE `two_factor_challenges` ADD `remember_me` integer DEFAULT false NOT NULL;

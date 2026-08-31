@@ -8,29 +8,115 @@ const HTTP_TOO_MANY_REQUESTS = 429
 const KEYS = {
   accessToken: 'iad.accessToken',
   refreshToken: 'iad.refreshToken',
+  /** Ultima eleccion de la casilla "Recordarme", para devolverla como estaba. */
+  rememberMe: 'iad.rememberMe',
+  /** Email del ultimo login recordado. La contrasena NO se guarda nunca. */
+  rememberedEmail: 'iad.rememberedEmail',
 } as const
 
-/** Lee ambos tokens de localStorage; null si falta uno o el storage no esta disponible. */
-export function getTokens(): AuthTokens | null {
+/**
+ * Almacen donde viven los tokens: `localStorage` si la sesion es recordada,
+ * `sessionStorage` si dura lo que la pestaña.
+ *
+ * Devuelve `null` en vez de lanzar porque el mero acceso al almacen tira en
+ * navegadores con el almacenamiento bloqueado, y quedarse sin guardar la sesion
+ * no es motivo para tumbar la navegacion en curso.
+ */
+function storeFor(persist: boolean): Storage | null {
   try {
-    const accessToken = localStorage.getItem(KEYS.accessToken)
-    const refreshToken = localStorage.getItem(KEYS.refreshToken)
+    return persist ? localStorage : sessionStorage
+  } catch {
+    return null
+  }
+}
+
+/** Lee el par de tokens de un almacen concreto; null si falta alguno. */
+function readTokensFrom(store: Storage | null): AuthTokens | null {
+  try {
+    const accessToken = store?.getItem(KEYS.accessToken)
+    const refreshToken = store?.getItem(KEYS.refreshToken)
     return accessToken && refreshToken ? { accessToken, refreshToken } : null
   } catch {
     return null
   }
 }
 
-/** Persiste ambos tokens en localStorage (sin fallback si el storage falla). */
-export function setTokens(tokens: AuthTokens): void {
-  localStorage.setItem(KEYS.accessToken, tokens.accessToken)
-  localStorage.setItem(KEYS.refreshToken, tokens.refreshToken)
+/** True si la sesion viva es una recordada, es decir, si vive en `localStorage`. */
+export function isRememberedSession(): boolean {
+  return readTokensFrom(storeFor(true)) !== null
 }
 
-/** Borra ambos tokens; se llama en logout y cuando el refresh falla. */
+/** Lee ambos tokens: primero la sesion recordada, luego la de esta visita. */
+export function getTokens(): AuthTokens | null {
+  return readTokensFrom(storeFor(true)) ?? readTokensFrom(storeFor(false))
+}
+
+/**
+ * Persiste ambos tokens en el almacen que corresponda y los borra del otro, para
+ * que una sesion no quede duplicada ni ascienda de pestaña a permanente.
+ *
+ * Sin `persist` se queda donde ya estaba la sesion: es lo que necesita la
+ * renovacion, que no debe cambiar la duracion que eligio el usuario.
+ */
+export function setTokens(tokens: AuthTokens, options: { persist?: boolean } = {}): void {
+  const persist = options.persist ?? isRememberedSession()
+  try {
+    const previous = storeFor(!persist)
+    previous?.removeItem(KEYS.accessToken)
+    previous?.removeItem(KEYS.refreshToken)
+    const target = storeFor(persist)
+    target?.setItem(KEYS.accessToken, tokens.accessToken)
+    target?.setItem(KEYS.refreshToken, tokens.refreshToken)
+  } catch {
+    // Almacenamiento lleno o bloqueado: la sesion vive en memoria hasta recargar.
+  }
+}
+
+/** Borra ambos tokens de los dos almacenes; se llama en logout y si el refresh falla. */
 export function clearTokens(): void {
-  localStorage.removeItem(KEYS.accessToken)
-  localStorage.removeItem(KEYS.refreshToken)
+  for (const store of [storeFor(true), storeFor(false)]) {
+    try {
+      store?.removeItem(KEYS.accessToken)
+      store?.removeItem(KEYS.refreshToken)
+    } catch {
+      // Nada que borrar si el almacen no esta disponible.
+    }
+  }
+}
+
+/**
+ * Ultima eleccion de la casilla "Recordarme". Marcada mientras el usuario no
+ * diga lo contrario: el sentido del cambio es no repetir la contrasena.
+ */
+export function wasSessionRemembered(): boolean {
+  try {
+    return localStorage.getItem(KEYS.rememberMe) !== 'false'
+  } catch {
+    return true
+  }
+}
+
+/** Email del ultimo login recordado, para prerrellenar el formulario. */
+export function getRememberedEmail(): string | null {
+  try {
+    return localStorage.getItem(KEYS.rememberedEmail)
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Guarda la eleccion del usuario y, con ella, su email. La contrasena no entra
+ * aqui ni en ningun otro almacen: de eso se encarga el gestor del navegador.
+ */
+export function rememberLoginChoice(email: string, rememberMe: boolean): void {
+  try {
+    localStorage.setItem(KEYS.rememberMe, String(rememberMe))
+    if (rememberMe) localStorage.setItem(KEYS.rememberedEmail, email)
+    else localStorage.removeItem(KEYS.rememberedEmail)
+  } catch {
+    // Sin almacen no hay nada que recordar: el formulario saldra en blanco.
+  }
 }
 
 // Auth error — thrown when refresh fails, caught by AuthContext

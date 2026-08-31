@@ -250,3 +250,49 @@ describe('assertProductionSecrets — TOTP_ENCRYPTION_KEY', () => {
     expect(() => assertProductionSecrets(loadConfig())).not.toThrow()
   })
 })
+
+describe('loadConfig — REMEMBER_ME_REFRESH_TOKEN_TTL', () => {
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    process.env = { ...originalEnv }
+    delete process.env.REMEMBER_ME_REFRESH_TOKEN_TTL
+    delete process.env.REFRESH_TOKEN_TTL
+  })
+
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  it('usa 30 dias como valor por defecto', () => {
+    expect(loadConfig().REMEMBER_ME_REFRESH_TOKEN_TTL).toBe(2_592_000)
+  })
+
+  it('respeta el valor indicado por entorno', () => {
+    process.env.REMEMBER_ME_REFRESH_TOKEN_TTL = '1209600'
+
+    expect(loadConfig().REMEMBER_ME_REFRESH_TOKEN_TTL).toBe(1_209_600)
+  })
+
+  it('rechaza un TTL recordado menor que el normal, que acortaria la sesion', () => {
+    process.env.REFRESH_TOKEN_TTL = '604800'
+    process.env.REMEMBER_ME_REFRESH_TOKEN_TTL = '3600'
+
+    expect(() => loadConfig()).toThrow(/REMEMBER_ME_REFRESH_TOKEN_TTL/)
+  })
+
+  it('acepta que ambos TTL sean iguales', () => {
+    process.env.REFRESH_TOKEN_TTL = '604800'
+    process.env.REMEMBER_ME_REFRESH_TOKEN_TTL = '604800'
+
+    expect(loadConfig().REMEMBER_ME_REFRESH_TOKEN_TTL).toBe(604_800)
+  })
+
+  it('rechaza 0 y valores no numericos', () => {
+    process.env.REMEMBER_ME_REFRESH_TOKEN_TTL = '0'
+    expect(() => loadConfig()).toThrow()
+
+    process.env.REMEMBER_ME_REFRESH_TOKEN_TTL = 'un-mes'
+    expect(() => loadConfig()).toThrow()
+  })
+})

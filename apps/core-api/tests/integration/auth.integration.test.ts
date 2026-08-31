@@ -28,6 +28,12 @@ const mockAuditRepo: AuditLogRepository = {
   stats: async () => ({ byStatusCode: {}, byPath: {} }),
 }
 const mockLogger: LoggerPort = { debug: () => {}, info: () => {}, warn: () => {}, error: () => {} }
+
+/** Claims de un JWT sin verificar la firma: aqui solo interesan las fechas y `rme`. */
+function decodeClaims(token: string): { iat: number; exp: number; rme?: boolean } {
+  const payload = token.split('.')[1]
+  return JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
+}
 import { SqliteUserRepository } from '@/infrastructure/persistence/sqlite/userRepository.js'
 import { SqliteRefreshTokenStore } from '@/infrastructure/persistence/sqlite/refreshTokenStore.js'
 import { SqlitePasswordResetTokenRepository } from '@/infrastructure/persistence/sqlite/passwordResetTokenRepository.js'
@@ -73,6 +79,7 @@ describe('Auth integration', () => {
       refreshTokenSecret: REFRESH_SECRET,
       accessTokenExpiresIn: 900,
       refreshTokenExpiresIn: 604800,
+      rememberMeRefreshTokenExpiresIn: 2592000,
       tokenStore,
     })
     emailSender = new CapturingEmailSender()
@@ -90,6 +97,7 @@ describe('Auth integration', () => {
         authService,
         tokenStore,
         refreshTokenTtlMs: 604800000,
+        rememberMeRefreshTokenTtlMs: 2592000000,
       }),
       refreshToken: new RefreshTokenUseCase(authService),
       getCurrentUser: new GetCurrentUserUseCase(userRepo),
@@ -198,6 +206,51 @@ describe('Auth integration', () => {
 
       expect(res.body.accessToken).toBeDefined()
       expect(res.body.refreshToken).toBeDefined()
+    })
+
+    it('alarga la sesion y la marca cuando el login pide recordarla', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'juan@test.com', password: 'Pass1234!', rememberMe: true })
+        .expect(200)
+
+      const claims = decodeClaims(res.body.refreshToken)
+      expect(claims.rme).toBe(true)
+      expect(claims.exp - claims.iat).toBe(2592000)
+    })
+
+    it('sin recordar, la sesion mantiene la duracion normal', async () => {
+      const res = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'juan@test.com', password: 'Pass1234!' })
+        .expect(200)
+
+      const claims = decodeClaims(res.body.refreshToken)
+      expect(claims.rme).toBeUndefined()
+      expect(claims.exp - claims.iat).toBe(604800)
+    })
+
+    it('la sesion recordada sobrevive a la rotacion del refresh token', async () => {
+      const login = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'juan@test.com', password: 'Pass1234!', rememberMe: true })
+        .expect(200)
+
+      const res = await request(app)
+        .post('/api/auth/refresh')
+        .send({ refreshToken: login.body.refreshToken })
+        .expect(200)
+
+      const claims = decodeClaims(res.body.refreshToken)
+      expect(claims.rme).toBe(true)
+      expect(claims.exp - claims.iat).toBe(2592000)
+    })
+
+    it('rechaza un rememberMe que no es booleano', async () => {
+      await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'juan@test.com', password: 'Pass1234!', rememberMe: 'si' })
+        .expect(400)
     })
 
     it('should return 401 for wrong password', async () => {

@@ -4,10 +4,12 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuth } from '@/lib/auth-context'
+import { getRememberedEmail, wasSessionRemembered } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { PasswordInput } from '@/components/ui/password-input'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
@@ -26,6 +28,8 @@ import { FooterSection } from '@/components/landing/FooterSection'
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(1, 'La contraseña es obligatoria'),
+  /** Casilla "Recordarme": alarga la sesión. La contraseña no se guarda nunca. */
+  rememberMe: z.boolean(),
 })
 
 const registerSchema = z.object({
@@ -238,6 +242,12 @@ function LoginForm({
     formState: { errors, isSubmitting },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
+    // Lo recordado de la visita anterior: el email y la casilla, nunca la
+    // contrasena. Marcada de salida, que es el motivo de que exista la casilla.
+    defaultValues: {
+      email: getRememberedEmail() ?? '',
+      rememberMe: wasSessionRemembered(),
+    },
   })
 
   return (
@@ -270,6 +280,12 @@ function LoginForm({
             ¿Olvidaste tu contraseña?
           </Link>
         </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <Checkbox id="login-remember-me" {...register('rememberMe')} />
+        <Label htmlFor="login-remember-me" className="cursor-pointer text-xs text-muted-foreground">
+          Mantener la sesión iniciada en este dispositivo
+        </Label>
       </div>
       {serverError && (
         <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">

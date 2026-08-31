@@ -113,6 +113,7 @@ describe('AuthPage', () => {
       expect(login).toHaveBeenCalledWith({
         email: 'a@b.com',
         password: 'password123',
+        rememberMe: true,
       })
     })
   })
@@ -321,5 +322,98 @@ describe('AuthPage — segundo factor', () => {
 
     await waitFor(() => expect(mockAuthState.login).toHaveBeenCalled())
     expect(screen.queryByLabelText(/código/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('AuthPage — recordar la sesion', () => {
+  const REMEMBER_LABEL = /Mantener la sesión iniciada en este dispositivo/i
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockAuthState.status = 'anonymous'
+    mockAuthState.user = null
+    localStorage.clear()
+  })
+
+  it('pinta la casilla marcada en la primera visita', () => {
+    render(<AuthPage />)
+
+    expect(screen.getByLabelText(REMEMBER_LABEL)).toHaveProperty('checked', true)
+  })
+
+  it('devuelve la casilla como la dejo el usuario', () => {
+    localStorage.setItem('iad.rememberMe', 'false')
+
+    render(<AuthPage />)
+
+    expect(screen.getByLabelText(REMEMBER_LABEL)).toHaveProperty('checked', false)
+  })
+
+  it('prerrellena el email recordado y deja la contrasena vacia', () => {
+    localStorage.setItem('iad.rememberedEmail', 'mecanico@taller.com')
+
+    render(<AuthPage />)
+
+    expect(screen.getByPlaceholderText('tu@email.com')).toHaveProperty(
+      'value',
+      'mecanico@taller.com',
+    )
+    expect(screen.getByPlaceholderText('••••••••')).toHaveProperty('value', '')
+  })
+
+  it('manda la eleccion al desmarcar la casilla', async () => {
+    const login = vi.fn().mockResolvedValue({ kind: 'tokens' })
+    mockAuthState.login = login
+    render(<AuthPage />)
+
+    fireEvent.change(screen.getByPlaceholderText('tu@email.com'), {
+      target: { value: 'a@b.com' },
+    })
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), {
+      target: { value: 'password123' },
+    })
+    fireEvent.click(screen.getByLabelText(REMEMBER_LABEL))
+    fireEvent.click(screen.getByRole('button', { name: /Iniciar sesión/i }))
+
+    await waitFor(() => {
+      expect(login).toHaveBeenCalledWith({
+        email: 'a@b.com',
+        password: 'password123',
+        rememberMe: false,
+      })
+    })
+  })
+
+  it('el paso del segundo factor no vuelve a preguntar por la casilla', async () => {
+    mockAuthState.login = vi.fn().mockResolvedValue({
+      kind: 'twoFactorRequired',
+      challengeToken: 'reto-abc',
+      expiresAt: '2026-08-31T12:05:00.000Z',
+    })
+    render(<AuthPage />)
+
+    fireEvent.change(screen.getByPlaceholderText('tu@email.com'), {
+      target: { value: 'a@b.com' },
+    })
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), {
+      target: { value: 'password123' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /Iniciar sesión/i }))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/Código de verificación/i)).toBeDefined()
+    })
+    expect(screen.queryByLabelText(REMEMBER_LABEL)).toBeNull()
+  })
+
+  it('la pestaña de registro no pinta la casilla', async () => {
+    render(<AuthPage />)
+
+    fireEvent.mouseDown(screen.getByText('Registrarse'))
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText('usuario123')).toBeDefined()
+    })
+    expect(screen.queryByLabelText(REMEMBER_LABEL)).toBeNull()
   })
 })

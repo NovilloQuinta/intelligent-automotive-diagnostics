@@ -23,11 +23,75 @@ describe('api — endpoints', () => {
         }),
       )
 
-      const result = await api.login({ email: 'a@b.com', password: 'secret' })
+      const result = await api.login({ email: 'a@b.com', password: 'secret', rememberMe: true })
 
       expect(result).toEqual({ kind: 'tokens' })
       expect(localStorage.getItem('iad.accessToken')).toBe('access-abc')
       expect(localStorage.getItem('iad.refreshToken')).toBe('refresh-xyz')
+    })
+
+    it('sin recordar, los tokens solo viven en sessionStorage', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ ...MOCK_TOKENS, twoFactorRequired: false }),
+        }),
+      )
+
+      await api.login({ email: 'a@b.com', password: 'secret', rememberMe: false })
+
+      expect(sessionStorage.getItem('iad.accessToken')).toBe('access-abc')
+      expect(sessionStorage.getItem('iad.refreshToken')).toBe('refresh-xyz')
+      expect(localStorage.getItem('iad.accessToken')).toBeNull()
+      expect(localStorage.getItem('iad.refreshToken')).toBeNull()
+    })
+
+    it('manda la eleccion al backend', async () => {
+      const mockFetch = vi.fn().mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ...MOCK_TOKENS, twoFactorRequired: false }),
+      })
+      vi.stubGlobal('fetch', mockFetch)
+
+      await api.login({ email: 'a@b.com', password: 'secret', rememberMe: true })
+
+      const body = JSON.parse(mockFetch.mock.calls[0][1].body as string)
+      expect(body.rememberMe).toBe(true)
+    })
+
+    it('recuerda el email al marcar la casilla y lo olvida al desmarcarla', async () => {
+      const respond = () =>
+        vi.stubGlobal(
+          'fetch',
+          vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({ ...MOCK_TOKENS, twoFactorRequired: false }),
+          }),
+        )
+
+      respond()
+      await api.login({ email: 'a@b.com', password: 'secret', rememberMe: true })
+      expect(localStorage.getItem('iad.rememberedEmail')).toBe('a@b.com')
+
+      respond()
+      await api.login({ email: 'a@b.com', password: 'secret', rememberMe: false })
+      expect(localStorage.getItem('iad.rememberedEmail')).toBeNull()
+    })
+
+    it('no guarda la contrasena en ningun almacen', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ ...MOCK_TOKENS, twoFactorRequired: false }),
+        }),
+      )
+
+      await api.login({ email: 'a@b.com', password: 'sup3r-secreta', rememberMe: true })
+
+      expect(JSON.stringify(localStorage)).not.toContain('sup3r-secreta')
+      expect(JSON.stringify(sessionStorage)).not.toContain('sup3r-secreta')
     })
 
     it('devuelve el reto y NO guarda nada cuando hace falta el segundo factor', async () => {

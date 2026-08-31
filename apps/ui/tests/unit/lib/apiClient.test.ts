@@ -44,6 +44,50 @@ describe('apiClient — fontaneria HTTP', () => {
     })
   })
 
+  describe('almacen de la sesion', () => {
+    it('la renovacion reescribe donde vivia el token, sin promover la sesion', async () => {
+      sessionStorage.setItem('iad.accessToken', 'access-abc')
+      sessionStorage.setItem('iad.refreshToken', 'refresh-xyz')
+      const mockFetch = vi
+        .fn()
+        .mockResolvedValueOnce({ ok: false, status: 401 })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ accessToken: 'nuevo-access', refreshToken: 'nuevo-refresh' }),
+        })
+        .mockResolvedValueOnce({ ok: true, json: async () => [] })
+      vi.stubGlobal('fetch', mockFetch)
+
+      await api.getScenarios()
+
+      expect(sessionStorage.getItem('iad.accessToken')).toBe('nuevo-access')
+      expect(sessionStorage.getItem('iad.refreshToken')).toBe('nuevo-refresh')
+      expect(localStorage.getItem('iad.accessToken')).toBeNull()
+      expect(localStorage.getItem('iad.refreshToken')).toBeNull()
+    })
+
+    it('el cierre de sesion limpia los dos almacenes', async () => {
+      localStorage.setItem('iad.accessToken', 'access-abc')
+      localStorage.setItem('iad.refreshToken', 'refresh-xyz')
+      sessionStorage.setItem('iad.accessToken', 'otro-access')
+      sessionStorage.setItem('iad.refreshToken', 'otro-refresh')
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) }))
+
+      await api.logout()
+
+      expect(api.hasTokens()).toBe(false)
+      expect(localStorage.getItem('iad.accessToken')).toBeNull()
+      expect(sessionStorage.getItem('iad.accessToken')).toBeNull()
+    })
+
+    it('encuentra los tokens de una sesion de una sola visita', async () => {
+      sessionStorage.setItem('iad.accessToken', 'access-abc')
+      sessionStorage.setItem('iad.refreshToken', 'refresh-xyz')
+
+      expect(api.hasTokens()).toBe(true)
+    })
+  })
+
   // -----------------------------------------------------------------------
   // apiFetch — raw error propagation
   // -----------------------------------------------------------------------

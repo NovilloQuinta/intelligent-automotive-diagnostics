@@ -53,9 +53,11 @@ export function createAuthStack(
     refreshTokenSecret: config.REFRESH_TOKEN_SECRET,
     accessTokenExpiresIn: config.ACCESS_TOKEN_TTL,
     refreshTokenExpiresIn: config.REFRESH_TOKEN_TTL,
+    rememberMeRefreshTokenExpiresIn: config.REMEMBER_ME_REFRESH_TOKEN_TTL,
     tokenStore: repos.tokenStore,
   })
   const refreshTokenTtlMs = config.REFRESH_TOKEN_TTL * 1000
+  const rememberMeRefreshTokenTtlMs = config.REMEMBER_ME_REFRESH_TOKEN_TTL * 1000
   return {
     authService,
     registerUseCase: new RegisterUserUseCase({
@@ -70,6 +72,7 @@ export function createAuthStack(
       authService,
       tokenStore: repos.tokenStore,
       refreshTokenTtlMs,
+      rememberMeRefreshTokenTtlMs,
       logger,
       twoFactor: twoFactorLogin,
     }),
