@@ -28,15 +28,21 @@
 ```bash
 pnpm install
 
+# 1. Crear el .env en la raiz y rellenar como minimo LLM_API_KEY (ver "Variables de entorno" abajo)
+cp .env.example .env
+
 # 2. Iniciar backend + frontend
 pnpm dev:all
 # o por separado:
 #   pnpm dev      → backend (http://localhost:4000)
 #   pnpm dev:ui   → frontend (http://localhost:5173)
-
-# 3. Dashboard: http://localhost:5173
-#    Swagger UI: http://localhost:4000/api-docs
 ```
+
+`main.ts` carga el `.env` de la raiz del repo automaticamente (`dotenv.config`), sin
+depender del directorio desde el que arranques ni de un export manual.
+
+- Dashboard: http://localhost:5173
+- Swagger UI: http://localhost:4000/api-docs
 
 ### Dashboard UI (apps/ui)
 
