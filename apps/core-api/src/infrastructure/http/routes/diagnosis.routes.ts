@@ -4,15 +4,17 @@ import type { DiagnosisController } from '@/infrastructure/http/controllers/Diag
 
 /**
  * Telemetria en vivo: el poller del front pide cada 1000ms exactos
- * (`LIVE_TELEMETRY_INTERVAL_MS`). Un limite de 1 peticion/s no deja margen —
- * el jitter normal del event loop o una pestaña en segundo plano lo revientan
- * solos, sin que haga falta un segundo cliente. Ventana de 5s con 8 peticiones
- * absorbe ese jitter sin dejar de frenar un abuso real.
+ * (`LIVE_TELEMETRY_INTERVAL_MS`), 5 peticiones nominales en esta ventana de 5s.
+ * 8 se probo insuficiente en produccion: el refetch-on-focus de React Query
+ * (una peticion extra cada vez que se vuelve a la pestaña) mas el jitter normal
+ * bastaban para agotarlo con un solo usuario, sin abuso de por medio. 20 deja
+ * 4x de margen sobre el nominal y sigue frenando un poller real que ignore el
+ * intervalo.
  */
 const liveDataRateLimit = createRateLimiter({
   namespace: 'live-data',
   windowMinutes: 5 / 60,
-  maxRequests: 8,
+  maxRequests: 20,
 })
 
 /** 30 peticiones/min para el historial: listado + detalle (misma ventana, mismo limite). */

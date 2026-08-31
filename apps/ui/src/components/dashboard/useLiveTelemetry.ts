@@ -42,6 +42,9 @@ export function useLiveTelemetry(selectedId: string, pids?: readonly string[]) {
     // se convertia en una rafaga de peticiones que agotaba el rate limit y lo
     // mantenia agotado. El siguiente ciclo del intervalo ya es el reintento.
     retry: false,
+    // El poller ya cubre 1 Hz solo: sin esto, volver a la pestaña dispara una
+    // peticion extra encima del intervalo, ayudando a agotar el rate limit.
+    refetchOnWindowFocus: false,
   })
 
   if (!selectedId || !data || isLoading) {
