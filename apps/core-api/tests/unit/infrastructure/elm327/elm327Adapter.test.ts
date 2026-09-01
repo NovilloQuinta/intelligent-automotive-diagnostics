@@ -136,6 +136,7 @@ const RESPONSES: Record<string, string> = {
   '22 F4 30': '22 F4 30\r62 F4 30 5A \r\r>',
   '03': '03\r43 03 01 04 01\r\r>',
   '09 02': '014\r0: 49 02 01 57 50 30\r1: 5A 5A 5A 39 39 5A\r2: 54 53 33 39 30 30\r3: 30 30\r\r>',
+  '02 02': '02 02\r42 02 03 01\r\r>',
   '02 0C': '02 0C\r42 0C 0C 80\r\r>',
   '02 04': '02 04\r42 04 2E\r\r>',
   '02 05': '02 05\r42 05 82\r\r>',
@@ -370,28 +371,32 @@ describe('Elm327TcpRepository', () => {
     await expect(promise).resolves.toBe('WP0ZZZ99ZTS390000')
   })
 
-  it('getFreezeFrame: lee 5 PIDs Mode 02 y devuelve frame con todos los valores', async () => {
+  it('getFreezeFrame: lee el dueño (PID 02) y 5 PIDs Mode 02, devuelve frame con todos los valores', async () => {
     const repo = makeRepo(100)
     const promise = repo.getFreezeFrame('P0301')
 
     await vi.waitFor(() => {
       expect(lastSocket().write).toHaveBeenCalledTimes(1)
     })
-    respond(RESPONSES['02 04'])
+    respond(RESPONSES['02 02'])
     await vi.waitFor(() => {
       expect(lastSocket().write).toHaveBeenCalledTimes(2)
     })
-    respond(RESPONSES['02 05'])
+    respond(RESPONSES['02 04'])
     await vi.waitFor(() => {
       expect(lastSocket().write).toHaveBeenCalledTimes(3)
     })
-    respond(RESPONSES['02 0C'])
+    respond(RESPONSES['02 05'])
     await vi.waitFor(() => {
       expect(lastSocket().write).toHaveBeenCalledTimes(4)
     })
-    respond(RESPONSES['02 0D'])
+    respond(RESPONSES['02 0C'])
     await vi.waitFor(() => {
       expect(lastSocket().write).toHaveBeenCalledTimes(5)
+    })
+    respond(RESPONSES['02 0D'])
+    await vi.waitFor(() => {
+      expect(lastSocket().write).toHaveBeenCalledTimes(6)
     })
     respond(RESPONSES['02 11'])
 
@@ -408,41 +413,56 @@ describe('Elm327TcpRepository', () => {
     })
   })
 
+  it('getFreezeFrame: un DTC distinto al dueño real del snapshot devuelve null sin leer los demas PIDs', async () => {
+    const repo = makeRepo(100)
+    const promise = repo.getFreezeFrame('P0401')
+
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(1))
+    respond(RESPONSES['02 02']) // el dueño real es P0301, no P0401
+
+    await expect(promise).resolves.toBeNull()
+    expect(lastSocket().write).toHaveBeenCalledTimes(1)
+  })
+
   it('getFreezeFrame: un PID que falla (NO DATA) no invalida el resto', async () => {
     const repo = makeRepo(100)
     const promise = repo.getFreezeFrame()
 
     await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(1))
-    respond(RESPONSES['02 04'])
+    respond(RESPONSES['02 02'])
     await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(2))
-    respond('NO DATA\r\r>')
+    respond(RESPONSES['02 04'])
     await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(3))
-    respond(RESPONSES['02 0C'])
-    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(4))
     respond('NO DATA\r\r>')
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(4))
+    respond(RESPONSES['02 0C'])
     await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(5))
+    respond('NO DATA\r\r>')
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(6))
     respond(RESPONSES['02 11'])
 
     const frame = await promise
     expect(frame).toEqual({
-      dtcCode: 'UNKNOWN',
+      dtcCode: 'P0301',
       pidValues: { '04': 18.03921568627451, '0C': 800, '11': 14.117647058823529 },
     })
   })
 
-  it('getFreezeFrame: trata dtc vacío como UNKNOWN', async () => {
+  it('getFreezeFrame: sin dueño legible (PID 02 no soportado), dtc vacío cae a UNKNOWN', async () => {
     const repo = makeRepo(100)
     const promise = repo.getFreezeFrame('')
 
     await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(1))
-    respond(RESPONSES['02 04'])
-    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(2))
     respond('NO DATA\r\r>')
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(2))
+    respond(RESPONSES['02 04'])
     await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(3))
     respond('NO DATA\r\r>')
     await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(4))
     respond('NO DATA\r\r>')
     await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(5))
+    respond('NO DATA\r\r>')
+    await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(6))
     respond('NO DATA\r\r>')
 
     const frame = await promise
@@ -452,11 +472,11 @@ describe('Elm327TcpRepository', () => {
     })
   })
 
-  it('getFreezeFrame: devuelve null si ningun PID responde', async () => {
+  it('getFreezeFrame: devuelve null si ningun PID responde, incluido el dueño', async () => {
     const repo = makeRepo(100)
     const promise = repo.getFreezeFrame('P0401')
 
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 6; i++) {
       await vi.waitFor(() => expect(lastSocket().write).toHaveBeenCalledTimes(i))
       respond('NO DATA\r\r>')
     }

@@ -9,6 +9,7 @@ import { VehicleStatus } from '@/domain/value-objects/VehicleStatus.js'
 import { Vin, FALLBACK_VIN } from '@/domain/value-objects/Vin.js'
 import { createPidFormulaCatalog } from './pidFormulaCatalog.js'
 import type { PidFormulaCatalogPort } from '@/application/ports/PidFormulaCatalogPort.js'
+import type { PidFormulaEntry } from '@/domain/pidFormulaEntry.js'
 import { toFormulaEntries } from '@/application/shared/formulaEntries.js'
 import { ALL_SEED_PIDS } from '@/domain/catalogs/pidCatalog.js'
 import { dtcDescribe } from '@/domain/catalogs/dtcCatalog.js'
@@ -43,6 +44,32 @@ const UNKNOWN_FREEZE_FRAME_DTC = 'UNKNOWN'
 
 /** PIDs Mode 02 que se leen para construir el freeze frame. */
 const FREEZE_FRAME_PIDS = ['04', '05', '0C', '0D', '11']
+
+/** Mode 02 PID 02: DTC que disparo el guardado del freeze frame. */
+const FREEZE_FRAME_DTC_PID = '02'
+
+/** El dtc pedido no es el dueño real del snapshot (solo se puede saber si se conoce el dueño). */
+function freezeFrameMismatches(owningDtc: string | null, dtc: string | undefined): boolean {
+  if (!owningDtc || !dtc) return false
+  return dtc.trim() !== '' && owningDtc !== dtc
+}
+
+/** Prioriza el dueño real; sin el, cae al dtc pedido o a UNKNOWN. */
+function resolveFreezeFrameDtc(owningDtc: string | null, dtc: string | undefined): string {
+  if (owningDtc) return owningDtc
+  return dtc?.trim() ? dtc : UNKNOWN_FREEZE_FRAME_DTC
+}
+
+/** Bytes de dato del PID segun el catalogo estandar; 0 si no esta catalogado. */
+function pidDataBytes(entry: PidFormulaEntry | undefined): number {
+  return entry?.dataBytes ?? 0
+}
+
+/** NO DATA, parse error o respuesta negativa: el PID no responde, no es un fallo real del bus. */
+function isRecoverableReadError(err: unknown): boolean {
+  if (err instanceof Elm327NoDataError || err instanceof Elm327ParseError) return true
+  return err instanceof Error && NEGATIVE_RESPONSE_RE.test(err.message)
+}
 
 /** Modo 22 (UDS ReadDataByIdentifier): su respuesta se parsea distinto a la de los modos SAE. */
 const MODE_UDS = '22'
@@ -168,6 +195,12 @@ export class Elm327TcpRepository implements ObdRepository {
     return (await this.readPidWithBytes(mode, pid)).value
   }
 
+  /** Mode 22 (o cualquier PID fuera del catalogo estandar) se resuelve desde la BD. */
+  private usesVehicleRepoPid(modeUpper: string, entry: PidFormulaEntry | undefined): boolean {
+    if (!this.vehicleRepo) return false
+    return modeUpper === MODE_UDS || !entry
+  }
+
   async readPidWithBytes(mode: string, pid: string): Promise<PidReadResult> {
     // Normaliza a mayúsculas para ser coherente con `pidKey` del catálogo estándar
     // (case-insensitive) y con los PidCodes almacenados en BD (uppercase).
@@ -175,17 +208,15 @@ export class Elm327TcpRepository implements ObdRepository {
     const pidUpper = pid.toUpperCase()
     const entry = this.pidFormulas.get(modeUpper, pidUpper)
 
-    // Cerrar el loop de lectura: los PIDs Mode 22 (o cualquier PID fuera del
-    // catálogo estándar) se resuelven desde la BD vía el puerto VehicleRepository.
-    if (this.vehicleRepo && (modeUpper === MODE_UDS || !entry)) {
-      const definition = await this.vehicleRepo.findPidDefinition(modeUpper, pidUpper)
+    if (this.usesVehicleRepoPid(modeUpper, entry)) {
+      const definition = await this.vehicleRepo?.findPidDefinition(modeUpper, pidUpper)
       if (definition) {
         const bytes = await this.fetchPidBytes(modeUpper, pidUpper, definition.dataBytes)
         return { value: definition.formula.evaluate(bytes), bytes }
       }
     }
 
-    const bytes = await this.fetchPidBytes(modeUpper, pidUpper, entry?.dataBytes ?? 0)
+    const bytes = await this.fetchPidBytes(modeUpper, pidUpper, pidDataBytes(entry))
     return { value: this.pidFormulas.apply(modeUpper, pidUpper, bytes), bytes }
   }
 
@@ -252,27 +283,51 @@ export class Elm327TcpRepository implements ObdRepository {
     }
   }
 
+  /** Como {@link fetchPidBytes}, pero un NO DATA/parse/negativo vuelve `null` en vez de lanzar. */
+  private async tryFetchPidBytes(
+    mode: string,
+    pid: string,
+    dataBytes: number,
+  ): Promise<number[] | null> {
+    try {
+      return await this.fetchPidBytes(mode, pid, dataBytes)
+    } catch (err) {
+      if (isRecoverableReadError(err)) return null
+      throw err
+    }
+  }
+
   /**
    * Lee el freeze frame con degradacion por PID: un {@code NO DATA} en un PID
    * no invalida el resto. Solo devuelve {@code null} si ningun PID responde.
+   *
+   * Un vehiculo real solo guarda UN freeze frame, ligado al primer DTC que lo
+   * disparo (Mode 02 PID 02 dice cual). Si se pide uno distinto al que de verdad
+   * lo disparo, no hay snapshot que darle: se devuelve {@code null} en vez de
+   * relabelar el mismo dato bajo otro codigo, que antes hacia que el freeze
+   * frame pareciera identico sin importar en que DTC se hiciera clic.
    */
   async getFreezeFrame(dtc?: string): Promise<FreezeFrame | null> {
+    const owningDtc = await this.readFreezeFrameOwningDtc()
+    if (freezeFrameMismatches(owningDtc, dtc)) return null
+
     const pidValues: Record<string, number> = {}
     for (const pid of FREEZE_FRAME_PIDS) {
-      try {
-        const bytes = await this.fetchPidBytes(MODE_FREEZE_FRAME, pid, 2)
-        pidValues[pid] = this.pidFormulas.apply(MODE_SAE_01, pid, bytes)
-      } catch (err) {
-        if (err instanceof Elm327NoDataError || err instanceof Elm327ParseError) continue
-        if (err instanceof Error && NEGATIVE_RESPONSE_RE.test(err.message)) continue
-        throw err
-      }
+      const bytes = await this.tryFetchPidBytes(MODE_FREEZE_FRAME, pid, 2)
+      if (bytes) pidValues[pid] = this.pidFormulas.apply(MODE_SAE_01, pid, bytes)
     }
     if (Object.keys(pidValues).length === 0) return null
-    return new FreezeFrame({
-      dtcCode: dtc && dtc.trim() !== '' ? dtc : UNKNOWN_FREEZE_FRAME_DTC,
-      pidValues,
-    })
+    return new FreezeFrame({ dtcCode: resolveFreezeFrameDtc(owningDtc, dtc), pidValues })
+  }
+
+  /**
+   * Lee el DTC dueño del freeze frame (Mode 02 PID 02). `null` si el adaptador no lo
+   * soporta: sin ese dato no se puede verificar la propiedad, asi que se sigue
+   * devolviendo el snapshot best-effort en vez de bloquear la lectura entera.
+   */
+  private async readFreezeFrameOwningDtc(): Promise<string | null> {
+    const bytes = await this.tryFetchPidBytes(MODE_FREEZE_FRAME, FREEZE_FRAME_DTC_PID, 2)
+    return bytes ? DtcCode.decodeFromBytes(bytes[0], bytes[1]) : null
   }
 
   /** Resuelve la descripcion de un DTC: catalogo estandar J2012, o BD si es manufacturer-specific.

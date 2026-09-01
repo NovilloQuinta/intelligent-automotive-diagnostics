@@ -345,6 +345,12 @@ ObdMessage = {
     # argument for reading the freeze frame before clearing codes collapses
     # if these values are identical to the Mode 01 ones.
     # ==================================================================
+    "FF_DTC": {
+        "Request": "^0202" + ELM_FOOTER,
+        "Descr": "Freeze frame owning DTC (P0301)",
+        "Header": ECU_ADDR_E,
+        "Response": HD(ECU_R_ADDR_E) + SZ("04") + DT("42 02 03 01"),
+    },
     "FF_LOAD": {
         "Request": "^0204" + ELM_FOOTER,
         "Descr": "Freeze frame engine load",
