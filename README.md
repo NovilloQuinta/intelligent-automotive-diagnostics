@@ -5,6 +5,32 @@
 > Simulacion de telemetria vehicular y diagnostico con IA mediante el protocolo MCP (Model Context Protocol).
 > Clean Architecture + Hexagonal. Cumplimiento SAE J1979 / ISO 15031 / ISO 15765-4 / ISO 3779.
 
+## Entrega del TFM
+
+| Recurso | Enlace |
+|---|---|
+| **Aplicacion desplegada** | **https://diag.jcodinglabs.com** |
+| Documentacion de API (Swagger) | https://diag.jcodinglabs.com/api-docs |
+| Presentacion (slides) | [`docs/presentacion/`](docs/presentacion/) — _URL publica pendiente_ |
+| Video de presentacion | _pendiente de publicar_ |
+| Checklist de entrega | [`docs/entrega-tfm.md`](docs/entrega-tfm.md) |
+
+### Acceso de prueba
+
+La aplicacion tiene login. Para probarla sin registrarse:
+
+| Campo | Valor |
+|---|---|
+| Email | _pendiente de fijar_ |
+| Contrasena | _pendiente de fijar_ |
+
+Tambien se puede crear una cuenta nueva desde **Registro**: el alta esta abierta y da
+acceso a todo el flujo de diagnostico.
+
+> El **panel de administracion** (`/admin`) es aparte: requiere rol `admin` **y** segundo
+> factor TOTP activo — sin el, `/api/admin` responde 403 aunque el rol sea correcto. El
+> primer admin se siembra al arrancar con `ADMIN_EMAIL`/`ADMIN_PASSWORD` en el `.env`.
+
 ## Stack
 
 | Capa | Tecnologia |
@@ -139,6 +165,31 @@ domain ← application ← infrastructure
 
 [ADR 001](docs/adr/001-arquitectura-del-sistema.md) — justificacion completa.
 
+### Estructura del monorepo
+
+```
+.
+├── apps/
+│   ├── core-api/          ← Backend Express 5 + MCP + SQLite (Clean Architecture)
+│   └── ui/                ← Frontend React 19 + Vite + TanStack Router
+│       └── src/           ← components/ hooks/ lib/ routes/
+├── docs/
+│   ├── adr/               ← 9 decisiones de arquitectura
+│   ├── tfm/               ← Documentacion tecnica de la defensa (6 documentos)
+│   ├── infrastructure/    ← Despliegue y emulador ELM327
+│   ├── entrega-tfm.md     ← Checklist de entrega del TFM
+│   ├── guion-video.md     ← Guion del video de presentacion
+│   └── guion-demo.md      ← Guion de la demo, pantalla a pantalla
+├── docker/                ← Emuladores ELM327 (Audi, Kawasaki, Toyota)
+├── openspec/              ← Especificaciones de cambios (propuesta antes de codigo)
+├── scripts/               ← Sondas OBD y bateria de evaluacion del agente
+├── docker-compose.yml     ← Desarrollo (3 emuladores)
+├── docker-compose.prod.yml← Produccion (API + UI + emuladores, solo loopback)
+└── Caddyfile              ← Reverse proxy con TLS del despliegue
+```
+
+### Backend — `apps/core-api/`
+
 ```
 apps/core-api/src/
 ├── main.ts                     ← Entry point (10 lineas: loadConfig, buildApp, listen)
@@ -211,16 +262,30 @@ apps/core-api/src/
 | DTO | `VerbNounInput/Output.ts` | `RegisterUserInput.ts` |
 | Controller | `NounController.ts` | `AuthController.ts` |
 
-## MCP Server — 6 tools
+## MCP Server — 16 tools
+
+El LLM no toca el coche ni la base de datos: pide **tools**, y el servidor MCP decide si
+las ejecuta. Detalle completo en [`docs/tfm/01-mcp.md`](docs/tfm/01-mcp.md).
+
+**Diagnostico OBD-II (7)**
 
 | Tool | Ejemplo |
 |---|---|
 | `read_pid(mode, pid)` | `read_pid("01", "0C")` → `"750"` |
-| `get_dtc_codes()` | → `"P0301"` |
-| `get_freeze_frame(dtc?)` | → valores congelados |
+| `get_dtc_codes()` | → `"P0301: Cylinder 1 Misfire"` |
+| `get_freeze_frame(dtc?)` | → valores congelados (Service 02) |
 | `read_vin()` | → `"WAUZZZ8V5JA123456"` |
-| `get_vehicle_info()` | → `"Audi A3 (2018) — 2.0 TFSI"` |
-| `get_available_pids(vehicleId?)` | → PIDs conocidos |
+| `get_vehicle_info()` | → `"Audi A3 (2018) — 2.0 TDI"` |
+| `get_available_pids(vehicleId?)` | → PIDs soportados (bitmask `01 00/20/40/60` + catalogo) |
+| `get_ecu_info()` | → `"ECM (Engine, 7E0→7E8) — ISO 15765-4"` |
+
+**Conocimiento / RAG (8)** — `search_similar_pids`, `search_similar_dtcs`,
+`search_similar_ecus`, `search_similar_diagnoses`, `index_pid`, `index_dtc`, `index_ecu`,
+`index_diagnosis`. Busqueda semantica sobre LanceDB y escritura del catalogo
+auto-expansivo ([ADR 007](docs/adr/007-catalogo-auto-expansivo-lancedb.md)).
+
+**Web (1)** — `web_search`, ultimo recurso cuando el catalogo no sabe. Presupuesto maximo
+de 3 busquedas por sesion y resultado envuelto en `<untrusted-web-result>`.
 
 ```bash
 curl -X POST http://localhost:4000/api/mcp/tools/read_pid \
@@ -242,14 +307,28 @@ curl -X POST http://localhost:4000/api/mcp/tools/read_pid \
 
 ## Testing
 
+TDD estricto: primero el test que falla. **2.519 tests en verde** repartidos en 228
+ficheros (core-api 1.806 en 156, UI 713 en 72), verificado el 2026-09-01.
+
 ```bash
-pnpm test              # 432 tests en 33 suites
-pnpm test:watch
-pnpm test:coverage
+pnpm verify            # gate pre-push completo: lint + format + coverage + build (ambas apps)
+pnpm test:all          # las dos suites
+pnpm test              # solo core-api
+pnpm test:coverage     # coverage core-api (Core 100 %, Features >= 80 %)
 ```
+
+El coverage entra en el gate y en CI. La estrategia por capas —Core al 100 %, Features
+por encima del 80 %, infraestructura excluida— esta en `.opencode/skills/coverage-strategy/`.
 
 ## Documentacion
 
-- **ADR** — 8 decisiones en `docs/adr/`
+- **ADR** — 9 decisiones en [`docs/adr/`](docs/adr/)
+- **Documentacion tecnica del TFM** — [`docs/tfm/`](docs/tfm/README.md): MCP, embeddings y
+  RAG, OBD-II y emulador, diagnostico cognitivo, arquitectura y UI
+- **Despliegue** — [`docs/infrastructure/despliegue.md`](docs/infrastructure/despliegue.md):
+  cadena CI/CD, como saber que version corre y como volver atras
+- **Seguridad** — [`docs/security.md`](docs/security.md): OWASP API Top 10 2023 completo
+- **Entrega del TFM** — [`docs/entrega-tfm.md`](docs/entrega-tfm.md) y
+  [`docs/guion-video.md`](docs/guion-video.md)
 - **TSDoc** — export publico con CI (`jsdoc/require-jsdoc`)
 - **[AGENTS.md](AGENTS.md)** — Reglas de sesion, agentes, skills, convenciones
