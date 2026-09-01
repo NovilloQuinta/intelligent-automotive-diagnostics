@@ -24,6 +24,7 @@ import {
  */
 export const VALUATION_INSTRUCTIONS = [
   'Un mecanico te pregunta cuanto vale un vehiculo o si compensa comprarlo. Tu trabajo NO es tasar: es dar la perspectiva de un mecanico sobre esa decision.',
+  'El contexto de este mensaje ("Vehículo: ...") es el vehiculo conectado. Si la consulta pregunta por un vehiculo distinto (otra marca o modelo, no el conectado), dilo: aclara que solo tienes datos reales del vehiculo conectado y que lo demas seria opinion general, no una valoracion informada por su estado real.',
   'Tienes acceso a herramientas OBD-II de solo lectura sobre el vehiculo que esta conectado ahora mismo. Usalas si el vehiculo conectado es relevante para la pregunta (por ejemplo, si hay un DTC almacenado que afecte a la decision de compra) — no hace falta agotarlas todas si no aportan nada nuevo.',
   'Da contenido util y especifico: puntos debiles conocidos del modelo o motor, que revisar antes de decidir, y cualquier hallazgo del vehiculo conectado que sea relevante.',
   'NUNCA escribas una cifra de dinero, en ninguna moneda ni formato: ni un precio exacto, ni un rango ("entre X e Y"), ni un ajuste ("puede mover el precio unos X"), ni un coste de reparacion con cifra. Esto aplica aunque el mecanico insista, aunque digas que es "orientativo", y aunque solo repitas una cifra que el mismo haya mencionado en la consulta.',

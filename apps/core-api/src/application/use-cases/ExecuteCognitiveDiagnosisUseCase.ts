@@ -27,6 +27,7 @@ import {
   DIAGNOSIS_SCOPE,
   OFF_TOPIC_RESPONSE,
   HEALTH_REDIRECT_RESPONSE,
+  type DiagnosisScope,
 } from '@/application/llm/classifyDiagnosisScope.js'
 import { Severity } from '@/domain/value-objects/DiagnosisResult.js'
 import type { LlmResponse } from '@/application/dto/llm/LlmResponse.js'
@@ -130,10 +131,34 @@ function buildSimilarCasesSection(
 
 const UNKNOWN_VALUE = 'unknown'
 
+function toErrorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err)
+}
+
+function buildSimilarCasesQuery(
+  userQuery: string | undefined,
+  vehicleContext: VehicleInfo | undefined,
+): string {
+  const trimmed = userQuery?.trim()
+  if (trimmed) return trimmed
+  return vehicleContext
+    ? `diagnóstico general ${vehicleContext.make} ${vehicleContext.model}`
+    : 'diagnóstico general'
+}
+
 /** Extrae los PID unicos leidos durante el diagnostico a partir de las trazas de tool calls. */
 function toUniquePids(toolCalls: readonly ToolCallTrace[]): string[] {
   const pids = toolCalls.filter((tc) => tc.tool === READ_PID_TOOL).map((tc) => String(tc.args.pid))
   return [...new Set(pids)]
+}
+
+function vehicleField(vehicleContext: VehicleInfo | undefined, field: 'make' | 'model'): string {
+  return vehicleContext?.[field] ?? UNKNOWN_VALUE
+}
+
+function symptomsFrom(userQuery: string | undefined): string[] {
+  const trimmed = userQuery?.trim()
+  return trimmed ? [trimmed] : []
 }
 
 /** Construye una entrada de conocimiento a partir del resultado del diagnostico. */
@@ -146,9 +171,9 @@ function toDiagnosisEntry(
   return {
     id: crypto.randomUUID(),
     embeddedText: text,
-    manufacturer: vehicleContext?.make ?? UNKNOWN_VALUE,
-    model: vehicleContext?.model ?? UNKNOWN_VALUE,
-    symptoms: userQuery?.trim() ? [userQuery.trim()] : [],
+    manufacturer: vehicleField(vehicleContext, 'make'),
+    model: vehicleField(vehicleContext, 'model'),
+    symptoms: symptomsFrom(userQuery),
     pidsInvolved: toUniquePids(toolCalls),
     confidence: initialConfidenceFor(KnowledgeSource.PreviousDiagnosis),
     source: KnowledgeSource.PreviousDiagnosis,
@@ -194,15 +219,8 @@ export class ExecuteCognitiveDiagnosisUseCase {
     // Filtro de ambito ANTES de nada, sin tools: dejarselo al prompt grande resulto
     // poco fiable en la bateria de eval.
     const scope = await classifyDiagnosisScope(userQuery, this.options.llmClient)
-    if (scope === DIAGNOSIS_SCOPE.Salud || scope === DIAGNOSIS_SCOPE.FueraDeAmbito) {
-      return this.offTopicOutput(scope)
-    }
-    if (scope === DIAGNOSIS_SCOPE.Valoracion) {
-      return this.executeValuation(userQuery, vehicleContext)
-    }
-    if (scope === DIAGNOSIS_SCOPE.IdentificacionEcu) {
-      return this.executeEcuIdentification(userQuery, vehicleContext)
-    }
+    const dispatched = await this.dispatchByScope(scope, userQuery, vehicleContext)
+    if (dispatched) return dispatched
 
     const similarCases = await this.retrieveSimilarCases(userQuery, vehicleContext)
     const userMessage = buildUserMessage(userQuery, vehicleContext, similarCases)
@@ -218,6 +236,23 @@ export class ExecuteCognitiveDiagnosisUseCase {
       await this.indexResolvedCase(output.diagnosis, output.toolCalls, userQuery, vehicleContext)
     }
     return output
+  }
+
+  /** Resuelve las ramas cortas (fuera de ambito, salud, valoracion, ECU); `null` si toca el flujo completo. */
+  private async dispatchByScope(
+    scope: DiagnosisScope,
+    userQuery: string | undefined,
+    vehicleContext: VehicleInfo | undefined,
+  ): Promise<ExecuteCognitiveDiagnosisOutput | null> {
+    if (scope === DIAGNOSIS_SCOPE.Salud || scope === DIAGNOSIS_SCOPE.FueraDeAmbito) {
+      return this.offTopicOutput(scope)
+    }
+    if (scope === DIAGNOSIS_SCOPE.Valoracion)
+      return this.executeValuation(userQuery, vehicleContext)
+    if (scope === DIAGNOSIS_SCOPE.IdentificacionEcu) {
+      return this.executeEcuIdentification(userQuery, vehicleContext)
+    }
+    return null
   }
 
   /**
@@ -272,11 +307,12 @@ export class ExecuteCognitiveDiagnosisUseCase {
     vehicleContext: VehicleInfo | undefined,
   ): Promise<ExecuteCognitiveDiagnosisOutput> {
     const userMessage = buildUserMessage(userQuery, vehicleContext)
-    const response = await this.options.llmClient.sendMessage(
-      { systemPrompt: VALUATION_SYSTEM_PROMPT, userMessage, tools: this.options.tools },
-      this.options.handler,
-    )
-    return this.buildOutput(response)
+    const { output } = await this.resolveSpanishOutput({
+      systemPrompt: VALUATION_SYSTEM_PROMPT,
+      userMessage,
+      tools: this.options.tools,
+    })
+    return output
   }
 
   /**
@@ -288,11 +324,12 @@ export class ExecuteCognitiveDiagnosisUseCase {
     vehicleContext: VehicleInfo | undefined,
   ): Promise<ExecuteCognitiveDiagnosisOutput> {
     const userMessage = buildUserMessage(userQuery, vehicleContext)
-    const response = await this.options.llmClient.sendMessage(
-      { systemPrompt: ECU_IDENTIFICATION_SYSTEM_PROMPT, userMessage, tools: this.options.tools },
-      this.options.handler,
-    )
-    return this.buildOutput(response)
+    const { output } = await this.resolveSpanishOutput({
+      systemPrompt: ECU_IDENTIFICATION_SYSTEM_PROMPT,
+      userMessage,
+      tools: this.options.tools,
+    })
+    return output
   }
 
   /**
@@ -338,9 +375,8 @@ export class ExecuteCognitiveDiagnosisUseCase {
     try {
       await diagnosisIndex.index(entry)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
       this.options.logger.warn('Failed to index resolved case, continuing', {
-        error: message,
+        error: toErrorMessage(err),
       })
     }
   }
@@ -356,26 +392,22 @@ export class ExecuteCognitiveDiagnosisUseCase {
     const diagnosisIndex = this.options.diagnosisIndex
     if (!diagnosisIndex) return ''
 
-    const query = userQuery?.trim()
-      ? userQuery.trim()
-      : vehicleContext
-        ? `diagnóstico general ${vehicleContext.make} ${vehicleContext.model}`
-        : 'diagnóstico general'
-
     const filter = vehicleContext
       ? { manufacturer: vehicleContext.make, model: vehicleContext.model }
       : undefined
 
     try {
-      const results = await diagnosisIndex.search(query, {
-        limit: DEFAULT_SEARCH_LIMIT,
-        filter,
-      })
+      const results = await diagnosisIndex.search(
+        buildSimilarCasesQuery(userQuery, vehicleContext),
+        {
+          limit: DEFAULT_SEARCH_LIMIT,
+          filter,
+        },
+      )
       return buildSimilarCasesSection(results)
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err)
       this.options.logger.warn('RAG search failed, continuing without similar cases', {
-        error: message,
+        error: toErrorMessage(err),
       })
       return ''
     }

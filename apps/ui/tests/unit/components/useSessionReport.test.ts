@@ -142,6 +142,41 @@ describe('useSessionReport', () => {
     })
   })
 
+  it('should keep the first precomputed cognitive result and ignore later follow-ups', async () => {
+    vi.mocked(api.getCapabilities).mockResolvedValue({ cognitiveDiagnosis: true })
+    vi.mocked(api.runDiagnosis).mockResolvedValue(SAMPLE_DIAGNOSIS)
+    vi.mocked(api.getEcuInfo).mockResolvedValue(SAMPLE_ECUS)
+    vi.mocked(api.getFreezeFrame).mockResolvedValue(SAMPLE_FREEZE_FRAME)
+
+    const first = {
+      diagnosisText: 'Diagnóstico inicial',
+      severity: 'high',
+      confidence: 0.9,
+      recommendations: ['Revisar bujía'],
+      loading: false,
+      error: null,
+    }
+    const followUp = {
+      ...first,
+      diagnosisText: 'Respuesta al follow-up',
+      severity: 'low',
+      confidence: 0.3,
+    }
+
+    const { result, rerender } = renderHook(
+      ({ precomputedCognitive }) => useSessionReport('scenario-1', precomputedCognitive),
+      { initialProps: { precomputedCognitive: first } },
+    )
+
+    await waitFor(() => {
+      expect(result.current.cognitive).toMatchObject({ diagnosis: 'Diagnóstico inicial' })
+    })
+
+    rerender({ precomputedCognitive: followUp })
+
+    expect(result.current.cognitive).toMatchObject({ diagnosis: 'Diagnóstico inicial' })
+  })
+
   // ---- Test 3: cognitiveDiagnosis: false → cognitive = 'unavailable' ----
 
   it("should mark cognitive as 'unavailable' and skip getCognitiveDiagnosis when capabilities say false", async () => {

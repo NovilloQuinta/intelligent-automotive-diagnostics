@@ -748,6 +748,27 @@ describe('filtro de ambito previo (classifyDiagnosisScope)', () => {
     expect(diagnosisIndex.index).not.toHaveBeenCalled()
   })
 
+  it('should retry the valuation prompt too when the first attempt leaks English', async () => {
+    const sendMessage = vi
+      .fn()
+      .mockResolvedValueOnce(cognitiveResponse('You should check the misfire before buying it.'))
+      .mockResolvedValueOnce(cognitiveResponse('Revisa el fallo de encendido antes de comprarlo.'))
+    const llmClient = mockLlmClient({
+      sendSingleMessage: vi
+        .fn()
+        .mockResolvedValue({ text: 'VALORACION', toolCalls: [], raw: null }),
+      sendMessage,
+    })
+
+    const result = await makeUseCase(llmClient).execute({
+      userQuery: '¿Cuánto vale un Audi A3 2018 con 140.000 km?',
+      vehicleContext,
+    })
+
+    expect(sendMessage).toHaveBeenCalledTimes(2)
+    expect(result.diagnosis).toBe('Revisa el fallo de encendido antes de comprarlo.')
+  })
+
   it('should use the short ECU identification prompt, with tools but without the catalog, and never index the response, when the classifier says ECU', async () => {
     const diagnosisIndex = mockDiagnosisIndex([])
     const handler = vi.fn()

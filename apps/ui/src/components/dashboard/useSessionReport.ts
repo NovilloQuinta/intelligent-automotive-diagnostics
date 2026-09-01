@@ -214,11 +214,13 @@ export function useSessionReport(
 ): SessionReportState {
   const [state, setState] = useState<SessionReportState>(INITIAL_STATE)
   const cancelled = useRef(false)
+  const cognitiveLocked = useRef(false)
 
   useEffect(() => {
     if (!scenarioId) return
 
     cancelled.current = false
+    cognitiveLocked.current = false
 
     setState({
       ...INITIAL_STATE,
@@ -248,10 +250,12 @@ export function useSessionReport(
     // eslint-disable-next-line react-hooks/exhaustive-deps -- precomputedCognitive/dtcCode se releen via closure a proposito: solo scenarioId debe reiniciar el efecto entero.
   }, [scenarioId])
 
-  // Mantiene la seccion cognitiva sincronizada con el hook de arriba sin relanzar el resto del informe.
   useEffect(() => {
-    if (!precomputedCognitive) return
+    if (!precomputedCognitive || cognitiveLocked.current) return
     setState((prev) => ({ ...prev, ...cognitiveStateFromPrecomputed(precomputedCognitive) }))
+    if (precomputedCognitive.diagnosisText !== null && !precomputedCognitive.loading) {
+      cognitiveLocked.current = true
+    }
   }, [precomputedCognitive])
 
   return state
