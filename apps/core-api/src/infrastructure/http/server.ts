@@ -41,6 +41,8 @@ const HTTP_INTERNAL_SERVER_ERROR = 500
 
 /** Un año en segundos, para la cabecera HSTS. */
 const HSTS_MAX_AGE_SECONDS = 31536000
+const CORS_PREFLIGHT_MAX_AGE_SECONDS = 600
+const TRUSTED_PROXY_HOPS = 1
 
 /** Dependencias del servidor Express. */
 export interface ServerDependencies {
@@ -78,7 +80,14 @@ function applyBaseMiddleware(app: express.Application, deps: ServerDependencies)
       frameguard: { action: 'deny' },
     }),
   )
-  app.use(createRateLimiter({ namespace: 'global', ...deps.rateLimit }))
+  app.use(
+    createRateLimiter({
+      namespace: 'global',
+      ...deps.rateLimit,
+      // Poller de diagnostico OBD, no trafico de usuario: sin limite.
+      skip: (req) => req.path === '/api/live-data',
+    }),
+  )
   app.use(createAuditLogger(deps.auditRepo))
   // El chat cognitivo reenvia el hilo entero en cada pregunta, asi que su cuerpo
   // crece con la conversacion y con 10 KB se agotaba a la tercera pregunta. Lleva
@@ -102,7 +111,7 @@ function applyCors(app: express.Application, allowedOrigins: string): void {
       },
       methods: ['GET', 'POST', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],
-      maxAge: 600,
+      maxAge: CORS_PREFLIGHT_MAX_AGE_SECONDS,
     }),
   )
 }
@@ -320,7 +329,7 @@ export function createServer(deps: ServerDependencies): express.Application {
 
   // Sin esto express ve la IP del proxy, no la del cliente, y el rate limit
   // acabaria contando todo el trafico como si viniera de un unico origen.
-  app.set('trust proxy', 1)
+  app.set('trust proxy', TRUSTED_PROXY_HOPS)
 
   applyRequestId(app)
   applyBaseMiddleware(app, deps)

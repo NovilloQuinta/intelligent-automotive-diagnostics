@@ -1,3 +1,4 @@
+import type { Request } from 'express'
 import { rateLimit } from 'express-rate-limit'
 import { SqliteRateLimitStore } from '@/infrastructure/persistence/sqlite/rateLimitStore.js'
 
@@ -11,6 +12,8 @@ export interface RateLimiterConfig {
    * otro. Cada punto de montaje de `server.ts` declara el suyo.
    */
   readonly namespace: string
+  /** Excluye peticiones de este contador. */
+  readonly skip?: (req: Request) => boolean
 }
 
 const DEFAULT_WINDOW_MINUTES = 15
@@ -73,5 +76,6 @@ export function createRateLimiter(config?: Partial<RateLimiterConfig>) {
     legacyHeaders: false,
     message: { error: 'Too many requests, please try again later.' },
     store: new SqliteRateLimitStore({ namespace }),
+    skip: config?.skip,
   })
 }
