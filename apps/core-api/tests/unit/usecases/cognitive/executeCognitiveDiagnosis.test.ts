@@ -506,6 +506,51 @@ describe('executeCognitiveDiagnosis', () => {
     vi.restoreAllMocks()
   })
 
+  it('should retry once and keep the Spanish narrative when the first attempt leaks English', async () => {
+    const englishText = 'The engine has a misfire in cylinder 1 because of a faulty coil.'
+    const spanishText =
+      'El motor tiene un fallo de encendido en el cilindro 1 por una bobina defectuosa.'
+    const sendMessage = vi
+      .fn()
+      .mockResolvedValueOnce(cognitiveResponse(englishText))
+      .mockResolvedValueOnce(cognitiveResponse(spanishText))
+    const llmClient = mockLlmClient({ sendMessage })
+    const index = mockDiagnosisIndex([])
+
+    const result = await new ExecuteCognitiveDiagnosisUseCase({
+      llmClient,
+      tools: sixTools,
+      handler: vi.fn(),
+      diagnosisIndex: index,
+      logger: createMockLogger(),
+    }).execute({ userQuery: 'tiembla al ralentí', vehicleContext })
+
+    expect(sendMessage).toHaveBeenCalledTimes(2)
+    expect(result.diagnosis).toBe(spanishText)
+    expect(index.index).toHaveBeenCalledTimes(1)
+  })
+
+  it('should return a fixed response and skip indexing when both attempts leak English', async () => {
+    const englishText = 'The engine has a misfire because of a faulty coil.'
+    const sendMessage = vi.fn().mockResolvedValue(cognitiveResponse(englishText))
+    const llmClient = mockLlmClient({ sendMessage })
+    const index = mockDiagnosisIndex([])
+
+    const result = await new ExecuteCognitiveDiagnosisUseCase({
+      llmClient,
+      tools: sixTools,
+      handler: vi.fn(),
+      diagnosisIndex: index,
+      logger: createMockLogger(),
+    }).execute({ userQuery: 'tiembla al ralentí', vehicleContext })
+
+    expect(sendMessage).toHaveBeenCalledTimes(2)
+    expect(result.diagnosis).toBe('No te he entendido bien. ¿Puedes repetir la pregunta?')
+    expect(result.severity).toBe(Severity.Low)
+    expect(result.confidence).toBe(0)
+    expect(index.index).not.toHaveBeenCalled()
+  })
+
   it('should not attempt to index when diagnosisIndex is absent', async () => {
     const llmText = 'Narrativa'
     const llmClient = mockLlmClient({

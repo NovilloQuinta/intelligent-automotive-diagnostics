@@ -60,6 +60,28 @@ function isShoutedConfirmation(text: string): boolean {
   return text.length <= MAX_SHOUT_LENGTH && /[A-ZÁÉÍÓÚÑ]/.test(text) && text === text.toUpperCase()
 }
 
+/** Tildes, eñe y palabras funcionales frecuentes en español. */
+const SPANISH_MARKER_REGEX =
+  /[áéíóúñÁÉÍÓÚÑ¿¡]|\b(el|la|los|las|de|que|es|un|una|para|con|por|no|se|del|está|esto|esta)\b/i
+/** Palabras funcionales frecuentes en inglés. */
+const ENGLISH_MARKER_REGEX =
+  /\b(the|and|this|that|with|your|vehicle|engine|should|would|because|however)\b/i
+
+/**
+ * Detecta cuando la narrativa se fue a inglés pese a la instrucción de sistema.
+ *
+ * Conservador a propósito, igual que {@link isShoutedConfirmation}: solo marca fuga
+ * de idioma cuando NO hay ningún marcador de español y SÍ hay marcadores de inglés.
+ * Un falso positivo cuesta un reintento; uno negativo deja pasar inglés — lo primero
+ * es más barato.
+ */
+function looksLikeEnglishLeak(text: string): boolean {
+  return !SPANISH_MARKER_REGEX.test(text) && ENGLISH_MARKER_REGEX.test(text)
+}
+
+/** Respuesta fija cuando el LLM no logra responder en español tras un reintento. */
+const MISUNDERSTOOD_RESPONSE = 'No te he entendido bien. ¿Puedes repetir la pregunta?'
+
 /** Umbrales de la etiqueta de parecido (distancia vectorial: menor es mas parecido). */
 const VERY_SIMILAR_MAX_DISTANCE = 0.5
 const SIMILAR_MAX_DISTANCE = 1.0
@@ -184,20 +206,50 @@ export class ExecuteCognitiveDiagnosisUseCase {
 
     const similarCases = await this.retrieveSimilarCases(userQuery, vehicleContext)
     const userMessage = buildUserMessage(userQuery, vehicleContext, similarCases)
+    const request = {
+      systemPrompt: COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT,
+      userMessage,
+      tools: this.options.tools,
+      conversationHistory,
+    }
 
-    const response = await this.options.llmClient.sendMessage(
-      {
-        systemPrompt: COGNITIVE_DIAGNOSIS_SYSTEM_PROMPT,
-        userMessage,
-        tools: this.options.tools,
-        conversationHistory,
-      },
-      this.options.handler,
-    )
-
-    const output = this.buildOutput(response)
-    await this.indexResolvedCase(output.diagnosis, response.toolCalls, userQuery, vehicleContext)
+    const { output, understood } = await this.resolveSpanishOutput(request)
+    if (understood) {
+      await this.indexResolvedCase(output.diagnosis, output.toolCalls, userQuery, vehicleContext)
+    }
     return output
+  }
+
+  /**
+   * Ejecuta el diagnostico y reintenta una vez si la narrativa se fue a ingles pese a
+   * la instruccion de sistema (prompt-only demostro no ser fiable contra este patron,
+   * igual que con el filtro de ambito). Si el reintento tampoco sale en espanol, se
+   * sirve {@link MISUNDERSTOOD_RESPONSE} en vez del texto en el idioma equivocado, y
+   * no se indexa como caso resuelto.
+   */
+  private async resolveSpanishOutput(
+    request: Parameters<LlmClientPort['sendMessage']>[0],
+  ): Promise<{ output: ExecuteCognitiveDiagnosisOutput; understood: boolean }> {
+    const first = this.buildOutput(
+      await this.options.llmClient.sendMessage(request, this.options.handler),
+    )
+    if (!looksLikeEnglishLeak(first.diagnosis)) return { output: first, understood: true }
+
+    const retry = this.buildOutput(
+      await this.options.llmClient.sendMessage(request, this.options.handler),
+    )
+    if (!looksLikeEnglishLeak(retry.diagnosis)) return { output: retry, understood: true }
+
+    return {
+      output: {
+        ...retry,
+        diagnosis: MISUNDERSTOOD_RESPONSE,
+        severity: Severity.Low,
+        confidence: 0,
+        recommendations: [],
+      },
+      understood: false,
+    }
   }
 
   /** Respuesta fija, sin llamar al LLM grande, para salud/fuera de ambito. */
