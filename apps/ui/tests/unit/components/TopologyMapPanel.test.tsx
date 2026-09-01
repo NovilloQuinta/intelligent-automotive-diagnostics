@@ -95,7 +95,7 @@ describe('TopologyMapPanel', () => {
     it('colorea cada nodo segun su tipo', () => {
       render(<TopologyMapPanel {...BASE} ecus={AUDI_ECUS} />)
       const abs = screen.getByRole('button', { name: /frenos abs/i })
-      expect(abs.querySelector('circle')).toHaveAttribute('fill', getEcuTopologyColor('ABS'))
+      expect(abs.querySelector('rect')).toHaveAttribute('fill', getEcuTopologyColor('ABS'))
     })
   })
 
@@ -179,6 +179,33 @@ describe('TopologyMapPanel', () => {
       )
 
       expect(screen.getByRole('button', { name: /Motor.*2 aver/i })).toBeInTheDocument()
+    })
+
+    it('muestra los codigos de averia de la ECU al seleccionarla', async () => {
+      const user = userEvent.setup()
+      render(
+        <TopologyMapPanel
+          {...BASE}
+          ecus={AUDI_ECUS}
+          dtcs={[
+            { code: 'P0301', description: 'Fallo de encendido cilindro 1', ecuAddress: '7E8' },
+          ]}
+        />,
+      )
+
+      await user.click(screen.getByRole('button', { name: /Motor/i }))
+
+      expect(screen.getByText('P0301')).toBeInTheDocument()
+      expect(screen.getByText(/Fallo de encendido cilindro 1/)).toBeInTheDocument()
+    })
+
+    it('no muestra ninguna lista de averias si la ECU seleccionada no reporta ninguna', async () => {
+      const user = userEvent.setup()
+      render(<TopologyMapPanel {...BASE} ecus={AUDI_ECUS} dtcs={[dtc('P0301', '7E9')]} />)
+
+      await user.click(screen.getByRole('button', { name: 'Motor' }))
+
+      expect(screen.queryByText('P0301')).not.toBeInTheDocument()
     })
   })
 

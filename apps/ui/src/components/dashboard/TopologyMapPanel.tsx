@@ -15,8 +15,11 @@ const TOPOLOGY = {
   VIEWBOX_HEIGHT: 260,
   BUS_Y: 130,
   BUS_MARGIN_X: 56,
-  NODE_RADIUS: 22,
-  NODE_RADIUS_SELECTED: 26,
+  NODE_WIDTH: 34,
+  NODE_HEIGHT: 24,
+  NODE_WIDTH_SELECTED: 38,
+  NODE_HEIGHT_SELECTED: 28,
+  NODE_CORNER_RADIUS: 6,
   /** Separacion vertical de los nodos respecto a la linea de bus, alternando arriba/abajo. */
   NODE_OFFSET_Y: 58,
   STUB_WIDTH: 2,
@@ -34,6 +37,13 @@ const TOPOLOGY = {
 } as const
 
 const BUS_STROKE = 'rgba(255,255,255,0.18)'
+
+const AI_ORIGIN_TITLE = 'Centralita identificada por el diagnóstico cognitivo'
+
+/** Normaliza una direccion CAN para comparar sin distinguir mayusculas/espacios. */
+function normalizeEcuAddress(address: string | undefined): string | undefined {
+  return address?.trim().toUpperCase()
+}
 
 interface Props {
   readonly ecus: EcuInfo[]
@@ -69,21 +79,25 @@ function nodePosition(index: number, total: number): NodePosition {
   return { x, y }
 }
 
+/** Estado visual del nodo, agrupado para no superar 4 props en {@link EcuNode}. */
+interface EcuNodeStatus {
+  readonly selected: boolean
+  /** Cuantas averias reporta esta ECU. `0` = sana. */
+  readonly faultCount: number
+}
+
 interface EcuNodeProps {
   readonly ecu: EcuInfo
   readonly position: NodePosition
-  readonly selected: boolean
-  readonly onSelect: (index: number) => void
-  readonly index: number
-  /** Cuantas averias reporta esta ECU. `0` = sana. */
-  readonly faultCount: number
+  readonly status: EcuNodeStatus
+  readonly onSelect: () => void
 }
 
 /** Cuenta las averias atribuidas a cada ECU por su direccion de respuesta. */
 function countFaultsByEcu(dtcs: readonly DtcCode[]): Map<string, number> {
   const counts = new Map<string, number>()
   for (const dtc of dtcs) {
-    const address = dtc.ecuAddress?.trim().toUpperCase()
+    const address = normalizeEcuAddress(dtc.ecuAddress)
     if (!address) continue
     counts.set(address, (counts.get(address) ?? 0) + 1)
   }
@@ -108,56 +122,27 @@ function isAboveBus(position: NodePosition): boolean {
   return position.y < TOPOLOGY.BUS_Y
 }
 
-/**
- * Nodo individual del mapa: linea al bus, circulo coloreado por tipo y etiqueta.
- *
- * Es un `<g>` con `role="button"` para que sea alcanzable por teclado y por
- * nombre accesible — un `<circle>` suelto no lo seria.
- */
-function EcuNode({ ecu, position, selected, onSelect, index, faultCount }: EcuNodeProps) {
-  const color = getEcuTopologyColor(ecu.type)
-  const radius = selected ? TOPOLOGY.NODE_RADIUS_SELECTED : TOPOLOGY.NODE_RADIUS
-  const faulty = faultCount > 0
-
+/** Anillo rojo alrededor del nodo cuando la ECU reporta alguna averia. */
+function FaultRing({ width, height }: { readonly width: number; readonly height: number }) {
   return (
-    <g
-      role="button"
-      tabIndex={0}
-      aria-label={nodeLabel(ecu, faultCount)}
-      aria-pressed={selected}
-      transform={`translate(${position.x}, ${position.y})`}
-      className="cursor-pointer focus:outline-none"
-      onClick={() => onSelect(index)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') onSelect(index)
-      }}
-    >
-      <line
-        x1={0}
-        y1={0}
-        x2={0}
-        y2={TOPOLOGY.BUS_Y - position.y}
-        stroke={color}
-        strokeWidth={TOPOLOGY.STUB_WIDTH}
-        className={selected ? undefined : 'stub-pulse'}
-        opacity={selected ? 0.9 : 0.5}
-      />
-      {faulty && (
-        <circle
-          r={radius + TOPOLOGY.FAULT_RING_GAP}
-          fill="none"
-          stroke={COLORS.destructive}
-          strokeWidth={TOPOLOGY.FAULT_RING_WIDTH}
-          opacity={0.9}
-        />
-      )}
-      <circle
-        r={radius}
-        fill={color}
-        fillOpacity={selected ? 0.95 : 0.75}
-        stroke={faulty ? COLORS.destructive : color}
-        strokeWidth={selected ? 3 : 1}
-      />
+    <rect
+      x={-width / 2 - TOPOLOGY.FAULT_RING_GAP}
+      y={-height / 2 - TOPOLOGY.FAULT_RING_GAP}
+      width={width + TOPOLOGY.FAULT_RING_GAP * 2}
+      height={height + TOPOLOGY.FAULT_RING_GAP * 2}
+      rx={TOPOLOGY.NODE_CORNER_RADIUS + TOPOLOGY.FAULT_RING_GAP}
+      fill="none"
+      stroke={COLORS.destructive}
+      strokeWidth={TOPOLOGY.FAULT_RING_WIDTH}
+      opacity={0.9}
+    />
+  )
+}
+
+/** Tipo dentro del nodo y nombre (con badge IA si aplica) fuera de el. */
+function NodeLabels({ ecu, position }: { readonly ecu: EcuInfo; readonly position: NodePosition }) {
+  return (
+    <>
       <text
         textAnchor="middle"
         dy={4}
@@ -173,25 +158,97 @@ function EcuNode({ ecu, position, selected, onSelect, index, faultCount }: EcuNo
         {ecu.name}
         {ecu.source === 'ai' ? (
           <tspan dx={5} className="fill-primary text-[9px] font-bold">
-            <title>Centralita identificada por el diagnóstico cognitivo</title>
+            <title>{AI_ORIGIN_TITLE}</title>
             IA
           </tspan>
         ) : null}
       </text>
+    </>
+  )
+}
+
+/** Linea que conecta el nodo con el bus, con el pulso animado cuando no esta seleccionado. */
+function NodeStub({
+  color,
+  y2,
+  selected,
+}: {
+  readonly color: string
+  readonly y2: number
+  readonly selected: boolean
+}) {
+  return (
+    <line
+      x1={0}
+      y1={0}
+      x2={0}
+      y2={y2}
+      stroke={color}
+      strokeWidth={TOPOLOGY.STUB_WIDTH}
+      className={selected ? undefined : 'stub-pulse'}
+      opacity={selected ? 0.9 : 0.5}
+    />
+  )
+}
+
+/**
+ * Nodo individual del mapa: linea al bus, rectangulo coloreado por tipo y etiqueta.
+ *
+ * Es un `<g>` con `role="button"` para que sea alcanzable por teclado y por
+ * nombre accesible — un `<rect>` suelto no lo seria.
+ */
+function EcuNode({ ecu, position, status, onSelect }: EcuNodeProps) {
+  const { selected, faultCount } = status
+  const color = getEcuTopologyColor(ecu.type)
+  const width = selected ? TOPOLOGY.NODE_WIDTH_SELECTED : TOPOLOGY.NODE_WIDTH
+  const height = selected ? TOPOLOGY.NODE_HEIGHT_SELECTED : TOPOLOGY.NODE_HEIGHT
+  const faulty = faultCount > 0
+
+  return (
+    <g
+      role="button"
+      tabIndex={0}
+      aria-label={nodeLabel(ecu, faultCount)}
+      aria-pressed={selected}
+      transform={`translate(${position.x}, ${position.y})`}
+      className="cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') onSelect()
+      }}
+    >
+      <NodeStub color={color} y2={TOPOLOGY.BUS_Y - position.y} selected={selected} />
+      {faulty && <FaultRing width={width} height={height} />}
+      <rect
+        x={-width / 2}
+        y={-height / 2}
+        width={width}
+        height={height}
+        rx={TOPOLOGY.NODE_CORNER_RADIUS}
+        fill={color}
+        fillOpacity={selected ? 0.95 : 0.75}
+        stroke={faulty ? COLORS.destructive : color}
+        strokeWidth={selected ? 3 : 1}
+      />
+      <NodeLabels ecu={ecu} position={position} />
     </g>
   )
 }
 
-/** Tarjeta de detalle de la ECU seleccionada. */
-function EcuDetailCard({ ecu }: { readonly ecu: EcuInfo }) {
+/** Tarjeta de detalle de la ECU seleccionada, con sus averias si las reporta. */
+function EcuDetailCard({
+  ecu,
+  faults,
+}: {
+  readonly ecu: EcuInfo
+  readonly faults: readonly DtcCode[]
+}) {
   return (
     <div className="mt-3 rounded-md border border-white/10 bg-white/[0.02] p-3">
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-xs font-bold text-foreground/90">
           {ecu.name}
-          {ecu.source === 'ai' ? (
-            <AiOriginBadge title="Centralita identificada por el diagnóstico cognitivo" />
-          ) : null}
+          {ecu.source === 'ai' ? <AiOriginBadge title={AI_ORIGIN_TITLE} /> : null}
         </span>
         <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
           {ecu.type}
@@ -201,6 +258,157 @@ function EcuDetailCard({ ecu }: { readonly ecu: EcuInfo }) {
         {ecu.requestAddr} → {ecu.responseAddr}
       </div>
       <div className="mt-1 text-[10px] text-muted-foreground">{ecu.protocol}</div>
+      {faults.length > 0 && (
+        <ul className="mt-2 space-y-1 border-t border-white/5 pt-2">
+          {faults.map((fault) => (
+            <li key={fault.code} className="text-[10px] text-destructive">
+              <span className="mono font-bold">{fault.code}</span>
+              {fault.description ? ` — ${fault.description}` : null}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+/** Averias de una ECU concreta por su direccion de respuesta. */
+function faultsForEcu(dtcs: readonly DtcCode[], ecu: EcuInfo): DtcCode[] {
+  const address = normalizeEcuAddress(ecu.responseAddr)
+  return dtcs.filter((dtc) => normalizeEcuAddress(dtc.ecuAddress) === address)
+}
+
+/** Estados vacio/carga/error del panel; `null` cuando toca mostrar el mapa. */
+function TopologyPanelState({
+  selectedId,
+  loading,
+  error,
+  hasEcus,
+}: {
+  readonly selectedId: string | null
+  readonly loading: boolean
+  readonly error: string | null
+  readonly hasEcus: boolean
+}) {
+  if (!selectedId) return <PanelState state="empty" message={ECU_PANEL_MESSAGES.noVehicle} />
+  if (loading) return <PanelState state="loading" message={ECU_PANEL_MESSAGES.loading} />
+  if (error) return <PanelState state="error" message={error} />
+  if (!hasEcus) return <PanelState state="empty" message={ECU_PANEL_MESSAGES.noEcus} />
+  return null
+}
+
+/** Alto util cuando no hay ningun nodo por debajo del bus (caso de una sola ECU). */
+function viewBoxHeightFor(ecuCount: number): number {
+  return ecuCount > 1 ? TOPOLOGY.VIEWBOX_HEIGHT : TOPOLOGY.VIEWBOX_HEIGHT_TOP_ONLY
+}
+
+interface TopologyDiagramProps {
+  readonly ecus: EcuInfo[]
+  readonly selectedNode: number | null
+  readonly onSelect: (index: number) => void
+  readonly faultsByEcu: Map<string, number>
+}
+
+/**
+ * Dos lineas superpuestas: la base da el cuerpo del bus y la capa de trazos
+ * animada simula el trafico de datos. Separadas porque animar el dash de la
+ * propia base la dejaria discontinua cuando el usuario pide menos movimiento.
+ */
+function BusLine() {
+  return (
+    <>
+      <line
+        x1={TOPOLOGY.BUS_MARGIN_X / 2}
+        y1={TOPOLOGY.BUS_Y}
+        x2={TOPOLOGY.VIEWBOX_WIDTH - TOPOLOGY.BUS_MARGIN_X / 2}
+        y2={TOPOLOGY.BUS_Y}
+        stroke={BUS_STROKE}
+        strokeWidth={4}
+        strokeLinecap="round"
+      />
+      <line
+        x1={TOPOLOGY.BUS_MARGIN_X / 2}
+        y1={TOPOLOGY.BUS_Y}
+        x2={TOPOLOGY.VIEWBOX_WIDTH - TOPOLOGY.BUS_MARGIN_X / 2}
+        y2={TOPOLOGY.BUS_Y}
+        stroke={COLORS.primary}
+        strokeWidth={2}
+        strokeLinecap="round"
+        className="bus-flow"
+        opacity={0.7}
+        aria-hidden="true"
+      />
+    </>
+  )
+}
+
+/** `EcuInfo.id` de una ECU sin fila persistida todavia: la key cae a la direccion. */
+const NO_ECU_ID = 0
+
+/** El `<svg>` del bus y sus nodos, separado para que {@link TopologyMapPanel} quede corto. */
+function TopologyDiagram({ ecus, selectedNode, onSelect, faultsByEcu }: TopologyDiagramProps) {
+  return (
+    <svg
+      viewBox={`0 0 ${TOPOLOGY.VIEWBOX_WIDTH} ${viewBoxHeightFor(ecus.length)}`}
+      className="h-auto w-full"
+      role="img"
+      aria-label="Mapa de topología del bus CAN"
+    >
+      <BusLine />
+      {ecus.map((ecu, index) => (
+        <EcuNode
+          key={ecu.id !== NO_ECU_ID ? ecu.id : `${ecu.responseAddr}-${index}`}
+          ecu={ecu}
+          position={nodePosition(index, ecus.length)}
+          onSelect={() => onSelect(index)}
+          status={{
+            selected: selectedNode === index,
+            faultCount: faultsByEcu.get(normalizeEcuAddress(ecu.responseAddr) ?? '') ?? 0,
+          }}
+        />
+      ))}
+    </svg>
+  )
+}
+
+/** Nota bajo el mapa: aviso de ECU unica, o la ficha de la seleccionada. */
+function TopologyFootnote({
+  singleEcu,
+  activeEcu,
+  faults,
+}: {
+  readonly singleEcu: boolean
+  readonly activeEcu: EcuInfo | null
+  readonly faults: DtcCode[]
+}) {
+  return (
+    <>
+      {singleEcu ? (
+        <p className="px-1 text-[10px] leading-relaxed text-muted-foreground">
+          Se ha descubierto una sola ECU. El descubrimiento depende de los modos OBD que soporte el
+          vehículo, así que puede haber más unidades no visibles.
+        </p>
+      ) : null}
+      {activeEcu ? (
+        <EcuDetailCard ecu={activeEcu} faults={faults} />
+      ) : (
+        <p className="px-1 text-[10px] text-muted-foreground">
+          Selecciona un nodo para ver sus direcciones y protocolo.
+        </p>
+      )}
+    </>
+  )
+}
+
+/** Cabecera del panel: titulo y escenario activo. */
+function TopologyHeader({ selectedId }: { readonly selectedId: string | null }) {
+  return (
+    <div className="mb-3 flex items-center justify-between border-b border-white/5 pb-3">
+      <div className="flex items-center gap-2">
+        <Network className="h-4 w-4 text-primary" />
+        <h3 className="text-sm font-semibold uppercase tracking-[0.15em]">Topología del Bus</h3>
+      </div>
+      <span className="mono text-[10px] text-muted-foreground">{selectedId ?? '—'}</span>
     </div>
   )
 }
@@ -217,95 +425,35 @@ export function TopologyMapPanel({ ecus, loading, error, selectedId, dtcs = [] }
   const faultsByEcu = countFaultsByEcu(dtcs)
 
   const showMap = Boolean(selectedId) && !loading && !error && ecus.length > 0
-  // Los nodos impares son los que caen por debajo del bus: con una sola ECU no
-  // hay ninguno y la mitad inferior del lienzo quedaria vacia.
-  const viewBoxHeight = ecus.length > 1 ? TOPOLOGY.VIEWBOX_HEIGHT : TOPOLOGY.VIEWBOX_HEIGHT_TOP_ONLY
   // El indice puede quedar fuera de rango si cambia el vehiculo: se deriva en
   // render en vez de sincronizarse con un efecto.
   const activeEcu = selectedNode !== null ? (ecus[selectedNode] ?? null) : null
 
   return (
     <div className="panel flex min-h-0 flex-col p-4">
-      <div className="mb-3 flex items-center justify-between border-b border-white/5 pb-3">
-        <div className="flex items-center gap-2">
-          <Network className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-semibold uppercase tracking-[0.15em]">Topología del Bus</h3>
-        </div>
-        <span className="mono text-[10px] text-muted-foreground">{selectedId ?? '—'}</span>
-      </div>
+      <TopologyHeader selectedId={selectedId} />
 
       <div className="min-h-0 flex-1 overflow-auto">
-        {!selectedId && <PanelState state="empty" message={ECU_PANEL_MESSAGES.noVehicle} />}
-        {selectedId && loading && (
-          <PanelState state="loading" message={ECU_PANEL_MESSAGES.loading} />
-        )}
-        {selectedId && !loading && error && <PanelState state="error" message={error} />}
-        {selectedId && !loading && !error && ecus.length === 0 && (
-          <PanelState state="empty" message={ECU_PANEL_MESSAGES.noEcus} />
-        )}
+        <TopologyPanelState
+          selectedId={selectedId}
+          loading={loading}
+          error={error}
+          hasEcus={ecus.length > 0}
+        />
 
         {showMap && (
           <>
-            <svg
-              viewBox={`0 0 ${TOPOLOGY.VIEWBOX_WIDTH} ${viewBoxHeight}`}
-              className="h-auto w-full"
-              role="img"
-              aria-label="Mapa de topología del bus CAN"
-            >
-              {/*
-                Dos lineas superpuestas: la base da el cuerpo del bus y la capa
-                de trazos animada simula el trafico de datos. Separadas porque
-                animar el dash de la propia base la dejaria discontinua cuando
-                el usuario pide menos movimiento.
-              */}
-              <line
-                x1={TOPOLOGY.BUS_MARGIN_X / 2}
-                y1={TOPOLOGY.BUS_Y}
-                x2={TOPOLOGY.VIEWBOX_WIDTH - TOPOLOGY.BUS_MARGIN_X / 2}
-                y2={TOPOLOGY.BUS_Y}
-                stroke={BUS_STROKE}
-                strokeWidth={4}
-                strokeLinecap="round"
-              />
-              <line
-                x1={TOPOLOGY.BUS_MARGIN_X / 2}
-                y1={TOPOLOGY.BUS_Y}
-                x2={TOPOLOGY.VIEWBOX_WIDTH - TOPOLOGY.BUS_MARGIN_X / 2}
-                y2={TOPOLOGY.BUS_Y}
-                stroke={COLORS.primary}
-                strokeWidth={2}
-                strokeLinecap="round"
-                className="bus-flow"
-                opacity={0.7}
-                aria-hidden="true"
-              />
-              {ecus.map((ecu, index) => (
-                <EcuNode
-                  key={ecu.id !== 0 ? ecu.id : `${ecu.responseAddr}-${index}`}
-                  ecu={ecu}
-                  index={index}
-                  position={nodePosition(index, ecus.length)}
-                  selected={selectedNode === index}
-                  onSelect={setSelectedNode}
-                  faultCount={faultsByEcu.get(ecu.responseAddr.toUpperCase()) ?? 0}
-                />
-              ))}
-            </svg>
-
-            {ecus.length === 1 ? (
-              <p className="px-1 text-[10px] leading-relaxed text-muted-foreground">
-                Se ha descubierto una sola ECU. El descubrimiento depende de los modos OBD que
-                soporte el vehículo, así que puede haber más unidades no visibles.
-              </p>
-            ) : null}
-
-            {activeEcu ? (
-              <EcuDetailCard ecu={activeEcu} />
-            ) : (
-              <p className="px-1 text-[10px] text-muted-foreground">
-                Selecciona un nodo para ver sus direcciones y protocolo.
-              </p>
-            )}
+            <TopologyDiagram
+              ecus={ecus}
+              selectedNode={selectedNode}
+              onSelect={setSelectedNode}
+              faultsByEcu={faultsByEcu}
+            />
+            <TopologyFootnote
+              singleEcu={ecus.length === 1}
+              activeEcu={activeEcu}
+              faults={activeEcu ? faultsForEcu(dtcs, activeEcu) : []}
+            />
           </>
         )}
       </div>
