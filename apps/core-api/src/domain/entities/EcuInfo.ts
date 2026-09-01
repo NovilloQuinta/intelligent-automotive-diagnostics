@@ -8,6 +8,10 @@ export class EcuInfoError extends Error {
 
 const CAN_ADDR_REGEX = /^[0-9A-Fa-f]+$/
 
+function assertValidCanAddr(addr: string, label: string): void {
+  if (!CAN_ADDR_REGEX.test(addr)) throw new EcuInfoError(`Invalid CAN ${label} address: "${addr}"`)
+}
+
 /** Origen del nombre de una ECU: la norma, o lo aprendido por el agente. */
 export type EcuInfoSource = 'catalog' | 'ai'
 
@@ -22,15 +26,7 @@ export class EcuInfo {
   readonly protocol: string
   readonly discoveredAt?: string
 
-  /**
-   * De donde sale el nombre de esta ECU.
-   *
-   * `'catalog'` = la norma ISO 15765-4, que solo estandariza el ECM. `'ai'` = lo
-   * averiguo el diagnostico cognitivo y quedo aprendido en `ecu_definitions`.
-   *
-   * Se marca por la misma razon que en los PIDs: lo que aprende la IA se muestra
-   * como tal, para que el mecanico sepa que no viene de una norma.
-   */
+  /** `'ai'` solo si lo investigo el agente en vivo; norma, seed o mecanico salen como `'catalog'`. */
   readonly source: EcuInfoSource
 
   constructor(params: {
@@ -45,12 +41,8 @@ export class EcuInfo {
     source?: EcuInfoSource
   }) {
     if (!params.name.trim()) throw new EcuInfoError('ECU name must not be empty')
-    if (!CAN_ADDR_REGEX.test(params.requestAddr)) {
-      throw new EcuInfoError(`Invalid CAN request address: "${params.requestAddr}"`)
-    }
-    if (!CAN_ADDR_REGEX.test(params.responseAddr)) {
-      throw new EcuInfoError(`Invalid CAN response address: "${params.responseAddr}"`)
-    }
+    assertValidCanAddr(params.requestAddr, 'request')
+    assertValidCanAddr(params.responseAddr, 'response')
     if (!params.protocol.trim()) throw new EcuInfoError('ECU protocol must not be empty')
     this.id = params.id
     this.vehicleId = params.vehicleId

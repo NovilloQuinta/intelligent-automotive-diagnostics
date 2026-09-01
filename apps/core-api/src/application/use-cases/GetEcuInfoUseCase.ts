@@ -8,6 +8,10 @@ import { loadEcuDefinitionLookup } from '@/application/ecu-catalog/loadEcuDefini
 import { resolveEcuDefinitions } from '@/application/ecu-catalog/resolveEcuDefinitions.js'
 import { persistDiscoveredEcus } from '@/application/shared/persistDiscoveredEcus.js'
 
+function toLoggableError(e: unknown): Error | string {
+  return e instanceof Error ? e : String(e)
+}
+
 /** Dependencias de {@link GetEcuInfoUseCase}, inyectadas por constructor. */
 export interface GetEcuInfoUseCaseOptions {
   /** Catalogo del vehiculo. Ausente cuando la app corre sin persistencia. */
@@ -44,8 +48,8 @@ export class GetEcuInfoUseCase {
   /**
    * Sustituye el nombre de las ECUs sin catalogar por el que aprendio el agente.
    *
-   * Lo resuelto se marca con `source: 'ai'` para que la pantalla lo distinga de lo que
-   * dicta la norma: solo `7E8` esta estandarizada por ISO 15765-4.
+   * Solo se marca `source: 'ai'` cuando el agente lo investigo en vivo; lo sembrado o
+   * corregido a mano sale como `'catalog'` (ver {@link resolveEcuDefinitions}).
    *
    * Best-effort: si el vehiculo no esta identificado o el catalogo falla, se devuelven
    * las ECUs tal cual. Descubrir no depende de poder resolver.
@@ -67,9 +71,7 @@ export class GetEcuInfoUseCase {
       const lookup = await loadEcuDefinitionLookup(vehicleRepo, make, model, ecus)
       return resolveEcuDefinitions(ecus, lookup)
     } catch (e) {
-      logger.warn('Failed to resolve learned ECU names', {
-        err: e instanceof Error ? e : String(e),
-      })
+      logger.warn('Failed to resolve learned ECU names', { err: toLoggableError(e) })
       return ecus
     }
   }
@@ -89,9 +91,7 @@ export class GetEcuInfoUseCase {
       const { id } = await vehicleRepo.upsertVehicle(identifyVehicle.toVehicleProfile(identified))
       await persistDiscoveredEcus(vehicleRepo, id, ecus)
     } catch (e) {
-      logger.warn('Failed to persist discovered ECUs', {
-        err: e instanceof Error ? e : String(e),
-      })
+      logger.warn('Failed to persist discovered ECUs', { err: toLoggableError(e) })
     }
   }
 }

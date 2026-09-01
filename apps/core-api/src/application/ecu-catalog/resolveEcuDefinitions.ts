@@ -16,9 +16,9 @@ export type EcuDefinitionLookup = (responseAddr: string) => EcuDefinition | unde
  * **No filtra por confianza a propósito.** La procedencia `web` —la única que el agente
  * puede producir— nace en 0.3, así que cualquier umbral por encima dejaría el catálogo
  * aprendido invisible para siempre. La confianza no se pierde: se guarda en
- * `ecu_definitions` y ordena la búsqueda, de modo que gana la definición más fiable. Y lo
- * resuelto sale marcado `source: 'ai'`, que es la advertencia que le corresponde: el
- * mecánico ve que es una deducción, no una norma.
+ * `ecu_definitions` y ordena la búsqueda, de modo que gana la definición más fiable.
+ * Solo `source: 'web'` (agente investigando en vivo) sale como `'ai'`; `seed` y
+ * `mechanic` salen como `'catalog'`.
  *
  * @param ecus - ECUs descubiertas por el auto-scan.
  * @param lookup - Devuelve la definición de ECU para una dirección de respuesta, o `undefined`.
@@ -41,9 +41,7 @@ export function resolveEcuDefinitions(
       type: definition.type,
       protocol: ecu.protocol,
       discoveredAt: ecu.discoveredAt,
-      // El nombre ya no viene de la norma sino de lo que aprendio el agente, y
-      // eso se muestra: mismo criterio que los PIDs descubiertos por la IA.
-      source: 'ai',
+      source: definition.source === 'web' ? 'ai' : 'catalog',
     })
   })
 }

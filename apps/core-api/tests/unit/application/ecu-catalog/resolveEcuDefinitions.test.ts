@@ -40,7 +40,20 @@ describe('resolveEcuDefinitions', () => {
     expect(resolved[0].name).toBe('Transmission Control Module')
     expect(resolved[0].type).toBe('TCM')
     expect(resolved[0].responseAddr).toBe('7E9')
-    expect(resolved[0].source).toBe('ai')
+  })
+
+  it('should NOT mark as AI-sourced a definition from `mechanic` or `seed`', () => {
+    const ecus = [unknownEcu('7E9'), unknownEcu('7EA')]
+    const lookup = (addr: string) => {
+      if (addr === '7E9') return ecuDefinition({ source: 'mechanic' })
+      if (addr === '7EA') return ecuDefinition({ responseAddr: '7EA', source: 'seed' })
+      return undefined
+    }
+
+    const resolved = resolveEcuDefinitions(ecus, lookup)
+
+    expect(resolved[0].source).toBe('catalog')
+    expect(resolved[1].source).toBe('catalog')
   })
 
   it('should keep UNKNOWN when there is no matching definition', () => {
