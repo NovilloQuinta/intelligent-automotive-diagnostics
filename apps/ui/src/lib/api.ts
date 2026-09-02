@@ -36,14 +36,15 @@ import type {
 import {
   AuthError,
   COGNITIVE_TIMEOUT_MS,
-  DEFAULT_TIMEOUT_MS,
   GENERIC_ERROR_MESSAGE,
+  HTTP_LOCKED,
   apiFetch,
   assertOk,
   buildQuery,
   clearTokens,
   getTokens,
   logoutServer,
+  postPublicJson,
   setTokens,
 } from '@/lib/apiClient'
 import type {
@@ -73,6 +74,13 @@ import { isNativeUsbScenario } from '@/lib/obd/nativeScenario'
  */
 function usesNativeUsb(scenarioId: string): boolean {
   return isNativeUsbScenario(scenarioId) && isNativePlatform()
+}
+
+/** GET a un endpoint con `?scenarioId=`, con el manejo de error curado comun. */
+async function fetchScenarioJson<T>(path: string, scenarioId: string): Promise<T> {
+  const res = await apiFetch(`${path}?scenarioId=${encodeURIComponent(scenarioId)}`)
+  await assertOk(res, GENERIC_ERROR_MESSAGE)
+  return (await res.json()) as T
 }
 
 /**
@@ -138,13 +146,9 @@ export const api = {
    * dentro con una credencial que no abre ninguna ruta.
    */
   async login(input: LoginInput): Promise<LoginResult> {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
-    })
-    if (res.status === 423) throw new ApiHttpError(await accountLockedMessage(res), res.status)
+    const res = await postPublicJson('/api/auth/login', input)
+    if (res.status === HTTP_LOCKED)
+      throw new ApiHttpError(await accountLockedMessage(res), res.status)
     await assertOk(res, GENERIC_ERROR_MESSAGE)
 
     const body = (await res.json()) as LoginResponseBody
@@ -163,17 +167,13 @@ export const api = {
   /**
    * POST /api/auth/2fa/verify — segundo factor.
    *
-   * Va con `fetch` desnudo y no con `apiFetch`, igual que `login`: todavia no hay
-   * sesion que adjuntar, y `apiFetch` intentaria refrescar un token inexistente.
+   * Va con `postPublicJson` y no con `apiFetch`, igual que `login`: todavia no
+   * hay sesion que adjuntar, y `apiFetch` intentaria refrescar un token inexistente.
    */
   async verifyTwoFactor(input: VerifyTwoFactorInput): Promise<AuthTokens> {
-    const res = await fetch('/api/auth/2fa/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
-    })
-    if (res.status === 423) throw new ApiHttpError(await accountLockedMessage(res), res.status)
+    const res = await postPublicJson('/api/auth/2fa/verify', input)
+    if (res.status === HTTP_LOCKED)
+      throw new ApiHttpError(await accountLockedMessage(res), res.status)
     await assertOk(res, 'El código no es válido o ha caducado')
 
     const tokens = (await res.json()) as AuthTokens
@@ -209,12 +209,7 @@ export const api = {
 
   /** POST /api/auth/register — returns tokens + user. */
   async register(input: RegisterInput): Promise<{ user: AuthUser; tokens: AuthTokens }> {
-    const res = await fetch('/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
-      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
-    })
+    const res = await postPublicJson('/api/auth/register', input)
     await assertOk(res, GENERIC_ERROR_MESSAGE)
     const data = (await res.json()) as RegisterResponse
     setTokens({
@@ -244,12 +239,7 @@ export const api = {
    * unconditionally rather than branching on this promise's outcome.
    */
   async forgotPassword(email: string): Promise<void> {
-    const res = await fetch('/api/auth/forgot-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
-    })
+    const res = await postPublicJson('/api/auth/forgot-password', { email })
     await assertOk(res, GENERIC_ERROR_MESSAGE)
   },
 
@@ -259,12 +249,7 @@ export const api = {
    * already used, or when the new password fails validation.
    */
   async resetPassword(token: string, newPassword: string): Promise<void> {
-    const res = await fetch('/api/auth/reset-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token, newPassword }),
-      signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
-    })
+    const res = await postPublicJson('/api/auth/reset-password', { token, newPassword })
     await assertOk(res, GENERIC_ERROR_MESSAGE)
   },
 
@@ -360,9 +345,7 @@ export const api = {
   /** GET /api/ecu-info — returns the ECUs discovered for the vehicle. */
   async getEcuInfo(scenarioId: string): Promise<EcuInfo[]> {
     if (usesNativeUsb(scenarioId)) return getNativeObdService().getEcuInfo()
-    const res = await apiFetch(`/api/ecu-info?scenarioId=${encodeURIComponent(scenarioId)}`)
-    await assertOk(res, GENERIC_ERROR_MESSAGE)
-    const data = (await res.json()) as { ecus: EcuInfo[] }
+    const data = await fetchScenarioJson<{ ecus: EcuInfo[] }>('/api/ecu-info', scenarioId)
     return data.ecus
   },
 
@@ -387,9 +370,7 @@ export const api = {
         modelYearDecoded: null,
       }
     }
-    const res = await apiFetch(`/api/vehicle-info?scenarioId=${encodeURIComponent(scenarioId)}`)
-    await assertOk(res, GENERIC_ERROR_MESSAGE)
-    return (await res.json()) as VehicleInfoResponse
+    return fetchScenarioJson<VehicleInfoResponse>('/api/vehicle-info', scenarioId)
   },
 
   /**
@@ -413,9 +394,7 @@ export const api = {
     if (usesNativeUsb(scenarioId)) {
       return { dtcCodes: await getNativeObdService().readPendingDtcCodes() }
     }
-    const res = await apiFetch(`/api/pending-dtc?scenarioId=${encodeURIComponent(scenarioId)}`)
-    await assertOk(res, GENERIC_ERROR_MESSAGE)
-    return (await res.json()) as { dtcCodes: DtcCode[] }
+    return fetchScenarioJson<{ dtcCodes: DtcCode[] }>('/api/pending-dtc', scenarioId)
   },
 
   /** GET /api/permanent-dtc — returns permanent DTCs (Mode 0A). */
@@ -423,9 +402,7 @@ export const api = {
     if (usesNativeUsb(scenarioId)) {
       return { dtcCodes: await getNativeObdService().readPermanentDtcCodes() }
     }
-    const res = await apiFetch(`/api/permanent-dtc?scenarioId=${encodeURIComponent(scenarioId)}`)
-    await assertOk(res, GENERIC_ERROR_MESSAGE)
-    return (await res.json()) as { dtcCodes: DtcCode[] }
+    return fetchScenarioJson<{ dtcCodes: DtcCode[] }>('/api/permanent-dtc', scenarioId)
   },
 
   /** POST /api/clear-dtc — clears stored DTCs and resets emission monitors. */
@@ -445,9 +422,7 @@ export const api = {
   /** GET /api/vehicle-status — returns MIL status, DTC count, and monitor readiness. */
   async getVehicleStatus(scenarioId: string): Promise<VehicleStatusOutput> {
     if (usesNativeUsb(scenarioId)) return getNativeObdService().getVehicleStatus()
-    const res = await apiFetch(`/api/vehicle-status?scenarioId=${encodeURIComponent(scenarioId)}`)
-    await assertOk(res, GENERIC_ERROR_MESSAGE)
-    return (await res.json()) as VehicleStatusOutput
+    return fetchScenarioJson<VehicleStatusOutput>('/api/vehicle-status', scenarioId)
   },
 
   /** POST /api/mcp/cognitive-diagnosis — AI-powered cognitive analysis. */

@@ -4,6 +4,18 @@ import type { AuthTokens } from '@/components/dashboard/types'
 const HTTP_UNAUTHORIZED = 401
 const HTTP_SERVER_ERROR_MIN = 500
 const HTTP_TOO_MANY_REQUESTS = 429
+export const HTTP_LOCKED = 423
+
+/**
+ * Prefijo absoluto del core-api. Vacío en la web normal (mismo origen); se
+ * hornea en build time para el APK Capacitor, que no tiene origen propio.
+ */
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
+
+/** Antepone {@link API_BASE_URL} a una ruta `/api/...`. */
+export function apiUrl(path: string): string {
+  return `${API_BASE_URL}${path}`
+}
 
 const KEYS = {
   accessToken: 'iad.accessToken',
@@ -56,7 +68,7 @@ async function refreshAccessToken(): Promise<AuthTokens> {
   }
 
   try {
-    const res = await fetch('/api/auth/refresh', {
+    const res = await fetch(apiUrl('/api/auth/refresh'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken: tokens.refreshToken }),
@@ -105,9 +117,47 @@ function isAbortError(error: unknown): boolean {
 }
 
 /**
+ * POST sin sesion adjunta (login, registro, 2FA, recuperacion de contrasena):
+ * no hay token que enviar, y `apiFetch` intentaria refrescar uno inexistente.
+ */
+export async function postPublicJson(path: string, body: unknown): Promise<Response> {
+  return fetch(apiUrl(path), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(DEFAULT_TIMEOUT_MS),
+  })
+}
+
+/**
+ * Reintenta `path` tras refrescar el token (single-flight: los 401
+ * concurrentes comparten el mismo refresh). En fallo de refresh limpia la
+ * sesion y lanza {@link AuthError}.
+ */
+async function retryAfterRefresh(
+  path: string,
+  requestInit: RequestInit,
+  headers: Record<string, string>,
+): Promise<Response> {
+  if (!refreshPromise) {
+    refreshPromise = refreshAccessToken().finally(() => {
+      refreshPromise = null
+    })
+  }
+
+  try {
+    const newTokens = await refreshPromise
+    headers['Authorization'] = `Bearer ${newTokens.accessToken}`
+    return await fetch(apiUrl(path), { ...requestInit, headers })
+  } catch {
+    clearTokens()
+    throw new AuthError()
+  }
+}
+
+/**
  * Wraps fetch() with automatic JWT auth and single-flight token refresh.
- * On 401: refreshes the token once and retries. On refresh failure, clears
- * storage and throws {@link AuthError}.
+ * On 401: refreshes the token once and retries via {@link retryAfterRefresh}.
  *
  * Adds a 10s timeout via {@link AbortSignal.timeout} unless the caller
  * provides its own signal (which is then respected as-is). A timeout is not
@@ -128,7 +178,7 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
 
   let res: Response
   try {
-    res = await fetch(path, requestInit)
+    res = await fetch(apiUrl(path), requestInit)
   } catch (error) {
     if (isAbortError(error)) {
       throw new Error('La petición tardó demasiado')
@@ -139,21 +189,7 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   }
 
   if (res.status === HTTP_UNAUTHORIZED && tokens?.refreshToken) {
-    // Single-flight: all concurrent 401s share one refresh
-    if (!refreshPromise) {
-      refreshPromise = refreshAccessToken().finally(() => {
-        refreshPromise = null
-      })
-    }
-
-    try {
-      const newTokens = await refreshPromise
-      headers['Authorization'] = `Bearer ${newTokens.accessToken}`
-      res = await fetch(path, { ...requestInit, headers })
-    } catch {
-      clearTokens()
-      throw new AuthError()
-    }
+    return retryAfterRefresh(path, requestInit, headers)
   }
 
   return res
@@ -201,7 +237,7 @@ export async function logoutServer(): Promise<void> {
   const tokens = getTokens()
   if (!tokens?.refreshToken) return
   try {
-    const res = await fetch('/api/auth/logout', {
+    const res = await fetch(apiUrl('/api/auth/logout'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken: tokens.refreshToken }),
