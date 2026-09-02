@@ -1,326 +1,242 @@
 # Guion de vídeo — Tecnologías utilizadas
 
-> Material de apoyo para grabar el bloque "tecnologías" del vídeo del TFM.
-> No es documentación de arquitectura (eso está en `05-arquitectura-core-api.md` y
-> `02-embeddings-rag.md`): es **qué decir, en qué orden y por qué**, con las cifras
-> reales del código para no improvisarlas delante de la cámara.
+> Lo que hay que **decir**, en lenguaje llano. Las frases en cursiva se pueden leer
+> tal cual delante de la cámara. El detalle técnico está en `05-arquitectura-core-api.md`
+> y `02-embeddings-rag.md`, por si en las preguntas hace falta bajar ahí.
 
 ---
 
-## Parte A — Stack de la API
+## Parte A — Las tecnologías de la API (unos 3 minutos)
 
-### La idea que sostiene todo el bloque
+### La imagen que lo explica todo
 
-No enumeres librerías. **Sigue una petición HTTP** desde que entra hasta que llega al caso de
-uso, y cada pieza aparece cuando le toca. Es el mismo orden que tiene `server.ts`, así que si
-enseñas el fichero en pantalla, el guion y el código van sincronizados.
+Cuando alguien usa la aplicación, su petición **entra por una puerta y va pasando controles**,
+como quien llega a un taller: primero la puerta de la calle, luego el mostrador, luego alguien
+comprueba que es cliente, y solo entonces el coche entra al foso.
 
-```
-Petición  →  Helmet  →  rate limit  →  auditoría  →  express.json  →  CORS
-          →  ruta  →  auth JWT  →  Zod (validación)  →  caso de uso
-                              (y Pino registrando todo el recorrido)
-```
+Cada tecnología es **uno de esos controles**. Eso es todo lo que hay que contar.
 
-Frase de apertura sugerida:
-
-> "El backend es una API REST en Node con TypeScript. Más que la lista de librerías, lo
-> interesante es que cada una cubre una responsabilidad concreta de la cadena por la que pasa
-> toda petición. Vamos a seguir una."
+> *"El backend está hecho en Node con TypeScript. Cada petición que llega atraviesa una cadena de
+> controles antes de que se ejecute nada, y cada una de las tecnologías que voy a nombrar es uno
+> de esos controles."*
 
 ---
 
-### 1. Express 5 — el esqueleto HTTP
+### Express — la estructura del edificio
 
-**Qué decir**
+> *"Express es el armazón: lo que recibe las peticiones que llegan por internet y las reparte a
+> la parte del código que sabe responderlas. Es el estándar en Node; aquí uso la versión 5, que
+> es la última."*
 
-- Framework HTTP minimalista, el estándar de facto en Node. Se eligió **la versión 5**, no la 4.
-- La diferencia que importa: en Express 5 los errores de un handler `async` se propagan solos al
-  manejador de errores. En Express 4 había que envolver cada handler en un `try/catch` o en un
-  wrapper. Con un backend donde casi todo es asíncrono (puerto serie, LLM, base de datos), eso
-  es menos código repetido y ningún fallo silencioso.
-- **El punto de arquitectura**: Express vive **solo** en `infrastructure/http/`. Los casos de uso
-  no importan Express ni saben que existe HTTP. Se comunican por puertos (interfaces).
+Y añade la parte que sí es decisión tuya:
 
-**Frase de remate**
+> *"Lo importante no es Express en sí, es dónde lo he puesto. Toda la lógica del proyecto —cómo se
+> diagnostica un coche, cómo se interpreta un fallo— no sabe que Express existe. Si mañana lo
+> cambiara por otro, la lógica del negocio ni se entera."*
 
-> "Si mañana cambiara Express por Fastify, tocaría una carpeta. El dominio y los casos de uso no
-> se enteran. Eso no es casualidad, es lo que compra Clean Architecture."
+**Si preguntan por qué eso importa:** porque la parte valiosa del proyecto no queda atada a una
+librería que puede pasar de moda.
 
 ---
 
-### 2. Helmet — cabeceras de seguridad
+### Helmet — cerrar puertas y ventanas
 
-**Qué decir**
+> *"Helmet no añade ninguna funcionalidad. Lo que hace es cerrar puertas: le dice al navegador
+> cómo debe tratar a esta API para que no se pueda abusar de ella."*
 
-- No añade funcionalidad: **quita superficie de ataque**. Pone las cabeceras HTTP de seguridad
-  que el navegador respeta.
-- Configuración real del proyecto:
+Un ejemplo concreto, que siempre queda bien porque se entiende sin saber nada:
 
-| Cabecera | Valor | Por qué |
-|---|---|---|
-| `Content-Security-Policy` | `default-src 'none'` | Es una API REST: no sirve HTML ni carga recursos. La política más restrictiva que existe es literalmente correcta aquí. |
-| `Strict-Transport-Security` | `max-age=31536000; includeSubDomains` | Un año. El navegador no vuelve a hablar por HTTP con este dominio. |
-| `X-Frame-Options` | `deny` | Nadie mete la API en un iframe (clickjacking). |
-| `X-Content-Type-Options` | `nosniff` | El navegador no adivina el tipo de contenido. |
+> *"Por ejemplo, le dice al navegador que esta API no carga ni imágenes ni scripts ni nada de
+> fuera. Y es verdad: es una API, solo devuelve datos. Así que la regla más estricta que existe
+> es, en este caso, simplemente la correcta."*
 
-**El detalle que demuestra que no es copy-paste** (buen momento para el vídeo):
-
-> "Swagger UI sí necesita cargar scripts y estilos, así que con `default-src 'none'` global no
-> arrancaría. En vez de aflojar la política de toda la API, `/api-docs` monta **su propio Helmet**
-> con una CSP relajada, y además solo se publica fuera de producción."
+**Si preguntan:** también obliga a que todo vaya cifrado (HTTPS) y prohíbe que nadie meta la
+aplicación dentro de otra página para engañar al usuario.
 
 ---
 
-### 3. Zod — la frontera entre el mundo exterior y el código tipado
+### Zod — el control de calidad de lo que entra
 
-**Qué decir**
+Esta es la que más cuesta explicar, así que ve por el problema primero:
 
-- El argumento de fondo, y es el que engancha: **TypeScript desaparece al compilar**. Los tipos son
-  una promesa en tiempo de desarrollo. Lo que llega en un `req.body`, en un `.env` o en la
-  respuesta de un LLM no lo ha comprobado nadie.
-- Zod valida **en tiempo de ejecución** y de la misma declaración se infiere el tipo de
-  TypeScript. Un solo sitio donde está escrita la forma del dato: no hay interfaz por un lado y
-  validación por otro que se desincronicen.
-- En el proyecto se usa en **36 ficheros**, en cuatro frentes:
+> *"TypeScript me avisa de errores mientras programo, pero desaparece cuando el programa arranca.
+> Así que lo que llega de fuera —lo que escribe un usuario, lo que responde la inteligencia
+> artificial— nadie lo ha comprobado de verdad."*
 
-| Dónde | Qué protege |
+> *"Zod es ese control. Antes de que un dato entre al sistema, comprueba que tiene exactamente la
+> forma que se espera. Si no la tiene, se rechaza ahí mismo, en la puerta, en vez de reventar
+> tres capas más adentro."*
+
+Y el remate, que es el que impresiona:
+
+> *"Se usa hasta para leer la configuración: si el servidor está mal configurado, la aplicación no
+> arranca. Falla al encenderla, en vez de fallar a las tres de la mañana con un cliente delante."*
+
+**Si preguntan por la documentación de la API:** la documentación se genera automáticamente a
+partir de esas mismas comprobaciones. Es decir, **no puede quedarse desactualizada**, porque no
+está escrita a mano: sale del código que está funcionando de verdad.
+
+---
+
+### JWT — la pulsera del festival
+
+La comparación funciona sola:
+
+> *"Cuando alguien inicia sesión, el servidor le da un token. Es como la pulsera de un festival:
+> la enseñas en cada puerta y te dejan pasar, sin tener que volver a identificarte."*
+
+> *"Aquí hay dos pulseras. Una de acceso, que caduca a los quince minutos, y otra de renovación,
+> que dura una semana y sirve para pedir una nueva sin volver a escribir la contraseña. Cada vez
+> que se usa, se anula y se entrega otra: si alguien roba una y la reutiliza, el sistema lo
+> detecta y corta la sesión."*
+
+**Prepárate esta pregunta, es la típica:** *"un token no se puede anular, ¿cómo le quitas los
+permisos a un administrador?"*
+
+> *"Porque la pulsera no dice si eres administrador. Eso se consulta en la base de datos en cada
+> petición. Así, quitarle los permisos a alguien tiene efecto al instante, sin esperar a que su
+> token caduque."*
+
+---
+
+### Pino — el libro de registro
+
+> *"Pino es lo que deja constancia de lo que pasa. No guarda frases sueltas: guarda registros
+> ordenados, con su hora, su gravedad y su contexto, para poder buscar después qué ocurrió."*
+
+> *"Va a dos sitios: a la consola del servidor y a la base de datos, que es de donde bebe el panel
+> de administración de la aplicación."*
+
+**Si preguntan por qué no un `console.log`:** porque un texto suelto no se puede filtrar ni buscar
+cuando hay miles de líneas, y porque Pino está pensado para no ralentizar la respuesta.
+
+---
+
+### Cierre del bloque (media frase, no te alargues)
+
+> *"Hay algo más en esa cadena: control de origen de las peticiones, un límite de peticiones por
+> minuto para que nadie pueda machacar el servidor, y un registro de auditoría de todo lo que
+> entra. Ninguna de estas piezas es exótica. Lo que quería enseñar no es cuál elegí, sino que cada
+> una hace una sola cosa y ninguna se mete donde no le toca."*
+
+---
+
+## Parte B — La base de datos vectorial (unos 3 minutos)
+
+### Empieza por el problema, nunca por la tecnología
+
+Esto es lo que hace que se entienda todo lo demás. Cuéntalo despacio:
+
+> *"El diagnóstico OBD tiene una parte estándar, igual en todos los coches. Pero cada fabricante
+> añade además los suyos propios: sus sensores y sus códigos de avería. Son miles, no están
+> publicados, y no hay forma de tenerlos todos cargados de antemano."*
+
+> *"Así que el sistema tiene que aprenderlos sobre la marcha. Y si aprende, tiene que poder
+> recordar después lo que aprendió."*
+
+Y ahora el momento clave, el que justifica toda la tecnología que viene detrás:
+
+> *"El problema es cómo se busca eso. Si un mecánico escribe 'el coche pierde presión de aceite' y
+> en el sistema está guardado como 'low oil pressure sensor', una búsqueda normal no encuentra
+> nada. No comparten ni una palabra. Y son exactamente lo mismo."*
+
+---
+
+### Qué es una base vectorial (con esta imagen basta)
+
+> *"Una base de datos vectorial no guarda las palabras: guarda el **significado**. Convierte cada
+> texto en una posición dentro de un mapa, y los textos que quieren decir lo parecido caen cerca
+> unos de otros. Buscar deja de ser comparar letras y pasa a ser mirar qué hay cerca."*
+
+Si quieres una sola frase de cómo se hace:
+
+> *"De eso se encarga un modelo de inteligencia artificial que traduce texto a números. Es
+> pequeño, entiende español e inglés —que es justo lo que hace falta aquí, porque la documentación
+> técnica está en inglés y el mecánico escribe en español— y corre dentro del propio servidor:
+> sin conexión a ningún servicio externo y sin coste por consulta."*
+
+---
+
+### Por qué LanceDB
+
+La frase que lo resuelve:
+
+> *"LanceDB es a las bases vectoriales lo que SQLite a las de toda la vida: no necesita un
+> servidor aparte, es una carpeta en el disco y funciona dentro del propio programa."*
+
+Y por qué eso es lo correcto **aquí**:
+
+> *"Esto tiene que poder funcionar en el portátil de un taller, no en un centro de datos. Las
+> alternativas que miré exigían levantar un servidor de base de datos aparte, o instalar Python, o
+> pagar por cada consulta a un servicio externo. Todas resolvían el problema, pero todas añadían
+> una pieza más que mantener. LanceDB no añade ninguna."*
+
+**Si preguntan por qué no una búsqueda de texto normal, que es gratis:** vuelve al ejemplo de
+antes. *"Presión de aceite"* contra *"oil pressure"*. Nunca se encontrarían.
+
+---
+
+### Lo que de verdad hay que enseñar: que el sistema aprende
+
+Cuenta el ciclo como una historia, no como un diagrama:
+
+> *"Entra un coche. Durante el diagnóstico aparece un código que el sistema no conoce. Busca en su
+> memoria y no encuentra nada. Entonces busca en internet, encuentra una definición posible y la
+> guarda… pero **desconfiando de ella**."*
+
+> *"Y aquí viene lo que más me gusta del proyecto: no se lo cree. Lo comprueba. Va al coche real,
+> lee ese dato y mira si el valor tiene sentido. Si lo tiene, sube la confianza y lo da por bueno.
+> Si no, lo descarta."*
+
+> *"Y no se fía igual de todo el mundo: algo leído en internet entra con poca confianza; algo que
+> aporta el mecánico, con bastante más. Como en la vida."*
+
+**El cierre del bloque. Esta es la frase con la que se cierra el vídeo:**
+
+> *"Lo que significa esto es que el sistema no es el mismo después de cada coche. El primer Audi
+> que pasa por el taller le enseña sus códigos propios. El segundo Audi ya se los encuentra
+> aprendidos y verificados. El conocimiento no lo pone quien programó la aplicación: lo pone la
+> flota de coches que va pasando por el taller."*
+
+---
+
+### Una honestidad que suma (guárdala para las preguntas)
+
+Si sale el tema de hasta dónde llega el aprendizaje, esto puntúa más que fingir que está todo
+resuelto:
+
+> *"Hay una parte que dejé deliberadamente sin activar: que un dato gane confianza cada vez que se
+> reutiliza. Para eso haría falta saber que el diagnóstico **acertó**, y esa información el
+> sistema no la tiene. Que un mecánico consulte un caso no significa que le sirviera. Si me la
+> inventara, subiría por igual la confianza de los aciertos y la de los errores, y el catálogo
+> empeoraría con el uso en vez de mejorar. Hace falta que el mecánico diga si le valió, y eso ya
+> es otro alcance."*
+
+Y si preguntan por el riesgo de haber elegido una tecnología poco conocida:
+
+> *"Solo hay un fichero en todo el proyecto que sepa que por debajo hay LanceDB. Cambiar de motor
+> sería reescribir ese fichero, nada más."*
+
+---
+
+## Errores a evitar en la grabación
+
+- **No leas la lista de librerías.** Nombre, para qué sirve en una frase, y siguiente.
+- **No entres en configuración concreta** (valores, cabeceras, parámetros) salvo que pregunten.
+- **En la parte vectorial, resiste la tentación de explicar cómo funciona un embedding por
+  dentro.** Con "guarda el significado y lo parecido cae cerca" es suficiente: quien sepa, lo
+  reconocerá; quien no, lo entenderá igual.
+- **Reserva munición.** Lo que no cuentes en el vídeo es lo que te salva en las preguntas.
+
+---
+
+## Chuleta, por si te preguntan cifras
+
+| | |
 |---|---|
-| DTOs de entrada (`application/dto/`) | Lo que manda el cliente en cada endpoint. |
-| Configuración (`configuration/index.ts`) | Las variables de entorno: tipos, valores por defecto, `.env` mal puesto → **la app no arranca**, falla al inicio y no a las tres de la mañana. |
-| Capa LLM y tools MCP | La respuesta del modelo es texto: se valida antes de tratarla como dato. |
-| OpenAPI | `zod-to-json-schema` genera la especificación **desde los mismos objetos Zod que validan**. |
-
-**Los dos remates buenos** (elige uno según el tiempo):
-
-> "La documentación OpenAPI no puede mentir, porque no está escrita a mano: se genera desde el
-> mismo validador que corre en producción. Y hay un test que recorre los routers reales de Express
-> y falla si aparece una ruta que no esté documentada."
-
-> "El caso de seguridad concreto: después de `jwt.verify`, el payload todavía se valida con un
-> schema Zod que **descarta claves desconocidas**. Gracias a eso, el reto del segundo factor —que
-> también es un token— no puede colarse como token de acceso."
-
----
-
-### 4. JWT — autenticación sin estado, con los matices
-
-**Qué decir**
-
-- Esquema de **doble token**:
-
-```
-ACCESS TOKEN                          REFRESH TOKEN
-• TTL 15 minutos                      • TTL 7 días
-• Va en Authorization: Bearer         • Va en el body de POST /api/auth/refresh
-• Se valida en cada petición          • Se guarda HASHEADO en base de datos
-• NO contiene el rol                  • Se revoca al usarse (rotación)
-```
-
-- **Rotación**: cada refresh revoca el token viejo y emite un par nuevo. Si llega un refresh ya
-  revocado, es señal de reuso —token robado— y se responde 401.
-- **El matiz que suele preguntar un tribunal**: "un JWT no se puede revocar, ¿cómo echas a un
-  admin?" Respuesta preparada:
-
-> "Por eso el access token **no lleva el rol**. El middleware de administración consulta el
-> usuario en base de datos en cada petición, así que quitar el rol admin surte efecto inmediato,
-> sin esperar a que caduque el token. Es un compromiso consciente: statelessness para lo barato,
-> consulta a base de datos justo para lo que debe poder revocarse ya."
-
-- Complementos que puedes mencionar de pasada si hay tiempo: bloqueo de cuenta a los 5 intentos
-  fallidos (15 min, contador atómico en una sola sentencia SQL para evitar carreras) y segundo
-  factor TOTP con secreto cifrado en reposo (AES-256-GCM).
-
----
-
-### 5. Pino — logging estructurado
-
-**Qué decir**
-
-- Logger JSON, y es de los más rápidos de Node: serializa con muy poco coste, así que loguear no
-  penaliza el tiempo de respuesta.
-- **Estructurado, no texto**: cada línea es un objeto con contexto. Se puede filtrar y agregar; un
-  `console.log` con interpolación, no.
-- En el proyecto: `Logger implements LoggerPort`. Los casos de uso dependen del **puerto**, no de
-  Pino. Otra vez inversión de dependencias.
-- **Doble destino**: `stdout` (con `pino-pretty` legible en desarrollo, JSON crudo en producción
-  para que lo ingiera el agregador) y la tabla `logs` de SQLite, que es la que alimenta el panel
-  de administración.
-
-**Detalle fino, si quieres enseñar oficio**
-
-> "Los `Error` del contexto se serializan a mano antes de guardarlos, porque `JSON.stringify` se
-> come el `stack`: no es una propiedad enumerable. Sin ese paso, el contexto del error se
-> guardaba como un objeto vacío."
-
----
-
-### 6. Cierre del bloque API (30 s)
-
-Menciona en una frase lo que completa la cadena y no merece sección propia:
-
-- **CORS** con allowlist configurable, solo `GET`/`POST`/`OPTIONS`.
-- **express-rate-limit** con el contador **persistido en SQLite**, no en memoria: reiniciar el
-  proceso no regala cuota. Límites por ruta: login 5/min, diagnóstico cognitivo 5/min, global
-  100/15 min.
-- **Auditoría HTTP** de cada petición (método, ruta, status, IP, duración, usuario) → OWASP A09.
-
-> "Ninguna de estas piezas es exótica. La decisión de diseño no está en cuál elegí, está en que
-> cada una ocupa una única responsabilidad de la cadena y ninguna se filtra al dominio."
-
----
-
-## Parte B — La base vectorial (LanceDB)
-
-### 1. Empieza por el problema, no por la tecnología
-
-**El problema real** (30 s, y es lo que hace que se entienda todo lo demás):
-
-> "El OBD-II estándar tiene unos PIDs comunes a todos los coches. Pero cada fabricante define
-> además los suyos propios, en Mode 22, y sus propios códigos de avería. Son miles y no están
-> publicados. Precargarlos todos es imposible. Así que el sistema tiene que **aprenderlos**: y si
-> aprende, tiene que poder **recordar y encontrar** lo aprendido."
-
-Y ahí es donde una base de datos relacional se queda corta:
-
-> "Si un mecánico escribe 'el coche pierde presión de aceite' y el catálogo tiene guardado
-> 'low oil pressure sensor', un `LIKE` no encuentra nada. Ni una sola palabra coincide. Y son lo
-> mismo."
-
-### 2. Qué es un embedding (explícalo así)
-
-> "Un embedding es convertir un texto en una lista de números —aquí, 384— que codifica su
-> **significado**, no sus letras. Textos que significan lo parecido acaban cerca en ese espacio de
-> 384 dimensiones. Buscar deja de ser comparar cadenas y pasa a ser medir distancias."
-
-Modelo usado: `Xenova/paraphrase-multilingual-MiniLM-L12-v2`, vía **transformers.js**.
-
-- **Multilingüe** (español + inglés): es justo lo que necesita el caso anterior. La documentación
-  técnica de automoción está en inglés y el mecánico escribe en español.
-- **Local**, unos 118 MB, corre en CPU en el mismo proceso Node: sin API key, sin latencia de red,
-  **coste cero por embedding**. Cuesta unos 300 MB de RAM, y ese es el precio que se paga.
-
-### 3. Por qué LanceDB y no otra cosa
-
-Este es el punto donde un tribunal valora la decisión, no el producto. Ten las alternativas
-preparadas:
-
-| Alternativa | Por qué se descartó |
-|---|---|
-| **pgvector** (Postgres) | Exige un PostgreSQL corriendo. El proyecto usa SQLite embebido: metería un servicio entero solo para esto. |
-| **Chroma** | Necesita runtime de Python y un servidor aparte. Rompe el "cero infraestructura". |
-| **Embeddings de OpenAI** | API key, coste por embedding y latencia de red para una búsqueda interna. |
-| **Solo FTS5 de SQLite** | Busca por texto, no por significado: "presión de aceite" nunca casaría con "oil pressure". Es exactamente el problema que hay que resolver. |
-
-**El argumento a favor, en una frase**:
-
-> "LanceDB es a las bases vectoriales lo que SQLite a las relacionales: embebida, sin servidor, un
-> directorio en disco, corriendo dentro del propio proceso. El proyecto se despliega igual con
-> búsqueda semántica que sin ella —cero infraestructura añadida— y tiene soporte nativo en Node."
-
-### 4. Cómo funciona, por dentro
-
-**Cuatro tablas**, cada fila es un vector más sus metadatos:
-
-| Tabla | Qué guarda |
-|---|---|
-| `pids_index` | PIDs propietarios aprendidos |
-| `dtcs_index` | Códigos de avería específicos de fabricante |
-| `diagnoses_index` | **Memoria de taller**: casos completos (síntomas → PIDs → solución) |
-| `ecus_index` | Definiciones de centralitas descubiertas |
-
-**La búsqueda**, en cuatro pasos:
-
-1. La consulta se convierte en su vector de 384 dimensiones.
-2. LanceDB devuelve los **5 más cercanos** por distancia L2.
-3. Se puede filtrar por fabricante y modelo con un predicado SQL sobre los metadatos.
-4. Resultados ordenados por distancia ascendente: menor distancia, más parecido.
-
-**Si te preguntan por la métrica**, respuesta corta y correcta:
-
-> "LanceDB usa distancia euclídea. Como los embeddings salen normalizados, la euclídea es
-> equivalente a la similitud coseno: `coseno ≈ 1 − d²/2`. El umbral que usa el prompt del modelo
-> es 0,5, que equivale a una similitud coseno de en torno a 0,87."
-
-**Y si preguntan por el índice ANN** —es la pregunta de manual—:
-
-> "No hay índice IVF-PQ: la búsqueda es exacta. Con un corpus de cientos de entradas, un índice
-> aproximado añadiría complejidad y pérdida de precisión sin ganar tiempo. Es una decisión
-> tomada con el volumen delante, no un olvido; el día que el corpus lo pida, se añade."
-
-### 5. El bucle de aprendizaje (esto es lo que hay que enseñar)
-
-```
-1. Diagnóstico en marcha, aparece un PID o un DTC desconocido
-2. El modelo busca en LanceDB → sin resultados o con confianza baja
-3. Invoca la tool web_search → encuentra una definición candidata
-4. La indexa con confianza 0.3
-5. La VALIDA contra el coche: lee el PID y comprueba que el valor cae en su rango
-6. Si valida → la confianza sube a 0.7. Si no → se descarta
-7. Al cerrar el diagnóstico, el caso completo se indexa en la memoria de taller
-```
-
-**Sistema de confianza** (el mecánico vale más que internet):
-
-| Origen | Confianza inicial | Tras validar contra el coche |
-|---|---|---|
-| Búsqueda web | 0,3 | 0,7 |
-| Aportado por el mecánico | 0,8 | 0,9 |
-
-**El cierre del bloque, y es el mejor argumento de venta del proyecto**:
-
-> "Esto significa que el sistema **no es el mismo después de cada coche**. El primer Audi A3 que
-> pasa por el taller enseña sus PIDs propietarios. El segundo Audi A3 ya se los encuentra
-> aprendidos y validados. El conocimiento no lo pone el fabricante del software: lo pone la flota
-> que atraviesa el taller."
-
-### 6. Dos honestidades que suman ante el tribunal
-
-Guárdalas para el final del bloque, o para preguntas. Reconocer un límite y explicar por qué se
-decidió así puntúa más que fingir que no existe:
-
-- **La confianza no escala con la reutilización, a propósito.** La función que subiría la
-  confianza cada vez que una entrada se reutiliza con éxito está implementada y **sin cablear**:
-  exige saber que el diagnóstico *acertó*, y esa señal no existe. Que un mecánico consulte un
-  diagnóstico no significa que le sirviera. Inventarla —dar por buena toda entrada reutilizada—
-  subiría por igual la confianza de los aciertos y la de los errores, y degradaría el catálogo.
-  Hace falta feedback explícito del mecánico, y eso es un cambio de alcance, no una línea
-  pendiente.
-- **El motor está aislado en un solo fichero.** `lanceVectorStore.ts` es el único módulo de toda
-  la cadena atado a LanceDB: aprovisiona la tabla, traduce el filtro, escapa los literales del
-  predicado y valida dimensiones. Migrar a pgvector sería escribir otro fichero como ese.
-
-Y si hay que rematar con robustez:
-
-> "Si la capa vectorial fallara, el diagnóstico OBD-II básico sigue funcionando. El conocimiento
-> aprendido enriquece el diagnóstico, no lo sostiene."
-
----
-
-## Chuleta de cifras (para no dudar en cámara)
-
-| Dato | Valor |
-|---|---|
-| Express | 5.x |
-| Zod, ficheros que lo usan | 36 |
-| Access token / refresh token | 15 min / 7 días |
-| Bloqueo por intentos fallidos | 5 intentos → 15 min |
-| Rate limit global / login | 100 por 15 min / 5 por min |
-| HSTS | 31.536.000 s (1 año) |
-| Modelo de embeddings | `paraphrase-multilingual-MiniLM-L12-v2` |
-| Dimensiones del vector | 384, normalizado (norma L2 = 1) |
-| Tamaño del modelo / RAM extra | ~118 MB / ~300 MB |
-| Top-K por defecto | 5 |
-| Umbral de alta relevancia | distancia < 0,5 (coseno ≈ 0,87) |
-| Tablas vectoriales | 4 (`pids`, `dtcs`, `diagnoses`, `ecus`) |
-| Confianza web / mecánico | 0,3 → 0,7 / 0,8 → 0,9 |
-
----
-
-## Referencias en el repositorio
-
-- `apps/core-api/src/infrastructure/http/server.ts` — la cadena de middleware, en orden.
-- `apps/core-api/src/infrastructure/observability/logger.ts` — Pino + persistencia.
-- `apps/core-api/src/infrastructure/services/authService.ts` — firma y verificación de JWT.
-- `apps/core-api/src/infrastructure/persistence/vector/` — LanceDB y embeddings.
-- `docs/adr/007-catalogo-auto-expansivo-lancedb.md` — la decisión y sus alternativas.
-- `docs/tfm/02-embeddings-rag.md` y `docs/tfm/05-arquitectura-core-api.md` — el detalle completo.
+| Sesión: token de acceso / de renovación | 15 minutos / 7 días |
+| Bloqueo de cuenta | 5 intentos fallidos → 15 minutos |
+| Límite de peticiones al login | 5 por minuto |
+| Resultados que devuelve una búsqueda | los 5 más parecidos |
+| Confianza: internet / mecánico | 0,3 → 0,7 tras verificar / 0,8 → 0,9 |
+| Dónde vive todo esto | `infrastructure/http/server.ts` y `infrastructure/persistence/vector/` |
