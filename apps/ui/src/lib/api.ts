@@ -58,6 +58,22 @@ import type {
   TwoFactorSetup,
   VerifyTwoFactorInput,
 } from '@/lib/apiTypes'
+import { getNativeObdService, isNativePlatform } from '@/lib/obd/nativeObdBridge'
+import { isNativeUsbScenario } from '@/lib/obd/nativeScenario'
+
+/**
+ * True cuando `scenarioId` es el vehiculo real por USB-OTG y la app corre
+ * dentro del APK Android — la unica combinacion en la que existe un puerto
+ * serie nativo al que desviar la lectura en vez de pedirsela al core-api.
+ *
+ * Sin esta comprobacion doble, un `scenarioId` coincidente por casualidad en
+ * la web normal (sin Capacitor) intentaria hablar con un transporte que no
+ * existe; y el modo nativo sin este id concreto seguiria yendo por HTTP, que
+ * es lo correcto para los escenarios del emulador incluso dentro del APK.
+ */
+function usesNativeUsb(scenarioId: string): boolean {
+  return isNativeUsbScenario(scenarioId) && isNativePlatform()
+}
 
 /**
  * Contrato publico re-exportado: `@/lib/api` sigue siendo el unico punto de
@@ -294,8 +310,15 @@ export const api = {
     return data.pids
   },
 
-  /** POST /api/diagnosis — runs OBD diagnosis for a scenario. */
+  /**
+   * POST /api/diagnosis — runs OBD diagnosis for a scenario.
+   *
+   * En el vehiculo real por USB-OTG (Android nativo) lee directo del puerto
+   * serie en vez de pedirselo al core-api: el cable esta en el telefono, no
+   * en el servidor.
+   */
   async runDiagnosis(scenarioId: string): Promise<DiagnosisResponse> {
+    if (usesNativeUsb(scenarioId)) return getNativeObdService().runDiagnosis()
     const res = await apiFetch('/api/diagnosis', {
       method: 'POST',
       body: JSON.stringify({ scenarioId }),
@@ -309,6 +332,7 @@ export const api = {
    * the code (or scenario) has no snapshot.
    */
   async getFreezeFrame(scenarioId: string, dtc?: string): Promise<FreezeFrame | null> {
+    if (usesNativeUsb(scenarioId)) return getNativeObdService().getFreezeFrame(dtc)
     const query = new URLSearchParams({ scenarioId })
     if (dtc) query.set('dtc', dtc)
     const res = await apiFetch(`/api/freeze-frame?${query.toString()}`)
@@ -325,6 +349,7 @@ export const api = {
    * failed; the others keep their value.
    */
   async getLiveData(scenarioId: string, pids?: readonly string[]): Promise<LiveDataResponse> {
+    if (usesNativeUsb(scenarioId)) return getNativeObdService().getLiveData(pids)
     const query = new URLSearchParams({ scenarioId })
     if (pids && pids.length > 0) query.set('pids', pids.join(','))
     const res = await apiFetch(`/api/live-data?${query.toString()}`)
@@ -334,14 +359,34 @@ export const api = {
 
   /** GET /api/ecu-info — returns the ECUs discovered for the vehicle. */
   async getEcuInfo(scenarioId: string): Promise<EcuInfo[]> {
+    if (usesNativeUsb(scenarioId)) return getNativeObdService().getEcuInfo()
     const res = await apiFetch(`/api/ecu-info?scenarioId=${encodeURIComponent(scenarioId)}`)
     await assertOk(res, GENERIC_ERROR_MESSAGE)
     const data = (await res.json()) as { ecus: EcuInfo[] }
     return data.ecus
   },
 
-  /** GET /api/vehicle-info — identifies the vehicle by reading and decoding its VIN. */
+  /**
+   * GET /api/vehicle-info — identifies the vehicle by reading and decoding its VIN.
+   *
+   * Sobre USB nativo solo lee el VIN crudo: decodificar fabricante/modelo por
+   * WMI es RAG/LLM y sigue siendo el core-api, que sí tiene esa base — fuera
+   * de alcance para el transporte serie en si mismo.
+   */
   async getVehicleInfo(scenarioId: string): Promise<VehicleInfoResponse> {
+    if (usesNativeUsb(scenarioId)) {
+      const vin = await getNativeObdService().readVin()
+      return {
+        vin,
+        make: 'unknown',
+        model: 'unknown',
+        year: 0,
+        engineType: 'unknown',
+        manufacturer: null,
+        region: null,
+        modelYearDecoded: null,
+      }
+    }
     const res = await apiFetch(`/api/vehicle-info?scenarioId=${encodeURIComponent(scenarioId)}`)
     await assertOk(res, GENERIC_ERROR_MESSAGE)
     return (await res.json()) as VehicleInfoResponse
@@ -365,6 +410,9 @@ export const api = {
 
   /** GET /api/pending-dtc — returns pending DTCs (Mode 07). */
   async getPendingDtc(scenarioId: string): Promise<{ dtcCodes: DtcCode[] }> {
+    if (usesNativeUsb(scenarioId)) {
+      return { dtcCodes: await getNativeObdService().readPendingDtcCodes() }
+    }
     const res = await apiFetch(`/api/pending-dtc?scenarioId=${encodeURIComponent(scenarioId)}`)
     await assertOk(res, GENERIC_ERROR_MESSAGE)
     return (await res.json()) as { dtcCodes: DtcCode[] }
@@ -372,6 +420,9 @@ export const api = {
 
   /** GET /api/permanent-dtc — returns permanent DTCs (Mode 0A). */
   async getPermanentDtc(scenarioId: string): Promise<{ dtcCodes: DtcCode[] }> {
+    if (usesNativeUsb(scenarioId)) {
+      return { dtcCodes: await getNativeObdService().readPermanentDtcCodes() }
+    }
     const res = await apiFetch(`/api/permanent-dtc?scenarioId=${encodeURIComponent(scenarioId)}`)
     await assertOk(res, GENERIC_ERROR_MESSAGE)
     return (await res.json()) as { dtcCodes: DtcCode[] }
@@ -379,6 +430,10 @@ export const api = {
 
   /** POST /api/clear-dtc — clears stored DTCs and resets emission monitors. */
   async clearDtc(scenarioId: string): Promise<{ cleared: boolean }> {
+    if (usesNativeUsb(scenarioId)) {
+      await getNativeObdService().clearDtcCodes()
+      return { cleared: true }
+    }
     const res = await apiFetch('/api/clear-dtc', {
       method: 'POST',
       body: JSON.stringify({ scenarioId }),
@@ -389,6 +444,7 @@ export const api = {
 
   /** GET /api/vehicle-status — returns MIL status, DTC count, and monitor readiness. */
   async getVehicleStatus(scenarioId: string): Promise<VehicleStatusOutput> {
+    if (usesNativeUsb(scenarioId)) return getNativeObdService().getVehicleStatus()
     const res = await apiFetch(`/api/vehicle-status?scenarioId=${encodeURIComponent(scenarioId)}`)
     await assertOk(res, GENERIC_ERROR_MESSAGE)
     return (await res.json()) as VehicleStatusOutput
