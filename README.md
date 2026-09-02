@@ -1,9 +1,37 @@
 # Intelligent Automotive Diagnostics
 
 > **TFM — Master IA** · Jesus Novillo · Julio 2026
->
-> Simulacion de telemetria vehicular y diagnostico con IA mediante el protocolo MCP (Model Context Protocol).
-> Clean Architecture + Hexagonal. Cumplimiento SAE J1979 / ISO 15031 / ISO 15765-4 / ISO 3779.
+
+Aplicacion web que diagnostica averias de vehiculos (coches y motos): se conecta al vehiculo,
+real por cable o WiFi o simulado, lee sus codigos de fallo y datos en vivo, y explica que
+significan en lenguaje llano con ayuda de una IA — como un mecanico digital. Tiene login y
+guarda el historial de diagnosticos de cada usuario.
+
+Por dentro habla con el vehiculo usando el protocolo estandar del sector (OBD-II: SAE J1979,
+ISO 15031, ISO 15765-4, ISO 3779), y usa MCP (Model Context Protocol) para poner esa lectura a
+disposicion de la IA como herramientas que puede invocar. Backend Express + dashboard React,
+Clean Architecture + Hexagonal.
+
+**Demo en vivo**: https://diag.jcodinglabs.com — solo con los 3 vehiculos emulados (no hay
+adaptador OBD conectado al servidor); registro propio, sin cuenta de prueba.
+
+## Funcionalidades
+
+- **Diagnostico de un vehiculo real o simulado**: por cable USB o WiFi (adaptador ELM327) o con
+  uno de los escenarios simulados (Audi A3 TDI, Kawasaki Z900, Toyota Auris Hybrid)
+- **Telemetria en tiempo real**: un gauge por cada PID que soporte el vehiculo conectado (RPM,
+  velocidad, temperaturas, presiones, etc.)
+- **Identificacion del vehiculo por VIN**: cascada BBDD -> catalogo -> web -> mecanico; si el
+  fabricante no se resuelve, se confirma a mano y queda aprendido
+- **Codigos de fallo (DTC)**: con severidad, freeze frame, pendientes y permanentes
+- **Diagnostico determinista** (reglas sobre el propio protocolo) **y cognitivo** (LLM, si esta
+  configurado), con **chat** para preguntar sobre la averia en curso
+- **Historial**: sesiones anteriores por usuario, con el informe congelado de cada una
+- **Panel admin**: usuarios, logs, auditoria y explorador del catalogo de conocimiento
+- **Autenticacion**: login/registro JWT, segundo factor TOTP opcional, recuperacion de
+  contrasena por email, perfil
+
+> No hay exportacion a PDF ni busqueda por matricula: el vehiculo se identifica por **VIN**.
 
 ## Stack
 
@@ -14,6 +42,7 @@
 | Framework web | Express 5 + Zod + Helmet |
 | IA / Agentes | MCP SDK (`@modelcontextprotocol/sdk`) |
 | Persistencia | SQLite + Drizzle ORM |
+| Busqueda vectorial | LanceDB (catalogo de conocimiento auto-expansivo) |
 | Logger | pino + pino-pretty |
 | Tests | Vitest 3 + supertest |
 | Package manager | pnpm 10+ |
@@ -25,6 +54,9 @@
 
 ## Inicio rapido
 
+Requisitos: Node 22+, pnpm 10+, Docker (para los emuladores; solo hace falta con
+`OBD_MODE=docker`, el modo por defecto).
+
 ```bash
 pnpm install
 
@@ -33,7 +65,12 @@ pnpm install
 #    los tres son obligatorios: si falta cualquiera, la API no arranca en absoluto.
 cp .env.example .env
 
-# 2. Iniciar backend + frontend
+# 2. Arrancar los emuladores ELM327 (Docker), necesarios con el OBD_MODE=docker
+#    por defecto. Sin esto no hay coche (real o simulado) al otro lado y el
+#    diagnostico no tiene datos que leer.
+docker compose up -d elm327-audi elm327-kawasaki elm327-toyota
+
+# 3. Iniciar backend + frontend
 pnpm dev:all
 # o por separado:
 #   pnpm dev      → backend (http://localhost:4000)
@@ -48,21 +85,8 @@ depender del directorio desde el que arranques ni de un export manual.
 
 ### Dashboard UI (apps/ui)
 
-React 19 SPA (Vite + TanStack Router) con dashboard OBD-II profesional:
-
-- **Gauges en tiempo real**: RPM, velocidad, temperatura de refrigerante y admision
-- **Selector de vehiculos**: escenarios reales del backend (Audi A3 TDI, Kawasaki Z900, Toyota Auris Hybrid)
-- **Wizard de identificacion por VIN**: cascada BBDD -> catalogo -> web -> mecanico; si el fabricante
-  no se resuelve, se confirma a mano y queda aprendido
-- **Panel DTC**: codigos de fallo con severidad, mas freeze frame, DTC pendientes y permanentes
-- **Diagnostico**: determinista via API + cognitivo via LLM (si esta configurado)
-- **MechanicChat**: conversacion con el agente sobre el diagnostico en curso
-- **Historial**: sesiones anteriores por usuario, con el informe congelado de cada una
-- **Panel admin**: usuarios, logs, auditoria y explorador del catalogo de conocimiento
-- **Auth JWT**: login/registro, recuperacion de contrasena por email y perfil, con formularios
-  validados (Zod + react-hook-form)
-
-> No hay exportacion a PDF ni busqueda por matricula: el vehiculo se identifica por **VIN**.
+React 19 SPA (Vite + TanStack Router). Funcionalidades detalladas mas arriba; formularios
+validados con Zod + react-hook-form.
 
 ```bash
 cd apps/ui
@@ -88,6 +112,8 @@ Lista completa en Swagger UI (`/api-docs`). Resumen por familia:
 | `/api/auth/forgot-password` | POST | No | Envia email de reseteo |
 | `/api/auth/reset-password` | POST | No | Consume el token de reseteo |
 | `/api/profile` | PATCH | JWT | Actualiza perfil y contrasena |
+| `/api/auth/2fa/verify` | POST | No | Verifica el codigo TOTP tras el login |
+| `/api/profile/2fa/setup` · `/activate` · `/disable` | POST | JWT | Activa/desactiva el segundo factor |
 | **Diagnostico** | | | |
 | `/api/scenarios` | GET | JWT | Escenarios de simulacion |
 | `/api/diagnosis` | POST | JWT | Diagnostico determinista |
@@ -111,22 +137,29 @@ Lista completa en Swagger UI (`/api-docs`). Resumen por familia:
 
 ## Variables de entorno (`.env`)
 
+Lista completa y comentada en [`.env.example`](.env.example). Las mas relevantes:
+
 ```env
-OBD_MODE=docker                # docker = emulador | serial = ELM327 USB | tcp = ELM327 WiFi
-OBD_READ_ONLY=false            # forzado a true en serial/tcp: Mode 04 es irreversible
-ELM327_HOST=localhost          # solo OBD_MODE=tcp
+OBD_MODE=docker                # docker = 3 emuladores | serial = ELM327 USB | tcp = ELM327 WiFi
+ELM327_AUDI_PORT=35000         # docker: un puerto por vehiculo emulado (Audi/Kawasaki/Toyota)
+ELM327_KAWASAKI_PORT=35001
+ELM327_TOYOTA_PORT=35002
+ELM327_HOST=localhost          # solo OBD_MODE=tcp (dongle WiFi real)
 ELM327_PORT=35000
 SERIAL_PORT_PATH=/dev/ttyUSB0  # solo OBD_MODE=serial — descubrelo con `pnpm obd:probe`
 SERIAL_BAUD_RATE=38400
+OBD_READ_ONLY=false            # forzado a true en serial/tcp: Mode 04 es irreversible
 DB_PATH=data/diagnostics.db
-ACCESS_TOKEN_SECRET=
-REFRESH_TOKEN_SECRET=
+ACCESS_TOKEN_SECRET=changeme
+REFRESH_TOKEN_SECRET=changeme
+TOTP_ENCRYPTION_KEY=           # cifra el secreto 2FA en BBDD; genera con openssl rand -base64 32
 ALLOWED_ORIGINS=http://localhost:5173
-LLM_PROVIDER=openai            # anthropic | openai
+LLM_PROVIDER=openai            # anthropic | openai (compatible tambien con DeepSeek, Groq...)
 LLM_API_KEY=
 LLM_BASE_URL=
 LLM_MODEL=
-ANTHROPIC_API_KEY=
+ANTHROPIC_API_KEY=             # solo si LLM_PROVIDER=anthropic
+SMTP_HOST=                     # sin configurar, los emails se loguean en consola (dev)
 ```
 
 ## Arquitectura
@@ -211,7 +244,15 @@ apps/core-api/src/
 | DTO | `VerbNounInput/Output.ts` | `RegisterUserInput.ts` |
 | Controller | `NounController.ts` | `AuthController.ts` |
 
-## MCP Server — 6 tools
+## MCP Server — 16 tools
+
+| Categoria | Tools |
+|---|---|
+| Diagnostico | `read_pid`, `get_dtc_codes`, `get_freeze_frame`, `read_vin`, `get_vehicle_info`, `get_available_pids`, `get_ecu_info` |
+| Conocimiento (LanceDB) | `search_similar_pids`, `search_similar_dtcs`, `search_similar_diagnoses`, `search_similar_ecus`, `index_pid`, `index_dtc`, `index_diagnosis`, `index_ecu` |
+| Web | `web_search` |
+
+Ejemplos:
 
 | Tool | Ejemplo |
 |---|---|
@@ -226,7 +267,7 @@ apps/core-api/src/
 curl -X POST http://localhost:4000/api/mcp/tools/read_pid \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <token>" \
-  -d '{"scenarioId":"audi-a3-idle","args":{"mode":"01","pid":"0C"}}'
+  -d '{"scenarioId":"audi-a3-tdi","args":{"mode":"01","pid":"0C"}}'
 ```
 
 ## Seguridad
@@ -243,13 +284,22 @@ curl -X POST http://localhost:4000/api/mcp/tools/read_pid \
 ## Testing
 
 ```bash
-pnpm test              # 432 tests en 33 suites
+pnpm test              # core-api: ~1800 tests
+pnpm test:ui           # apps/ui: ~715 tests
+pnpm test:all          # ambas apps
 pnpm test:watch
-pnpm test:coverage
+pnpm test:coverage     # Features >=80% + Core 100%
+pnpm test:e2e          # Playwright, tests/e2e/ (auth, dashboard, logout, 2FA)
 ```
 
 ## Documentacion
 
-- **ADR** — 8 decisiones en `docs/adr/`
+- **ADR** — 9 decisiones en `docs/adr/`
 - **TSDoc** — export publico con CI (`jsdoc/require-jsdoc`)
 - **[AGENTS.md](AGENTS.md)** — Reglas de sesion, agentes, skills, convenciones
+
+## Licencia
+
+Todos los derechos reservados — ver [LICENSE](LICENSE). Repositorio publicado con fines
+academicos (TFM): evaluacion del tribunal y consulta publica como evidencia del trabajo,
+sin autorizacion de reutilizacion, copia o distribucion.
