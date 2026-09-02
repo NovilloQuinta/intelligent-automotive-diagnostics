@@ -1,59 +1,62 @@
-# Guion de vídeo — Bloque de tecnologías
+# Notas del ponente — Slide 3.1 «Tecnologías utilizadas»
 
-**Duración: 2 minutos.** Se lee tal cual.
-
----
-
-## API (45 segundos)
-
-El backend es una API REST en Node con TypeScript, sobre Express 5.
-
-Alrededor hay cuatro piezas, cada una con una responsabilidad. **Helmet** fija las cabeceras de
-seguridad de la respuesta, con la política más restrictiva que existe, que aquí además es la
-correcta: una API que solo devuelve datos no necesita cargar nada de fuera. **Zod** valida en
-tiempo de ejecución todo lo que entra —las peticiones, la configuración y la respuesta del modelo
-de lenguaje—, que es justo lo que TypeScript no puede hacer, porque los tipos desaparecen al
-compilar. **JWT** resuelve la sesión, con un token de acceso corto y un refresco que se rota en
-cada uso. Y **Pino** registra de forma estructurada; ese registro es el que alimenta el panel de
-administración.
-
-Las cuatro viven confinadas en la capa de infraestructura. Los casos de uso no las conocen.
+> Sustituyen a las notas actuales de esa slide en `docs/presentacion/build.mjs`
+> (rama `claude/tfm-slide-presentation-2fflme`). Mismo presupuesto: **~60 s**.
+> Las notas de ahora enumeran la tabla; estas dicen **por qué** está cada cosa,
+> que es lo que pregunta un tribunal.
 
 ---
 
-## Base vectorial (75 segundos)
+## Para leer (~60 s)
 
-La base vectorial responde a un problema concreto.
+Todo el proyecto es TypeScript en modo estricto sobre Node 22, backend y frontend. Un solo
+lenguaje y un solo modelo mental de punta a punta.
 
-Cada fabricante define sus propios PID en el Mode 22 y sus propios DTC. Son miles, no están
-publicados, y no hay forma de precargarlos. Así que el catálogo no puede ser estático: el sistema
-tiene que aprenderlos sobre la marcha.
+En la API, Express 5 porque propaga solo los errores de los handlers asíncronos, y aquí casi todo
+lo es: el puerto serie, el modelo, la base de datos. Zod porque los tipos de TypeScript
+desaparecen al compilar, así que lo que entra de fuera —peticiones, configuración y la respuesta
+del modelo— hay que validarlo en ejecución; y de esos mismos esquemas se genera la documentación
+OpenAPI, así que no puede quedarse desfasada. Helmet para las cabeceras de seguridad, JWT para la
+sesión y pino para el log estructurado, que es el que alimenta el panel de administración.
 
-Y buscarlos por texto no sirve. Si el mecánico escribe "pérdida de presión de aceite" y la entrada
-está guardada como *low oil pressure*, no hay una sola palabra en común. Y son lo mismo. Una base
-vectorial no compara palabras: compara significado.
+En persistencia, SQLite con Drizzle: sin servidor que mantener, y los esquemas son TypeScript,
+no un fichero aparte. Y LanceDB para la búsqueda vectorial por el mismo criterio: es embebida
+igual que SQLite, una carpeta en disco, así que la búsqueda semántica no añade infraestructura.
+Los embeddings se generan en local con transformers.js: sin clave de API, sin latencia y sin
+coste por consulta.
 
-Elegí LanceDB con un criterio: no añadir infraestructura. Es embebida, un directorio en disco,
-corriendo dentro del propio proceso. pgvector me obligaba a levantar un PostgreSQL entero,
-Chroma un servicio en Python, y los embeddings de OpenAI habrían metido clave de API y coste por
-consulta para una búsqueda que es interna. Los vectores los genera un modelo local y multilingüe,
-porque la documentación técnica está en inglés y el mecánico escribe en español.
+El agente va sobre el SDK oficial de MCP, que es un estándar de herramientas y no un formato
+propio mío, y por debajo Anthropic u OpenAI según lo configurado. El acceso al coche es un
+ELM327 por serie o TCP, más un emulador en Python que es lo que me permitió desarrollar el
+proyecto entero sin tener el vehículo delante.
 
-Y lo importante es esto: cuando el sistema encuentra una definición nueva, no se la cree. La
-valida contra el coche, leyendo ese PID y comprobando que el valor cae en el rango esperado. Si
-valida, sube la confianza; si no, la descarta.
+La interfaz es React 19 con Vite y TanStack. Las pruebas, Vitest en unidad, supertest en los
+endpoints y Playwright de extremo a extremo. Y la entrega, GitHub Actions, Docker y Caddy.
 
-Por eso el segundo Audi que entra al taller ya se encuentra aprendido lo que enseñó el primero.
+Lo importante no es la lista: de la tercera fila para abajo, todo está detrás de un puerto. Se
+sustituye sin tocar la lógica.
 
 ---
 
-## Reserva para preguntas (no leer en el vídeo)
+## Si preguntan por qué LanceDB y no otra
 
-- **JWT no se revoca** → el rol no va en el token; se consulta en base de datos en cada petición.
-- **¿Índice vectorial?** → búsqueda exacta; con cientos de entradas un índice aproximado añade
-  complejidad y pérdida de precisión sin ganar tiempo.
-- **¿Confianza?** → web 0,3 → 0,7 tras validar contra el coche; mecánico 0,8 → 0,9.
-- **¿Y si LanceDB se queda corto?** → un solo módulo está acoplado al motor; y si la capa
-  vectorial cae, el diagnóstico OBD básico sigue.
+Una frase por alternativa, no las sueltes todas:
 
-Detalle completo en `05-arquitectura-core-api.md` y `02-embeddings-rag.md`.
+- **pgvector** obligaba a levantar un PostgreSQL entero solo para esto.
+- **Chroma** necesita un runtime de Python y un servicio aparte.
+- **Los embeddings de OpenAI** metían clave de API y coste por consulta en una búsqueda interna.
+- **La búsqueda de texto de SQLite** no captura significado, que es justo el problema: "presión
+  de aceite" nunca casaría con *low oil pressure*.
+
+Y si van a por el riesgo de elegir un motor joven: un solo módulo del proyecto está acoplado a
+LanceDB. Cambiar de motor es reescribir ese fichero.
+
+---
+
+## Dos avisos sobre el deck
+
+1. **El índice suma 20:35.** Si el vídeo son 10-15 minutos, no cabe: hay que decidir qué bloques
+   se recortan antes de grabar, no sobre la marcha.
+2. **El "por qué" del modelo de embeddings** (multilingüe porque la documentación técnica está en
+   inglés y el mecánico escribe en español) encaja mejor en la slide 4.7, la de modelos empleados,
+   que aquí. En 3.1 basta con "en local".
