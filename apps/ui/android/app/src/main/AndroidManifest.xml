@@ -38,4 +38,7 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- ELM327 por USB-OTG: host USB, no obligatorio para instalar en tablets sin puerto USB. -->
+    <uses-feature android:name="android.hardware.usb.host" android:required="false" />
 </manifest>

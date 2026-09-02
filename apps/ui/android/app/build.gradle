@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
 
 android {
     namespace = "com.iad.dashboard"
@@ -22,6 +23,9 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    kotlinOptions {
+        jvmTarget = "21"
+    }
 }
 
 repositories {
@@ -40,6 +44,8 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    // Driver USB-serial para el adaptador ELM327 (misma libreria que usa AndrOBD).
+    implementation 'com.github.mik3y:usb-serial-for-android:3.7.0'
 }
 
 apply from: 'capacitor.build.gradle'
